@@ -1719,6 +1719,11 @@ Continue?</source>
         <translation>&quot;신뢰도 낮음&quot;으로 표시된 트랙은 확실한 탐지가 너무 적어 기본적으로 제외됩니다. 실제 얼굴이나 번호판을 가리는 트랙이라면 체크하세요.</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="470"/>
+        <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
+        <translation>타임라인의 빨간 표시는 트랙이 대상을 너무 오래 놓쳐 경로를 추정할 수 없었던 구간입니다. 그 구간은 아무것도 가려지지 않으므로, 중요한 곳에는 수동 트랙을 그리세요.</translation>
+    </message>
+    <message>
         <location filename="../src/VideoReviewDialog.cpp" line="489"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>트랙 %1  ·  %2–%3</translation>
@@ -1808,6 +1813,13 @@ Continue?</source>
         <location filename="../src/VideoReviewDialog.cpp" line="1093"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>자동 트랙 %2개 중 %1개 포함 · 수동 %3개</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/VideoReviewDialog.cpp" line="1120"/>
+        <source>%n uncovered range(s)</source>
+        <translation>
+            <numerusform>가려지지 않은 구간 %n개</numerusform>
+        </translation>
     </message>
 </context>
 </TS>

@@ -1719,6 +1719,11 @@ Continue?</source>
         <translation>「低信頼度」と表示されたトラックは確実な検出が少なすぎるため、既定で除外されます。実際の顔やナンバープレートを覆うトラックにはチェックを入れてください。</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="470"/>
+        <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
+        <translation>タイムラインの赤い印は、トラックが対象を長く見失い、経路を推定できなかった区間です。そこでは何も覆われないため、重要な箇所には手動トラックを描いてください。</translation>
+    </message>
+    <message>
         <location filename="../src/VideoReviewDialog.cpp" line="489"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>トラック %1  ·  %2–%3</translation>
@@ -1808,6 +1813,13 @@ Continue?</source>
         <location filename="../src/VideoReviewDialog.cpp" line="1093"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>自動トラック %2 件中 %1 件を含む · 手動 %3 件</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/VideoReviewDialog.cpp" line="1120"/>
+        <source>%n uncovered range(s)</source>
+        <translation>
+            <numerusform>覆われていない範囲 %n 件</numerusform>
+        </translation>
     </message>
 </context>
 </TS>

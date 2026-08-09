@@ -1719,6 +1719,11 @@ Continue?</source>
         <translation>标记为“低置信度”的轨迹因可靠检测过少而默认被排除。如果某条轨迹覆盖了真实的人脸或车牌，请勾选它。</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="470"/>
+        <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
+        <translation>时间轴上的红色标记表示轨迹丢失目标过久、无法推断路径的区间。那里没有任何遮盖，重要的位置请手动绘制轨迹。</translation>
+    </message>
+    <message>
         <location filename="../src/VideoReviewDialog.cpp" line="489"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>轨迹 %1  ·  %2–%3</translation>
@@ -1808,6 +1813,13 @@ Continue?</source>
         <location filename="../src/VideoReviewDialog.cpp" line="1093"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>已包含 %2 条自动轨迹中的 %1 条 · %3 条手动轨迹</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/VideoReviewDialog.cpp" line="1120"/>
+        <source>%n uncovered range(s)</source>
+        <translation>
+            <numerusform>未遮盖的范围 %n 段</numerusform>
+        </translation>
     </message>
 </context>
 </TS>

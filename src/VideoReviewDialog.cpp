@@ -410,6 +410,19 @@ namespace cloakframe
                         QRect(x1, y - 4, std::max(2, x2 - x1 + 1), 3), QColor("#22D3EE"));
                 }
             }
+            // Drawn on their own row above the tracks: these are the frames no track
+            // covers, so they never coincide with a track bar worth overlaying.
+            for (const auto &span : request_->uncoveredSpans)
+            {
+                const double denominator = static_cast<double>(request_->frameCount - 1);
+                const int x1 =
+                    groove.left()
+                    + static_cast<int>(std::lround(span.firstFrame / denominator * groove.width()));
+                const int x2 =
+                    groove.left()
+                    + static_cast<int>(std::lround(span.lastFrame / denominator * groove.width()));
+                painter.fillRect(QRect(x1, y - 8, std::max(2, x2 - x1 + 1), 3), QColor("#EF4444"));
+            }
         }
 
     private:
@@ -450,6 +463,13 @@ namespace cloakframe
             hintText += tr("Tracks marked \"low confidence\" had too few confident "
                            "detections and are excluded by default — check any that "
                            "cover a real face or plate.");
+        }
+        if (!request_.uncoveredSpans.isEmpty())
+        {
+            hintText += QStringLiteral(" ");
+            hintText += tr("The red marks on the timeline are stretches where a track lost "
+                           "its subject for too long to guess the path. Nothing is masked "
+                           "there, so draw a manual track over any that matter.");
         }
         auto *hint = new QLabel(hintText, this);
         hint->setWordWrap(true);
@@ -1090,9 +1110,17 @@ namespace cloakframe
     void VideoReviewDialog::updateSummary()
     {
         const qsizetype includedAutomatic = request_.tracks.size() - excludedTrackIds_.size();
-        summaryLabel_->setText(tr("%1 of %2 automatic tracks included · %3 manual")
-                .arg(includedAutomatic)
-                .arg(request_.tracks.size())
-                .arg(manualTracks_.size()));
+        QString text = tr("%1 of %2 automatic tracks included · %3 manual")
+                           .arg(includedAutomatic)
+                           .arg(request_.tracks.size())
+                           .arg(manualTracks_.size());
+        if (!request_.uncoveredSpans.isEmpty())
+        {
+            text += QStringLiteral(" · ")
+                    + tr("%n uncovered range(s)",
+                        nullptr,
+                        static_cast<int>(request_.uncoveredSpans.size()));
+        }
+        summaryLabel_->setText(text);
     }
 }

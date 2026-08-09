@@ -59,6 +59,7 @@ namespace cloakframe
     using VideoProgressFn = std::function<void(int pass, qint64 frame, qint64 totalEstimate)>;
     using VideoDetectFn = std::function<FaceDetections(const cv::Mat &frame)>;
     using VideoTrackReviewFn = std::function<bool(std::vector<Track> &tracks,
+        const std::vector<UncoveredSpan> &uncoveredSpans,
         qint64 frameCount,
         const QString &sourcePath,
         const VideoInfo &info)>;

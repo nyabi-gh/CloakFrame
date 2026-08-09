@@ -1304,6 +1304,7 @@ namespace cloakframe
         if (reviewEnabled_ && reviewReceiver_)
         {
             review = [this, &tools, &fileName, index, total](std::vector<Track> &tracks,
+                         const std::vector<UncoveredSpan> &uncoveredSpans,
                          qint64 frameCount,
                          const QString &reviewSourcePath,
                          const VideoInfo &reviewInfo)
@@ -1334,6 +1335,11 @@ namespace cloakframe
                             box.interpolated});
                     }
                     request.tracks.push_back(std::move(reviewTrack));
+                }
+                request.uncoveredSpans.reserve(static_cast<qsizetype>(uncoveredSpans.size()));
+                for (const auto &span : uncoveredSpans)
+                {
+                    request.uncoveredSpans.push_back(span);
                 }
 
                 VideoReviewResult reviewResult;

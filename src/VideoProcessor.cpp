@@ -673,7 +673,8 @@ namespace cloakframe
             detections.clear();
         }
 
-        if (review && !review(tracks, frameCount, processingSource, activeInfo))
+        if (review
+            && !review(tracks, result.uncoveredSpans, frameCount, processingSource, activeInfo))
         {
             result.status = VideoProcessStatus::Cancelled;
             return result;

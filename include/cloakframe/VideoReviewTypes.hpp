@@ -49,6 +49,9 @@ namespace cloakframe
         int fpsDen = 1;
         int frameCount = 0;
         QVector<VideoReviewTrack> tracks;
+        // Frame ranges post-processing refused to interpolate. They are exactly the places a
+        // manual track is worth drawing, so the timeline marks them.
+        QVector<UncoveredSpan> uncoveredSpans;
     };
 
     enum class VideoReviewDecision

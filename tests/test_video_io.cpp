@@ -1022,6 +1022,7 @@ int main(int argc, char **argv)
             cancelled,
             {},
             [&](std::vector<cloakframe::Track> &tracks,
+                const std::vector<cloakframe::UncoveredSpan> &uncoveredSpans,
                 qint64 frameCount,
                 const QString &,
                 const cloakframe::VideoInfo &)
@@ -1029,6 +1030,7 @@ int main(int argc, char **argv)
                 reviewCalled = true;
                 assert(frameCount >= 55 && frameCount <= 65);
                 assert(tracks.size() == 1);
+                assert(uncoveredSpans.empty());
                 return true;
             });
         assert(result.status == cloakframe::VideoProcessStatus::Completed);
@@ -1060,6 +1062,7 @@ int main(int argc, char **argv)
         const QString gappedPath = tempDir.filePath("gapped.mp4");
         std::atomic<bool> cancelled{false};
         int detectedFrame = 0;
+        bool reviewSawSpan = false;
         const auto result = cloakframe::processVideo(
             *tools,
             samplePath,
@@ -1076,8 +1079,22 @@ int main(int argc, char **argv)
                 }
                 return detections;
             },
-            cancelled);
+            cancelled,
+            {},
+            [&reviewSawSpan](std::vector<cloakframe::Track> &,
+                const std::vector<cloakframe::UncoveredSpan> &uncoveredSpans,
+                qint64,
+                const QString &,
+                const cloakframe::VideoInfo &)
+            {
+                // The reviewer has to be told where to draw, not only that something is
+                // missing.
+                reviewSawSpan = uncoveredSpans.size() == 1 && uncoveredSpans[0].firstFrame == 10
+                                && uncoveredSpans[0].lastFrame == 15;
+                return true;
+            });
         assert(result.status == cloakframe::VideoProcessStatus::Completed);
+        assert(reviewSawSpan);
         assert(result.uncoveredFrames == 6);
         assert(result.uncoveredSpans.size() == 1);
         assert(result.uncoveredSpans[0].firstFrame == 10);
@@ -1103,6 +1120,7 @@ int main(int argc, char **argv)
             cancelled,
             {},
             [&](std::vector<cloakframe::Track> &,
+                const std::vector<cloakframe::UncoveredSpan> &,
                 qint64,
                 const QString &,
                 const cloakframe::VideoInfo &)
@@ -1137,6 +1155,7 @@ int main(int argc, char **argv)
             cancelled,
             {},
             [&](std::vector<cloakframe::Track> &,
+                const std::vector<cloakframe::UncoveredSpan> &,
                 qint64,
                 const QString &,
                 const cloakframe::VideoInfo &)
