@@ -7,7 +7,8 @@ and enable tests.
 ## Dependencies
 
 - Qt 6.8.1 or later: Core, Gui, Widgets, and Network
-- OpenCV 4.10 or later: core, dnn, imgcodecs, imgproc, and objdetect
+- OpenCV 4.10 or later, including OpenCV 5: core, dnn, imgcodecs, imgproc,
+  and objdetect
 - ONNX Runtime
 - spdlog
 - Exiv2 (optional, enables metadata preservation)
@@ -15,7 +16,7 @@ and enable tests.
 - Qt SVG (optional, renders the settings icon as SVG)
 - FFmpeg and FFprobe at runtime for video processing
 
-Official Windows and Linux releases use Qt 6.10.3 and OpenCV 4.13.0. The
+Official Windows and Linux releases use Qt 6.10.3 and OpenCV 5.0.0. The
 Linux release baseline is Ubuntu 26.04. macOS release builds use the stable
 Homebrew packages available to the release workflow.
 

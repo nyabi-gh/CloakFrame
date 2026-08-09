@@ -17,9 +17,9 @@ concurrency:
 
 env:
   QT_VERSION: 6.10.3
-  OPENCV_VERSION: 4.13.0
-  OPENCV_SOURCE_SHA256: 1d40ca017ea51c533cf9fd5cbde5b5fe7ae248291ddf2af99d4c17cf8e13017d
-  OPENCV_WINDOWS_SHA256: f0e98c302464d6860777a7015065e11b9b271b5394e6ba92663f0cf1fc303f2c
+  OPENCV_VERSION: 5.0.0
+  OPENCV_SOURCE_SHA256: b0528f5a1d379d59d4701cb28c36e22214cc51cf64594e5b56f2d3e6c0233095
+  OPENCV_WINDOWS_SHA256: 9c6c1fcea58acdf06edba13148b2246e00c2658143fa51e61ecd370db8c39f63
   ONNXRUNTIME_VERSION: 1.27.1
   ONNXRUNTIME_LINUX_SHA256: 25b1ef1fea1acd210d63f8f24dc870ad6e077795ce1f54876252c6d3803c15af
   ONNXRUNTIME_DIRECTML_VERSION: 1.24.4
@@ -156,7 +156,7 @@ jobs:
             -DWITH_QT=OFF
           cmake --build opencv-build --parallel
           cmake --install opencv-build
-          echo "OpenCV_DIR=$HOME/opencv/lib/cmake/opencv4" >> "$GITHUB_ENV"
+          echo "OpenCV_DIR=$HOME/opencv/lib/cmake/opencv5" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$HOME/opencv/lib" >> "$GITHUB_ENV"
 
       - name: Install Qt
