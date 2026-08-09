@@ -115,8 +115,14 @@ endif()
 if(WIN32)
     target_sources(CloakFrame PRIVATE ${PROJECT_SOURCE_DIR}/assets/CloakFrame.rc)
     if(MSVC)
-        # The manifest comes from the resource script; a linker-generated one would collide
-        # with it and would not carry activeCodePage or longPathAware.
+        # Qt generates a manifest of its own for a Windows app unless the target already
+        # lists a .manifest source, and CMake embeds such a source through the linker. The
+        # resource script must not embed one as well, or the two RT_MANIFEST entries make
+        # the resource compiler fail with CVT1100.
+        target_sources(CloakFrame PRIVATE ${PROJECT_SOURCE_DIR}/assets/CloakFrame.manifest)
+        set_source_files_properties(${PROJECT_SOURCE_DIR}/assets/CloakFrame.rc PROPERTIES
+            COMPILE_DEFINITIONS CLOAKFRAME_MANIFEST_FROM_LINKER)
+        # A linker-generated manifest would not carry activeCodePage or longPathAware.
         target_link_options(CloakFrame PRIVATE /MANIFEST:NO)
     endif()
 endif()

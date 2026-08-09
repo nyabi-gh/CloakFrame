@@ -2,5 +2,8 @@ IDI_ICON1 ICON "cloakframe.ico"
 
 // Resource id 1 is CREATEPROCESS_MANIFEST_RESOURCE_ID and type 24 is RT_MANIFEST. The
 // numbers are used directly so the script needs no Windows headers and also assembles with
-// windres. The linker must not add its own manifest as well; see src/CMakeLists.txt.
+// windres. MSVC builds embed the same file through the linker instead; see
+// src/CMakeLists.txt.
+#ifndef CLOAKFRAME_MANIFEST_FROM_LINKER
 1 24 "CloakFrame.manifest"
+#endif
