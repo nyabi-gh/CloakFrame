@@ -3,6 +3,7 @@
 #include <QByteArrayView>
 #include <QCryptographicHash>
 
+#include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
@@ -11,6 +12,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <fstream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -161,6 +163,10 @@ namespace cloakframe
             return {};
         }
 
+        // Each emplace ends the previous stage and starts the next, so the three accumulators
+        // partition detect() exactly.
+        std::optional<StageScope> stage;
+        stage.emplace(preprocessMicros_);
         const float ratio =
             std::min(static_cast<float>(inputWidth_) / static_cast<float>(bgrImage.cols),
                 static_cast<float>(inputHeight_) / static_cast<float>(bgrImage.rows));
@@ -171,41 +177,45 @@ namespace cloakframe
         const float padX = static_cast<float>(inputWidth_ - resizedWidth) / 2.0F;
         const float padY = static_cast<float>(inputHeight_ - resizedHeight) / 2.0F;
 
-        cv::Mat resized;
-        cv::resize(
-            bgrImage, resized, cv::Size(resizedWidth, resizedHeight), 0.0, 0.0, cv::INTER_LINEAR);
-
-        cv::Mat canvas(inputHeight_, inputWidth_, CV_8UC3, cv::Scalar(114, 114, 114));
         const int top = static_cast<int>(std::round(padY - 0.1F));
         const int left = static_cast<int>(std::round(padX - 0.1F));
-        resized.copyTo(canvas(cv::Rect(left, top, resized.cols, resized.rows)));
 
-        std::vector<float> tensor(static_cast<size_t>(kChannels) * inputHeight_ * inputWidth_);
-        const int planeSize = inputWidth_ * inputHeight_;
-        for (int y = 0; y < inputHeight_; ++y)
+        // Members rather than locals: a dashcam pass calls this once per frame alongside the
+        // face detector, so the allocations were being paid twice over.
+        if (canvas_.empty())
         {
-            const auto *row = canvas.ptr<cv::Vec3b>(y);
-            for (int x = 0; x < inputWidth_; ++x)
-            {
-                const int offset = y * inputWidth_ + x;
-                tensor[offset] = static_cast<float>(row[x][2]) / 255.0F;
-                tensor[planeSize + offset] = static_cast<float>(row[x][1]) / 255.0F;
-                tensor[2 * planeSize + offset] = static_cast<float>(row[x][0]) / 255.0F;
-            }
+            canvas_.create(inputHeight_, inputWidth_, CV_8UC3);
         }
+        canvas_.setTo(cv::Scalar(114, 114, 114));
+        cv::Mat letterbox = canvas_(cv::Rect(left, top, resizedWidth, resizedHeight));
+        cv::resize(bgrImage, letterbox, letterbox.size(), 0.0, 0.0, cv::INTER_LINEAR);
+
+        // Same normalise and HWC→CHW as the scalar loop it replaces — scale 1/255, and
+        // swapRB because the source is BGR — but vectorised, and into a reused buffer.
+        cv::dnn::blobFromImage(canvas_,
+            blob_,
+            1.0 / 255.0,
+            cv::Size(),
+            cv::Scalar(),
+            /*swapRB=*/true,
+            /*crop=*/false,
+            CV_32F);
 
         std::array<int64_t, 4> inputShape = {1, kChannels, inputHeight_, inputWidth_};
-        Ort::MemoryInfo memoryInfo =
-            Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-        Ort::Value inputTensor = Ort::Value::CreateTensor<float>(
-            memoryInfo, tensor.data(), tensor.size(), inputShape.data(), inputShape.size());
+        Ort::Value inputTensor = Ort::Value::CreateTensor<float>(memoryInfo_,
+            blob_.ptr<float>(),
+            static_cast<std::size_t>(kChannels) * inputHeight_ * inputWidth_,
+            inputShape.data(),
+            inputShape.size());
 
+        stage.emplace(inferenceMicros_);
         auto outputs = session_.Run(Ort::RunOptions{nullptr},
             inputNamePtrs_.data(),
             &inputTensor,
             1,
             outputNamePtrs_.data(),
             1);
+        stage.emplace(postprocessMicros_);
 
         if (outputs.empty() || !outputs.front().IsTensor())
         {
