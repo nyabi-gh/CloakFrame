@@ -538,7 +538,11 @@ namespace cloakframe
             scaleY = static_cast<float>(activeInfo.displayHeight())
                      / static_cast<float>(reader.frameHeight());
 
+            // `readTimer` measures only the wait on the decoder, which runs as its own
+            // process feeding a pipe. A small figure means detection kept the pipe full, not
+            // that decoding was cheap.
             StageTimer readTimer;
+            StageTimer sceneTimer;
             StageTimer detectTimer;
             cv::Mat frame;
             for (;;)
@@ -555,8 +559,10 @@ namespace cloakframe
                     result.status = VideoProcessStatus::Cancelled;
                     return result;
                 }
-                const auto detectMark = StageTimer::now();
+                const auto sceneMark = StageTimer::now();
                 cutDetector.push(frame);
+                sceneTimer.add(sceneMark);
+                const auto detectMark = StageTimer::now();
                 if (static_cast<qint64>(frameDetections.size()) >= kMaxVideoFrameCount)
                 {
                     result.error = trVideoProcessor(QT_TRANSLATE_NOOP("cloakframe::VideoProcessor",
@@ -607,8 +613,10 @@ namespace cloakframe
                 result.error = reader.errorString();
                 return result;
             }
-            spdlog::info("Pass 1 timing: decode {} ms, detect+scene {} ms ({} frames)",
+            spdlog::info("Pass 1 timing: decode wait {} ms, scene cuts {} ms, detect {} ms "
+                         "({} frames)",
                 readTimer.ms(),
+                sceneTimer.ms(),
                 detectTimer.ms(),
                 frameDetections.size());
         }

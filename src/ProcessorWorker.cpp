@@ -31,6 +31,8 @@
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
+#include <spdlog/spdlog.h>
+
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -57,6 +59,29 @@ namespace cloakframe
         // A long film can leave dozens of holes. Listing all of them would bury the rest of
         // the log, so the message names the first few and says how many it withheld.
         constexpr std::size_t kMaxReportedUncoveredSpans = 12;
+
+        void logDetectorStages(
+            const char *label, const DetectorStageTimings &before, const Detector *detector)
+        {
+            if (detector == nullptr)
+            {
+                return;
+            }
+            const auto after = detector->stageTimings();
+            const long long preprocess = after.preprocessMicros - before.preprocessMicros;
+            const long long inference = after.inferenceMicros - before.inferenceMicros;
+            const long long postprocess = after.postprocessMicros - before.postprocessMicros;
+            if (preprocess + inference + postprocess <= 0)
+            {
+                return;
+            }
+            spdlog::info("Detector timing ({}): preprocess {} ms, inference {} ms, "
+                         "postprocess {} ms",
+                label,
+                preprocess / 1000,
+                inference / 1000,
+                postprocess / 1000);
+        }
 
         QString formatUncoveredSpans(const std::vector<UncoveredSpan> &spans)
         {
@@ -1412,6 +1437,13 @@ namespace cloakframe
             };
         }
 
+        // The accumulators run for the life of the detector, so a multi-file run needs the
+        // difference across this video rather than the running total.
+        const DetectorStageTimings faceStagesBefore =
+            videoDetector_ ? videoDetector_->stageTimings() : DetectorStageTimings{};
+        const DetectorStageTimings plateStagesBefore =
+            plateDetector_ ? plateDetector_->stageTimings() : DetectorStageTimings{};
+
         const auto result = processVideo(*tools,
             pathToQString(item.sourcePath),
             pathToQString(destination),
@@ -1421,6 +1453,10 @@ namespace cloakframe
             cancelled_,
             progress,
             review);
+
+        logDetectorStages("face", faceStagesBefore, videoDetector_.get());
+        logDetectorStages("plate", plateStagesBefore, plateDetector_.get());
+
         switch (result.status)
         {
         case VideoProcessStatus::Completed:

@@ -5,6 +5,7 @@
 #include <QByteArrayView>
 #include <QCryptographicHash>
 
+#include <opencv2/dnn.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
@@ -190,6 +191,10 @@ namespace cloakframe
             throw std::invalid_argument("YOLO5Face-n requires an 8-bit BGR image.");
         }
 
+        // Each emplace ends the previous stage and starts the next, so the three accumulators
+        // partition detect() exactly.
+        std::optional<StageScope> stage;
+        stage.emplace(preprocessMicros_);
         const float scale =
             std::min(static_cast<float>(kInputSize) / static_cast<float>(bgrImage.cols),
                 static_cast<float>(kInputSize) / static_cast<float>(bgrImage.rows));
@@ -228,8 +233,10 @@ namespace cloakframe
             memoryInfo, tensor.data(), tensor.size(), inputShape.data(), inputShape.size());
         const char *inputName = inputName_.c_str();
         const char *outputName = outputName_.c_str();
+        stage.emplace(inferenceMicros_);
         auto outputs =
             session_.Run(Ort::RunOptions{nullptr}, &inputName, &inputTensor, 1, &outputName, 1);
+        stage.emplace(postprocessMicros_);
 
         if (outputs.size() != 1 || !outputs.front().IsTensor())
         {
