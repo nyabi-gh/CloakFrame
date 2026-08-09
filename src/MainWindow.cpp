@@ -1367,7 +1367,8 @@ namespace cloakframe
         const auto files = QFileDialog::getOpenFileNames(this,
             tr("Select Images or Videos"),
             QStandardPaths::writableLocation(QStandardPaths::PicturesLocation),
-            tr("Images & Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v)"));
+            tr("Images & Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v "
+               "*.webm)"));
         for (const auto &file : files)
         {
             addInputPath(file);

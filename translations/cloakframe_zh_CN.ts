@@ -566,8 +566,8 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1365"/>
-        <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v)</source>
-        <translation>图像与视频 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v)</translation>
+        <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</source>
+        <translation>图像与视频 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1379"/>
@@ -1495,8 +1495,8 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="650"/>
-        <source>unsupported video codec &apos;%1&apos; (H.264/HEVC only)</source>
-        <translation>不支持的视频编解码器“%1”（仅支持 H.264/HEVC）</translation>
+        <source>unsupported video codec &apos;%1&apos; (H.264, HEVC, VP8 and VP9 only)</source>
+        <translation>不支持的视频编解码器“%1”（仅支持 H.264、HEVC、VP8 和 VP9）</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="655"/>

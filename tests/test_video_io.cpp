@@ -230,7 +230,13 @@ namespace
         info.videoCodec = "hevc";
         assert(cloakframe::videoUnsupportedReason(info).isEmpty());
 
+        info.videoCodec = "vp8";
+        assert(cloakframe::videoUnsupportedReason(info).isEmpty());
+
         info.videoCodec = "vp9";
+        assert(cloakframe::videoUnsupportedReason(info).isEmpty());
+
+        info.videoCodec = "av1";
         assert(!cloakframe::videoUnsupportedReason(info).isEmpty());
         info.videoCodec = "h264";
 
@@ -267,7 +273,8 @@ namespace
         assert(cloakframe::isSupportedVideo("clip.mp4"));
         assert(cloakframe::isSupportedVideo("CLIP.MOV"));
         assert(cloakframe::isSupportedVideo("clip.m4v"));
-        assert(!cloakframe::isSupportedVideo("clip.webm"));
+        assert(cloakframe::isSupportedVideo("clip.webm"));
+        assert(cloakframe::isSupportedVideo("CLIP.WEBM"));
         assert(!cloakframe::isSupportedVideo("clip.mkv"));
         assert(!cloakframe::isSupportedVideo("clip.jpg"));
     }

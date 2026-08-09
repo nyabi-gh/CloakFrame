@@ -566,8 +566,8 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1365"/>
-        <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v)</source>
-        <translation>画像・動画 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v)</translation>
+        <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</source>
+        <translation>画像・動画 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1379"/>
@@ -1495,8 +1495,8 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="650"/>
-        <source>unsupported video codec &apos;%1&apos; (H.264/HEVC only)</source>
-        <translation>非対応の映像コーデック '%1'（H.264/HEVC のみ対応）</translation>
+        <source>unsupported video codec &apos;%1&apos; (H.264, HEVC, VP8 and VP9 only)</source>
+        <translation>非対応の映像コーデック '%1'（H.264、HEVC、VP8、VP9 のみ対応）</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="655"/>

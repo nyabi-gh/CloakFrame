@@ -445,7 +445,8 @@ namespace cloakframe
             {
                 return static_cast<char>(std::tolower(ch));
             });
-        return extension == ".mp4" || extension == ".mov" || extension == ".m4v";
+        return extension == ".mp4" || extension == ".mov" || extension == ".m4v"
+               || extension == ".webm";
     }
 
     int crfForQuality(const VideoQuality quality)
@@ -659,10 +660,11 @@ namespace cloakframe
             return trVideo(QT_TRANSLATE_NOOP(
                 "cloakframe::VideoIo", "the video frame count exceeds the safety limit"));
         }
-        if (info.videoCodec != "h264" && info.videoCodec != "hevc")
+        if (info.videoCodec != "h264" && info.videoCodec != "hevc" && info.videoCodec != "vp8"
+            && info.videoCodec != "vp9")
         {
             return trVideo(QT_TRANSLATE_NOOP("cloakframe::VideoIo",
-                               "unsupported video codec '%1' (H.264/HEVC only)"))
+                               "unsupported video codec '%1' (H.264, HEVC, VP8 and VP9 only)"))
                 .arg(info.videoCodec);
         }
         static const QRegularExpression highBitDepth("(9|10|12|14|16)(le|be)?$");

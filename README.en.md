@@ -79,7 +79,7 @@ inspect those files.
 ## Supported files and processing
 
 - Images: `.jpg` `.jpeg` `.png` `.bmp` `.tif` `.tiff` `.webp`
-- Videos: `.mp4` `.mov` `.m4v` (H.264/HEVC, 8-bit SDR)
+- Videos: `.mp4` `.mov` `.m4v` `.webm` (H.264/HEVC/VP8/VP9, 8-bit SDR)
 - Video output: H.264 (default) or HEVC MP4
 
 Videos are processed in two passes: bidirectional detection and tracking, then

@@ -76,7 +76,7 @@ chmod +x CloakFrame-Linux-x86_64.AppImage
 ## 지원 파일과 처리 방식
 
 - 이미지: `.jpg` `.jpeg` `.png` `.bmp` `.tif` `.tiff` `.webp`
-- 영상: `.mp4` `.mov` `.m4v` (H.264/HEVC, 8비트 SDR)
+- 영상: `.mp4` `.mov` `.m4v` `.webm` (H.264/HEVC/VP8/VP9, 8비트 SDR)
 - 출력 영상: H.264(기본) 또는 HEVC MP4
 
 영상은 양방향 추적으로 대상을 찾은 뒤 인코딩하는 두 단계로 처리합니다. 원본
