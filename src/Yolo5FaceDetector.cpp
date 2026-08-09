@@ -207,30 +207,34 @@ namespace cloakframe
         const int left = static_cast<int>(padX);
         const int top = static_cast<int>(padY);
 
-        cv::Mat resized;
-        cv::resize(
-            bgrImage, resized, cv::Size(resizedWidth, resizedHeight), 0.0, 0.0, cv::INTER_LINEAR);
-        cv::Mat canvas(kInputSize, kInputSize, CV_8UC3, cv::Scalar(114, 114, 114));
-        resized.copyTo(canvas(cv::Rect(left, top, resizedWidth, resizedHeight)));
-
-        const int planeSize = kInputSize * kInputSize;
-        std::vector<float> tensor(static_cast<std::size_t>(kChannels) * planeSize);
-        for (int y = 0; y < kInputSize; ++y)
+        // The buffers are members so a video pass reuses one allocation per frame instead of
+        // asking for a fresh 4.7 MiB tensor 17,000 times over.
+        if (canvas_.empty())
         {
-            const auto *row = canvas.ptr<cv::Vec3b>(y);
-            for (int x = 0; x < kInputSize; ++x)
-            {
-                const int offset = y * kInputSize + x;
-                tensor[offset] = static_cast<float>(row[x][2]) / 255.0F;
-                tensor[planeSize + offset] = static_cast<float>(row[x][1]) / 255.0F;
-                tensor[2 * planeSize + offset] = static_cast<float>(row[x][0]) / 255.0F;
-            }
+            canvas_.create(kInputSize, kInputSize, CV_8UC3);
         }
+        canvas_.setTo(cv::Scalar(114, 114, 114));
+        cv::Mat letterbox = canvas_(cv::Rect(left, top, resizedWidth, resizedHeight));
+        cv::resize(bgrImage, letterbox, letterbox.size(), 0.0, 0.0, cv::INTER_LINEAR);
+
+        // Same normalise and HWC→CHW as the scalar loop it replaces — scale 1/255, and
+        // swapRB because the source is BGR — but vectorised, and it writes into the existing
+        // buffer once the shape matches.
+        cv::dnn::blobFromImage(canvas_,
+            blob_,
+            1.0 / 255.0,
+            cv::Size(),
+            cv::Scalar(),
+            /*swapRB=*/true,
+            /*crop=*/false,
+            CV_32F);
 
         std::array<int64_t, 4> inputShape = {1, kChannels, kInputSize, kInputSize};
-        auto memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-        auto inputTensor = Ort::Value::CreateTensor<float>(
-            memoryInfo, tensor.data(), tensor.size(), inputShape.data(), inputShape.size());
+        auto inputTensor = Ort::Value::CreateTensor<float>(memoryInfo_,
+            blob_.ptr<float>(),
+            static_cast<std::size_t>(kChannels) * kInputSize * kInputSize,
+            inputShape.data(),
+            inputShape.size());
         const char *inputName = inputName_.c_str();
         const char *outputName = outputName_.c_str();
         stage.emplace(inferenceMicros_);

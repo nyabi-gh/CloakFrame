@@ -46,5 +46,10 @@ namespace cloakframe
         Ort::Session session_;
         std::string inputName_;
         std::string outputName_;
+        // Reused across calls; detect() is never entered concurrently on one detector.
+        Ort::MemoryInfo memoryInfo_ =
+            Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+        cv::Mat canvas_;
+        cv::Mat blob_;
     };
 }
