@@ -280,8 +280,6 @@ jobs:
           $env:PATH = "$(Resolve-Path (Join-Path $env:OpenCV_DIR '..\bin'));$env:PATH"
           ctest --test-dir build --output-on-failure
 
-      # The release workflow is the only other place the install step runs, so without this
-      # a package missing a third-party runtime is not caught until a release build.
       - name: Verify deployable package
         shell: pwsh
         run: |
