@@ -16,17 +16,27 @@ function(cloakframe_enable_velopack target)
         if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
             message(FATAL_ERROR "Velopack integration expects a 64-bit Windows build")
         endif()
+        # The release carries a per-platform file name, but the import library and the
+        # DLL's own export directory both name it velopack_libc.dll, and that is the name
+        # the loader resolves. Stage it under that name so everything downstream, including
+        # the install step, deploys what the import table asks for.
+        set(_velopack_dll "${CMAKE_BINARY_DIR}/velopack/velopack_libc.dll")
+        file(COPY_FILE
+            "${velopack_libc_SOURCE_DIR}/lib/velopack_libc_win_x64_msvc.dll"
+            "${_velopack_dll}"
+            ONLY_IF_DIFFERENT)
+
         # GLOBAL: the packaging module runs in the top-level directory, so a target
         # imported with this function's default (src/) scope would not be visible there.
         add_library(velopack::velopack SHARED IMPORTED GLOBAL)
         set_target_properties(velopack::velopack PROPERTIES
-            IMPORTED_LOCATION "${velopack_libc_SOURCE_DIR}/lib/velopack_libc_win_x64_msvc.dll"
+            IMPORTED_LOCATION "${_velopack_dll}"
             IMPORTED_IMPLIB "${velopack_libc_SOURCE_DIR}/lib/velopack_libc_win_x64_msvc.dll.lib"
             INTERFACE_INCLUDE_DIRECTORIES "${velopack_libc_SOURCE_DIR}/include"
         )
         add_custom_command(TARGET ${target} POST_BUILD
             COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-                "${velopack_libc_SOURCE_DIR}/lib/velopack_libc_win_x64_msvc.dll"
+                "$<TARGET_FILE:velopack::velopack>"
                 "$<TARGET_FILE_DIR:${target}>"
         )
     else()

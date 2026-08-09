@@ -485,6 +485,20 @@ jobs:
           if ($process.HasExited) {
             throw "Installed application exited with code $($process.ExitCode)"
           }
+          # An unresolved import stops the process on a blocking dialog rather than exiting,
+          # so staying alive is not evidence that the application started. Require the
+          # libraries it imports to be loaded.
+          $process.Refresh()
+          $modules = @($process.Modules | ForEach-Object { $_.ModuleName })
+          foreach ($required in @(
+            'Qt6Core.dll',
+            'onnxruntime.dll',
+            'velopack_libc.dll'
+          )) {
+            if ($modules -notcontains $required) {
+              throw "Installed application did not load $required"
+            }
+          }
           Stop-Process -Id $process.Id -Force
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
