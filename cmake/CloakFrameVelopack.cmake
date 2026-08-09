@@ -21,6 +21,7 @@ function(cloakframe_enable_velopack target)
         # the loader resolves. Stage it under that name so everything downstream, including
         # the install step, deploys what the import table asks for.
         set(_velopack_dll "${CMAKE_BINARY_DIR}/velopack/velopack_libc.dll")
+        file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/velopack")
         file(COPY_FILE
             "${velopack_libc_SOURCE_DIR}/lib/velopack_libc_win_x64_msvc.dll"
             "${_velopack_dll}"
