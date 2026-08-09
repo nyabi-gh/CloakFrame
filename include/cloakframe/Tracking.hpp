@@ -111,7 +111,22 @@ namespace cloakframe
         const SceneCuts &cuts = {},
         const TrackingContinueGuard &continueGuard = {});
 
-    int interpolateGaps(Track &track,
+    // A run of frames inside one track's own span that stayed unmasked, closed at both
+    // ends. A total on its own gives a reviewer nowhere to look, so the range travels
+    // with it.
+    struct UncoveredSpan
+    {
+        int trackId = 0;
+        int firstFrame = 0;
+        int lastFrame = 0;
+
+        [[nodiscard]] int frameCount() const
+        {
+            return lastFrame - firstFrame + 1;
+        }
+    };
+
+    std::vector<UncoveredSpan> interpolateGaps(Track &track,
         int maxGap,
         const SceneCuts &cuts = {},
         const TrackingContinueGuard &continueGuard = {});
@@ -124,13 +139,16 @@ namespace cloakframe
         const SceneCuts &cuts = {},
         const TrackingContinueGuard &continueGuard = {});
 
-    // Coverage that post-processing could not deliver. `uncoveredFrames` counts frames
-    // inside a retained track's own span that end up with no mask, so a caller must not
-    // report a clean result while it is nonzero.
+    // Coverage that post-processing could not deliver, in three kinds that have different
+    // remedies and must not be added together: `uncoveredFrames` and the matching
+    // `uncoveredSpans` are frames inside a retained track's own span that end up with no
+    // mask, and `droppedTracks` counts tracks discarded for holding no confident detection
+    // at all. A caller must not report a clean result while any of them is nonzero.
     struct TrackCoverageReport
     {
         int uncoveredFrames = 0;
         int droppedTracks = 0;
+        std::vector<UncoveredSpan> uncoveredSpans;
     };
 
     TrackCoverageReport postProcessTracks(std::vector<Track> &tracks,

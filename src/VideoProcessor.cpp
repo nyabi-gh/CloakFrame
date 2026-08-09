@@ -650,9 +650,11 @@ namespace cloakframe
             TrackPostProcessConfig postProcess = options.postProcess;
             postProcess.strongScoreThreshold = trackerConfig.highScoreThreshold;
             postProcess.retainLowConfidenceTracks = static_cast<bool>(review);
-            const auto coverage = postProcessTracks(
+            auto coverage = postProcessTracks(
                 tracks, postProcess, static_cast<int>(frameCount), sceneCuts, trackingContinue);
-            result.uncoveredRegions = coverage.uncoveredFrames;
+            result.uncoveredFrames = coverage.uncoveredFrames;
+            result.uncoveredSpans = std::move(coverage.uncoveredSpans);
+            result.droppedTracks = coverage.droppedTracks;
         }
         catch (const TrackingCancelled &)
         {

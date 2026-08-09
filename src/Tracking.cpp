@@ -518,14 +518,14 @@ namespace cloakframe
         return forward;
     }
 
-    int interpolateGaps(
+    std::vector<UncoveredSpan> interpolateGaps(
         Track &track, int maxGap, const SceneCuts &cuts, const TrackingContinueGuard &continueGuard)
     {
         if (track.boxes.size() < 2 || maxGap < 1)
         {
-            return 0;
+            return {};
         }
-        int uncovered = 0;
+        std::vector<UncoveredSpan> uncovered;
 
         std::vector<TrackedBox> filled;
         filled.reserve(track.boxes.size());
@@ -558,7 +558,7 @@ namespace cloakframe
             }
             if (gap > maxGap)
             {
-                uncovered += gap;
+                uncovered.push_back({track.id, current.frame + 1, next.frame - 1});
                 continue;
             }
 
@@ -787,8 +787,12 @@ namespace cloakframe
         {
             requireTrackingContinue(continueGuard);
             const auto previous = track.boxes.size();
-            report.uncoveredFrames +=
-                interpolateGaps(track, config.maxInterpolationGap, cuts, continueGuard);
+            for (const auto &span :
+                interpolateGaps(track, config.maxInterpolationGap, cuts, continueGuard))
+            {
+                report.uncoveredFrames += span.frameCount();
+                report.uncoveredSpans.push_back(span);
+            }
             const auto withoutCurrent = totalBoxes - previous;
             if (withoutCurrent > kMaxFinalTrackedBoxes
                 || track.boxes.size() > kMaxFinalTrackedBoxes - withoutCurrent)

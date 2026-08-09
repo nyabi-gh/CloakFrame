@@ -25,12 +25,14 @@
 #include <QMetaObject>
 #include <QRectF>
 #include <QSize>
+#include <QStringList>
 #include <QTemporaryDir>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
 #include <exception>
 #include <filesystem>
@@ -51,6 +53,24 @@ namespace cloakframe
         constexpr int kVideoDetectionInputSize = 960;
 
         constexpr int kReviewMaxLongEdge = 1600;
+
+        // A long film can leave dozens of holes. Listing all of them would bury the rest of
+        // the log, so the message names the first few and says how many it withheld.
+        constexpr std::size_t kMaxReportedUncoveredSpans = 12;
+
+        QString formatUncoveredSpans(const std::vector<UncoveredSpan> &spans)
+        {
+            QStringList parts;
+            const auto listed = std::min(spans.size(), kMaxReportedUncoveredSpans);
+            for (std::size_t i = 0; i < listed; ++i)
+            {
+                const auto &span = spans[i];
+                parts << (span.firstFrame == span.lastFrame
+                              ? QString::number(span.firstFrame)
+                              : QStringLiteral("%1-%2").arg(span.firstFrame).arg(span.lastFrame));
+            }
+            return parts.join(QStringLiteral(", "));
+        }
 
         std::shared_ptr<Detector> makeFaceDetector(const FaceModelKind kind,
             const QString &modelPath,
@@ -516,6 +536,7 @@ namespace cloakframe
             int unredactedCount = 0;
             int warningCount = 0;
             int uncoveredCount = 0;
+            int uncoveredFileCount = 0;
 
             const auto applyOutcome = [&](ItemOutcome &&outcome)
             {
@@ -530,6 +551,10 @@ namespace cloakframe
                 unredactedCount += outcome.unredacted;
                 warningCount += outcome.warnings;
                 uncoveredCount += outcome.uncovered;
+                if (outcome.uncovered > 0)
+                {
+                    ++uncoveredFileCount;
+                }
                 if (!outcome.cancelled)
                 {
                     emit progressChanged(++completed, total);
@@ -626,13 +651,15 @@ namespace cloakframe
                     unredactedCount));
             }
 
-            if (uncoveredCount > 0)
+            // The per-file messages already say what was left over and in what unit. This
+            // one only has to say how many files carry any of it.
+            if (uncoveredFileCount > 0)
             {
                 emit logMessage(
-                    tr("Warning: %n detected region(s) could not be redacted. Review the affected "
-                       "files before sharing.",
+                    tr("Warning: %n file(s) finished with regions the output does not cover. "
+                       "Review them before sharing.",
                         nullptr,
-                        uncoveredCount));
+                        uncoveredFileCount));
             }
 
             if (cancelled_.load(std::memory_order_acquire))
@@ -1416,16 +1443,46 @@ namespace cloakframe
             {
                 outcome.logs.push_back(tr("Video encoder: %1").arg(result.encoderName));
             }
-            if (const int uncovered = omittedDetections + result.uncoveredRegions; uncovered > 0)
+            // Three different failures used to be added together and reported as one count
+            // of detected regions. They are frames, objects and tracks, and each one sends
+            // the user somewhere else, so each is reported on its own terms.
+            if (omittedDetections > 0)
             {
                 outcome.logs.push_back(
-                    tr("Warning: %n detected region(s) were left unredacted in %1. Review before "
-                       "sharing.",
+                    tr("Warning: %n detected region(s) exceeded the safety limit and were "
+                       "left unredacted in %1. Review before sharing.",
                         nullptr,
-                        uncovered)
+                        omittedDetections)
                         .arg(fileName));
-                outcome.uncovered = uncovered;
             }
+            if (result.droppedTracks > 0)
+            {
+                outcome.logs.push_back(
+                    tr("Warning: %n track(s) in %1 held no confident detection and were "
+                       "dropped. Review before sharing.",
+                        nullptr,
+                        result.droppedTracks)
+                        .arg(fileName));
+            }
+            if (result.uncoveredFrames > 0)
+            {
+                outcome.logs.push_back(
+                    tr("Warning: %n frame(s) of %1 fall inside a tracked region that the "
+                       "output does not cover. Review before sharing.",
+                        nullptr,
+                        result.uncoveredFrames)
+                        .arg(fileName));
+                outcome.logs.push_back(tr("Uncovered frame ranges in %1: %2")
+                        .arg(fileName, formatUncoveredSpans(result.uncoveredSpans)));
+                if (result.uncoveredSpans.size() > kMaxReportedUncoveredSpans)
+                {
+                    outcome.logs.push_back(tr("%n further uncovered range(s) are not listed.",
+                        nullptr,
+                        static_cast<int>(
+                            result.uncoveredSpans.size() - kMaxReportedUncoveredSpans)));
+                }
+            }
+            outcome.uncovered = omittedDetections + result.uncoveredFrames + result.droppedTracks;
             break;
         case VideoProcessStatus::Cancelled:
             outcome.cancelled = true;

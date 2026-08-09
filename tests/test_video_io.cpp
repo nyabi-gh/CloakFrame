@@ -1051,6 +1051,42 @@ int main(int argc, char **argv)
     }
 
     {
+        // A hole the tracker refuses to interpolate has to reach the caller as a located
+        // range. A bare count leaves a reviewer with nowhere to look.
+        cloakframe::VideoProcessOptions options;
+        options.analysisLongEdge = 160;
+        options.postProcess.maxInterpolationGap = 2;
+        options.postProcess.extensionFrames = 0;
+        const QString gappedPath = tempDir.filePath("gapped.mp4");
+        std::atomic<bool> cancelled{false};
+        int detectedFrame = 0;
+        const auto result = cloakframe::processVideo(
+            *tools,
+            samplePath,
+            gappedPath,
+            *info,
+            options,
+            [&detectedFrame](const cv::Mat &)
+            {
+                const int frame = detectedFrame++;
+                cloakframe::FaceDetections detections;
+                if (frame < 10 || frame >= 16)
+                {
+                    detections.push_back({cv::Rect2f(40.0F, 30.0F, 80.0F, 60.0F), 0.9F});
+                }
+                return detections;
+            },
+            cancelled);
+        assert(result.status == cloakframe::VideoProcessStatus::Completed);
+        assert(result.uncoveredFrames == 6);
+        assert(result.uncoveredSpans.size() == 1);
+        assert(result.uncoveredSpans[0].firstFrame == 10);
+        assert(result.uncoveredSpans[0].lastFrame == 15);
+        assert(result.uncoveredSpans[0].frameCount() == result.uncoveredFrames);
+        std::puts("uncovered frame ranges reach the caller: ok");
+    }
+
+    {
         const QString reviewCancelledPath = tempDir.filePath("review-cancelled.mp4");
         std::atomic<bool> cancelled{false};
         bool reviewCalled = false;

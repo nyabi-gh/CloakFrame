@@ -46,8 +46,13 @@ namespace cloakframe
         QString error;
         qint64 frameCount = 0;
         int trackCount = 0;
-        // Frames inside a retained track's span that the output does not mask.
-        int uncoveredRegions = 0;
+        // Frames inside a retained track's span that the output does not mask, and where
+        // they are. These are frames, not objects, and must not be added to a count of
+        // detections.
+        int uncoveredFrames = 0;
+        std::vector<UncoveredSpan> uncoveredSpans;
+        // Tracks discarded for holding no confident detection at all.
+        int droppedTracks = 0;
         QString encoderName;
     };
 

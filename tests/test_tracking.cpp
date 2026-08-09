@@ -120,9 +120,13 @@ namespace
 
         auto tracks = cloakframe::buildTracks(sequence);
         assert(tracks.size() == 1);
-        const int uncovered = cloakframe::interpolateGaps(tracks[0], 3);
+        const auto uncovered = cloakframe::interpolateGaps(tracks[0], 3);
         assert(tracks[0].boxAtFrame(8) == nullptr);
-        assert(uncovered == 8);
+        assert(uncovered.size() == 1);
+        assert(uncovered[0].frameCount() == 8);
+        // The gap runs between the last detection before it and the first one after.
+        assert(uncovered[0].firstFrame == 5);
+        assert(uncovered[0].lastFrame == 12);
 
         auto reported = cloakframe::buildTracks(sequence);
         cloakframe::TrackPostProcessConfig config;
@@ -130,6 +134,10 @@ namespace
         config.extensionFrames = 0;
         const auto report = cloakframe::postProcessTracks(reported, config, 20);
         assert(report.uncoveredFrames == 8);
+        assert(report.uncoveredSpans.size() == 1);
+        assert(report.uncoveredSpans[0].firstFrame == 5);
+        assert(report.uncoveredSpans[0].lastFrame == 12);
+        assert(report.uncoveredSpans[0].trackId == reported[0].id);
     }
 
     void testGuardRejectedGapIsCoveredConservatively()
@@ -140,8 +148,8 @@ namespace
 
         auto tracks = cloakframe::buildTracks(sequence);
         assert(tracks.size() == 1);
-        const int uncovered = cloakframe::interpolateGaps(tracks[0], 20);
-        assert(uncovered == 0);
+        const auto uncovered = cloakframe::interpolateGaps(tracks[0], 20);
+        assert(uncovered.empty());
 
         const auto *middle = tracks[0].boxAtFrame(1);
         assert(middle != nullptr);
@@ -655,8 +663,8 @@ namespace
         const auto first = track.boxes.front().box;
         const auto last = track.boxes.back().box;
 
-        const int uncovered = cloakframe::interpolateGaps(track, 10);
-        assert(uncovered == 0);
+        const auto uncovered = cloakframe::interpolateGaps(track, 10);
+        assert(uncovered.empty());
         assert(track.boxes.size() == 6);
         for (const auto &tracked : track.boxes)
         {

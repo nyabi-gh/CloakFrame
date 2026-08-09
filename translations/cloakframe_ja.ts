@@ -1003,10 +1003,10 @@ Check these results before sharing them.</source>
         <translation>スキップ（アニメーション画像またはマルチページ画像はサポートされていません）: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="632"/>
-        <source>Warning: %n detected region(s) could not be redacted. Review the affected files before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="661"/>
+        <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
         <translation>
-            <numerusform>警告: 検出された領域のうち %n 件を隠せませんでした。共有する前に該当ファイルを確認してください。</numerusform>
+            <numerusform>警告: %n 件のファイルが、出力で覆えなかった領域を残したまま終わりました。共有する前に確認してください。</numerusform>
         </translation>
     </message>
     <message>
@@ -1155,7 +1155,8 @@ Check these results before sharing them.</source>
         <translation>動画ではメタデータの保持に対応していないため、メタデータを削除しました: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1093"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1122"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1454"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告: 検出された領域 %n 件が安全上限を超えたため、%1 で隠されずに残りました。共有する前に確認してください。</numerusform>
@@ -1193,10 +1194,29 @@ Check these results before sharing them.</source>
         <translation>エンコード中 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1422"/>
-        <source>Warning: %n detected region(s) were left unredacted in %1. Review before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="1463"/>
+        <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
-            <numerusform>警告: 検出された領域 %n 件が %1 で隠されずに残りました。共有する前に確認してください。</numerusform>
+            <numerusform>警告: %1 で確度の高い検出がひとつもないトラック %n 件を破棄しました。共有する前に確認してください。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="1472"/>
+        <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
+        <translation>
+            <numerusform>警告: %1 の %n フレームが、追跡された領域の内側にありながら出力で覆われていません。共有する前に確認してください。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1477"/>
+        <source>Uncovered frame ranges in %1: %2</source>
+        <translation>%1 で覆われていないフレーム範囲: %2</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="1481"/>
+        <source>%n further uncovered range(s) are not listed.</source>
+        <translation>
+            <numerusform>覆われていない範囲 %n 件は一覧に含めていません。</numerusform>
         </translation>
     </message>
     <message>

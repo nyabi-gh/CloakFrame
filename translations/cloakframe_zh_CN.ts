@@ -1003,10 +1003,10 @@ Check these results before sharing them.</source>
         <translation>已跳过（不支持动画或多页图像）：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="632"/>
-        <source>Warning: %n detected region(s) could not be redacted. Review the affected files before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="661"/>
+        <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
         <translation>
-            <numerusform>警告：有 %n 个检测到的区域未能遮盖。分享前请检查相关文件。</numerusform>
+            <numerusform>警告：有 %n 个文件在结束时仍留有输出未遮盖的区域。分享前请检查。</numerusform>
         </translation>
     </message>
     <message>
@@ -1155,7 +1155,8 @@ Check these results before sharing them.</source>
         <translation>视频无法保留元数据；已移除元数据：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1093"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1122"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1454"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告：有 %n 个检测到的区域超出安全上限，在 %1 中未被遮盖。分享前请检查。</numerusform>
@@ -1193,10 +1194,29 @@ Check these results before sharing them.</source>
         <translation>正在编码 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1422"/>
-        <source>Warning: %n detected region(s) were left unredacted in %1. Review before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="1463"/>
+        <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
-            <numerusform>警告：有 %n 个检测到的区域在 %1 中未被遮盖。分享前请检查。</numerusform>
+            <numerusform>警告：在 %1 中丢弃了 %n 条没有任何可信检测的轨迹。分享前请检查。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="1472"/>
+        <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
+        <translation>
+            <numerusform>警告：%1 中有 %n 帧位于被跟踪的区域内，但输出并未遮盖。分享前请检查。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1477"/>
+        <source>Uncovered frame ranges in %1: %2</source>
+        <translation>%1 中未遮盖的帧范围：%2</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="1481"/>
+        <source>%n further uncovered range(s) are not listed.</source>
+        <translation>
+            <numerusform>另有 %n 段未遮盖的范围未在此列出。</numerusform>
         </translation>
     </message>
     <message>

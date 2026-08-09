@@ -1003,10 +1003,10 @@ Check these results before sharing them.</source>
         <translation>건너뜀(애니메이션 또는 다중 페이지 이미지는 지원되지 않음): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="632"/>
-        <source>Warning: %n detected region(s) could not be redacted. Review the affected files before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="661"/>
+        <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
         <translation>
-            <numerusform>경고: 검출된 영역 %n곳을 가리지 못했습니다. 공유하기 전에 해당 파일을 확인하세요.</numerusform>
+            <numerusform>경고: 파일 %n개가 출력이 가리지 못한 영역을 남긴 채 끝났습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
@@ -1155,7 +1155,8 @@ Check these results before sharing them.</source>
         <translation>동영상은 메타데이터 보존이 지원되지 않아 메타데이터가 제거되었습니다: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1093"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1122"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1454"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>경고: 검출된 영역 %n곳이 안전 한도를 넘어 %1에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
@@ -1193,10 +1194,29 @@ Check these results before sharing them.</source>
         <translation>인코딩 중 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1422"/>
-        <source>Warning: %n detected region(s) were left unredacted in %1. Review before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="1463"/>
+        <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
-            <numerusform>경고: 검출된 영역 %n곳이 %1에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
+            <numerusform>경고: %1에서 확실한 검출이 하나도 없는 트랙 %n개를 버렸습니다. 공유하기 전에 확인하세요.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="1472"/>
+        <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
+        <translation>
+            <numerusform>경고: %1의 프레임 %n개가 추적된 영역 안에 있는데도 출력에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1477"/>
+        <source>Uncovered frame ranges in %1: %2</source>
+        <translation>%1에서 가려지지 않은 프레임 구간: %2</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="1481"/>
+        <source>%n further uncovered range(s) are not listed.</source>
+        <translation>
+            <numerusform>가려지지 않은 구간 %n개는 목록에서 생략했습니다.</numerusform>
         </translation>
     </message>
     <message>
