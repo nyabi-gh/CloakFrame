@@ -279,3 +279,21 @@ jobs:
           Copy-Item "$env:ONNXRUNTIME_ROOT\lib\*.dll" build\tests\
           $env:PATH = "$(Resolve-Path (Join-Path $env:OpenCV_DIR '..\bin'));$env:PATH"
           ctest --test-dir build --output-on-failure
+
+      # The release workflow is the only other place the install step runs, so without this
+      # a package missing a third-party runtime is not caught until a release build.
+      - name: Verify deployable package
+        shell: pwsh
+        run: |
+          $package = Join-Path $env:RUNNER_TEMP cloakframe-package
+          if (Test-Path $package) { Remove-Item $package -Recurse -Force }
+          cmake --install build --config Release --prefix $package
+          foreach ($required in @(
+            "$package\CloakFrame.exe",
+            "$package\onnxruntime.dll"
+          )) {
+            if (-not (Test-Path $required)) { throw "Missing packaged file: $required" }
+          }
+          if (-not (Get-ChildItem $package -Filter 'opencv_*.dll' -File)) {
+            throw "Missing packaged OpenCV runtime"
+          }

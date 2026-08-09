@@ -46,6 +46,27 @@ if(WIN32 AND CLOAKFRAME_DIRECTML_DLL)
         DESTINATION "${CMAKE_INSTALL_BINDIR}")
 endif()
 
+if(WIN32)
+    # windeployqt deploys Qt modules and plugins only, so every third-party runtime the
+    # executable loads has to be installed here or the package cannot start.
+    install(FILES "$<TARGET_FILE:onnxruntime::onnxruntime>"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+    set(_cloakframe_opencv_targets ${OpenCV_LIBS})
+    list(REMOVE_DUPLICATES _cloakframe_opencv_targets)
+    foreach(_cloakframe_opencv_target IN LISTS _cloakframe_opencv_targets)
+        if(NOT TARGET ${_cloakframe_opencv_target})
+            continue()
+        endif()
+        get_target_property(_cloakframe_opencv_type
+            ${_cloakframe_opencv_target} TYPE)
+        if(NOT _cloakframe_opencv_type MATCHES "STATIC_LIBRARY|INTERFACE_LIBRARY")
+            install(FILES "$<TARGET_FILE:${_cloakframe_opencv_target}>"
+                DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        endif()
+    endforeach()
+endif()
+
 if(CLOAKFRAME_FFMPEG_DIR)
     if(WIN32)
         set(_cloakframe_ffmpeg_suffix ".exe")

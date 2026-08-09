@@ -423,6 +423,9 @@ jobs:
           )) {
             if (-not (Test-Path $required)) { throw "Missing packaged file: $required" }
           }
+          if (-not (Get-ChildItem $package -Filter 'opencv_*.dll' -File)) {
+            throw "Missing packaged OpenCV runtime"
+          }
           if (Get-ChildItem $package -Recurse -Filter *.onnx -File) {
             throw "ONNX model files must not be bundled"
           }
