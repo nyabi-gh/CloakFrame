@@ -91,10 +91,15 @@ placed next to `onnxruntime.dll`. Pass the DLL to CMake with
 On Ubuntu, install the base packages with:
 
 ```bash
-sudo apt install cmake ninja-build build-essential pkg-config ffmpeg \
+sudo apt install cmake ninja-build build-essential pkg-config ffmpeg patchelf \
   libjpeg-dev libpng-dev libtiff-dev libwebp-dev \
   libspdlog-dev libexiv2-dev
 ```
+
+`patchelf` is only needed to stage a package. Qt otherwise rewrites plugin
+RPATHs with `file(RPATH_SET)`, which can only replace an entry in place and
+fails on plugins whose own RUNPATH is shorter than the deployed path.
+`CLOAKFRAME_APPIMAGE_LAYOUT` therefore requires it.
 
 Install a sufficiently recent Qt and OpenCV separately when distribution
 packages are older. ONNX Runtime is detected through `pkg-config

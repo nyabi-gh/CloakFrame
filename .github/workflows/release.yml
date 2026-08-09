@@ -429,6 +429,10 @@ jobs:
           if (Get-ChildItem $package -Recurse -Filter *.onnx -File) {
             throw "ONNX model files must not be bundled"
           }
+          # Windows searches the system directory before PATH, and the runner image ships its
+          # own onnxruntime.dll there, so the pinned build has to sit next to the test
+          # executables. The installed application already has it in its own directory.
+          Copy-Item "$env:ONNXRUNTIME_ROOT\lib\*.dll" build-windows\tests\
           $env:PATH = "$package;$package\ffmpeg;$env:PATH"
           ctest --test-dir build-windows -C Release --output-on-failure
 

@@ -43,6 +43,17 @@ if(CLOAKFRAME_SELF_UPDATE)
     endif()
 endif()
 
+if(UNIX AND NOT APPLE)
+    # Qt's deployment rewrites plugin RPATHs with file(RPATH_SET), which can only replace an
+    # entry in place, so deployment fails on any plugin whose own RUNPATH is shorter than the
+    # deployed path. patchelf rewrites the section instead. Qt reads both variables while
+    # Core is being found, so they have to be set before find_package.
+    find_program(QT_DEPLOY_PATCHELF_EXECUTABLE patchelf)
+    if(QT_DEPLOY_PATCHELF_EXECUTABLE)
+        set(QT_DEPLOY_USE_PATCHELF ON)
+    endif()
+endif()
+
 find_package(Qt6 6.8.1 REQUIRED COMPONENTS Core Gui Widgets Network)
 find_package(Qt6 6.8.1 QUIET OPTIONAL_COMPONENTS LinguistTools Svg)
 find_package(OpenCV REQUIRED COMPONENTS core dnn imgcodecs imgproc objdetect)

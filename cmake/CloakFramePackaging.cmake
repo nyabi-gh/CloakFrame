@@ -7,6 +7,13 @@ set(CLOAKFRAME_DIRECTML_DLL "" CACHE FILEPATH
 option(CLOAKFRAME_APPIMAGE_LAYOUT
     "Create the top-level AppDir links required by AppImage" OFF)
 
+if(CLOAKFRAME_APPIMAGE_LAYOUT AND NOT QT_DEPLOY_USE_PATCHELF)
+    # Without patchelf the deployment falls back to file(RPATH_SET), which cannot grow a
+    # RUNPATH entry and so fails partway through staging the AppDir.
+    message(FATAL_ERROR
+        "The AppImage layout requires patchelf; install it and reconfigure")
+endif()
+
 if(APPLE)
     set(CLOAKFRAME_DOCUMENTATION_DESTINATION
         "CloakFrame.app/Contents/Resources")
