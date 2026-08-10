@@ -81,12 +81,15 @@ namespace
     {
         QTemporaryDir root;
         assert(root.isValid());
-        assert(cloakframe::inspectCacheDirectory(root.filePath(QStringLiteral("absent")))
+        // The expected value is chosen outside the assert: a preprocessor directive inside a
+        // macro's argument list is not valid C++, whatever a given compiler makes of it.
 #ifdef _WIN32
-               == cloakframe::CacheDirectoryTrust::Unsupported);
+        const auto expected = cloakframe::CacheDirectoryTrust::Unsupported;
 #else
-               == cloakframe::CacheDirectoryTrust::Absent);
+        const auto expected = cloakframe::CacheDirectoryTrust::Absent;
 #endif
+        assert(
+            cloakframe::inspectCacheDirectory(root.filePath(QStringLiteral("absent"))) == expected);
     }
 
     void testDigestMatchingAcceptsOnlyTheDescribedFile()
