@@ -33,12 +33,14 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <memory>
 #include <set>
 #include <stdexcept>
+#include <string_view>
 #include <thread>
 #include <vector>
 
@@ -1860,6 +1862,231 @@ namespace
         assert(!cloakframe::makeOnnxSpatialDimsFixed(garbage, -320).has_value());
     }
 
+    // Enough of a protobuf writer to hand-build the ONNX models the patch tests need. Field
+    // numbers below are the ones from onnx.proto.
+    void appendProtobufVarint(std::vector<std::uint8_t> &out, std::uint64_t value)
+    {
+        while (value >= 0x80U)
+        {
+            out.push_back(static_cast<std::uint8_t>((value & 0x7FU) | 0x80U));
+            value >>= 7;
+        }
+        out.push_back(static_cast<std::uint8_t>(value));
+    }
+
+    void appendVarintField(
+        std::vector<std::uint8_t> &out, std::uint32_t number, std::uint64_t value)
+    {
+        appendProtobufVarint(out, static_cast<std::uint64_t>(number) << 3);
+        appendProtobufVarint(out, value);
+    }
+
+    void appendBytesField(std::vector<std::uint8_t> &out,
+        std::uint32_t number,
+        const std::vector<std::uint8_t> &bytes)
+    {
+        appendProtobufVarint(out, (static_cast<std::uint64_t>(number) << 3) | 2U);
+        appendProtobufVarint(out, bytes.size());
+        out.insert(out.end(), bytes.begin(), bytes.end());
+    }
+
+    void appendStringField(
+        std::vector<std::uint8_t> &out, std::uint32_t number, std::string_view text)
+    {
+        appendBytesField(out, number, {text.begin(), text.end()});
+    }
+
+    std::vector<std::uint8_t> onnxFixedDim(std::int64_t value)
+    {
+        std::vector<std::uint8_t> dim;
+        appendVarintField(dim, 1, static_cast<std::uint64_t>(value));
+        return dim;
+    }
+
+    std::vector<std::uint8_t> onnxNamedDim(std::string_view name)
+    {
+        std::vector<std::uint8_t> dim;
+        appendStringField(dim, 2, name);
+        return dim;
+    }
+
+    std::vector<std::uint8_t> onnxFloatTensorValueInfo(
+        std::string_view name, const std::vector<std::vector<std::uint8_t>> &dims)
+    {
+        std::vector<std::uint8_t> shape;
+        for (const auto &dim : dims)
+        {
+            appendBytesField(shape, 1, dim);
+        }
+        std::vector<std::uint8_t> tensorType;
+        appendVarintField(tensorType, 1, 1);
+        appendBytesField(tensorType, 2, shape);
+        std::vector<std::uint8_t> type;
+        appendBytesField(type, 1, tensorType);
+        std::vector<std::uint8_t> valueInfo;
+        appendStringField(valueInfo, 1, name);
+        appendBytesField(valueInfo, 2, type);
+        return valueInfo;
+    }
+
+    std::vector<std::uint8_t> onnxInt64Initializer(
+        std::string_view name, const std::vector<std::int64_t> &values)
+    {
+        std::vector<std::uint8_t> tensor;
+        appendVarintField(tensor, 1, values.size());
+        appendVarintField(tensor, 2, 7);
+        appendStringField(tensor, 8, name);
+        std::vector<std::uint8_t> raw(values.size() * sizeof(std::int64_t));
+        std::memcpy(raw.data(), values.data(), raw.size());
+        appendBytesField(tensor, 9, raw);
+        return tensor;
+    }
+
+    std::vector<std::uint8_t> onnxStringAttribute(std::string_view name, std::string_view value)
+    {
+        std::vector<std::uint8_t> attribute;
+        appendStringField(attribute, 1, name);
+        appendStringField(attribute, 4, value);
+        appendVarintField(attribute, 20, 3);
+        return attribute;
+    }
+
+    std::vector<std::uint8_t> onnxNode(std::string_view opType,
+        const std::vector<std::string_view> &inputs,
+        std::string_view output,
+        const std::vector<std::vector<std::uint8_t>> &attributes = {})
+    {
+        std::vector<std::uint8_t> node;
+        for (const auto &input : inputs)
+        {
+            appendStringField(node, 1, input);
+        }
+        appendStringField(node, 2, output);
+        appendStringField(node, 4, opType);
+        for (const auto &attribute : attributes)
+        {
+            appendBytesField(node, 5, attribute);
+        }
+        return node;
+    }
+
+    std::vector<std::uint8_t> onnxModel(const std::vector<std::uint8_t> &graph)
+    {
+        std::vector<std::uint8_t> opset;
+        appendVarintField(opset, 2, 13);
+
+        std::vector<std::uint8_t> model;
+        appendVarintField(model, 1, 8);
+        appendStringField(model, 2, "cloakframe-test");
+        appendBytesField(model, 7, graph);
+        appendBytesField(model, 8, opset);
+        return model;
+    }
+
+    // A graph that is one Resize, exported at `exportedSize` and told to produce exactly
+    // `resizeSizes`. Real detector graphs bake the same kind of constant into their upsamples.
+    std::vector<std::uint8_t> makeResizeModel(std::int64_t exportedSize,
+        const std::vector<std::int64_t> &resizeSizes,
+        bool dynamicInput = false,
+        bool shareTheConstant = false)
+    {
+        std::vector<std::vector<std::uint8_t>> inputDims = {onnxFixedDim(1), onnxFixedDim(3)};
+        for (int i = 0; i < 2; ++i)
+        {
+            inputDims.push_back(
+                dynamicInput ? onnxNamedDim("dynamic") : onnxFixedDim(exportedSize));
+        }
+
+        std::vector<std::uint8_t> graph;
+        appendBytesField(graph,
+            1,
+            onnxNode("Resize",
+                {"images", "", "", "resize_sizes"},
+                "resized",
+                {onnxStringAttribute("mode", "nearest"),
+                    onnxStringAttribute("coordinate_transformation_mode", "asymmetric")}));
+        if (shareTheConstant)
+        {
+            appendBytesField(graph, 1, onnxNode("Reshape", {"resized", "resize_sizes"}, "y"));
+        }
+        appendStringField(graph, 2, "cloakframe_test_graph");
+        appendBytesField(graph, 5, onnxInt64Initializer("resize_sizes", resizeSizes));
+        appendBytesField(graph, 11, onnxFloatTensorValueInfo("images", inputDims));
+        appendBytesField(graph,
+            12,
+            onnxFloatTensorValueInfo(shareTheConstant ? "y" : "resized",
+                {onnxFixedDim(resizeSizes[0]),
+                    onnxFixedDim(resizeSizes[1]),
+                    onnxFixedDim(resizeSizes[2]),
+                    onnxFixedDim(resizeSizes[3])}));
+        return onnxModel(graph);
+    }
+
+    std::vector<std::int64_t> runPatchedResize(
+        const std::vector<std::uint8_t> &model, int inputSize)
+    {
+        Ort::Env env(ORT_LOGGING_LEVEL_ERROR, "cloakframe-test");
+        Ort::SessionOptions options;
+        Ort::Session session(env, model.data(), model.size(), options);
+
+        std::vector<float> pixels(static_cast<std::size_t>(3) * inputSize * inputSize, 0.0F);
+        const std::array<std::int64_t, 4> inputShape = {1, 3, inputSize, inputSize};
+        auto memoryInfo = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+        auto input = Ort::Value::CreateTensor<float>(
+            memoryInfo, pixels.data(), pixels.size(), inputShape.data(), inputShape.size());
+
+        const std::array<const char *, 1> inputNames = {"images"};
+        const std::array<const char *, 1> outputNames = {"resized"};
+        auto outputs = session.Run(Ort::RunOptions{nullptr},
+            inputNames.data(),
+            &input,
+            1,
+            outputNames.data(),
+            outputNames.size());
+        return outputs.front().GetTensorTypeAndShapeInfo().GetShape();
+    }
+
+    void testOnnxPatchScalesResizeTargetsByTheirExportedRatio()
+    {
+        // A quarter-resolution Resize, not the doubling an upsample usually is: assuming 2x
+        // here would ask the graph for 640x640 out of a 320x320 input.
+        const auto quarter = makeResizeModel(640, {1, 3, 160, 160});
+        const auto patchedQuarter = cloakframe::makeOnnxSpatialDimsFixed(quarter, 320);
+        assert(patchedQuarter.has_value());
+        const auto quarterShape = runPatchedResize(*patchedQuarter, 320);
+        assert(quarterShape.size() == 4);
+        assert(quarterShape[2] == 80 && quarterShape[3] == 80);
+
+        // The doubling case the built-in models actually use still lands where it did.
+        const auto doubled = makeResizeModel(640, {1, 3, 40, 40});
+        const auto patchedDoubled = cloakframe::makeOnnxSpatialDimsFixed(doubled, 320);
+        assert(patchedDoubled.has_value());
+        const auto doubledShape = runPatchedResize(*patchedDoubled, 320);
+        assert(doubledShape.size() == 4);
+        assert(doubledShape[2] == 20 && doubledShape[3] == 20);
+
+        // Patching to the size it was exported at leaves the target where the model put it.
+        const auto unchanged = cloakframe::makeOnnxSpatialDimsFixed(quarter, 640);
+        assert(unchanged.has_value());
+        const auto unchangedShape = runPatchedResize(*unchanged, 640);
+        assert(unchangedShape[2] == 160 && unchangedShape[3] == 160);
+    }
+
+    void testOnnxPatchRefusesResizeTargetsItCannotDerive()
+    {
+        // Nothing to measure the constant against.
+        const auto dynamicInput = makeResizeModel(640, {1, 3, 160, 160}, true);
+        assert(!cloakframe::makeOnnxSpatialDimsFixed(dynamicInput, 320).has_value());
+
+        // The constant feeds a Reshape as well, so rewriting it would change that too.
+        const auto shared = makeResizeModel(640, {1, 3, 160, 160}, false, true);
+        assert(!cloakframe::makeOnnxSpatialDimsFixed(shared, 320).has_value());
+
+        // 3/640 of the input is not a whole number of pixels at 320.
+        const auto uneven = makeResizeModel(640, {1, 3, 3, 3});
+        assert(!cloakframe::makeOnnxSpatialDimsFixed(uneven, 320).has_value());
+    }
+
     void testFixedScrfdModelRunsAtRequestedSize()
     {
         const auto modelPath = std::filesystem::path(__FILE__).parent_path().parent_path()
@@ -2012,6 +2239,8 @@ int main(int argc, char **argv)
     testInvalidDetectionsAreIgnored();
     testDetectorsRejectUnexpectedModelHash();
     testOnnxPatchRejectsInvalidBytes();
+    testOnnxPatchScalesResizeTargetsByTheirExportedRatio();
+    testOnnxPatchRefusesResizeTargetsItCannotDerive();
     testFixedScrfdModelRunsAtRequestedSize();
     testDynamicScrfdModelRunsAtRequestedSize();
     testRecommendedFaceModels();

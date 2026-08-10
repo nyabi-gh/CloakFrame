@@ -68,13 +68,20 @@ obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에�
 ### 0.2 감사 밖에 남은 작업
 
 감사 범위 밖에서 발견했지만 아직 열려 있는 항목이다. `Mosaic.cpp`,
-`ImageScanner.cpp`, `ModelDownloader.cpp`, `OutputPlan.cpp`,
-`OnnxGraphPatch.cpp`는 2026-08-09 이후 한 줄도 바뀌지 않았다.
+`ImageScanner.cpp`, `ModelDownloader.cpp`, `OutputPlan.cpp`는 2026-08-09 이후 한
+줄도 바뀌지 않았다.
+
+`OnnxGraphPatch.cpp`의 "Resize scale 하드코딩"은 2026-08-10에 닫았다. 고정
+`{1, 1, 2, 2}` scales를 붙이는 대신 원본 `sizes` initializer를 읽어 새 입력
+크기에 비례하도록 다시 쓴다. 유도할 수 없는 경우(그래프 입력이 동적, 상수를
+다른 노드가 함께 읽음, 비율이 정수 픽셀로 떨어지지 않음)에는 패치를 포기하고
+호출부가 모델 원래 크기로 되돌아간다. `tests/test_core.cpp`가 합성 ONNX를
+만들어 패치 결과를 ONNX Runtime에서 실제로 실행하고 출력 shape을 검사한다.
+이 경로는 `ScrfdFaceDetector`에서만 쓰이므로, SCRFD를 걷어내면 함께 사라진다.
 
 | 항목 | 위치 | 비고 |
 |---|---|---|
 | pass 1 검출 성능의 남은 절반 | `VideoProcessor.cpp` 검출 루프 | 측정과 tensor 재사용까지 끝났다. scene-cut 워커 분리(8.6s)와 prepare/infer 겹치기(14.3s)가 남았고, 후자는 `Detector`를 두 단계로 나눠야 한다. `docs/open-work-2026-08-09.md` §2 |
-| Resize scale 하드코딩 | `OnnxGraphPatch.cpp:382` | 원본 `sizes` initializer를 읽지 않고 2배를 가정한다 |
 | GUI 스레드 블로킹 | `MainWindow.cpp:242` | 썸네일 추출이 GUI 스레드에서 3초 `waitForStarted`/`waitForFinished`. 모델 SHA-256도 같은 스레드 |
 | 영상 리뷰 UX | `VideoReviewDialog.cpp:720` | Esc가 `CancelAll`(이미지 다이얼로그의 Esc는 한 장만 건너뛴다). undo 없음, "여기를 시작/끝으로"가 keyframe 전체를 지울 수 있다 |
 | soft-mask 전역 직렬화 | `Mosaic.cpp:451` | `g_maskComputationMutex`가 마스크 계산을 전 스레드에 걸쳐 직렬화한다 |

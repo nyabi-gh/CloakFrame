@@ -1,10 +1,10 @@
 #include "cloakframe/OnnxGraphPatch.hpp"
 
-#include <array>
 #include <cstring>
+#include <limits>
+#include <map>
 #include <set>
 #include <string>
-#include <string_view>
 
 namespace cloakframe
 {
@@ -15,7 +15,7 @@ namespace cloakframe
         constexpr std::uint32_t kWireLengthDelimited = 2;
         constexpr std::uint32_t kWireFixed32 = 5;
 
-        constexpr std::string_view kScalesInitializerName = "cloakframe_upsample_scales";
+        constexpr std::uint64_t kTensorInt64 = 7;
 
         struct PbField
         {
@@ -27,29 +27,35 @@ namespace cloakframe
 
         using PbMessage = std::vector<PbField>;
 
+        bool readVarint(
+            const std::uint8_t *data, std::size_t size, std::size_t &pos, std::uint64_t &value)
+        {
+            value = 0;
+            for (int shift = 0; shift < 64 && pos < size; shift += 7)
+            {
+                const std::uint8_t byte = data[pos++];
+                value |= static_cast<std::uint64_t>(byte & 0x7FU) << shift;
+                if ((byte & 0x80U) == 0)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         std::optional<PbMessage> parseMessage(const std::uint8_t *data, std::size_t size)
         {
             PbMessage fields;
             std::size_t pos = 0;
-            const auto readVarint = [&](std::uint64_t &value)
+            const auto readNext = [&](std::uint64_t &value)
             {
-                value = 0;
-                for (int shift = 0; shift < 64 && pos < size; shift += 7)
-                {
-                    const std::uint8_t byte = data[pos++];
-                    value |= static_cast<std::uint64_t>(byte & 0x7FU) << shift;
-                    if ((byte & 0x80U) == 0)
-                    {
-                        return true;
-                    }
-                }
-                return false;
+                return readVarint(data, size, pos, value);
             };
 
             while (pos < size)
             {
                 std::uint64_t key = 0;
-                if (!readVarint(key))
+                if (!readNext(key))
                 {
                     return std::nullopt;
                 }
@@ -63,7 +69,7 @@ namespace cloakframe
                 switch (field.wireType)
                 {
                 case kWireVarint:
-                    if (!readVarint(field.varint))
+                    if (!readNext(field.varint))
                     {
                         return std::nullopt;
                     }
@@ -83,7 +89,7 @@ namespace cloakframe
                 case kWireLengthDelimited:
                 {
                     std::uint64_t length = 0;
-                    if (!readVarint(length) || length > size - pos)
+                    if (!readNext(length) || length > size - pos)
                     {
                         return std::nullopt;
                     }
@@ -137,15 +143,6 @@ namespace cloakframe
             return out;
         }
 
-        PbField makeStringField(std::uint32_t number, std::string_view value)
-        {
-            PbField field;
-            field.number = number;
-            field.wireType = kWireLengthDelimited;
-            field.bytes.assign(value.begin(), value.end());
-            return field;
-        }
-
         PbField makeVarintField(std::uint32_t number, std::uint64_t value)
         {
             PbField field;
@@ -165,6 +162,25 @@ namespace cloakframe
                 }
             }
             return nullptr;
+        }
+
+        const PbField *findFirst(
+            const PbMessage &fields, std::uint32_t number, std::uint32_t wireType)
+        {
+            for (const auto &field : fields)
+            {
+                if (field.number == number && field.wireType == wireType)
+                {
+                    return &field;
+                }
+            }
+            return nullptr;
+        }
+
+        std::optional<PbMessage> childMessage(const PbMessage &parent, std::uint32_t number)
+        {
+            const auto *field = findFirst(parent, number, kWireLengthDelimited);
+            return field == nullptr ? std::nullopt : parseMessage(field->bytes);
         }
 
         std::string fieldString(const PbField &field)
@@ -242,6 +258,182 @@ namespace cloakframe
                                 });
                         });
                 });
+        }
+
+        struct SpatialSize
+        {
+            std::int64_t height = 0;
+            std::int64_t width = 0;
+        };
+
+        std::optional<std::int64_t> dimensionValue(const PbField &dimension)
+        {
+            const auto parsed = parseMessage(dimension.bytes);
+            if (!parsed)
+            {
+                return std::nullopt;
+            }
+            const auto *value = findFirst(*parsed, 1, kWireVarint);
+            if (value == nullptr)
+            {
+                return std::nullopt;
+            }
+            return static_cast<std::int64_t>(value->varint);
+        }
+
+        // The spatial dims the model was exported with. A dimension given as a name rather than a
+        // number has no answer here, and the caller then has nothing to rescale a Resize against.
+        std::optional<SpatialSize> inputSpatialDims(const PbField &input)
+        {
+            const auto valueInfo = parseMessage(input.bytes);
+            if (!valueInfo)
+            {
+                return std::nullopt;
+            }
+            const auto type = childMessage(*valueInfo, 2);
+            const auto tensor = type ? childMessage(*type, 1) : std::nullopt;
+            const auto shape = tensor ? childMessage(*tensor, 2) : std::nullopt;
+            if (!shape)
+            {
+                return std::nullopt;
+            }
+
+            std::vector<const PbField *> dims;
+            for (const auto &field : *shape)
+            {
+                if (field.number == 1 && field.wireType == kWireLengthDelimited)
+                {
+                    dims.push_back(&field);
+                }
+            }
+            if (dims.size() != 4)
+            {
+                return std::nullopt;
+            }
+
+            const auto height = dimensionValue(*dims[2]);
+            const auto width = dimensionValue(*dims[3]);
+            if (!height || !width || *height <= 0 || *width <= 0)
+            {
+                return std::nullopt;
+            }
+            return SpatialSize{*height, *width};
+        }
+
+        std::optional<std::vector<std::int64_t>> int64TensorValues(const PbMessage &tensor)
+        {
+            const auto *dataType = findFirst(tensor, 2, kWireVarint);
+            if (dataType == nullptr || dataType->varint != kTensorInt64)
+            {
+                return std::nullopt;
+            }
+
+            if (const auto *raw = findFirst(tensor, 9, kWireLengthDelimited))
+            {
+                if (raw->bytes.size() % sizeof(std::int64_t) != 0)
+                {
+                    return std::nullopt;
+                }
+                std::vector<std::int64_t> values(raw->bytes.size() / sizeof(std::int64_t));
+                std::memcpy(values.data(), raw->bytes.data(), raw->bytes.size());
+                return values;
+            }
+
+            std::vector<std::int64_t> values;
+            for (const auto &field : tensor)
+            {
+                if (field.number != 7)
+                {
+                    continue;
+                }
+                if (field.wireType == kWireVarint)
+                {
+                    values.push_back(static_cast<std::int64_t>(field.varint));
+                }
+                else if (field.wireType == kWireLengthDelimited)
+                {
+                    std::size_t pos = 0;
+                    while (pos < field.bytes.size())
+                    {
+                        std::uint64_t entry = 0;
+                        if (!readVarint(field.bytes.data(), field.bytes.size(), pos, entry))
+                        {
+                            return std::nullopt;
+                        }
+                        values.push_back(static_cast<std::int64_t>(entry));
+                    }
+                }
+            }
+            if (values.empty())
+            {
+                return std::nullopt;
+            }
+            return values;
+        }
+
+        // Written back as raw_data whichever of the two forms it arrived in: both are valid for an
+        // INT64 tensor, and one writer covers both.
+        void setInt64TensorValues(PbMessage &tensor, const std::vector<std::int64_t> &values)
+        {
+            std::erase_if(tensor,
+                [](const PbField &field)
+                {
+                    return field.number == 7 || field.number == 9;
+                });
+
+            PbField raw;
+            raw.number = 9;
+            raw.wireType = kWireLengthDelimited;
+            raw.bytes.resize(values.size() * sizeof(std::int64_t));
+            std::memcpy(raw.bytes.data(), values.data(), raw.bytes.size());
+            tensor.push_back(std::move(raw));
+        }
+
+        std::optional<std::int64_t> rescale(std::int64_t value, std::int64_t from, std::int64_t to)
+        {
+            if (value <= 0 || from <= 0 || to <= 0
+                || value > std::numeric_limits<std::int64_t>::max() / to)
+            {
+                return std::nullopt;
+            }
+            const auto product = value * to;
+            if (product % from != 0)
+            {
+                return std::nullopt;
+            }
+            return product / from;
+        }
+
+        // A Resize whose target size was baked in at export time still has to land on whatever the
+        // rest of the graph produces at the new input size. Its spatial extent is a fixed fraction
+        // of the input's, so the recorded size scales with the input and nothing about the node's
+        // own input tensor has to be known.
+        bool rescaleSizesInitializer(
+            PbField &initializerField, const SpatialSize &original, int size)
+        {
+            auto tensor = parseMessage(initializerField.bytes);
+            if (!tensor)
+            {
+                return false;
+            }
+            auto values = int64TensorValues(*tensor);
+            if (!values || values->size() != 4)
+            {
+                return false;
+            }
+
+            const auto height = rescale((*values)[2], original.height, size);
+            const auto width = rescale((*values)[3], original.width, size);
+            if (!height || !width)
+            {
+                return false;
+            }
+            (*values)[2] = *height;
+            (*values)[3] = *width;
+
+            setInt64TensorValues(*tensor, *values);
+            initializerField.bytes = serializeMessage(*tensor);
+            return true;
         }
 
         bool makeOutputShapeUnknown(PbField &output)
@@ -322,76 +514,54 @@ namespace cloakframe
             return true;
         }
 
-        enum class ResizePatch
+        enum class ResizeScan
         {
             NotResize,
-            Patched,
+            Rescalable,
             Unsupported,
         };
 
-        ResizePatch patchResizeNode(PbField &nodeField,
+        // Records which initializer holds this Resize's target size. The node is not touched:
+        // rewriting that initializer is what moves the Resize to the new input size.
+        ResizeScan scanResizeNode(const PbField &nodeField,
             const std::set<std::string> &initializerNames,
-            std::set<std::string> &detachedInitializers)
+            std::map<std::string, std::size_t> &sizesUses)
         {
-            auto node = parseMessage(nodeField.bytes);
+            const auto node = parseMessage(nodeField.bytes);
             if (!node)
             {
-                return ResizePatch::Unsupported;
+                return ResizeScan::Unsupported;
             }
             const auto *opType = findFirst(*node, 4, kWireLengthDelimited);
             if (opType == nullptr || fieldString(*opType) != "Resize")
             {
-                return ResizePatch::NotResize;
+                return ResizeScan::NotResize;
             }
 
-            std::vector<std::size_t> inputIndices;
-            for (std::size_t i = 0; i < node->size(); ++i)
+            std::vector<const PbField *> inputs;
+            for (const auto &field : *node)
             {
-                if ((*node)[i].number == 1 && (*node)[i].wireType == kWireLengthDelimited)
+                if (field.number == 1 && field.wireType == kWireLengthDelimited)
                 {
-                    inputIndices.push_back(i);
+                    inputs.push_back(&field);
                 }
             }
-            if (inputIndices.size() != 4)
+            if (inputs.size() != 4)
             {
-                return ResizePatch::NotResize;
+                return ResizeScan::NotResize;
             }
-            if (!initializerNames.contains(fieldString((*node)[inputIndices[3]])))
+            const auto sizesName = fieldString(*inputs[3]);
+            if (!initializerNames.contains(sizesName))
             {
-                return ResizePatch::NotResize;
+                return ResizeScan::NotResize;
             }
             if (!resizeModeIsSupported(*node))
             {
-                return ResizePatch::Unsupported;
+                return ResizeScan::Unsupported;
             }
 
-            detachedInitializers.insert(fieldString((*node)[inputIndices[3]]));
-            (*node)[inputIndices[2]] = makeStringField(1, kScalesInitializerName);
-            node->erase(node->begin() + static_cast<std::ptrdiff_t>(inputIndices[3]));
-            nodeField.bytes = serializeMessage(*node);
-            return ResizePatch::Patched;
-        }
-
-        PbField makeScalesInitializer()
-        {
-            PbMessage tensor;
-            tensor.push_back(makeVarintField(1, 4));
-            tensor.push_back(makeVarintField(2, 1));
-            tensor.push_back(makeStringField(8, kScalesInitializerName));
-
-            const std::array<float, 4> scales = {1.0F, 1.0F, 2.0F, 2.0F};
-            PbField raw;
-            raw.number = 9;
-            raw.wireType = kWireLengthDelimited;
-            raw.bytes.resize(sizeof(scales));
-            std::memcpy(raw.bytes.data(), scales.data(), sizeof(scales));
-            tensor.push_back(std::move(raw));
-
-            PbField field;
-            field.number = 5;
-            field.wireType = kWireLengthDelimited;
-            field.bytes = serializeMessage(tensor);
-            return field;
+            ++sizesUses[sizesName];
+            return ResizeScan::Rescalable;
         }
     }
 
@@ -435,11 +605,6 @@ namespace cloakframe
                 initializerNames.insert(fieldString(*name));
             }
         }
-        if (initializerNames.contains(std::string(kScalesInitializerName)))
-        {
-            return std::nullopt;
-        }
-
         std::vector<PbField *> inputs;
         for (auto &field : *graph)
         {
@@ -448,27 +613,23 @@ namespace cloakframe
                 inputs.push_back(&field);
             }
         }
-        if (inputs.size() != 1 || !setInputSpatialDims(*inputs.front(), size))
+        if (inputs.size() != 1)
+        {
+            return std::nullopt;
+        }
+        const auto exportedSize = inputSpatialDims(*inputs.front());
+        if (!setInputSpatialDims(*inputs.front(), size))
         {
             return std::nullopt;
         }
 
-        std::set<std::string> detachedInitializers;
-        bool patchedResize = false;
-        for (auto &field : *graph)
+        std::map<std::string, std::size_t> sizesUses;
+        for (const auto &field : *graph)
         {
-            if (field.number == 1 && field.wireType == kWireLengthDelimited)
+            if (field.number == 1 && field.wireType == kWireLengthDelimited
+                && scanResizeNode(field, initializerNames, sizesUses) == ResizeScan::Unsupported)
             {
-                switch (patchResizeNode(field, initializerNames, detachedInitializers))
-                {
-                case ResizePatch::Unsupported:
-                    return std::nullopt;
-                case ResizePatch::Patched:
-                    patchedResize = true;
-                    break;
-                case ResizePatch::NotResize:
-                    break;
-                }
+                return std::nullopt;
             }
         }
 
@@ -489,9 +650,16 @@ namespace cloakframe
                 return field.number == 13;
             });
 
-        if (!detachedInitializers.empty())
+        if (!sizesUses.empty())
         {
-            std::set<std::string> referencedInputs;
+            if (!exportedSize)
+            {
+                return std::nullopt;
+            }
+
+            // Rewriting a constant in place is only correct while the Resize is its only reader,
+            // and an exporter is free to share one constant between unrelated nodes.
+            std::map<std::string, std::size_t> allUses;
             for (const auto &field : *graph)
             {
                 if (field.number != 1 || field.wireType != kWireLengthDelimited)
@@ -501,42 +669,47 @@ namespace cloakframe
                 const auto node = parseMessage(field.bytes);
                 if (!node)
                 {
-                    continue;
+                    return std::nullopt;
                 }
                 for (const auto &entry : *node)
                 {
                     if (entry.number == 1 && entry.wireType == kWireLengthDelimited)
                     {
-                        referencedInputs.insert(fieldString(entry));
+                        ++allUses[fieldString(entry)];
                     }
                 }
             }
-            std::erase_if(*graph,
-                [&](const PbField &field)
+            for (const auto &[name, uses] : sizesUses)
+            {
+                if (allUses[name] != uses)
                 {
-                    if (field.number != 5 || field.wireType != kWireLengthDelimited)
-                    {
-                        return false;
-                    }
-                    auto initializer = parseMessage(field.bytes);
-                    if (!initializer)
-                    {
-                        return false;
-                    }
-                    const auto *name = findFirst(*initializer, 8, kWireLengthDelimited);
-                    if (name == nullptr)
-                    {
-                        return false;
-                    }
-                    const std::string text = fieldString(*name);
-                    return detachedInitializers.contains(text) && !referencedInputs.contains(text);
-                });
+                    return std::nullopt;
+                }
+            }
+
+            for (auto &field : *graph)
+            {
+                if (field.number != 5 || field.wireType != kWireLengthDelimited)
+                {
+                    continue;
+                }
+                const auto initializer = parseMessage(field.bytes);
+                if (!initializer)
+                {
+                    return std::nullopt;
+                }
+                const auto *name = findFirst(*initializer, 8, kWireLengthDelimited);
+                if (name == nullptr || !sizesUses.contains(fieldString(*name)))
+                {
+                    continue;
+                }
+                if (!rescaleSizesInitializer(field, *exportedSize, size))
+                {
+                    return std::nullopt;
+                }
+            }
         }
 
-        if (patchedResize)
-        {
-            graph->push_back(makeScalesInitializer());
-        }
         graphField->bytes = serializeMessage(*graph);
         return serializeMessage(*model);
     }
