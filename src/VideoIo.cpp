@@ -2,6 +2,7 @@
 
 #include "cloakframe/ImageIo.hpp"
 #include "cloakframe/PathUtil.hpp"
+#include "cloakframe/StageCleanup.hpp"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -19,8 +20,6 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QStandardPaths>
-#include <QTemporaryDir>
-#include <QThread>
 
 #include <spdlog/spdlog.h>
 
@@ -962,8 +961,7 @@ namespace cloakframe
         const QString stagingBase = !outputRootPath_.isEmpty()
                                         ? outputRootPath_
                                         : QFileInfo(destinationPath_).absolutePath();
-        stagingDirectory_ = std::make_unique<QTemporaryDir>(
-            QDir(stagingBase).filePath(QStringLiteral(".cloakframe-encode-XXXXXX")));
+        stagingDirectory_ = std::make_unique<StageDirectory>(stagingBase);
         if (!stagingDirectory_->isValid())
         {
             stagingDirectory_.reset();
@@ -1263,16 +1261,8 @@ namespace cloakframe
 
     void VideoFrameWriter::releaseStaging()
     {
-        if (stagingDirectory_)
-        {
-            for (int attempt = 0;
-                stagingDirectory_->isValid() && !stagingDirectory_->remove() && attempt < 20;
-                ++attempt)
-            {
-                QThread::msleep(100);
-            }
-            stagingDirectory_.reset();
-        }
+        // StageDirectory retries the removal itself, for the same reason the loop here did.
+        stagingDirectory_.reset();
         tempPath_.clear();
     }
 

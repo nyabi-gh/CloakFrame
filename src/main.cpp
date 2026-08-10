@@ -2,6 +2,7 @@
 #include "cloakframe/ProcessorWorker.hpp"
 #include "cloakframe/ReviewTypes.hpp"
 #include "cloakframe/SelfUpdater.hpp"
+#include "cloakframe/StageCleanup.hpp"
 #include "cloakframe/Theme.hpp"
 
 #include <QApplication>
@@ -12,6 +13,7 @@
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStyleFactory>
+#include <QThreadPool>
 #include <QVector>
 
 #include <spdlog/sinks/rotating_file_sink.h>
@@ -106,6 +108,15 @@ int main(int argc, char *argv[])
     configureApplicationAndMigrateSettings();
 
     setupLogging();
+
+    // A run that was killed leaves its private copy of the source behind. Sweep on a worker
+    // thread: one of the roots may be on a slow mount, and nothing here has to finish before
+    // the window appears.
+    QThreadPool::globalInstance()->start(
+        []
+        {
+            cloakframe::removeStaleStages();
+        });
 
     QApplication::setStyle(QStyleFactory::create("Fusion"));
     {

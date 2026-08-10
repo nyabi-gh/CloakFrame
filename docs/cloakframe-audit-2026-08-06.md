@@ -45,7 +45,7 @@
 | CF-017 | Obsolete | `scripts/package_linux.sh`가 삭제되고 AppImage는 `vpk pack`이 만든다 |
 | CF-018 | Fixed | keypair를 생성해 `SPARKLE_ED_PUBLIC_KEY` 변수와 `SPARKLE_ED_PRIVATE_KEY` secret으로 등록했다 (2026-08-10). keychain private key의 public half가 저장소 변수 및 번들의 `SUPublicEDKey`와 일치함을 대조했다. appcast에 서명이 실제로 실리는지는 다음 release job의 `grep -q 'edSignature='`가 확인한다 |
 | CF-019 | Open | `ModelDownloader.cpp:105`가 고정 `.part` 이름을 일반 `QFile`로 연다 |
-| CF-020 | Open | crash 후 남은 source snapshot(`ProcessorWorker.cpp:788`, `VideoProcessor.cpp:433`)을 회수하는 startup scavenger가 없다 |
+| CF-020 | Fixed | 네 개의 staging 경로가 모두 `StageDirectory`(`StageCleanup.cpp`)로 모였다 — image source snapshot(`ProcessorWorker.cpp`), video source snapshot과 encode staging(`VideoProcessor.cpp`, `VideoIo.cpp`), metadata staging(`ImageIo.cpp`). 이름이 `.cloakframe-stage-XXXXXX` 하나로 통일되고 각 디렉터리가 `QLockFile`을 든다. `main.cpp`가 시작 시 worker thread에서 `removeStaleStages()`를 돌려 system temp와 기억해 둔 output root를 훑고, 이름 형태·`inspectCacheDirectory`의 소유자/mode·lock 소유자 생존 세 가지를 모두 통과한 것만 지운다. lock 파일이 아직 없는 디렉터리는 다른 인스턴스가 만드는 중일 수 있으므로 60초 유예를 둔다. `tests/test_stage_cleanup.cpp`가 crash 잔여물 삭제, 실행 중 stage 보존, 이름 형태 불일치, 다른 계정이 쓸 수 있는 mode, stage 이름을 쓴 symlink를 검사한다. Windows는 `inspectCacheDirectory`가 `Unsupported`이므로 이름 형태와 lock만으로 판단한다 |
 | CF-021 | Open | `OutputPlan.cpp:15`의 `destinationKey`가 compile-time OS 가정으로 collision을 판단한다. README의 시작 전 충돌 보장 문구도 그대로다 |
 | CF-022 | Fixed | `Mosaic.cpp:116`의 fill이 `opaqueAlphaFor(roi)`로 alpha를 채운다 |
 | CF-023 | Fixed | 96개 문구를 번역하고 세 locale 모두에 strict gate를 적용했다. 근본 원인인 `trVideo`/`trVideoProcessor` 간접 호출도 `QT_TRANSLATE_NOOP`으로 노출했다 (2026-08-09) |

@@ -14,10 +14,11 @@
 class QLocalServer;
 class QLocalSocket;
 class QProcess;
-class QTemporaryDir;
 
 namespace cloakframe
 {
+    class StageDirectory;
+
     inline constexpr int kMaxVideoDimension = 16'384;
     inline constexpr qint64 kMaxVideoPixelCount = 36'000'000;
     inline constexpr double kMaxVideoFrameRate = 240.0;
@@ -163,7 +164,7 @@ namespace cloakframe
         void noteEncoderFailure(const QString &message);
 
         std::unique_ptr<QProcess> process_;
-        std::unique_ptr<QTemporaryDir> stagingDirectory_;
+        std::unique_ptr<StageDirectory> stagingDirectory_;
         QString tempPath_;
         QString destinationPath_;
         QString outputRootPath_;

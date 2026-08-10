@@ -12,6 +12,7 @@
 #include "cloakframe/PlateDetector.hpp"
 #include "cloakframe/ReviewTypes.hpp"
 #include "cloakframe/ScrfdFaceDetector.hpp"
+#include "cloakframe/StageCleanup.hpp"
 #include "cloakframe/VideoIo.hpp"
 #include "cloakframe/VideoProcessor.hpp"
 #include "cloakframe/VideoReviewTypes.hpp"
@@ -26,7 +27,6 @@
 #include <QRectF>
 #include <QSize>
 #include <QStringList>
-#include <QTemporaryDir>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -785,7 +785,7 @@ namespace cloakframe
             }
 
             const QString fileName = pathToQString(source.filename());
-            QTemporaryDir sourceStaging;
+            StageDirectory sourceStaging(QDir::tempPath());
             if (!sourceStaging.isValid())
             {
                 outcome.logs.push_back(

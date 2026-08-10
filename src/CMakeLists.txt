@@ -26,6 +26,7 @@ add_library(cloakframe_core STATIC
     ReleaseNotes.cpp
     SceneCut.cpp
     ScrfdFaceDetector.cpp
+    StageCleanup.cpp
     Tracking.cpp
     UpdateCache.cpp
     UpdateSignature.cpp
@@ -54,6 +55,7 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ReviewTypes.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SceneCut.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ScrfdFaceDetector.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/StageCleanup.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Tracking.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/UpdateCache.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/UpdateSignature.hpp

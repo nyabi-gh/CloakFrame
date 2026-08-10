@@ -1,10 +1,11 @@
 #include "cloakframe/ImageIo.hpp"
 
 #include "cloakframe/PathUtil.hpp"
+#include "cloakframe/StageCleanup.hpp"
 
+#include <QDir>
 #include <QImageIOHandler>
 #include <QImageReader>
-#include <QTemporaryDir>
 
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/imgproc.hpp>
@@ -1628,7 +1629,7 @@ namespace cloakframe
 
         if (!metadataSource.empty())
         {
-            QTemporaryDir staging;
+            StageDirectory staging(QDir::tempPath());
             if (staging.isValid())
             {
                 const auto stagedPath = pathFromQString(

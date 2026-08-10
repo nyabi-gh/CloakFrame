@@ -3,13 +3,12 @@
 #include "cloakframe/ImageIo.hpp"
 #include "cloakframe/MemoryBudget.hpp"
 #include "cloakframe/PathUtil.hpp"
+#include "cloakframe/StageCleanup.hpp"
 
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QTemporaryDir>
-#include <QThread>
 
 #include <opencv2/core.hpp>
 
@@ -300,38 +299,6 @@ namespace cloakframe
             bool stopping_ = false;
         };
 
-        class RetryingStagingDir
-        {
-        public:
-            explicit RetryingStagingDir(const QString &templatePath)
-                : dir_(templatePath)
-            {
-            }
-
-            ~RetryingStagingDir()
-            {
-                for (int attempt = 0; dir_.isValid() && !dir_.remove() && attempt < 20; ++attempt)
-                {
-                    QThread::msleep(100);
-                }
-            }
-
-            RetryingStagingDir(const RetryingStagingDir &) = delete;
-            RetryingStagingDir &operator=(const RetryingStagingDir &) = delete;
-
-            [[nodiscard]] bool isValid() const
-            {
-                return dir_.isValid();
-            }
-            [[nodiscard]] QString path() const
-            {
-                return dir_.path();
-            }
-
-        private:
-            QTemporaryDir dir_;
-        };
-
         QString trVideoProcessor(const char *text)
         {
             return QCoreApplication::translate("cloakframe::VideoProcessor", text);
@@ -429,8 +396,7 @@ namespace cloakframe
         const QString stagingBase = !options.outputRootPath.isEmpty()
                                         ? options.outputRootPath
                                         : QFileInfo(destinationPath).absolutePath();
-        RetryingStagingDir sourceStaging(
-            QDir(stagingBase).filePath(QStringLiteral(".cloakframe-snapshot-XXXXXX")));
+        StageDirectory sourceStaging(stagingBase);
         if (!sourceStaging.isValid())
         {
             result.error = trVideoProcessor(QT_TRANSLATE_NOOP("cloakframe::VideoProcessor",
