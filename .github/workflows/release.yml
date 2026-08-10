@@ -73,6 +73,25 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Check the update signing key is configured in both halves
+        env:
+          CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
+          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
+        run: |
+          # The client enforces a signature exactly when it was built with the public key, so
+          # half a configuration ships either an update nobody can verify or one every client
+          # refuses. Fail here rather than after the signing secrets have been used.
+          if [[ -n "$CLOAKFRAME_UPDATE_PUBLIC_KEY" && -z "$CLOAKFRAME_UPDATE_PRIVATE_KEY" ]]; then
+            echo "The app pins CLOAKFRAME_UPDATE_PUBLIC_KEY but CLOAKFRAME_UPDATE_PRIVATE_KEY" \
+              "is not set; every Windows and Linux client would reject this update." >&2
+            exit 1
+          fi
+          if [[ -z "$CLOAKFRAME_UPDATE_PUBLIC_KEY" && -n "$CLOAKFRAME_UPDATE_PRIVATE_KEY" ]]; then
+            echo "CLOAKFRAME_UPDATE_PRIVATE_KEY is set but the app pins no public key, so the" \
+              "signature would never be checked. Set the CLOAKFRAME_UPDATE_PUBLIC_KEY variable." >&2
+            exit 1
+          fi
+
   macos:
     name: Build macOS DMG
     needs: verify-version
@@ -396,6 +415,8 @@ jobs:
 
       - name: Configure and build
         shell: pwsh
+        env:
+          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
         run: |
           $prefix = "$env:QT_ROOT_DIR;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static-md"
           cmake -S . -B build-windows -G Ninja `
@@ -405,6 +426,7 @@ jobs:
             "-DONNXRUNTIME_ROOT=$env:ONNXRUNTIME_ROOT" `
             "-DCLOAKFRAME_DIRECTML_DLL=C:\onnx\lib\DirectML.dll" `
             "-DCLOAKFRAME_FFMPEG_DIR=$env:FFMPEG_DIR" `
+            "-DCLOAKFRAME_UPDATE_PUBLIC_KEY=$env:CLOAKFRAME_UPDATE_PUBLIC_KEY" `
             -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
           cmake --build build-windows --config Release --parallel
 
@@ -501,6 +523,13 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force
 
+      - name: Sign the update package
+        shell: bash
+        env:
+          CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
+          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
+        run: .github/scripts/sign_update_packages.sh artifacts
+
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: windows-velopack
@@ -587,6 +616,8 @@ jobs:
           chmod 755 ffmpeg-bundle/ffmpeg ffmpeg-bundle/ffprobe
 
       - name: Configure, build, and test
+        env:
+          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
         run: |
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -595,6 +626,7 @@ jobs:
             "-DOpenCV_DIR=$OpenCV_DIR" \
             "-DONNXRUNTIME_ROOT=$ONNXRUNTIME_ROOT" \
             "-DCLOAKFRAME_FFMPEG_DIR=$PWD/ffmpeg-bundle" \
+            "-DCLOAKFRAME_UPDATE_PUBLIC_KEY=$CLOAKFRAME_UPDATE_PUBLIC_KEY" \
             -DCLOAKFRAME_APPIMAGE_LAYOUT=ON
           cmake --build build-release --parallel
           PATH="$PWD/ffmpeg-bundle:$PATH" \
@@ -639,6 +671,12 @@ jobs:
           cp dist/linux/releases.linux.json artifacts/
           test -x "artifacts/$LINUX_ASSET_NAME"
           "artifacts/$LINUX_ASSET_NAME" --appimage-version
+
+      - name: Sign the update package
+        env:
+          CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
+          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
+        run: .github/scripts/sign_update_packages.sh artifacts
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

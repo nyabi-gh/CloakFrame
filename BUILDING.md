@@ -157,6 +157,7 @@ exported compilation database.
 | `BUILD_TESTING` | `ON` | Build and register the test suite |
 | `CLOAKFRAME_SELF_UPDATE` | `ON` | Include Velopack or Sparkle self-update support |
 | `CLOAKFRAME_SPARKLE_PUBLIC_KEY` | empty | Pin the macOS update signing key so Sparkle requires an EdDSA signature |
+| `CLOAKFRAME_UPDATE_PUBLIC_KEY` | empty | Pin the Windows and Linux update signing key so updates require an Ed25519 signature |
 | `CLOAKFRAME_WARNINGS_AS_ERRORS` | `OFF` | Promote compiler warnings to errors |
 | `CLOAKFRAME_FFMPEG_DIR` | empty | Bundle `ffmpeg` and `ffprobe` from this directory during installation |
 | `CLOAKFRAME_DIRECTML_DLL` | empty | Bundle DirectML with a Windows installation |
@@ -187,6 +188,31 @@ CMake and refuses to publish if only one of the two is configured.
 
 Losing the private key means shipped clients reject every later update, so it
 has to outlive the machine that created it.
+
+### Windows and Linux update signing key
+
+Velopack checks a package against a hash the release feed supplies, and the same
+release supplies the package, so that check says nothing about who published it.
+`CLOAKFRAME_UPDATE_PUBLIC_KEY` pins an Ed25519 key the client verifies each
+update against, which is the only part of a release an attacker holding the
+publishing credentials cannot forge. Configuring without it prints a warning.
+
+This is a separate key from the Sparkle one. Create it off the CI runner:
+
+```bash
+openssl genpkey -algorithm ed25519 -out cloakframe-update-key.pem
+openssl pkey -in cloakframe-update-key.pem -pubout -outform DER | tail -c 32 | base64
+```
+
+Store the printed public key as the `CLOAKFRAME_UPDATE_PUBLIC_KEY` repository
+variable and the PEM as the `CLOAKFRAME_UPDATE_PRIVATE_KEY` secret, keep an
+offline copy, and delete the local file. The release workflow refuses to run if
+only one of the two is configured, and `sign_update_packages.sh` refuses to sign
+if the secret's public half is not the pinned key.
+
+Configure the variable and the secret together. A build that pins a key rejects
+every update that has no matching signature, so publishing the variable while
+the secret is missing would strand existing installs.
 
 ## Packaging
 
