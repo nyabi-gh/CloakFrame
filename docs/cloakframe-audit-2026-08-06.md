@@ -14,7 +14,8 @@
 분류와 심각도는 감사 시점 기록이므로 바꾸지 않았다.
 
 **이 절이 남은 작업의 단일 목록이다.** 감사 밖에서 발견한 항목도 §0.2와 §0.3에
-함께 적는다. finding 상태가 바뀌면 여기서 갱신한다.
+함께 적는다. finding 상태가 바뀌면 여기서 갱신한다. 고치지 않기로 결정한
+항목은 표에서 지우지 말고 §0.5에 이유와 함께 남긴다.
 
 재확인 방법은 각 finding의 결함을 만드는 코드 경로를 다시 읽는 것이었다.
 자료구조나 필드가 생겼다는 사실은 근거로 쓰지 않았고, 그 값을 실제로 읽어
@@ -26,7 +27,7 @@
 | ID | 상태 | 근거 (2026-08-10 재확인) |
 |---|---|---|
 | CF-001 | Fixed | client가 적용 가능한 모든 asset의 SHA-256에 대한 Ed25519 서명을 build에 고정된 key로 검증하고(`SelfUpdaterVelopack.cpp`의 `updateIsTrusted`, `UpdateSignature.cpp`), release job이 `.github/scripts/sign_update_packages.sh`로 서명한다. keypair는 `CLOAKFRAME_UPDATE_PUBLIC_KEY` 변수와 `CLOAKFRAME_UPDATE_PRIVATE_KEY` secret으로 등록되었다 (2026-08-10). Authenticode는 이 finding과 무관하며 여전히 없다 — §0.2 |
-| CF-002 | Partial | cache는 여전히 공유 `/var/tmp`다. client가 그 위에서 할 수 있는 것은 했다 — `inspectCacheDirectory`가 cache tree의 소유자와 mode를 `lstat`으로 확인해 다른 계정이 통제하는 tree를 거부하고, `fileMatchesDigest`가 feed의 digest와 다른 package를 download 전에 지우고 download 후와 apply 직전에 다시 확인한다 (`UpdateCache.cpp`, `SelfUpdaterVelopack.cpp`, 2026-08-10). **남은 것은 마지막 확인과 Velopack이 파일을 여는 사이의 경합 창이다.** 이걸 닫으려면 공유되지 않는 cache가 필요한데, `UpdateManager`에 locator를 넘기면 auto-locate가 통째로 꺼지므로(`manager.rs:198`) `PackagesDir`만 바꿀 수 없다 — 상류가 `package_dir_override`를 C API로 노출해야 한다 (§0.2). 참고로 `CF-001`은 이 finding을 줄이지 못했다: `download_updates`는 파일이 이미 있으면 hash 없이 early return하고(`manager.rs:399`) apply는 존재만 확인한다(`manager.rs:616`) |
+| CF-002 | Accepted | 완화한 상태로 닫는다 (2026-08-10 결정, §0.5). client 방어는 그대로 남는다 — `inspectCacheDirectory`가 cache tree의 소유자와 mode를 `lstat`으로 확인해 다른 계정이 통제하는 tree를 거부하고, `fileMatchesDigest`가 feed의 digest와 다른 package를 download 전에 지우고 download 후와 apply 직전에 다시 확인한다 (`UpdateCache.cpp`, `SelfUpdaterVelopack.cpp`). 감수하는 잔여 위험은 마지막 확인과 Velopack이 파일을 여는 사이의 경합 창 하나다. 참고로 `CF-001`은 이 finding을 줄이지 못했다: `download_updates`는 파일이 이미 있으면 hash 없이 early return하고(`manager.rs:399`) apply는 존재만 확인한다(`manager.rs:616`) |
 | CF-003 | Fixed | `DetectionResult::omitted`(`Yolo5FaceDetector.cpp:319-338`, `ScrfdFaceDetector.cpp:610-624`)가 버린 후보를 전달하고 `RunSummary::uncovered`가 clean `Completed`를 막는다 |
 | CF-004 | Fixed | `VideoProcessor.cpp:665`가 `droppedTracks`를 결과에 싣고 `ProcessorWorker.cpp:1500,1527`이 이를 사용자 경고와 `outcome.uncovered`로 올린다 (2026-08-09 늦게, `e9ea380`) |
 | CF-005 | Fixed | `VideoProcessor.cpp:663-664`가 `uncoveredFrames`와 `uncoveredSpans`를 올리고, review timeline이 그 구간을 별도 행으로 표시한다 (`3135dcb`) |
@@ -83,7 +84,6 @@ obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에�
 | per-test timeout 없음 | `tests/CMakeLists.txt` | `TIMEOUT` 속성이 없어 멈춘 테스트가 CI 전체 한도까지 간다 |
 | Windows 설치본 미서명 | `.github/workflows/release.yml` | signtool 단계가 없어 SmartScreen 경고가 난다. `CF-001`은 app-pinned key로 닫혔고 Authenticode는 그것과 별개의 비용 문제다 |
 | Windows Qt 6.11.1 핀 | `.github/workflows/*` | 저장소 밖 차단. aqtinstall이 Windows의 아키텍처별 저장소 경로를 아직 못 읽는다 (issues #959, #1000는 master에만 반영) |
-| Velopack에 per-user cache 요청 | 상류 | `package_dir_override`는 Rust 안에는 있는데 C API로 노출되지 않는다. 그 한 줄이 뚫리면 `CF-002`가 완전히 닫힌다 — issue/PR을 올리는 것이 남은 정공법이다 |
 
 ### 0.3 사람이 해야 하는 것
 
@@ -112,6 +112,26 @@ track을 결과로 올린다"는 근거로 Fixed로 적었다. 그 시점(`b3beb
 `droppedTracks`는 `Tracking.cpp:783`에서 **쓰이기만 하고 읽는 곳이 없었다.**
 값이 사용자에게 도달한 것은 `e9ea380`부터다. 필드가 생겼다는 사실을 근거로
 쓰면 이런 오판이 나온다 — 근거는 항상 그 값을 읽는 caller까지 적는다.
+
+### 0.5 고치지 않고 감수하기로 한 위험
+
+**`CF-002` — Linux 공유 `/var/tmp` update cache (2026-08-10).** 같은 기계에
+적대적인 로컬 계정이 있는 상황을 위협 모델 밖에 두기로 했다. 따라서 상류
+Velopack에 `package_dir_override`의 C API 노출을 요청하지 않고, cache 위치를
+바꾸려는 시도도 하지 않는다.
+
+정확히 적어 둔다. `/var/tmp`가 모든 계정에 열려 있는 것은 Linux의 기본값이지
+잘못 설정된 기계가 아니고, 검증 없이 그 위를 믿기로 한 것은 번들한 Velopack
+1.2.0의 cache 설계다. 즉 "사용자 환경 문제"라서 감수하는 것이 아니라, 그
+위협 모델을 지원 범위에서 뺐기 때문에 감수하는 것이다.
+
+감수하는 것이 원래 finding 전체가 아니라 잔여 위험 하나라는 점도 같이 남긴다.
+§0.1의 client 검사 두 가지가 이미 들어가 있어서, 공격은 "임의 AppImage 실행"에서
+"마지막 digest 확인과 Velopack이 파일을 여는 사이의 경합 창"으로 줄어 있다. 그
+검사들은 제거하지 않는다.
+
+다시 열어야 하는 조건: Velopack이 cache 위치나 existing-package 검증을 바꾸는
+경우, 또는 다중 사용자 Linux 데스크톱이 지원 대상에 들어오는 경우.
 
 이 보고서는 정적 코드 추적, 두 번의 독립적인 sweep, 기존 테스트 검토, 별도 sanitizer/경고 빌드, 합성 이미지·영상과 production library에 연결한 임시 harness, 그리고 현재 CI/패키징 설정 검증을 결합한 결과다. 소스의 주석이나 README를 구현의 증거로 사용하지 않고 caller에서 최종 output/update sink까지 실제 경로를 확인했다. 외부 플랫폼이나 안전하게 재현할 수 없는 조건은 명시적으로 **Not dynamically verified**라고 표시했다.
 
@@ -1357,12 +1377,13 @@ translations/cloakframe_zh_CN.ts
 ## 17. Prioritized Remediation Plan
 
 > 감사 시점의 계획이다. 현재 상태만 요약하면 P0 2·3항은 완료, P0 1항은
-> `CF-001`이 닫히고 `CF-002`가 부분 완화, `CF-007`의 secret scope가 남았다.
+> `CF-001`이 닫히고 `CF-002`는 완화 후 잔여 위험을 감수하기로 했으며(§0.5),
+> `CF-007`의 secret scope가 남았다.
 > P0 4항의 regression gate는 절반이다 — coverage, timeline, update signature와
-> cache 판정 쪽 테스트는 생겼지만 two-user cache preseed와 실제 updater를 태우는
-> end-to-end 테스트는 없다. P1은 `CF-021`, `CF-026`과 8항의 fault-injection
-> suite를 빼고 완료되었다. 항목별 현재 상태는 §0.1, 감사 밖 남은 작업은 §0.2를
-> 본다.
+> cache 판정 쪽 테스트는 생겼지만 실제 updater를 태우는 end-to-end 테스트는
+> 없다. two-user cache preseed 테스트는 §0.5의 결정으로 더 이상 대상이 아니다.
+> P1은 `CF-021`과 8항의 fault-injection suite를 빼고 완료되었다.
+> 항목별 현재 상태는 §0.1, 감사 밖 남은 작업은 §0.2를 본다.
 
 ### P0: 배포 전에 반드시 수정
 
