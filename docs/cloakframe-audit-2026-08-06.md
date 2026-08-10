@@ -7,39 +7,50 @@
 > `scripts/package_windows.ps1`은 삭제되었으므로, 각 finding을 다시 확인할 때는
 > §0의 현재 상태를 먼저 보고 본문은 원인 분석과 재현 절차로 읽어야 한다.
 
-## 0. Finding 현재 상태 (2026-08-09 기준)
+## 0. Finding 현재 상태 (2026-08-10 기준)
 
-아래 표는 각 finding을 현재 `main`에서 다시 확인한 결과다. 본문 §9의 분류와
-심각도는 감사 시점 기록이므로 바꾸지 않았다.
+재확인 revision: `0879564940b4c000cee5e4ac88da70789eb2be6d` (`main`). 아래 줄
+번호도 그 revision 기준이며, 본문의 감사 시점 줄 번호와는 다르다. 본문 §9의
+분류와 심각도는 감사 시점 기록이므로 바꾸지 않았다.
 
-| ID | 상태 | 근거 |
+**이 절이 남은 작업의 단일 목록이다.** 감사 밖에서 발견한 항목도 §0.2와 §0.3에
+함께 적는다. finding 상태가 바뀌면 여기서 갱신한다.
+
+재확인 방법은 각 finding의 결함을 만드는 코드 경로를 다시 읽는 것이었다.
+자료구조나 필드가 생겼다는 사실은 근거로 쓰지 않았고, 그 값을 실제로 읽어
+사용자에게 도달시키는 caller가 있는지까지 확인했다 — `CF-004`가 그 구분 때문에
+한 번 잘못 닫혔다(§0.4).
+
+### 0.1 감사 finding
+
+| ID | 상태 | 근거 (2026-08-10 재확인) |
 |---|---|---|
-| CF-001 | Open | Velopack feed/package에 app-pinned trust anchor가 없다. offline signing key 보관 위치 결정 대기 |
-| CF-002 | Open | Velopack 1.2.0 고정과 공유 `/var/tmp` cache 그대로 |
-| CF-003 | Fixed | `DetectionResult::omitted`로 detector가 버린 후보를 전달하고 `RunSummary::uncovered`가 clean `Completed`를 막는다 |
-| CF-004 | Fixed | `TrackCoverageReport::droppedTracks`가 삭제된 track을 결과로 올린다 |
-| CF-005 | Fixed | `TrackCoverageReport::uncoveredFrames`가 retained track 내부 hole을 결과로 올린다 |
+| CF-001 | Open | `SelfUpdaterVelopack.cpp:29,55,73`이 `GithubSource` feed의 hash만 신뢰한다. app-pinned trust anchor 없음. Windows 아티팩트에 code-signing 단계도 없다. offline signing key 보관 위치 결정 대기 |
+| CF-002 | Open | `cmake/CloakFrameVelopack.cmake:3`의 Velopack 1.2.0 고정과 공유 `/var/tmp` cache 그대로 |
+| CF-003 | Fixed | `DetectionResult::omitted`(`Yolo5FaceDetector.cpp:319-338`, `ScrfdFaceDetector.cpp:610-624`)가 버린 후보를 전달하고 `RunSummary::uncovered`가 clean `Completed`를 막는다 |
+| CF-004 | Fixed | `VideoProcessor.cpp:665`가 `droppedTracks`를 결과에 싣고 `ProcessorWorker.cpp:1500,1527`이 이를 사용자 경고와 `outcome.uncovered`로 올린다 (2026-08-09 늦게, `e9ea380`) |
+| CF-005 | Fixed | `VideoProcessor.cpp:663-664`가 `uncoveredFrames`와 `uncoveredSpans`를 올리고, review timeline이 그 구간을 별도 행으로 표시한다 (`3135dcb`) |
 | CF-006 | Fixed | `VideoInfo::startTimeSeconds`가 정규화된 timeline을 정의하고 preview/encode가 같은 mapping을 쓴다 |
-| CF-007 | Fixed | 서명 job이 `environment: release`를 선언하고, 저장소의 `release` 환경이 `v*` tag 배포 제한과 필수 리뷰어로 설정되었다 (2026-08-09) |
-| CF-008 | Fixed | 디코드 패스가 `-xerror`로 실행되어, 복구된 오류가 나면 짧아진 결과를 게시하지 않고 실패한다 (2026-08-09) |
+| CF-007 | Fixed | 서명 job이 `environment: release`를 선언하고, 저장소의 `release` 환경이 `v*` tag 배포 제한과 필수 리뷰어로 설정되었다 (2026-08-09). 단 secret 자체는 아직 repository scope다 — §0.3 |
+| CF-008 | Fixed | 디코드 패스가 `-xerror`(`VideoIo.cpp:747`)로 실행되어, 복구된 오류가 나면 짧아진 결과를 게시하지 않고 실패한다 (2026-08-09) |
 | CF-009 | Fixed | `VideoInfo::sarNum/sarDen`을 probe하고 writer가 `setsar`를 적용한다 |
 | CF-010 | Fixed | probe가 모든 audio stream을 읽고 writer가 `-map 1:a?`로 전부 map하며, 호환되지 않는 stream만 재인코딩하고 언어 태그를 보존한다 (2026-08-09) |
 | CF-011 | Fixed | 실제 encode 실패가 encoder 원인일 때 software encoder로 pass 2를 한 번 재실행한다 (2026-08-09) |
 | CF-012 | Fixed | `process()` 진입 시의 cancel flag reset 제거 |
-| CF-013 | Fixed | thread 생성 실패 시 이미 시작한 worker를 stop/join한 뒤 rethrow한다 |
-| CF-014 | Fixed | estimate가 budget을 넘으면 decode 전에 거부한다 (2026-08-09) |
-| CF-015 | Fixed | 원자적 primitive가 없는 filesystem에서는 `.cloakframe-partial`로 복사한 뒤 rename하며, 복사 중 guard를 polling한다 (2026-08-09) |
-| CF-016 | Open | custom ONNX 동의가 path에만 묶이고 parser가 같은 process에서 실행된다 |
+| CF-013 | Fixed | thread 생성 실패 시 이미 시작한 worker를 stop/join한 뒤 rethrow한다 (`OrderedParallel.hpp`의 `StopAndJoin`, `VideoProcessor.cpp`의 `MaskWorkerPool` 생성자 catch) |
+| CF-014 | Fixed | estimate가 budget을 넘으면 decode 전에 거부한다 (`ProcessorWorker.cpp:875`, 2026-08-09) |
+| CF-015 | Fixed | 원자적 primitive가 없는 filesystem에서는 `.cloakframe-partial`(`ImageIo.cpp:1120,1184`)로 복사한 뒤 rename하며, 복사 중 guard를 polling한다 (2026-08-09) |
+| CF-016 | Open | settings에 `customModelPath`만 저장한다(`MainWindow.cpp:1923,2060`). 동의가 여전히 path에만 묶이고 parser가 같은 process에서 실행된다 |
 | CF-017 | Obsolete | `scripts/package_linux.sh`가 삭제되고 AppImage는 `vpk pack`이 만든다 |
-| CF-018 | Partial | `CLOAKFRAME_SPARKLE_PUBLIC_KEY`로 plist에 key를 고정할 수 있고 workflow가 반쪽 설정을 거부한다. 실제 keypair 생성·보관은 사람이 해야 한다 (2026-08-09) |
-| CF-019 | Open | `ModelDownloader`가 고정 `.part` 이름을 일반 `QFile`로 연다 |
-| CF-020 | Open | crash 후 남은 source snapshot을 회수하는 startup scavenger가 없다 |
-| CF-021 | Open | `destinationKey`가 compile-time OS 가정으로 collision을 판단한다 |
-| CF-022 | Fixed | alpha 채널이 있는 image의 solid fill이 불투명해졌다 |
+| CF-018 | Fixed | keypair를 생성해 `SPARKLE_ED_PUBLIC_KEY` 변수와 `SPARKLE_ED_PRIVATE_KEY` secret으로 등록했다 (2026-08-10). keychain private key의 public half가 저장소 변수 및 번들의 `SUPublicEDKey`와 일치함을 대조했다. appcast에 서명이 실제로 실리는지는 다음 release job의 `grep -q 'edSignature='`가 확인한다 |
+| CF-019 | Open | `ModelDownloader.cpp:105`가 고정 `.part` 이름을 일반 `QFile`로 연다 |
+| CF-020 | Open | crash 후 남은 source snapshot(`ProcessorWorker.cpp:788`, `VideoProcessor.cpp:433`)을 회수하는 startup scavenger가 없다 |
+| CF-021 | Open | `OutputPlan.cpp:15`의 `destinationKey`가 compile-time OS 가정으로 collision을 판단한다. README의 시작 전 충돌 보장 문구도 그대로다 |
+| CF-022 | Fixed | `Mosaic.cpp:116`의 fill이 `opaqueAlphaFor(roi)`로 alpha를 채운다 |
 | CF-023 | Fixed | 96개 문구를 번역하고 세 locale 모두에 strict gate를 적용했다. 근본 원인인 `trVideo`/`trVideoProcessor` 간접 호출도 `QT_TRANSLATE_NOOP`으로 노출했다 (2026-08-09) |
 | CF-024 | Fixed | release workflow의 `verify-version` job이 tag/project/release-notes 일치를 강제한다 |
-| CF-025 | Open | macOS Homebrew closure가 고정되지 않고 SBOM이 없다 |
-| CF-026 | Open | `SceneCutDetector::push`의 확정 분기가 여전히 early return한다 |
+| CF-025 | Open | `.github/workflows/release.yml:95`의 `brew install`이 버전을 고정하지 않고 SBOM이 없다 |
+| CF-026 | Open | `SceneCut.cpp:112`의 `push`에서 확정 분기가 여전히 early return한다 |
 
 감사에 없던 항목 두 가지도 함께 처리했다. Windows manifest
 (`activeCodePage`/`longPathAware`)를 추가해 non-ASCII 경로에서 metadata 보존이
@@ -47,6 +58,53 @@
 `trVideo`/`trVideoProcessor` 간접 호출을 인식하지 못해 video 관련 문구 36개가
 obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에서 영어로 표시되고
 있었다. 이는 `CF-023`보다 넓은 범위의 결함이었다.
+
+2026-08-09 늦게 시작한 별도 세션이 Windows/Linux 패키징 결함, webm(VP8/VP9)
+입력, uncovered region 보고와 pass 1 검출 성능을 다뤘다. 그 세션의 측정값,
+기각한 접근과 환경 메모는 `docs/open-work-2026-08-09.md`에 있다. 상태는 그
+문서가 아니라 이 절이 관리한다.
+
+### 0.2 감사 밖에 남은 작업
+
+감사 범위 밖에서 발견했지만 아직 열려 있는 항목이다. `Mosaic.cpp`,
+`ImageScanner.cpp`, `ModelDownloader.cpp`, `OutputPlan.cpp`, `SceneCut.cpp`,
+`OnnxGraphPatch.cpp`는 2026-08-09 이후 한 줄도 바뀌지 않았다.
+
+| 항목 | 위치 | 비고 |
+|---|---|---|
+| pass 1 검출 성능의 남은 절반 | `VideoProcessor.cpp` 검출 루프 | 측정과 tensor 재사용까지 끝났다. scene-cut 워커 분리(8.6s)와 prepare/infer 겹치기(14.3s)가 남았고, 후자는 `Detector`를 두 단계로 나눠야 한다. `docs/open-work-2026-08-09.md` §2 |
+| Resize scale 하드코딩 | `OnnxGraphPatch.cpp:382` | 원본 `sizes` initializer를 읽지 않고 2배를 가정한다 |
+| GUI 스레드 블로킹 | `MainWindow.cpp:242` | 썸네일 추출이 GUI 스레드에서 3초 `waitForStarted`/`waitForFinished`. 모델 SHA-256도 같은 스레드 |
+| 영상 리뷰 UX | `VideoReviewDialog.cpp:720` | Esc가 `CancelAll`(이미지 다이얼로그의 Esc는 한 장만 건너뛴다). undo 없음, "여기를 시작/끝으로"가 keyframe 전체를 지울 수 있다 |
+| soft-mask 전역 직렬화 | `Mosaic.cpp:451` | `g_maskComputationMutex`가 마스크 계산을 전 스레드에 걸쳐 직렬화한다 |
+| YOLO5Face 점수 | `Yolo5FaceDetector.cpp:270` | objectness만 쓰고 class score와 곱하지 않는다 |
+| 기타 Low | — | 1px blur no-op, 타원 모서리 미커버, 스캐너 에러 처리 비대칭, 대소문자 무시 입력 dedupe |
+| DMG만 stapling | `.github/workflows/release.yml:263` | app bundle 자체는 staple되지 않는다 |
+| per-test timeout 없음 | `tests/CMakeLists.txt` | `TIMEOUT` 속성이 없어 멈춘 테스트가 CI 전체 한도까지 간다 |
+| Windows 설치본 미서명 | `.github/workflows/release.yml` | signtool 단계가 없다. `CF-001`과 함께 봐야 한다 |
+| Windows Qt 6.11.1 핀 | `.github/workflows/*` | 저장소 밖 차단. aqtinstall이 Windows의 아키텍처별 저장소 경로를 아직 못 읽는다 (issues #959, #1000는 master에만 반영) |
+
+### 0.3 사람이 해야 하는 것
+
+코드로 끝낼 수 없고 비밀값 접근 권한이 필요한 작업이다. 하나 남았다.
+
+1. **Apple 서명 secret 7개를 `release` 환경으로 옮긴다.** `release` 환경은
+   존재하지만 `gh secret list --env release`가 비어 있고, 7개 secret은 여전히
+   repository scope다. 즉 어떤 workflow의 어떤 job이든 아직 읽을 수 있다
+   (`CF-007`의 남은 절반).
+
+2026-08-10에 Sparkle EdDSA keypair를 만들어 등록하면서 이 목록의 두 번째 항목은
+닫혔다 (`CF-018`). private key는 이 저장소가 아니라 생성한 사람의 keychain과
+오프라인 사본에 있다. 잃어버리면 이미 배포된 client가 이후 모든 update를
+영구히 거부하므로, 기계를 옮길 때 함께 옮겨야 한다.
+
+### 0.4 이 표가 한 번 틀렸던 곳
+
+2026-08-09 판 표는 `CF-004`를 "`TrackCoverageReport::droppedTracks`가 삭제된
+track을 결과로 올린다"는 근거로 Fixed로 적었다. 그 시점(`b3beb25`)에
+`droppedTracks`는 `Tracking.cpp:783`에서 **쓰이기만 하고 읽는 곳이 없었다.**
+값이 사용자에게 도달한 것은 `e9ea380`부터다. 필드가 생겼다는 사실을 근거로
+쓰면 이런 오판이 나온다 — 근거는 항상 그 값을 읽는 caller까지 적는다.
 
 이 보고서는 정적 코드 추적, 두 번의 독립적인 sweep, 기존 테스트 검토, 별도 sanitizer/경고 빌드, 합성 이미지·영상과 production library에 연결한 임시 harness, 그리고 현재 CI/패키징 설정 검증을 결합한 결과다. 소스의 주석이나 README를 구현의 증거로 사용하지 않고 caller에서 최종 output/update sink까지 실제 경로를 확인했다. 외부 플랫폼이나 안전하게 재현할 수 없는 조건은 명시적으로 **Not dynamically verified**라고 표시했다.
 
@@ -587,6 +645,9 @@ translations/cloakframe_zh_CN.ts
 </details>
 
 ## 9. Findings Summary Table
+
+> 감사 시점(2026-08-06) 기록이다. 대부분은 이후 수정되었으므로 현재 상태는
+> §0.1을 본다.
 
 | ID | Classification | Severity | Confidence | Component | Platforms | Summary |
 |---|---|---|---|---|---|---|
@@ -1287,6 +1348,13 @@ translations/cloakframe_zh_CN.ts
 - Bundled FFmpeg가 없을 때 PATH의 system FFmpeg를 사용한다. 이는 shell injection은 아니지만 codec/provider behavior가 distro별로 달라지므로 compatibility matrix가 필요하다.
 
 ## 17. Prioritized Remediation Plan
+
+> 감사 시점의 계획이다. 현재 상태만 요약하면 P0 2·3항은 완료, P0 1항의 update
+> chain(`CF-001`, `CF-002`, 그리고 `CF-007`의 secret scope)은 그대로 남았고,
+> P0 4항의 regression gate는 절반이다 — coverage와 timeline 쪽 테스트는
+> 생겼지만 update authenticity와 two-user cache preseed 테스트는 없다. P1은
+> `CF-021`, `CF-026`과 8항의 fault-injection suite를 빼고 완료되었다.
+> 항목별 현재 상태는 §0.1, 감사 밖 남은 작업은 §0.2를 본다.
 
 ### P0: 배포 전에 반드시 수정
 
