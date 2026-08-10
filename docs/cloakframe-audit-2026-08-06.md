@@ -9,7 +9,7 @@
 
 ## 0. Finding 현재 상태 (2026-08-10 기준)
 
-재확인 revision: `0879564940b4c000cee5e4ac88da70789eb2be6d` (`main`). 아래 줄
+재확인 revision: `9edfa0ce2713e2dd09edf8ddd0e545cf6de7ed06` (`main`). 아래 줄
 번호도 그 revision 기준이며, 본문의 감사 시점 줄 번호와는 다르다. 본문 §9의
 분류와 심각도는 감사 시점 기록이므로 바꾸지 않았다.
 
@@ -25,8 +25,8 @@
 
 | ID | 상태 | 근거 (2026-08-10 재확인) |
 |---|---|---|
-| CF-001 | Open | `SelfUpdaterVelopack.cpp:29,55,73`이 `GithubSource` feed의 hash만 신뢰한다. app-pinned trust anchor 없음. Windows 아티팩트에 code-signing 단계도 없다. offline signing key 보관 위치 결정 대기 |
-| CF-002 | Open | `cmake/CloakFrameVelopack.cmake:3`의 Velopack 1.2.0 고정과 공유 `/var/tmp` cache 그대로 |
+| CF-001 | Fixed | client가 적용 가능한 모든 asset의 SHA-256에 대한 Ed25519 서명을 build에 고정된 key로 검증하고(`SelfUpdaterVelopack.cpp`의 `updateIsTrusted`, `UpdateSignature.cpp`), release job이 `.github/scripts/sign_update_packages.sh`로 서명한다. keypair는 `CLOAKFRAME_UPDATE_PUBLIC_KEY` 변수와 `CLOAKFRAME_UPDATE_PRIVATE_KEY` secret으로 등록되었다 (2026-08-10). Authenticode는 이 finding과 무관하며 여전히 없다 — §0.2 |
+| CF-002 | Open | `cmake/CloakFrameVelopack.cmake:3`의 Velopack 1.2.0 고정과 공유 `/var/tmp` cache 그대로. 다만 `CF-001`의 서명 검증이 선점된 package를 거부하므로 남는 것은 검증과 Velopack의 재읽기 사이 좁은 TOCTOU다. `UpdateManager`에 locator를 넘기면 auto-locate가 통째로 꺼지므로(`manager.rs:198`) client에서 `PackagesDir`만 바꿀 수 없다. 상류가 `package_dir_override`를 C API로 노출하는 것이 정공법이다 |
 | CF-003 | Fixed | `DetectionResult::omitted`(`Yolo5FaceDetector.cpp:319-338`, `ScrfdFaceDetector.cpp:610-624`)가 버린 후보를 전달하고 `RunSummary::uncovered`가 clean `Completed`를 막는다 |
 | CF-004 | Fixed | `VideoProcessor.cpp:665`가 `droppedTracks`를 결과에 싣고 `ProcessorWorker.cpp:1500,1527`이 이를 사용자 경고와 `outcome.uncovered`로 올린다 (2026-08-09 늦게, `e9ea380`) |
 | CF-005 | Fixed | `VideoProcessor.cpp:663-664`가 `uncoveredFrames`와 `uncoveredSpans`를 올리고, review timeline이 그 구간을 별도 행으로 표시한다 (`3135dcb`) |
@@ -81,7 +81,7 @@ obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에�
 | 기타 Low | — | 1px blur no-op, 타원 모서리 미커버, 스캐너 에러 처리 비대칭, 대소문자 무시 입력 dedupe |
 | DMG만 stapling | `.github/workflows/release.yml:263` | app bundle 자체는 staple되지 않는다 |
 | per-test timeout 없음 | `tests/CMakeLists.txt` | `TIMEOUT` 속성이 없어 멈춘 테스트가 CI 전체 한도까지 간다 |
-| Windows 설치본 미서명 | `.github/workflows/release.yml` | signtool 단계가 없다. `CF-001`과 함께 봐야 한다 |
+| Windows 설치본 미서명 | `.github/workflows/release.yml` | signtool 단계가 없어 SmartScreen 경고가 난다. `CF-001`은 app-pinned key로 닫혔고 Authenticode는 그것과 별개의 비용 문제다 |
 | Windows Qt 6.11.1 핀 | `.github/workflows/*` | 저장소 밖 차단. aqtinstall이 Windows의 아키텍처별 저장소 경로를 아직 못 읽는다 (issues #959, #1000는 master에만 반영) |
 
 ### 0.3 사람이 해야 하는 것
@@ -93,10 +93,16 @@ obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에�
    repository scope다. 즉 어떤 workflow의 어떤 job이든 아직 읽을 수 있다
    (`CF-007`의 남은 절반).
 
-2026-08-10에 Sparkle EdDSA keypair를 만들어 등록하면서 이 목록의 두 번째 항목은
-닫혔다 (`CF-018`). private key는 이 저장소가 아니라 생성한 사람의 keychain과
-오프라인 사본에 있다. 잃어버리면 이미 배포된 client가 이후 모든 update를
-영구히 거부하므로, 기계를 옮길 때 함께 옮겨야 한다.
+2026-08-10에 update signing key 두 개를 만들어 등록하면서 이 목록의 두 번째
+항목은 닫혔다 — macOS의 Sparkle EdDSA key (`CF-018`)와 Windows/Linux의 Ed25519
+key (`CF-001`). 두 private key 모두 이 저장소가 아니라 만든 사람의 keychain과
+오프라인 사본에 있다. 어느 쪽이든 잃어버리면 그 key로 서명된 build를 받은
+client가 이후 모든 update를 영구히 거부하므로, 기계를 옮길 때 함께 옮겨야 한다.
+
+`CF-001`의 서명 경로는 local round trip과 CI build까지 확인했지만, 실제
+release에서 동작하는 것은 다음 `v*` tag가 처음이다. 그때 release job 로그에
+`signed <package> <digest>`가 찍히고 release asset에 `.nupkg.sig`가 올라오는지
+확인한다.
 
 ### 0.4 이 표가 한 번 틀렸던 곳
 
@@ -1349,11 +1355,11 @@ translations/cloakframe_zh_CN.ts
 
 ## 17. Prioritized Remediation Plan
 
-> 감사 시점의 계획이다. 현재 상태만 요약하면 P0 2·3항은 완료, P0 1항의 update
-> chain(`CF-001`, `CF-002`, 그리고 `CF-007`의 secret scope)은 그대로 남았고,
-> P0 4항의 regression gate는 절반이다 — coverage와 timeline 쪽 테스트는
-> 생겼지만 update authenticity와 two-user cache preseed 테스트는 없다. P1은
-> `CF-021`, `CF-026`과 8항의 fault-injection suite를 빼고 완료되었다.
+> 감사 시점의 계획이다. 현재 상태만 요약하면 P0 2·3항은 완료, P0 1항은
+> `CF-001`이 닫히고 `CF-002`와 `CF-007`의 secret scope가 남았다. P0 4항의
+> regression gate는 절반이다 — coverage, timeline, update signature 쪽 테스트는
+> 생겼지만 two-user cache preseed와 실제 updater를 태우는 end-to-end 테스트는
+> 없다. P1은 `CF-021`, `CF-026`과 8항의 fault-injection suite를 빼고 완료되었다.
 > 항목별 현재 상태는 §0.1, 감사 밖 남은 작업은 §0.2를 본다.
 
 ### P0: 배포 전에 반드시 수정
