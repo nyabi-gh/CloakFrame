@@ -240,4 +240,20 @@ namespace cloakframe
             QMessageBox::No);
         return answer == QMessageBox::Yes;
     }
+
+    bool confirmChangedCustomModel(QWidget *parent, const QString &path)
+    {
+        const QFileInfo info(path);
+        const auto answer = QMessageBox::question(parent,
+            QCoreApplication::translate("cloakframe::MainWindow", "Model File Changed"),
+            QCoreApplication::translate("cloakframe::MainWindow",
+                "This file is no longer the model you approved.\n\nModel: %1\nSize: %2 "
+                "MB\n\nSomething replaced its contents since you chose it. Continue only if "
+                "you replaced it yourself.\n\nLoad it anyway?")
+                .arg(info.fileName())
+                .arg(QString::number(static_cast<double>(info.size()) / 1024.0 / 1024.0, 'f', 1)),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        return answer == QMessageBox::Yes;
+    }
 }

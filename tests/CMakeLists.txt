@@ -11,6 +11,7 @@ function(add_cloakframe_test name)
 endfunction()
 
 add_cloakframe_test(cloakframe_tests test_core.cpp)
+add_cloakframe_test(cloakframe_custom_model_consent_tests test_custom_model_consent.cpp)
 add_cloakframe_test(cloakframe_tracking_tests test_tracking.cpp)
 add_cloakframe_test(cloakframe_parallel_tests test_parallel.cpp)
 add_cloakframe_test(cloakframe_stage_cleanup_tests test_stage_cleanup.cpp)

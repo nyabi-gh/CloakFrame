@@ -41,7 +41,7 @@
 | CF-013 | Fixed | thread 생성 실패 시 이미 시작한 worker를 stop/join한 뒤 rethrow한다 (`OrderedParallel.hpp`의 `StopAndJoin`, `VideoProcessor.cpp`의 `MaskWorkerPool` 생성자 catch) |
 | CF-014 | Fixed | estimate가 budget을 넘으면 decode 전에 거부한다 (`ProcessorWorker.cpp:875`, 2026-08-09) |
 | CF-015 | Fixed | 원자적 primitive가 없는 filesystem에서는 `.cloakframe-partial`(`ImageIo.cpp:1120,1184`)로 복사한 뒤 rename하며, 복사 중 guard를 polling한다 (2026-08-09) |
-| CF-016 | Open | settings에 `customModelPath`만 저장한다(`MainWindow.cpp:1923,2060`). 동의가 여전히 path에만 묶이고 parser가 같은 process에서 실행된다 |
+| CF-016 | Partial | 동의가 path가 아니라 content에 묶인다. 승인 시 SHA-256과 크기를 `customModelDigest`/`customModelSize`로 저장하고, 복원할 때는 파일을 다시 읽지 않고 기록된 값을 되살리며(다시 읽으면 지금 그 자리에 있는 것을 승인하는 셈이라 이 기록이 잡으려는 것을 놓친다), 실행 시작 시 `checkCustomModel`(`CustomModelConsent.cpp`)로 대조해 다르면 기본값 No인 재승인 프롬프트를 띄운다(`MainWindow.cpp`의 `ensureCustomModelStillApproved`, `ModelDownloader.cpp`의 `confirmChangedCustomModel`). content 기록 이전 버전의 settings는 "승인 기록 없음"으로 취급해 첫 실행에서 한 번 다시 묻는다. `tests/test_custom_model_consent.cpp`가 길이가 같은 교체, 길이가 다른 교체, symlink 재지정, 기록 없는 승인, 사라진 파일을 검사한다. **남은 절반은 parser/inference의 process 격리이며 감사도 long-term으로 적었다 — §0.2** |
 | CF-017 | Obsolete | `scripts/package_linux.sh`가 삭제되고 AppImage는 `vpk pack`이 만든다 |
 | CF-018 | Fixed | keypair를 생성해 `SPARKLE_ED_PUBLIC_KEY` 변수와 `SPARKLE_ED_PRIVATE_KEY` secret으로 등록했다 (2026-08-10). keychain private key의 public half가 저장소 변수 및 번들의 `SUPublicEDKey`와 일치함을 대조했다. appcast에 서명이 실제로 실리는지는 다음 release job의 `grep -q 'edSignature='`가 확인한다 |
 | CF-019 | Open | `ModelDownloader.cpp:105`가 고정 `.part` 이름을 일반 `QFile`로 연다 |
@@ -84,6 +84,7 @@ obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에�
 | per-test timeout 없음 | `tests/CMakeLists.txt` | `TIMEOUT` 속성이 없어 멈춘 테스트가 CI 전체 한도까지 간다 |
 | Windows 설치본 미서명 | `.github/workflows/release.yml` | signtool 단계가 없어 SmartScreen 경고가 난다. `CF-001`은 app-pinned key로 닫혔고 Authenticode는 그것과 별개의 비용 문제다 |
 | Windows Qt 6.11.1 핀 | `.github/workflows/*` | 저장소 밖 차단. aqtinstall이 Windows의 아키텍처별 저장소 경로를 아직 못 읽는다 (issues #959, #1000는 master에만 반영) |
+| Custom ONNX parser의 process 격리 | `ScrfdFaceDetector.cpp`와 새 helper | `CF-016`의 남은 절반. 악의적 ONNX가 GUI/미디어 process와 같은 권한으로 parse된다. 새 실행 파일, tensor IPC(영상은 프레임마다이므로 공유 메모리), 메모리·시간 제한, 플랫폼별 sandbox가 필요하고 검출 성능 작업과 얽힌다. 한 세션 분량이 아니다 |
 
 ### 0.3 사람이 해야 하는 것
 

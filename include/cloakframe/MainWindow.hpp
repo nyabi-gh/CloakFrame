@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cloakframe/CustomModelConsent.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
 #include "cloakframe/ReviewTypes.hpp"
 #include "cloakframe/Theme.hpp"
@@ -104,6 +105,10 @@ namespace cloakframe
         [[nodiscard]] QString selectedModelPath() const;
 
         [[nodiscard]] const BuiltinModel *selectedBuiltinModel() const;
+
+        // True when the file at `path` is the one the user approved, or when they approve it
+        // again after being told it changed. Records the new approval in that case.
+        [[nodiscard]] bool ensureCustomModelStillApproved(const QString &path);
 
         void setProcessing(bool processing);
 
@@ -236,6 +241,7 @@ namespace cloakframe
         DetectorCacheKey cachedPlateDetectorKey_;
         std::optional<ActiveRunState> activeRunState_;
         cv::Mat customImage_;
+        CustomModelApproval customModelApproval_;
 
         QTranslator translator_;
         QTranslator qtTranslator_;

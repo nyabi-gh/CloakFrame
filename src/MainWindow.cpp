@@ -1320,6 +1320,13 @@ namespace cloakframe
             {
                 return;
             }
+            const auto approval = approvalForCustomModel(path);
+            if (!approval)
+            {
+                appendLog(tr("Could not read the custom model file."));
+                return;
+            }
+            customModelApproval_ = *approval;
             const QFileInfo info(path);
             modelCombo_->addItem(tr("Custom — %1").arg(info.fileName()), info.absoluteFilePath());
             modelCombo_->setItemData(modelCombo_->count() - 1, -1, kModelCatalogIndexRole);
@@ -1513,7 +1520,9 @@ namespace cloakframe
                 appendLog(tr("Model ready: %1").arg(builtin->fileName));
             }
 
-            if (isCustom && !customModelFileIsAllowed(this, modelPath))
+            if (isCustom
+                && (!customModelFileIsAllowed(this, modelPath)
+                    || !ensureCustomModelStillApproved(modelPath)))
             {
                 return;
             }
@@ -1921,6 +1930,12 @@ namespace cloakframe
             modelCombo_->setCurrentIndex(savedModelIndex);
         }
         const auto savedCustomModel = settings.value("customModelPath").toString();
+        // The approval is restored as it was recorded, not re-derived from the file: re-reading
+        // the bytes here would approve whatever happens to be at the path now, which is the
+        // thing this record exists to catch. A settings file written before approvals were
+        // content-bound leaves this empty, and the first run asks again.
+        customModelApproval_.digest = settings.value("customModelDigest").toString();
+        customModelApproval_.size = settings.value("customModelSize").toLongLong();
         if (!savedCustomModel.isEmpty() && QFileInfo::exists(savedCustomModel))
         {
             const QFileInfo info(savedCustomModel);
@@ -2058,10 +2073,14 @@ namespace cloakframe
         if (!currentModel.isEmpty() && builtin == nullptr)
         {
             settings.setValue("customModelPath", currentModel);
+            settings.setValue("customModelDigest", customModelApproval_.digest);
+            settings.setValue("customModelSize", customModelApproval_.size);
         }
         else
         {
             settings.remove("customModelPath");
+            settings.remove("customModelDigest");
+            settings.remove("customModelSize");
         }
 
         settings.setValue("outputDir", outputDirEdit_->text());
@@ -2657,6 +2676,39 @@ namespace cloakframe
             return nullptr;
         }
         return &builtinModels()[static_cast<std::size_t>(index)];
+    }
+
+    bool MainWindow::ensureCustomModelStillApproved(const QString &path)
+    {
+        switch (checkCustomModel(path, customModelApproval_))
+        {
+        case CustomModelState::Approved:
+            return true;
+        case CustomModelState::Unavailable:
+            appendLog(tr("Could not read the custom model file."));
+            return false;
+        case CustomModelState::Unapproved:
+            break;
+        }
+
+        // Never approved as content - a model chosen by an older version - versus approved and
+        // then replaced. The second is the one worth alarming about.
+        const bool approved = customModelApproval_.isRecorded()
+                                  ? confirmChangedCustomModel(this, path)
+                                  : confirmTrustedCustomModel(this, path);
+        if (!approved)
+        {
+            appendLog(tr("The custom model was not approved, so nothing was processed."));
+            return false;
+        }
+        const auto approval = approvalForCustomModel(path);
+        if (!approval)
+        {
+            appendLog(tr("Could not read the custom model file."));
+            return false;
+        }
+        customModelApproval_ = *approval;
+        return true;
     }
 
     void MainWindow::addRetranslation(std::function<void()> apply)

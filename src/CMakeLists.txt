@@ -13,6 +13,7 @@ elseif(WIN32)
 endif()
 
 add_library(cloakframe_core STATIC
+    CustomModelConsent.cpp
     ImageIo.cpp
     ImageScanner.cpp
     MemoryBudget.cpp
@@ -35,6 +36,7 @@ add_library(cloakframe_core STATIC
     VideoReviewTypes.cpp
     Yolo5FaceDetector.cpp
     YuNetFaceDetector.cpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/CustomModelConsent.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/DetectionGeometry.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Detector.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/FaceDetection.hpp
