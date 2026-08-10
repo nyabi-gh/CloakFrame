@@ -1,6 +1,7 @@
 #include "cloakframe/ModelDownloader.hpp"
 
 #include "cloakframe/ModelCatalog.hpp"
+#include "cloakframe/ModelStore.hpp"
 
 #include <QCoreApplication>
 #include <QCryptographicHash>
@@ -101,30 +102,28 @@ namespace cloakframe
             return false;
         }
 
-        QDir().mkpath(QFileInfo(destPath).absolutePath());
-        const QString tempPath = destPath + ".part";
-        QFile file(tempPath);
-        if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size())
+        switch (saveModelFile(destPath, data, model.sha256))
         {
-            file.remove();
+        case ModelSaveResult::Saved:
+            return true;
+        case ModelSaveResult::FolderNotPrivate:
             QMessageBox::warning(parent,
                 QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
-                QCoreApplication::translate(
-                    "cloakframe::MainWindow", "Could not save the model file."));
+                QCoreApplication::translate("cloakframe::MainWindow",
+                    "Another account can change the model folder, so the download was not "
+                    "saved.\n\n%1")
+                    .arg(QDir::toNativeSeparators(QFileInfo(destPath).absolutePath())));
             return false;
+        case ModelSaveResult::WriteFailed:
+        case ModelSaveResult::ContentMismatch:
+        case ModelSaveResult::PublishFailed:
+            break;
         }
-        file.close();
-        QFile::remove(destPath);
-        if (!QFile::rename(tempPath, destPath))
-        {
-            QFile::remove(tempPath);
-            QMessageBox::warning(parent,
-                QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
-                QCoreApplication::translate(
-                    "cloakframe::MainWindow", "Could not save the model file."));
-            return false;
-        }
-        return true;
+        QMessageBox::warning(parent,
+            QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
+            QCoreApplication::translate(
+                "cloakframe::MainWindow", "Could not save the model file."));
+        return false;
     }
 
     namespace

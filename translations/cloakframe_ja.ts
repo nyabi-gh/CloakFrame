@@ -4,26 +4,26 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="31"/>
+        <location filename="../src/ModelDownloader.cpp" line="32"/>
         <source>Downloading model…</source>
         <translation>モデルをダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="32"/>
+        <location filename="../src/ModelDownloader.cpp" line="33"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="73"/>
-        <location filename="../src/ModelDownloader.cpp" line="84"/>
-        <location filename="../src/ModelDownloader.cpp" line="98"/>
+        <location filename="../src/ModelDownloader.cpp" line="74"/>
+        <location filename="../src/ModelDownloader.cpp" line="85"/>
+        <location filename="../src/ModelDownloader.cpp" line="99"/>
         <location filename="../src/ModelDownloader.cpp" line="111"/>
-        <location filename="../src/ModelDownloader.cpp" line="122"/>
+        <location filename="../src/ModelDownloader.cpp" line="123"/>
         <source>Download Failed</source>
         <translation>ダウンロード失敗</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="85"/>
+        <location filename="../src/ModelDownloader.cpp" line="86"/>
         <source>Could not download the model.
 
 %1</source>
@@ -32,23 +32,31 @@
 %1</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="99"/>
+        <location filename="../src/ModelDownloader.cpp" line="100"/>
         <source>The downloaded model failed its integrity check and was discarded.</source>
         <translation>ダウンロードしたモデルは整合性チェックに失敗したため破棄されました。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="74"/>
+        <location filename="../src/ModelDownloader.cpp" line="75"/>
         <source>The download was much larger than expected and was stopped.</source>
         <translation>ダウンロードサイズが予想を大幅に超えたため中止しました。</translation>
     </message>
     <message>
         <location filename="../src/ModelDownloader.cpp" line="112"/>
-        <location filename="../src/ModelDownloader.cpp" line="123"/>
+        <source>Another account can change the model folder, so the download was not saved.
+
+%1</source>
+        <translation>他のアカウントがモデルフォルダーを変更できるため、ダウンロードしたファイルを保存しませんでした。
+
+%1</translation>
+    </message>
+    <message>
+        <location filename="../src/ModelDownloader.cpp" line="124"/>
         <source>Could not save the model file.</source>
         <translation>モデルファイルを保存できませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="137"/>
+        <location filename="../src/ModelDownloader.cpp" line="136"/>
         <source>The %1 model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%2 MB) from the yolov5-face-onnx-inference project on GitHub. The model is based on the GPL-3.0-licensed YOLO5Face project and was trained on the WIDER FACE dataset, so treat it as non-commercial only. Your images are never uploaded.
@@ -61,7 +69,7 @@ CloakFrame は GitHub の yolov5-face-onnx-inference プロジェクトから一
 今すぐダウンロードしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="145"/>
+        <location filename="../src/ModelDownloader.cpp" line="144"/>
         <source>The %1 model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%2 MB) from the OpenCV Zoo project on GitHub (MIT-licensed). Your images are never uploaded.
@@ -74,7 +82,7 @@ CloakFrame は GitHub の OpenCV Zoo プロジェクトから一度だけ（%2 M
 今すぐダウンロードしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="153"/>
+        <location filename="../src/ModelDownloader.cpp" line="152"/>
         <source>The %1 model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%2 MB) from its source project. Your images are never uploaded.
@@ -87,13 +95,13 @@ CloakFrame は提供元プロジェクトから一度だけ（%2 MB）ダウン�
 今すぐダウンロードしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="166"/>
-        <location filename="../src/ModelDownloader.cpp" line="183"/>
+        <location filename="../src/ModelDownloader.cpp" line="165"/>
+        <location filename="../src/ModelDownloader.cpp" line="182"/>
         <source>Download Model</source>
         <translation>モデルをダウンロード</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="184"/>
+        <location filename="../src/ModelDownloader.cpp" line="183"/>
         <source>The license plate detection model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%1 MB) from the open-image-models project (MIT-licensed). Your images are never uploaded.
@@ -106,38 +114,38 @@ CloakFrame は open-image-models プロジェクト（MIT ライセンス）か�
 今すぐダウンロードしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="204"/>
-        <location filename="../src/ModelDownloader.cpp" line="212"/>
+        <location filename="../src/ModelDownloader.cpp" line="203"/>
+        <location filename="../src/ModelDownloader.cpp" line="211"/>
         <source>Invalid Model</source>
         <translation>無効なモデル</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="205"/>
+        <location filename="../src/ModelDownloader.cpp" line="204"/>
         <source>Choose an existing ONNX model file.</source>
         <translation>存在する ONNX モデルファイルを選択してください。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="213"/>
+        <location filename="../src/ModelDownloader.cpp" line="212"/>
         <source>The selected model must use the .onnx extension.</source>
         <translation>選択するモデルの拡張子は .onnx である必要があります。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="220"/>
+        <location filename="../src/ModelDownloader.cpp" line="219"/>
         <source>Model Too Large</source>
         <translation>モデルが大きすぎます</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="221"/>
+        <location filename="../src/ModelDownloader.cpp" line="220"/>
         <source>The selected ONNX file is larger than 512 MB. Choose a smaller SCRFD model.</source>
         <translation>選択した ONNX ファイルは 512 MB を超えています。より小さい SCRFD モデルを選んでください。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="233"/>
+        <location filename="../src/ModelDownloader.cpp" line="232"/>
         <source>Load Custom Model</source>
         <translation>カスタムモデルを読み込む</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="234"/>
+        <location filename="../src/ModelDownloader.cpp" line="233"/>
         <source>Only load ONNX models from sources you trust.
 
 Model: %1
@@ -152,12 +160,12 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="248"/>
+        <location filename="../src/ModelDownloader.cpp" line="247"/>
         <source>Model File Changed</source>
         <translation>モデルファイルが変わりました</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="249"/>
+        <location filename="../src/ModelDownloader.cpp" line="248"/>
         <source>This file is no longer the model you approved.
 
 Model: %1

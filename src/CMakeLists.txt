@@ -18,6 +18,7 @@ add_library(cloakframe_core STATIC
     ImageScanner.cpp
     MemoryBudget.cpp
     ModelCatalog.cpp
+    ModelStore.cpp
     Mosaic.cpp
     OnnxGraphPatch.cpp
     OrtAcceleration.cpp
@@ -44,6 +45,7 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ImageScanner.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/MemoryBudget.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelCatalog.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelStore.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Mosaic.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/OnnxGraphPatch.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/OrderedParallel.hpp
