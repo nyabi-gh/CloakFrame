@@ -226,8 +226,8 @@ namespace cloakframe
             const auto destinationName = QDir::toNativeSeparators(destPath).toStdWString();
             const std::size_t nameBytes = destinationName.size() * sizeof(wchar_t);
             const std::size_t infoSize = sizeof(FILE_RENAME_INFO) + nameBytes;
-            if (nameBytes > std::numeric_limits<DWORD>::max()
-                || infoSize > std::numeric_limits<DWORD>::max())
+            if (nameBytes > (std::numeric_limits<DWORD>::max)()
+                || infoSize > (std::numeric_limits<DWORD>::max)())
             {
                 return {false, ERROR_FILENAME_EXCED_RANGE};
             }
