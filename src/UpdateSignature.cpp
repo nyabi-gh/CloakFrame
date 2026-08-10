@@ -3,6 +3,7 @@
 #include <QCryptographicHash>
 #include <QFile>
 
+#include <algorithm>
 #include <mutex>
 #include <sodium.h>
 #include <utility>
@@ -97,6 +98,40 @@ namespace cloakframe
             return false;
         }
         return true;
+    }
+
+    UpdateTrust evaluateUpdateTrust(const QString &declaredSha256Hex,
+        const QString &signatureBase64,
+        const QString &pinnedPublicKeyBase64,
+        QString *error)
+    {
+        if (pinnedPublicKeyBase64.isEmpty())
+        {
+            return UpdateTrust::Unpinned;
+        }
+
+        const QString digest = declaredSha256Hex.trimmed().toLower();
+        static constexpr qsizetype kSha256HexLength = 64;
+        if (digest.size() != kSha256HexLength
+            || std::any_of(digest.cbegin(),
+                digest.cend(),
+                [](const QChar ch)
+                {
+                    return !((ch >= u'0' && ch <= u'9') || (ch >= u'a' && ch <= u'f'));
+                }))
+        {
+            setError(error,
+                QStringLiteral("the update feed declared '%1', which is not a SHA-256 digest")
+                    .arg(declaredSha256Hex));
+            return UpdateTrust::Rejected;
+        }
+
+        if (!verifyUpdateSignature(
+                digest.toLatin1(), signatureBase64, pinnedPublicKeyBase64, error))
+        {
+            return UpdateTrust::Rejected;
+        }
+        return UpdateTrust::Trusted;
     }
 
     std::optional<QByteArray> sha256HexOfFile(const QString &path, QString *error)

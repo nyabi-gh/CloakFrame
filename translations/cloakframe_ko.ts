@@ -1822,4 +1822,17 @@ Continue?</source>
         </translation>
     </message>
 </context>
+<context>
+    <name>cloakframe::VelopackWorker</name>
+    <message>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="158"/>
+        <source>Could not download the signature for %1. The update was not applied.</source>
+        <translation>%1의 서명을 내려받지 못했습니다. 업데이트를 적용하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="177"/>
+        <source>The update %1 failed its signature check and was not applied (%2).</source>
+        <translation>업데이트 %1이(가) 서명 검증에 실패하여 적용하지 않았습니다(%2).</translation>
+    </message>
+</context>
 </TS>

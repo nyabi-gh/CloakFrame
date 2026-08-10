@@ -24,6 +24,29 @@ namespace cloakframe
         const QString &publicKeyBase64,
         QString *error = nullptr);
 
+    enum class UpdateTrust
+    {
+        // The pinned key signed this update's digest.
+        Trusted,
+        // This build pins no key, so there is nothing to check the update against. Sparkle
+        // behaves the same way on macOS: the check exists exactly when a key was configured.
+        Unpinned,
+        // A key is pinned and the update did not verify against it. Never apply one of these.
+        Rejected,
+    };
+
+    // Decides whether an update may be applied, given the SHA-256 the release feed declares for
+    // its package and a detached signature over that digest.
+    //
+    // Only the digest is checked, because the updater exposes no path to the package it
+    // downloaded. That is sound as long as the updater enforces the digest it was given: the
+    // signature fixes which digest is legitimate, and the digest fixes which package is. The
+    // digest is compared in lowercase, since that is the form the signature is made over.
+    [[nodiscard]] UpdateTrust evaluateUpdateTrust(const QString &declaredSha256Hex,
+        const QString &signatureBase64,
+        const QString &pinnedPublicKeyBase64,
+        QString *error = nullptr);
+
     // Lowercase hex SHA-256 of a file, streamed so cost stays bounded regardless of size.
     [[nodiscard]] std::optional<QByteArray> sha256HexOfFile(
         const QString &path, QString *error = nullptr);

@@ -1,5 +1,8 @@
 include(FetchContent)
 
+set(CLOAKFRAME_UPDATE_PUBLIC_KEY "" CACHE STRING
+    "Base64 Ed25519 public key that Windows and Linux updates must be signed with")
+
 set(CLOAKFRAME_VELOPACK_VERSION "1.2.0")
 set(CLOAKFRAME_VELOPACK_SHA256
     "547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835")
@@ -57,4 +60,17 @@ function(cloakframe_enable_velopack target)
 
     target_link_libraries(${target} PRIVATE velopack::velopack)
     target_compile_definitions(${target} PRIVATE CLOAKFRAME_HAVE_VELOPACK)
+
+    # Velopack verifies a package against a hash the release feed supplies, and the same release
+    # supplies the package, so the check proves nothing about who published it. The signature
+    # check is enforced exactly when a key is pinned here, the same rule Sparkle follows on macOS.
+    target_compile_definitions(${target} PRIVATE
+        CLOAKFRAME_UPDATE_PUBLIC_KEY="${CLOAKFRAME_UPDATE_PUBLIC_KEY}")
+    if(CLOAKFRAME_UPDATE_PUBLIC_KEY)
+        message(STATUS "CloakFrame: updates require an Ed25519 signature")
+    else()
+        message(WARNING
+            "CLOAKFRAME_UPDATE_PUBLIC_KEY is unset; Windows and Linux updates are trusted on "
+            "whatever the release feed says. See BUILDING.md to create and configure the key.")
+    endif()
 endfunction()
