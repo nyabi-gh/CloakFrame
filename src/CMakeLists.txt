@@ -82,6 +82,7 @@ target_link_libraries(cloakframe_core PUBLIC
 )
 
 if(WIN32)
+    target_compile_definitions(cloakframe_core PRIVATE _WIN32_WINNT=0x0A00)
     target_link_libraries(cloakframe_core PUBLIC advapi32)
 endif()
 

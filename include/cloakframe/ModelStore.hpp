@@ -16,6 +16,7 @@ namespace cloakframe
 
     enum class ModelSaveResult
     {
+        // The verified file was published, or another writer already published the same digest.
         Saved,
         // Another account owns the model folder, or someone outside this account can write to
         // it. Publishing there would hand verified bytes to whoever controls the folder.
@@ -29,8 +30,9 @@ namespace cloakframe
     };
 
     // Writes `bytes` through a private temporary file in the model's own folder, reads it back
-    // through that same descriptor to confirm `expectedSha256Hex`, and only then gives it the
-    // model's name. `expectedSha256Hex` is compared case-insensitively.
+    // through that same descriptor to confirm `expectedSha256Hex`, and only then gives that open
+    // file the model's name. A concurrent writer that publishes the same digest also satisfies
+    // the operation. `expectedSha256Hex` is compared case-insensitively.
     [[nodiscard]] ModelSaveResult saveModelFile(
         const QString &destPath, const QByteArray &bytes, const QString &expectedSha256Hex);
 }

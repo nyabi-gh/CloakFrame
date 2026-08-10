@@ -9,10 +9,16 @@
 #include <QFileInfo>
 #include <QRandomGenerator>
 
+#include <spdlog/spdlog.h>
+
 #include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <limits>
+#include <vector>
 
 #ifdef _WIN32
 #include <fcntl.h>
@@ -29,6 +35,15 @@ namespace cloakframe
     {
         constexpr int kOpenAttempts = 16;
         constexpr qint64 kReadChunk = 1 << 20;
+#ifdef _WIN32
+        constexpr int kPublishAttempts = 8;
+#endif
+
+        struct PublishResult
+        {
+            bool published = false;
+            std::uint64_t nativeError = 0;
+        };
 
         class Descriptor
         {
@@ -86,9 +101,11 @@ namespace cloakframe
         {
 #ifdef _WIN32
             const auto native = QDir::toNativeSeparators(path).toStdWString();
+            // The handle stays open through publication, so it must permit the next verified
+            // writer to replace the name while this caller finishes closing it.
             const HANDLE handle = ::CreateFileW(native.c_str(),
-                GENERIC_READ | GENERIC_WRITE,
-                0,
+                GENERIC_READ | GENERIC_WRITE | DELETE,
+                FILE_SHARE_READ | FILE_SHARE_DELETE,
                 nullptr,
                 CREATE_NEW,
                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_OPEN_REPARSE_POINT,
@@ -194,19 +211,69 @@ namespace cloakframe
             return hash.result().toHex();
         }
 
-        bool replaceWith(const QString &temporaryPath, const QString &destPath)
+        PublishResult replaceWith(
+            const int descriptor, const QString &temporaryPath, const QString &destPath)
         {
 #ifdef _WIN32
-            return ::MoveFileExW(QDir::toNativeSeparators(temporaryPath).toStdWString().c_str(),
-                       QDir::toNativeSeparators(destPath).toStdWString().c_str(),
-                       MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)
-                   != 0;
+            Q_UNUSED(temporaryPath);
+
+            const HANDLE handle = reinterpret_cast<HANDLE>(::_get_osfhandle(descriptor));
+            if (handle == INVALID_HANDLE_VALUE)
+            {
+                return {false, ERROR_INVALID_HANDLE};
+            }
+
+            const auto destinationName = QDir::toNativeSeparators(destPath).toStdWString();
+            const std::size_t nameBytes = destinationName.size() * sizeof(wchar_t);
+            const std::size_t infoSize = sizeof(FILE_RENAME_INFO) + nameBytes;
+            if (nameBytes > std::numeric_limits<DWORD>::max()
+                || infoSize > std::numeric_limits<DWORD>::max())
+            {
+                return {false, ERROR_FILENAME_EXCED_RANGE};
+            }
+
+            const std::size_t storageCount =
+                (infoSize + sizeof(std::max_align_t) - 1) / sizeof(std::max_align_t);
+            std::vector<std::max_align_t> storage(storageCount);
+            std::memset(storage.data(), 0, storage.size() * sizeof(std::max_align_t));
+            auto *renameInfo = reinterpret_cast<FILE_RENAME_INFO *>(storage.data());
+            renameInfo->Flags =
+                FILE_RENAME_FLAG_REPLACE_IF_EXISTS | FILE_RENAME_FLAG_POSIX_SEMANTICS;
+            renameInfo->RootDirectory = nullptr;
+            renameInfo->FileNameLength = static_cast<DWORD>(nameBytes);
+            std::memcpy(renameInfo->FileName, destinationName.data(), nameBytes);
+
+            DWORD error = ERROR_SUCCESS;
+            for (int attempt = 0; attempt < kPublishAttempts; ++attempt)
+            {
+                if (::SetFileInformationByHandle(
+                        handle, FileRenameInfoEx, renameInfo, static_cast<DWORD>(infoSize))
+                    != 0)
+                {
+                    return {true, ERROR_SUCCESS};
+                }
+
+                error = ::GetLastError();
+                const bool retryable =
+                    error == ERROR_SHARING_VIOLATION || error == ERROR_LOCK_VIOLATION;
+                if (!retryable || attempt + 1 == kPublishAttempts)
+                {
+                    break;
+                }
+                ::Sleep(static_cast<DWORD>(1U << attempt));
+            }
+            return {false, error};
 #else
+            Q_UNUSED(descriptor);
             // rename() replaces in one step, so the model already in place stays readable until
             // the moment the new one takes over and survives untouched if this fails.
-            return ::rename(QFile::encodeName(temporaryPath).constData(),
-                       QFile::encodeName(destPath).constData())
-                   == 0;
+            if (::rename(QFile::encodeName(temporaryPath).constData(),
+                    QFile::encodeName(destPath).constData())
+                == 0)
+            {
+                return {true, 0};
+            }
+            return {false, static_cast<std::uint64_t>(errno)};
 #endif
         }
 
@@ -270,10 +337,17 @@ namespace cloakframe
             return discard(ModelSaveResult::ContentMismatch);
         }
 
+        const auto publish = replaceWith(file.get(), temporaryPath, destPath);
         file.close();
-        if (!replaceWith(temporaryPath, destPath))
+        if (!publish.published)
         {
             QFile::remove(temporaryPath);
+            if (fileMatchesDigest(destPath, expectedSha256Hex))
+            {
+                return ModelSaveResult::Saved;
+            }
+            spdlog::warn(
+                "Could not publish a verified model file (native error {})", publish.nativeError);
             return ModelSaveResult::PublishFailed;
         }
         syncDirectory(folder);

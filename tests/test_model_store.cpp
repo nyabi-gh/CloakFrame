@@ -12,7 +12,9 @@
 #include <cstdio>
 #include <memory>
 
-#ifndef _WIN32
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/stat.h>
 #endif
 
@@ -139,6 +141,30 @@ namespace
         assert(noResidue(folder.path()));
     }
 
+#ifdef _WIN32
+    void testAContendedPublishIsSuccessWhenTheModelAlreadyMatches()
+    {
+        const Folder folder;
+        writeFile(folder.modelPath(), kModelBytes);
+
+        const auto native = QDir::toNativeSeparators(folder.modelPath()).toStdWString();
+        const HANDLE reader = ::CreateFileW(native.c_str(),
+            GENERIC_READ,
+            FILE_SHARE_READ,
+            nullptr,
+            OPEN_EXISTING,
+            FILE_ATTRIBUTE_NORMAL,
+            nullptr);
+        assert(reader != INVALID_HANDLE_VALUE);
+
+        assert(cloakframe::saveModelFile(folder.modelPath(), kModelBytes, digestOf(kModelBytes))
+               == cloakframe::ModelSaveResult::Saved);
+        assert(readAll(folder.modelPath()) == kModelBytes);
+        assert(noResidue(folder.path()));
+        assert(::CloseHandle(reader) != 0);
+    }
+#endif
+
     // Two downloads of the same model at once must both finish, and neither may delete or
     // publish the other's temporary file.
     void testConcurrentDownloadsBothFinish()
@@ -217,6 +243,9 @@ int main()
     testAnExistingModelSurvivesAFailedPublication();
     testBytesThatDoNotMatchTheDigestNeverTakeTheModelName();
     testAReplacementTakesOverFromTheModelAlreadyThere();
+#ifdef _WIN32
+    testAContendedPublishIsSuccessWhenTheModelAlreadyMatches();
+#endif
     testConcurrentDownloadsBothFinish();
 #ifndef _WIN32
     testAFolderOthersCanWriteIsRefused();
