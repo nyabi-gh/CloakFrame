@@ -27,6 +27,7 @@ add_library(cloakframe_core STATIC
     SceneCut.cpp
     ScrfdFaceDetector.cpp
     Tracking.cpp
+    UpdateSignature.cpp
     VideoIo.cpp
     VideoProcessor.cpp
     VideoReviewTypes.cpp
@@ -53,6 +54,7 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SceneCut.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ScrfdFaceDetector.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Tracking.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/UpdateSignature.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoIo.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoProcessor.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoReviewTypes.hpp
@@ -68,6 +70,7 @@ target_link_libraries(cloakframe_core PUBLIC
     ${OpenCV_LIBS}
     onnxruntime::onnxruntime
     spdlog::spdlog
+    cloakframe::sodium
 )
 
 if(WIN32)

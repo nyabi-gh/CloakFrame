@@ -29,6 +29,7 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CloakFrameHarden)
+include(CloakFrameSodium)
 include(FindOnnxRuntimeLocal)
 set(CLOAKFRAME_USE_VELOPACK OFF)
 set(CLOAKFRAME_USE_SPARKLE OFF)

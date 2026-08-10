@@ -92,7 +92,7 @@ jobs:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        run: brew install cmake ninja qt opencv onnxruntime spdlog exiv2
+        run: brew install cmake ninja qt opencv onnxruntime spdlog exiv2 libsodium
 
       - name: Prepare pinned FFmpeg
         run: |
@@ -378,7 +378,7 @@ jobs:
       - name: Install spdlog, Exiv2, and Velopack
         shell: pwsh
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md"
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md" "libsodium:x64-windows-static-md"
           dotnet tool install --global vpk --version $env:VELOPACK_VERSION
 
       - name: Prepare pinned FFmpeg
@@ -524,7 +524,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build build-essential pkg-config curl unzip file desktop-file-utils patchelf \
             libjpeg-dev libpng-dev libtiff-dev libwebp-dev \
-            libspdlog-dev libexiv2-dev \
+            libspdlog-dev libexiv2-dev libsodium-dev \
             libgl1-mesa-dev libxcb-cursor0 libxcb-xinerama0 libxkbcommon-x11-0
 
       - name: Install OpenCV

@@ -71,7 +71,7 @@ jobs:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies and LLVM 22
-        run: brew install cmake qt opencv onnxruntime spdlog exiv2 llvm@22
+        run: brew install cmake qt opencv onnxruntime spdlog exiv2 libsodium llvm@22
 
       - name: Configure
         run: |
@@ -100,7 +100,7 @@ jobs:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
       - name: Install dependencies
-        run: brew install cmake qt opencv onnxruntime spdlog exiv2 ffmpeg
+        run: brew install cmake qt opencv onnxruntime spdlog exiv2 libsodium ffmpeg
 
       - name: Configure
         run: >-
@@ -131,7 +131,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build build-essential pkg-config ffmpeg \
             libjpeg-dev libpng-dev libtiff-dev libwebp-dev \
-            libspdlog-dev libexiv2-dev \
+            libspdlog-dev libexiv2-dev libsodium-dev \
             libgl1-mesa-dev libxcb-cursor0 libxcb-xinerama0 libxkbcommon-x11-0
 
       - name: Install OpenCV
@@ -252,7 +252,7 @@ jobs:
       - name: Install spdlog and Exiv2
         shell: pwsh
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md"
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md" "libsodium:x64-windows-static-md"
 
       - name: Install FFmpeg
         run: choco install ffmpeg -y --no-progress
