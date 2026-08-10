@@ -1,7 +1,11 @@
 #include "cloakframe/SelfUpdater.hpp"
+#include "cloakframe/UpdateCache.hpp"
 #include "cloakframe/UpdateSignature.hpp"
 
+#include <QDir>
 #include <QEventLoop>
+#include <QFile>
+#include <QFileInfo>
 #include <QMetaObject>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -27,6 +31,20 @@ namespace cloakframe
         constexpr auto kRepoUrl = "https://github.com/nyattic/CloakFrame";
         constexpr auto kReleaseDownloadPrefix =
             "https://github.com/nyattic/CloakFrame/releases/download/v";
+
+#ifdef __linux__
+        // Velopack 1.2.0 caches Linux packages here (locator.rs). It offers no way to ask for
+        // the path, and supplying a locator replaces its whole path discovery rather than this
+        // one field, so the path is derived. A derivation that is ever wrong costs nothing: the
+        // checks that use it find no file and leave the behaviour exactly as it was.
+        constexpr auto kVelopackCacheRoot = "/var/tmp/velopack";
+
+        QString packagesDirectory(const std::string &appId)
+        {
+            return QStringLiteral("%1/%2/packages")
+                .arg(QString::fromLatin1(kVelopackCacheRoot), QString::fromStdString(appId));
+        }
+#endif
 
         class VelopackWorker final : public QObject
         {
@@ -70,6 +88,12 @@ namespace cloakframe
                     emit downloadFailed(QStringLiteral("no update is pending"));
                     return;
                 }
+                if (QString rejection; !cacheIsUsable(&rejection))
+                {
+                    emit downloadFailed(rejection);
+                    return;
+                }
+                discardCachedPackagesThatDoNotMatch(*update_);
                 try
                 {
                     manager_->DownloadUpdates(*update_, &VelopackWorker::forwardProgress, this);
@@ -79,6 +103,12 @@ namespace cloakframe
                     emit downloadFailed(QString::fromUtf8(error.what()));
                     return;
                 }
+                if (QString rejection;
+                    !cachedPackageIsTheOneDescribed(update_->TargetFullRelease, &rejection))
+                {
+                    emit downloadFailed(rejection);
+                    return;
+                }
                 emit downloadFinished();
             }
 
@@ -86,6 +116,15 @@ namespace cloakframe
             {
                 if (!manager_ || !update_)
                 {
+                    return;
+                }
+                // Checked again here rather than trusting the download: this is the last moment
+                // the package is ours to look at, and on a shared cache it is not ours alone.
+                if (QString rejection;
+                    !cacheIsUsable(&rejection)
+                    || !cachedPackageIsTheOneDescribed(update_->TargetFullRelease, &rejection))
+                {
+                    emit downloadFailed(rejection);
                     return;
                 }
                 try
@@ -180,6 +219,79 @@ namespace cloakframe
                     return false;
                 }
                 return false;
+            }
+
+            // The Linux cache is shared with every account on the machine. Whoever owns the
+            // tree decides what is in it, so a tree this user does not own is not a place an
+            // update may come from.
+            bool cacheIsUsable(QString *rejection)
+            {
+#ifdef __linux__
+                const QString packages = packagesDirectory(manager_->GetAppId());
+                for (const QString &directory :
+                    {QString::fromLatin1(kVelopackCacheRoot), QFileInfo(packages).path(), packages})
+                {
+                    if (inspectCacheDirectory(directory) == CacheDirectoryTrust::Shared)
+                    {
+                        *rejection =
+                            tr("The update cache at %1 is owned or writable by another account "
+                               "on this computer, so an update taken from it cannot be trusted. "
+                               "Remove that directory and try again.")
+                                .arg(directory);
+                        return false;
+                    }
+                }
+#else
+                Q_UNUSED(rejection);
+#endif
+                return true;
+            }
+
+            // The updater skips downloading whenever a file of the expected name is already
+            // present and never hashes it, so a package that is not the one the feed describes
+            // has to go before the download runs or it is what gets installed.
+            void discardCachedPackagesThatDoNotMatch(const Velopack::UpdateInfo &update)
+            {
+#ifdef __linux__
+                const QDir packages(packagesDirectory(manager_->GetAppId()));
+                auto discard = [&packages](const Velopack::VelopackAsset &asset)
+                {
+                    const QString path = packages.filePath(QString::fromStdString(asset.FileName));
+                    if (QFileInfo::exists(path)
+                        && !fileMatchesDigest(path, QString::fromStdString(asset.SHA256)))
+                    {
+                        QFile::remove(path);
+                    }
+                };
+                discard(update.TargetFullRelease);
+                for (const auto &delta : update.DeltasToTarget)
+                {
+                    discard(delta);
+                }
+#else
+                Q_UNUSED(update);
+#endif
+            }
+
+            bool cachedPackageIsTheOneDescribed(
+                const Velopack::VelopackAsset &asset, QString *rejection)
+            {
+#ifdef __linux__
+                const QString path = QDir(packagesDirectory(manager_->GetAppId()))
+                                         .filePath(QString::fromStdString(asset.FileName));
+                if (QFileInfo::exists(path)
+                    && !fileMatchesDigest(path, QString::fromStdString(asset.SHA256)))
+                {
+                    *rejection = tr("The cached update %1 is not the package this release "
+                                    "describes and was not applied.")
+                                     .arg(QString::fromStdString(asset.FileName));
+                    return false;
+                }
+#else
+                Q_UNUSED(asset);
+                Q_UNUSED(rejection);
+#endif
+                return true;
             }
 
             bool updateIsTrusted(const Velopack::UpdateInfo &update, QString *rejection)

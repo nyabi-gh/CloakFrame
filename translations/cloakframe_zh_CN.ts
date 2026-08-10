@@ -1834,5 +1834,15 @@ Continue?</source>
         <source>The update %1 failed its signature check and was not applied (%2).</source>
         <translation>更新 %1 未通过签名校验，未予应用（%2）。</translation>
     </message>
+    <message>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="230"/>
+        <source>The update cache at %1 is owned or writable by another account on this computer, so an update taken from it cannot be trusted. Remove that directory and try again.</source>
+        <translation>%1 的更新缓存由本机的其他账户拥有或可写，因此从中取得的更新不可信。请删除该目录后重试。</translation>
+    </message>
+    <message>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="272"/>
+        <source>The cached update %1 is not the package this release describes and was not applied.</source>
+        <translation>缓存的更新 %1 与此版本描述的软件包不符，未予应用。</translation>
+    </message>
 </context>
 </TS>

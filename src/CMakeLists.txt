@@ -27,6 +27,7 @@ add_library(cloakframe_core STATIC
     SceneCut.cpp
     ScrfdFaceDetector.cpp
     Tracking.cpp
+    UpdateCache.cpp
     UpdateSignature.cpp
     VideoIo.cpp
     VideoProcessor.cpp
@@ -54,6 +55,7 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SceneCut.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ScrfdFaceDetector.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Tracking.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/UpdateCache.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/UpdateSignature.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoIo.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoProcessor.hpp

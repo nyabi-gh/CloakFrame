@@ -1834,5 +1834,15 @@ Continue?</source>
         <source>The update %1 failed its signature check and was not applied (%2).</source>
         <translation>更新 %1 は署名の検証に失敗したため適用されませんでした(%2)。</translation>
     </message>
+    <message>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="230"/>
+        <source>The update cache at %1 is owned or writable by another account on this computer, so an update taken from it cannot be trusted. Remove that directory and try again.</source>
+        <translation>%1 の更新キャッシュはこのコンピューターの別のアカウントが所有しているか書き込み可能なため、そこから取得した更新は信頼できません。そのディレクトリを削除してからやり直してください。</translation>
+    </message>
+    <message>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="272"/>
+        <source>The cached update %1 is not the package this release describes and was not applied.</source>
+        <translation>キャッシュされた更新 %1 はこのリリースが示すパッケージと異なるため適用されませんでした。</translation>
+    </message>
 </context>
 </TS>
