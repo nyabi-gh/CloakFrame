@@ -14,6 +14,11 @@ namespace cloakframe
         constexpr float kMinCutDiff = 22.0F;
         constexpr float kMedianRatio = 2.5F;
         constexpr int kRecentWindow = 8;
+
+        // A candidate is confirmed only after this many further frames fail to return to the
+        // pre-candidate content, so the shortest shot the detector can resolve is this long. A
+        // shot shorter than that — a one-frame insert or a flash between two scenes — surfaces as
+        // the single boundary that starts it rather than as two.
         constexpr int kConfirmFrames = 2;
 
         cv::Mat toThumbnail(const cv::Mat &frame)
@@ -128,16 +133,17 @@ namespace cloakframe
             {
                 candidateFrame_ = -1;
                 preCandidate_.release();
+                previous_ = std::move(thumbnail);
+                return;
             }
-            else if (++framesSinceCandidate_ >= kConfirmFrames)
+            if (++framesSinceCandidate_ < kConfirmFrames)
             {
-                cuts_.push_back(candidateFrame_);
-                candidateFrame_ = -1;
-                preCandidate_.release();
-                recordDiff(diff);
+                previous_ = std::move(thumbnail);
+                return;
             }
-            previous_ = std::move(thumbnail);
-            return;
+            cuts_.push_back(candidateFrame_);
+            candidateFrame_ = -1;
+            preCandidate_.release();
         }
 
         const float median = recentMedian();

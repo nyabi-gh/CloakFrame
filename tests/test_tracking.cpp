@@ -558,6 +558,11 @@ namespace
         return frame;
     }
 
+    cv::Mat solidFrame(int value, int width = 480, int height = 270)
+    {
+        return {height, width, CV_8UC1, cv::Scalar(value)};
+    }
+
     void testSceneCutDetectorFindsHardCut()
     {
         const auto sceneA = gradientFrame(true);
@@ -618,6 +623,92 @@ namespace
         detector.push(sceneB);
         const auto cuts = detector.finish();
         assert(cuts.frames() == std::vector<int>({5}));
+    }
+
+    void testSceneCutDetectorFindsBothCutsAroundShortShot()
+    {
+        const auto sceneA = solidFrame(0);
+        const auto sceneB = solidFrame(110);
+        const auto sceneC = solidFrame(220);
+
+        for (const int middleLength : {2, 3, 4})
+        {
+            cloakframe::SceneCutDetector detector;
+            for (int frame = 0; frame < 10; ++frame)
+            {
+                detector.push(sceneA);
+            }
+            for (int frame = 0; frame < middleLength; ++frame)
+            {
+                detector.push(sceneB);
+            }
+            for (int frame = 0; frame < 10; ++frame)
+            {
+                detector.push(sceneC);
+            }
+            const auto expected = std::vector<int>({10, 10 + middleLength});
+            assert(detector.finish().frames() == expected);
+        }
+    }
+
+    void testSceneCutDetectorCommitsCandidateRaisedWhileConfirming()
+    {
+        const auto sceneA = solidFrame(0);
+        const auto sceneB = solidFrame(110);
+        const auto sceneC = solidFrame(220);
+
+        cloakframe::SceneCutDetector detector;
+        for (int frame = 0; frame < 10; ++frame)
+        {
+            detector.push(sceneA);
+        }
+        detector.push(sceneB);
+        detector.push(sceneB);
+        detector.push(sceneC);
+        const auto expected = std::vector<int>({10, 12});
+        assert(detector.finish().frames() == expected);
+    }
+
+    void testSceneCutDetectorReportsSingleFrameShotAsOneBoundary()
+    {
+        // A shot shorter than the confirmation window cannot be separated from the scene that
+        // follows it, so a one-frame insert — a flash between two different scenes included —
+        // yields the single boundary that starts it.
+        const auto sceneA = solidFrame(0);
+        const auto insert = solidFrame(255);
+        const auto sceneC = solidFrame(110);
+
+        cloakframe::SceneCutDetector detector;
+        for (int frame = 0; frame < 10; ++frame)
+        {
+            detector.push(sceneA);
+        }
+        detector.push(insert);
+        for (int frame = 0; frame < 10; ++frame)
+        {
+            detector.push(sceneC);
+        }
+        const auto expected = std::vector<int>({10});
+        assert(detector.finish().frames() == expected);
+    }
+
+    void testBidirectionalTracksRespectConsecutiveSceneCuts()
+    {
+        const auto sequence = movingObjectSequence(20, 50.0F, 5.0F);
+        const auto tracks = cloakframe::buildBidirectionalTracks(
+            sequence, {}, 0.5F, cloakframe::SceneCuts({10, 13}));
+        assert(tracks.size() == 3);
+        for (const auto &track : tracks)
+        {
+            const bool insideOneShot = track.lastFrame() < 10
+                                       || (track.firstFrame() >= 10 && track.lastFrame() < 13)
+                                       || track.firstFrame() >= 13;
+            assert(insideOneShot);
+        }
+        for (int frame = 0; frame < 20; ++frame)
+        {
+            assert(cloakframe::trackRegionsForFrame(tracks, frame).size() == 1);
+        }
     }
 
     void testSizeJumpStartsNewTrackInsteadOfAssociating()
@@ -804,6 +895,10 @@ int main()
     testSceneCutDetectorIgnoresFlash();
     testSceneCutDetectorIgnoresStaticScene();
     testSceneCutDetectorCommitsTrailingCandidate();
+    testSceneCutDetectorFindsBothCutsAroundShortShot();
+    testSceneCutDetectorCommitsCandidateRaisedWhileConfirming();
+    testSceneCutDetectorReportsSingleFrameShotAsOneBoundary();
+    testBidirectionalTracksRespectConsecutiveSceneCuts();
     testSizeJumpStartsNewTrackInsteadOfAssociating();
     testGradualGrowthKeepsOneTrack();
     testInterpolationCoversSizeJumpConservatively();

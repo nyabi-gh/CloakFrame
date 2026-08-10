@@ -50,7 +50,7 @@
 | CF-023 | Fixed | 96개 문구를 번역하고 세 locale 모두에 strict gate를 적용했다. 근본 원인인 `trVideo`/`trVideoProcessor` 간접 호출도 `QT_TRANSLATE_NOOP`으로 노출했다 (2026-08-09) |
 | CF-024 | Fixed | release workflow의 `verify-version` job이 tag/project/release-notes 일치를 강제한다 |
 | CF-025 | Open | `.github/workflows/release.yml:95`의 `brew install`이 버전을 고정하지 않고 SBOM이 없다 |
-| CF-026 | Open | `SceneCut.cpp:112`의 `push`에서 확정 분기가 여전히 early return한다 |
+| CF-026 | Fixed | `SceneCut.cpp:129-163`의 확정 분기가 early return하지 않고 spike 판정으로 떨어지므로, 확정에 쓴 그 transition이 새 candidate가 된다. 2·3·4-프레임 중간 shot에서 두 boundary를 모두 반환하고, 확정 직후 만들어진 candidate로 영상이 끝나면 `finish()`가 그것을 커밋한다. 두 테스트 모두 수정 전 코드에서 실패함을 확인했다 (`testSceneCutDetectorFindsBothCutsAroundShortShot`, `testSceneCutDetectorCommitsCandidateRaisedWhileConfirming`). 남은 한계는 `kConfirmFrames`보다 짧은 shot으로, 두 boundary가 아니라 하나로 보고된다 — `testSceneCutDetectorReportsSingleFrameShotAsOneBoundary`와 `release-notes/1.11.0.*.md`에 명시했다. tracking 쪽의 인접 cut 처리는 `testBidirectionalTracksRespectConsecutiveSceneCuts`로 따로 덮었고 이 테스트는 수정 전에도 통과한다 |
 
 감사에 없던 항목 두 가지도 함께 처리했다. Windows manifest
 (`activeCodePage`/`longPathAware`)를 추가해 non-ASCII 경로에서 metadata 보존이
@@ -67,7 +67,7 @@ obsolete로 표시되고 `lrelease`가 이를 제외하면서, 모든 언어에�
 ### 0.2 감사 밖에 남은 작업
 
 감사 범위 밖에서 발견했지만 아직 열려 있는 항목이다. `Mosaic.cpp`,
-`ImageScanner.cpp`, `ModelDownloader.cpp`, `OutputPlan.cpp`, `SceneCut.cpp`,
+`ImageScanner.cpp`, `ModelDownloader.cpp`, `OutputPlan.cpp`,
 `OnnxGraphPatch.cpp`는 2026-08-09 이후 한 줄도 바뀌지 않았다.
 
 | 항목 | 위치 | 비고 |
