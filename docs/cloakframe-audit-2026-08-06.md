@@ -26,7 +26,7 @@
 | ID | 상태 | 근거 (2026-08-10 재확인) |
 |---|---|---|
 | CF-001 | Fixed | client가 적용 가능한 모든 asset의 SHA-256에 대한 Ed25519 서명을 build에 고정된 key로 검증하고(`SelfUpdaterVelopack.cpp`의 `updateIsTrusted`, `UpdateSignature.cpp`), release job이 `.github/scripts/sign_update_packages.sh`로 서명한다. keypair는 `CLOAKFRAME_UPDATE_PUBLIC_KEY` 변수와 `CLOAKFRAME_UPDATE_PRIVATE_KEY` secret으로 등록되었다 (2026-08-10). Authenticode는 이 finding과 무관하며 여전히 없다 — §0.2 |
-| CF-002 | Open | `cmake/CloakFrameVelopack.cmake:3`의 Velopack 1.2.0 고정과 공유 `/var/tmp` cache 그대로. 다만 `CF-001`의 서명 검증이 선점된 package를 거부하므로 남는 것은 검증과 Velopack의 재읽기 사이 좁은 TOCTOU다. `UpdateManager`에 locator를 넘기면 auto-locate가 통째로 꺼지므로(`manager.rs:198`) client에서 `PackagesDir`만 바꿀 수 없다. 상류가 `package_dir_override`를 C API로 노출하는 것이 정공법이다 |
+| CF-002 | Open | `cmake/CloakFrameVelopack.cmake:3`의 Velopack 1.2.0 고정과 공유 `/var/tmp` cache 그대로. **`CF-001`은 이 finding을 줄이지 못한다** — `download_updates`는 파일이 이미 있으면 hash 없이 early return하고(`manager.rs:399`) apply는 존재만 확인하므로(`manager.rs:616`), 선점된 package는 한 번도 hash되지 않는다. 서명은 feed가 선언한 digest를 고정할 뿐 그것을 disk의 bytes와 대조하는 코드가 없다. `UpdateManager`에 locator를 넘기면 auto-locate가 통째로 꺼지므로(`manager.rs:198`) `PackagesDir`만 바꿀 수도 없다 |
 | CF-003 | Fixed | `DetectionResult::omitted`(`Yolo5FaceDetector.cpp:319-338`, `ScrfdFaceDetector.cpp:610-624`)가 버린 후보를 전달하고 `RunSummary::uncovered`가 clean `Completed`를 막는다 |
 | CF-004 | Fixed | `VideoProcessor.cpp:665`가 `droppedTracks`를 결과에 싣고 `ProcessorWorker.cpp:1500,1527`이 이를 사용자 경고와 `outcome.uncovered`로 올린다 (2026-08-09 늦게, `e9ea380`) |
 | CF-005 | Fixed | `VideoProcessor.cpp:663-664`가 `uncoveredFrames`와 `uncoveredSpans`를 올리고, review timeline이 그 구간을 별도 행으로 표시한다 (`3135dcb`) |
