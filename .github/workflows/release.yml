@@ -190,11 +190,35 @@ jobs:
           exit "$failed"
 
       - name: Import signing certificate
-        uses: apple-actions/import-codesign-certs@fe74d46e82474f87e1ba79832ad28a4013d0e33a # v6
-        with:
-          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE_P12 }}
-          p12-password: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          keychain-password: ${{ secrets.KEYCHAIN_PASSWORD }}
+        env:
+          MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+        run: |
+          for name in MACOS_CERTIFICATE_P12 MACOS_CERTIFICATE_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "$name is not configured" >&2
+              exit 1
+            fi
+          done
+          keychain="$RUNNER_TEMP/signing.keychain-db"
+          keychain_password=$(uuidgen)
+          certificate="$RUNNER_TEMP/certificate.p12"
+          (umask 077 && printf '%s' "$MACOS_CERTIFICATE_P12" | base64 --decode > "$certificate")
+          security create-keychain -p "$keychain_password" "$keychain"
+          security set-keychain-settings -lut 21600 "$keychain"
+          security unlock-keychain -p "$keychain_password" "$keychain"
+          security import "$certificate" \
+            -k "$keychain" \
+            -P "$MACOS_CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$keychain_password" \
+            "$keychain" > /dev/null
+          # The login keychain stays in the search list so the rest of the job keeps
+          # seeing the runner's own defaults.
+          security list-keychain -d user -s "$keychain" login.keychain-db
+          rm -f "$certificate"
 
       - name: Sign application
         env:
@@ -263,22 +287,25 @@ jobs:
 
       - name: Notarize and staple DMG
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+          MACOS_NOTARY_KEY: ${{ secrets.MACOS_NOTARY_KEY }}
+          MACOS_NOTARY_KEY_ID: ${{ secrets.MACOS_NOTARY_KEY_ID }}
+          MACOS_NOTARY_ISSUER_ID: ${{ secrets.MACOS_NOTARY_ISSUER_ID }}
         run: |
-          for name in APPLE_ID TEAM_ID APP_PASSWORD; do
+          for name in MACOS_NOTARY_KEY MACOS_NOTARY_KEY_ID MACOS_NOTARY_ISSUER_ID; do
             if [[ -z "${!name}" ]]; then
               echo "$name is not configured" >&2
               exit 1
             fi
           done
+          key="$RUNNER_TEMP/notary-key.p8"
+          (umask 077 && printf '%s' "$MACOS_NOTARY_KEY" | base64 --decode > "$key")
           dmg="artifacts/$MACOS_ASSET_NAME"
           xcrun notarytool submit "$dmg" \
-            --apple-id "$APPLE_ID" \
-            --team-id "$TEAM_ID" \
-            --password "$APP_PASSWORD" \
+            --key "$key" \
+            --key-id "$MACOS_NOTARY_KEY_ID" \
+            --issuer "$MACOS_NOTARY_ISSUER_ID" \
             --wait
+          rm -f "$key"
           xcrun stapler staple "$dmg"
           xcrun stapler validate "$dmg"
           hdiutil verify "$dmg"
