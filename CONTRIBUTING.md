@@ -60,12 +60,6 @@ Avoid changing supported operating-system, Qt, OpenCV, ONNX Runtime, model, or
 FFmpeg baselines without updating CI, packaging scripts, and documentation in
 the same pull request.
 
-[The 2026-08-06 audit](docs/cloakframe-audit-2026-08-06.md) records how each of
-these properties is currently enforced, which findings are still open, and the
-reproduction steps for them. Read the status table at the top of that document
-before working on privacy coverage, the video timeline, publication, or the
-updater, and update it when a finding changes state.
-
 ## Dependencies and licenses
 
 Record any new runtime dependency and its license in
