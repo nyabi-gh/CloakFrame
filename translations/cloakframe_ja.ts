@@ -1019,7 +1019,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="769"/>
         <source>Skipped unsafe output path for: %1</source>
-        <translation>スキップ: unsafe output path for: %1</translation>
+        <translation>安全でない出力パスのためスキップしました: %1</translation>
     </message>
     <message>
         <source>Skipped (cannot create parent dir): %1 — %2</source>
@@ -1028,7 +1028,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="812"/>
         <source>Skipped (file too large, %1 MB): %2</source>
-        <translation>スキップ: (file too large, %1 MB): %2</translation>
+        <translation>スキップ (ファイルが大きすぎます: %1 MB): %2</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="874"/>
@@ -1039,7 +1039,7 @@ Check these results before sharing them.</source>
         <location filename="../src/ProcessorWorker.cpp" line="894"/>
         <location filename="../src/ProcessorWorker.cpp" line="909"/>
         <source>Skipped (%1): %2</source>
-        <translation>スキップ: (%1): %2</translation>
+        <translation>スキップ (%1): %2</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="880"/>
@@ -1057,7 +1057,7 @@ Check these results before sharing them.</source>
         <location filename="../src/ProcessorWorker.cpp" line="793"/>
         <location filename="../src/ProcessorWorker.cpp" line="937"/>
         <source>Skipped unreadable image: %1</source>
-        <translation>スキップ: unreadable image: %1</translation>
+        <translation>読み取れない画像をスキップしました: %1</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="804"/>
@@ -1074,7 +1074,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="965"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
-        <translation>スキップ: (image too large, %1 × %2): %3</translation>
+        <translation>スキップ (画像が大きすぎます: %1 × %2): %3</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="975"/>
@@ -1093,7 +1093,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1061"/>
         <source>Skipped without saving: %1</source>
-        <translation>スキップ: without saving: %1</translation>
+        <translation>保存せずにスキップしました: %1</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1075"/>
@@ -1104,12 +1104,12 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1103"/>
         <source>Failed to copy: %1</source>
-        <translation>失敗しました: copy: %1</translation>
+        <translation>コピーに失敗しました: %1</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1109"/>
         <source>Skipped (original copied): %1</source>
-        <translation>スキップ: (original copied): %1</translation>
+        <translation>スキップ (元のファイルをコピーしました): %1</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1115"/>
@@ -1119,7 +1119,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1151"/>
         <source>Failed to save: %1</source>
-        <translation>失敗しました: save: %1</translation>
+        <translation>保存に失敗しました: %1</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1170"/>
@@ -1143,7 +1143,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="778"/>
         <source>Skipped (source and destination are the same file): %1</source>
-        <translation>スキップ: (source and destination are the same file): %1</translation>
+        <translation>スキップ (元のファイルと保存先が同じです): %1</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1189"/>
@@ -1292,7 +1292,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1568"/>
         <source>Failed to process video %1: %2</source>
-        <translation>失敗しました: process video %1: %2</translation>
+        <translation>動画 %1 の処理に失敗しました: %2</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1270"/>
@@ -1569,13 +1569,13 @@ Continue?</source>
     <message>
         <location filename="../src/VideoIo.cpp" line="73"/>
         <source>Could not read the FFmpeg checksum manifest.</source>
-        <translation>できませんでした: read the FFmpeg checksum manifest.</translation>
+        <translation>FFmpeg のチェックサムマニフェストを読み取れませんでした。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="86"/>
         <location filename="../src/VideoIo.cpp" line="96"/>
         <source>Could not read the bundled FFmpeg binary.</source>
-        <translation>できませんでした: read the bundled FFmpeg binary.</translation>
+        <translation>同梱の FFmpeg バイナリを読み取れませんでした。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="106"/>
@@ -1585,12 +1585,12 @@ Continue?</source>
     <message>
         <location filename="../src/VideoIo.cpp" line="492"/>
         <source>Could not inspect the video (ffprobe did not respond).</source>
-        <translation>できませんでした: inspect the video (ffprobe did not respond).</translation>
+        <translation>動画を確認できませんでした (ffprobe が応答しませんでした)。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="502"/>
         <source>Could not inspect the video: %1</source>
-        <translation>できませんでした: inspect the video: %1</translation>
+        <translation>動画を確認できませんでした: %1</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="624"/>
@@ -1627,7 +1627,7 @@ Continue?</source>
         <location filename="../src/VideoIo.cpp" line="730"/>
         <location filename="../src/VideoIo.cpp" line="761"/>
         <source>Could not start FFmpeg for decoding.</source>
-        <translation>できませんでした: start FFmpeg for decoding.</translation>
+        <translation>デコード用の FFmpeg を起動できませんでした。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="787"/>
@@ -1648,7 +1648,7 @@ Continue?</source>
     <message>
         <location filename="../src/VideoIo.cpp" line="1065"/>
         <source>Could not start FFmpeg for encoding.</source>
-        <translation>できませんでした: start FFmpeg for encoding.</translation>
+        <translation>エンコード用の FFmpeg を起動できませんでした。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="968"/>
@@ -1677,7 +1677,7 @@ Continue?</source>
     <message>
         <location filename="../src/VideoIo.cpp" line="1253"/>
         <source>Could not move the finished video into place.</source>
-        <translation>できませんでした: move the finished video into place.</translation>
+        <translation>完成した動画を所定の場所に移動できませんでした。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="1251"/>
