@@ -368,6 +368,109 @@ namespace
         assert(std::filesystem::exists(output / "input.png"));
     }
 
+    void testWorkerFailsWhenTheReviewReceiverIsMissing()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto source = root / "input.png";
+        const auto output = root / "out";
+        assert(cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60))));
+
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(source.string())};
+        request.outputDirectory = QString::fromStdString(output.string());
+        request.detectFaces = false;
+        request.reviewEnabled = true;
+
+        cloakframe::RunOutcome result = cloakframe::RunOutcome::Completed;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::finished,
+            [&](const cloakframe::RunOutcome value)
+            {
+                result = value;
+            });
+        worker.process();
+
+        assert(result == cloakframe::RunOutcome::Failed);
+        assert(!std::filesystem::exists(output / "input.png"));
+    }
+
+    void testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto source = root / "input.png";
+        const auto output = root / "out";
+        assert(cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60))));
+
+        auto reviewer = std::make_unique<QObject>();
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(source.string())};
+        request.outputDirectory = QString::fromStdString(output.string());
+        request.detectFaces = false;
+        request.reviewEnabled = true;
+        request.reviewReceiver = reviewer.get();
+
+        cloakframe::RunOutcome result = cloakframe::RunOutcome::Completed;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::finished,
+            [&](const cloakframe::RunOutcome value)
+            {
+                result = value;
+            });
+        reviewer.reset();
+        worker.process();
+
+        assert(result == cloakframe::RunOutcome::Failed);
+        assert(!std::filesystem::exists(output / "input.png"));
+    }
+
+    void testWorkerSavesNothingWhenTheReviewSlotIsMissing()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto source = root / "input.png";
+        const auto output = root / "out";
+        assert(cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60))));
+
+        // invokeMethod resolves the member before it honours the connection type, so a receiver
+        // without the slot answers false here rather than blocking this thread on itself.
+        QObject reviewer;
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(source.string())};
+        request.outputDirectory = QString::fromStdString(output.string());
+        request.detectFaces = false;
+        request.reviewEnabled = true;
+        request.reviewReceiver = &reviewer;
+
+        cloakframe::RunOutcome result = cloakframe::RunOutcome::Completed;
+        cloakframe::RunSummary summary;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::summaryAvailable,
+            [&](const cloakframe::RunSummary value)
+            {
+                summary = value;
+            });
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::finished,
+            [&](const cloakframe::RunOutcome value)
+            {
+                result = value;
+            });
+        worker.process();
+
+        assert(result == cloakframe::RunOutcome::CompletedWithWarnings);
+        assert(summary.total == 1 && summary.failed == 1);
+        assert(summary.redacted == 0 && summary.unredacted == 0 && summary.copied == 0);
+        assert(!std::filesystem::exists(output / "input.png"));
+    }
+
     void testWorkerHonoursCancelRequestedBeforeProcess()
     {
         QTemporaryDir temp;
@@ -2203,6 +2306,9 @@ int main(int argc, char **argv)
     testOutputPlanRejectsExistingAndDuplicateDestinations();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
     testWorkerReportsCopiedOriginalAsWarning();
+    testWorkerFailsWhenTheReviewReceiverIsMissing();
+    testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun();
+    testWorkerSavesNothingWhenTheReviewSlotIsMissing();
     testWorkerHonoursCancelRequestedBeforeProcess();
     testDroppedDetectionsKeepTheRunOutOfCleanCompletion();
     testWorkerUsesStableImageSnapshotDuringReview();

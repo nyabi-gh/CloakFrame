@@ -423,6 +423,17 @@ namespace cloakframe
     {
         try
         {
+            // Review that was promised but cannot be shown has to stop the run. Falling back to
+            // writing the unreviewed detections is the coverage claim SECURITY.md treats as a
+            // vulnerability, not a degraded mode.
+            if (reviewEnabled_ && !reviewReceiver_)
+            {
+                emit logMessage(tr("Error: review is on but no review window is available. "
+                                   "Nothing was processed."));
+                emit finished(RunOutcome::Failed);
+                return;
+            }
+
             if (detectFaces_)
             {
                 if (!detector_)
@@ -586,7 +597,7 @@ namespace cloakframe
                 }
             };
 
-            if (reviewEnabled_ && reviewReceiver_)
+            if (reviewEnabled_)
             {
                 int index = 0;
                 for (const auto &item : images)
@@ -969,7 +980,7 @@ namespace cloakframe
             bool doNotSaveThisImage = false;
             bool copyOriginalThisImage = false;
 
-            if (allowReview && reviewEnabled_ && reviewReceiver_)
+            if (allowReview && reviewEnabled_)
             {
                 emit stageChanged(index, total, tr("Reviewing"), fileName);
 
@@ -977,42 +988,43 @@ namespace cloakframe
                 const QVector<QRectF> detectedRects = scaleRects(toQRects(detected), previewScale);
 
                 ReviewResult reviewResult;
-                const bool invoked = QMetaObject::invokeMethod(reviewReceiver_.data(),
-                    "requestReview",
-                    Qt::BlockingQueuedConnection,
-                    Q_RETURN_ARG(cloakframe::ReviewResult, reviewResult),
-                    Q_ARG(QImage, preview),
-                    Q_ARG(QString, fileName),
-                    Q_ARG(QVector<QRectF>, detectedRects),
-                    Q_ARG(int, index),
-                    Q_ARG(int, total),
-                    Q_ARG(double, previewScale));
+                const bool invoked = reviewReceiver_
+                                     && QMetaObject::invokeMethod(reviewReceiver_.data(),
+                                         "requestReview",
+                                         Qt::BlockingQueuedConnection,
+                                         Q_RETURN_ARG(cloakframe::ReviewResult, reviewResult),
+                                         Q_ARG(QImage, preview),
+                                         Q_ARG(QString, fileName),
+                                         Q_ARG(QVector<QRectF>, detectedRects),
+                                         Q_ARG(int, index),
+                                         Q_ARG(int, total),
+                                         Q_ARG(double, previewScale));
 
                 if (!invoked)
                 {
-                    outcome.logs.push_back(tr("Review bridge unavailable; saved without review."));
+                    outcome.logs.push_back(
+                        tr("Failed (review could not be shown, nothing was saved): %1")
+                            .arg(fileName));
+                    outcome.failed = 1;
+                    return outcome;
                 }
-                else
-                {
-                    switch (reviewResult.decision)
-                    {
-                    case ReviewDecision::CancelAll:
-                        cancelled_.store(true, std::memory_order_release);
-                        break;
-                    case ReviewDecision::DoNotSave:
-                        doNotSaveThisImage = true;
-                        break;
-                    case ReviewDecision::CopyOriginal:
-                        copyOriginalThisImage = true;
-                        break;
-                    case ReviewDecision::Save:
 
-                        finalFaces =
-                            toDetections(scaleRects(reviewResult.finalBoxes,
-                                             previewScale != 0.0 ? 1.0 / previewScale : 1.0),
-                                detected);
-                        break;
-                    }
+                switch (reviewResult.decision)
+                {
+                case ReviewDecision::CancelAll:
+                    cancelled_.store(true, std::memory_order_release);
+                    break;
+                case ReviewDecision::DoNotSave:
+                    doNotSaveThisImage = true;
+                    break;
+                case ReviewDecision::CopyOriginal:
+                    copyOriginalThisImage = true;
+                    break;
+                case ReviewDecision::Save:
+                    finalFaces = toDetections(scaleRects(reviewResult.finalBoxes,
+                                                  previewScale != 0.0 ? 1.0 / previewScale : 1.0),
+                        detected);
+                    break;
                 }
             }
 
@@ -1326,7 +1338,7 @@ namespace cloakframe
         };
 
         VideoTrackReviewFn review;
-        if (reviewEnabled_ && reviewReceiver_)
+        if (reviewEnabled_)
         {
             review = [this, &tools, &fileName, index, total](std::vector<Track> &tracks,
                          const std::vector<UncoveredSpan> &uncoveredSpans,
@@ -1368,11 +1380,12 @@ namespace cloakframe
                 }
 
                 VideoReviewResult reviewResult;
-                const bool invoked = QMetaObject::invokeMethod(reviewReceiver_.data(),
-                    "requestVideoReview",
-                    Qt::BlockingQueuedConnection,
-                    Q_RETURN_ARG(cloakframe::VideoReviewResult, reviewResult),
-                    Q_ARG(cloakframe::VideoReviewRequest, request));
+                const bool invoked = reviewReceiver_
+                                     && QMetaObject::invokeMethod(reviewReceiver_.data(),
+                                         "requestVideoReview",
+                                         Qt::BlockingQueuedConnection,
+                                         Q_RETURN_ARG(cloakframe::VideoReviewResult, reviewResult),
+                                         Q_ARG(cloakframe::VideoReviewRequest, request));
                 if (!invoked || reviewResult.decision == VideoReviewDecision::CancelAll)
                 {
                     cancelled_.store(true, std::memory_order_release);

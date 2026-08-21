@@ -905,12 +905,12 @@ Check these results before sharing them.</source>
         <translation>이미지가 너무 큼, %1 x %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="878"/>
+        <location filename="../src/ProcessorWorker.cpp" line="889"/>
         <source>needs about %1 MB of memory, over the %2 MB limit</source>
         <translation>약 %1 MB의 메모리가 필요하여 %2 MB 한도를 넘음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="538"/>
+        <location filename="../src/ProcessorWorker.cpp" line="549"/>
         <source>Output name collision: &apos;%1&apos; and &apos;%2&apos; would both write to &apos;%3&apos;</source>
         <translation>출력 이름 충돌: &apos;%1&apos;와(과) &apos;%2&apos;가 모두 &apos;%3&apos;에 기록됩니다</translation>
     </message>
@@ -927,64 +927,64 @@ Check these results before sharing them.</source>
         <translation type="vanished">이미 불러온 SCRFD 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="430"/>
+        <location filename="../src/ProcessorWorker.cpp" line="441"/>
         <source>Loading face detection model...</source>
         <translation>얼굴 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="456"/>
+        <location filename="../src/ProcessorWorker.cpp" line="467"/>
         <source>Reusing loaded face detection model.</source>
         <translation>이미 불러온 얼굴 탐지 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="458"/>
+        <location filename="../src/ProcessorWorker.cpp" line="469"/>
         <source>Face detection backend: %1</source>
         <translation>얼굴 탐지 백엔드: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="443"/>
+        <location filename="../src/ProcessorWorker.cpp" line="454"/>
         <source>GPU acceleration can&apos;t run the face model; using the CPU instead.</source>
         <translation>GPU 가속으로 얼굴 모델을 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="490"/>
+        <location filename="../src/ProcessorWorker.cpp" line="501"/>
         <source>License plate detection backend: %1</source>
         <translation>번호판 탐지 백엔드: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="466"/>
+        <location filename="../src/ProcessorWorker.cpp" line="477"/>
         <source>Loading license plate detection model...</source>
         <translation>번호판 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="488"/>
+        <location filename="../src/ProcessorWorker.cpp" line="499"/>
         <source>Reusing loaded license plate detection model.</source>
         <translation>이미 불러온 번호판 탐지 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="478"/>
+        <location filename="../src/ProcessorWorker.cpp" line="489"/>
         <source>GPU acceleration can&apos;t run the license plate model; using the CPU instead.</source>
         <translation>GPU 가속으로 번호판 모델을 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="495"/>
+        <location filename="../src/ProcessorWorker.cpp" line="506"/>
         <source>Scanning inputs...</source>
         <translation>입력 스캔 중...</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="498"/>
+        <location filename="../src/ProcessorWorker.cpp" line="509"/>
         <source>Preflight: found %n supported file(s).</source>
         <translation>
             <numerusform>사전 점검: 지원되는 파일 %n개를 찾았습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="509"/>
+        <location filename="../src/ProcessorWorker.cpp" line="520"/>
         <source>No supported files were found.</source>
         <translation>지원되는 파일을 찾지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="519"/>
+        <location filename="../src/ProcessorWorker.cpp" line="530"/>
         <source>Cannot create output directory: %1</source>
         <translation>출력 폴더를 만들 수 없습니다: %1</translation>
     </message>
@@ -993,17 +993,17 @@ Check these results before sharing them.</source>
         <translation type="vanished">여러 입력이 같은 출력 경로에 기록되어 실행을 거부합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="532"/>
+        <location filename="../src/ProcessorWorker.cpp" line="543"/>
         <source>Refusing to run because an output path is already in use.</source>
         <translation>사용 중인 출력 경로가 있어 실행을 거부합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="545"/>
+        <location filename="../src/ProcessorWorker.cpp" line="556"/>
         <source>Existing output would be overwritten: &apos;%1&apos;</source>
         <translation>기존 출력 파일을 덮어쓰게 됩니다: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="550"/>
+        <location filename="../src/ProcessorWorker.cpp" line="561"/>
         <source>Additional output conflicts omitted.</source>
         <translation>추가 출력 충돌은 생략했습니다.</translation>
     </message>
@@ -1012,12 +1012,12 @@ Check these results before sharing them.</source>
         <translation type="vanished">사전 점검: 출력 경로가 모두 고유합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="554"/>
+        <location filename="../src/ProcessorWorker.cpp" line="565"/>
         <source>Preflight: output paths are available.</source>
         <translation>사전 점검: 모든 출력 경로를 사용할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="737"/>
+        <location filename="../src/ProcessorWorker.cpp" line="748"/>
         <source>Skipped unsafe output path for: %1</source>
         <translation>안전하지 않은 출력 경로를 건너뜀: %1</translation>
     </message>
@@ -1026,280 +1026,289 @@ Check these results before sharing them.</source>
         <translation type="vanished">건너뜀(상위 폴더 생성 불가): %1 — %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="780"/>
+        <location filename="../src/ProcessorWorker.cpp" line="791"/>
         <source>Skipped (file too large, %1 MB): %2</source>
         <translation>건너뜀(파일이 너무 큼, %1 MB): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="842"/>
+        <location filename="../src/ProcessorWorker.cpp" line="853"/>
         <source>Loading</source>
         <translation>로딩 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="862"/>
-        <location filename="../src/ProcessorWorker.cpp" line="877"/>
+        <location filename="../src/ProcessorWorker.cpp" line="873"/>
+        <location filename="../src/ProcessorWorker.cpp" line="888"/>
         <source>Skipped (%1): %2</source>
         <translation>건너뜀(%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="848"/>
+        <location filename="../src/ProcessorWorker.cpp" line="859"/>
         <source>Skipped (animated or multi-page images are not supported): %1</source>
         <translation>건너뜀(애니메이션 또는 다중 페이지 이미지는 지원되지 않음): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="684"/>
+        <location filename="../src/ProcessorWorker.cpp" line="695"/>
         <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
         <translation>
             <numerusform>경고: 파일 %n개가 출력이 가리지 못한 영역을 남긴 채 끝났습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="761"/>
-        <location filename="../src/ProcessorWorker.cpp" line="905"/>
+        <location filename="../src/ProcessorWorker.cpp" line="772"/>
+        <location filename="../src/ProcessorWorker.cpp" line="916"/>
         <source>Skipped unreadable image: %1</source>
         <translation>읽을 수 없는 이미지를 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="772"/>
+        <location filename="../src/ProcessorWorker.cpp" line="783"/>
         <source>Source file changed during processing: %1</source>
         <translation>처리 중 원본 파일이 변경되었습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="792"/>
-        <location filename="../src/ProcessorWorker.cpp" line="819"/>
-        <location filename="../src/ProcessorWorker.cpp" line="829"/>
+        <location filename="../src/ProcessorWorker.cpp" line="803"/>
+        <location filename="../src/ProcessorWorker.cpp" line="830"/>
+        <location filename="../src/ProcessorWorker.cpp" line="840"/>
         <source>Failed to create a private source snapshot: %1</source>
         <translation>원본의 비공개 사본을 만들지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="933"/>
+        <location filename="../src/ProcessorWorker.cpp" line="944"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
         <translation>건너뜀(이미지가 너무 큼, %1 × %2): %3</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="943"/>
+        <location filename="../src/ProcessorWorker.cpp" line="954"/>
         <source>Detecting</source>
         <translation>감지 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="974"/>
+        <location filename="../src/ProcessorWorker.cpp" line="985"/>
         <source>Reviewing</source>
         <translation>검토 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="993"/>
         <source>Review bridge unavailable; saved without review.</source>
-        <translation>검토 기능을 사용할 수 없어 검토 없이 저장했습니다.</translation>
+        <translation type="vanished">검토 기능을 사용할 수 없어 검토 없이 저장했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1028"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1040"/>
         <source>Skipped without saving: %1</source>
         <translation>저장하지 않고 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1042"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1098"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1054"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1110"/>
         <source>Saving</source>
         <translation>저장 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1070"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1082"/>
         <source>Failed to copy: %1</source>
         <translation>복사 실패: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1076"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1088"/>
         <source>Skipped (original copied): %1</source>
         <translation>건너뜀(원본 복사됨): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1082"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1094"/>
         <source>Applying anonymization</source>
         <translation>익명화 적용 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1118"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1130"/>
         <source>Failed to save: %1</source>
         <translation>저장 실패: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1137"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1471"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1149"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1484"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>영역 %n개 가림: %1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1127"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1139"/>
         <source>Saved, but could not copy metadata: %1</source>
         <translation>저장했지만 메타데이터를 복사하지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1132"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1465"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1144"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1478"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>가려진 영역 없이 저장됨: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="746"/>
+        <location filename="../src/ProcessorWorker.cpp" line="757"/>
         <source>Skipped (source and destination are the same file): %1</source>
         <translation>건너뜀 (원본과 저장 위치가 같은 파일): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1156"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1168"/>
         <source>Error processing %1: %2</source>
         <translation>%1 처리 중 오류: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="716"/>
+        <location filename="../src/ProcessorWorker.cpp" line="727"/>
         <source>Unexpected error — processing stopped.</source>
         <translation>예기치 못한 오류로 처리를 중단했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="652"/>
+        <location filename="../src/ProcessorWorker.cpp" line="663"/>
         <source>Summary: %1 redacted, %2 saved without redaction, %3 copied, %4 skipped, %5 failed (of %6).</source>
         <translation>요약: 가림 완료 %1, 가리지 않고 저장 %2, 복사 %3, 건너뜀 %4, 실패 %5 (총 %6).</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="673"/>
+        <location filename="../src/ProcessorWorker.cpp" line="684"/>
         <source>Warning: %n image(s) were saved with no regions redacted. Check them before sharing.</source>
         <translation>
             <numerusform>주의: 이미지 %n장이 아무 영역도 가려지지 않은 채 저장되었습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="704"/>
+        <location filename="../src/ProcessorWorker.cpp" line="715"/>
         <source>Done.</source>
         <translation>완료.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="699"/>
+        <location filename="../src/ProcessorWorker.cpp" line="710"/>
         <source>Completed with warnings. Review the summary before sharing.</source>
         <translation>주의 사항과 함께 완료되었습니다. 공유하기 전에 요약을 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="710"/>
+        <location filename="../src/ProcessorWorker.cpp" line="721"/>
         <source>Error: %1</source>
         <translation>오류: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1164"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1176"/>
         <source>Error processing %1</source>
         <translation>%1 처리 중 오류</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1337"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1349"/>
         <source>Reviewing video tracks</source>
         <translation>동영상 트랙 검토 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1182"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1194"/>
         <source>Metadata preservation is not available for videos; metadata was removed: %1</source>
         <translation>동영상은 메타데이터 보존이 지원되지 않아 메타데이터가 제거되었습니다: %1</translation>
     </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="431"/>
+        <source>Error: review is on but no review window is available. Nothing was processed.</source>
+        <translation>오류: 검토가 켜져 있지만 검토 창을 열 수 없습니다. 아무것도 처리하지 않았습니다.</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1006"/>
+        <source>Failed (review could not be shown, nothing was saved): %1</source>
+        <translation>실패 (검토를 표시할 수 없어 저장하지 않았습니다): %1</translation>
+    </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1145"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1494"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1157"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1507"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>경고: 검출된 영역 %n곳이 안전 한도를 넘어 %1에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1191"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1201"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1203"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1213"/>
         <source>Failed (%1): %2</source>
         <translation>실패 (%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1196"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1208"/>
         <source>Inspecting</source>
         <translation>확인 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1209"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1221"/>
         <source>Failed (unsupported video: %1): %2</source>
         <translation>실패 (지원되지 않는 동영상: %1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1216"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1228"/>
         <source>Note: variable frame rate is converted to a constant frame rate: %1</source>
         <translation>참고: 가변 프레임레이트는 고정 프레임레이트로 변환됩니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1315"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1327"/>
         <source>Analyzing %1%</source>
         <translation>분석 중 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1315"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1327"/>
         <source>Encoding %1%</source>
         <translation>인코딩 중 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1503"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1516"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>경고: %1에서 확실한 검출이 하나도 없는 트랙 %n개를 버렸습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1512"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1525"/>
         <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
         <translation>
             <numerusform>경고: %1의 프레임 %n개가 추적된 영역 안에 있는데도 출력에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1517"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1530"/>
         <source>Uncovered frame ranges in %1: %2</source>
         <translation>%1에서 가려지지 않은 프레임 구간: %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1521"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1534"/>
         <source>%n further uncovered range(s) are not listed.</source>
         <translation>
             <numerusform>가려지지 않은 구간 %n개는 목록에서 생략했습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1534"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1547"/>
         <source>Failed to process video %1: %2</source>
         <translation>동영상 처리 실패 %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1237"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1249"/>
         <source>Loading face detection model for video...</source>
         <translation>동영상용 얼굴 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1252"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1264"/>
         <source>GPU acceleration can&apos;t run the video face model at %1 px; using the CPU instead.</source>
         <translation>GPU 가속으로 동영상 얼굴 모델을 %1 px에서 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1263"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1275"/>
         <source>Video face detection: %1 px · %2</source>
         <translation>동영상 얼굴 탐지: %1 px · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1322"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1334"/>
         <source>%1m %2s left</source>
         <translation>%1분 %2초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1323"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1335"/>
         <source>%1s left</source>
         <translation>%1초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1478"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1491"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>프레임 %1개를 %2초에 처리 (실시간의 %3배): %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1486"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1499"/>
         <source>Video encoder: %1</source>
         <translation>비디오 인코더: %1</translation>
     </message>
