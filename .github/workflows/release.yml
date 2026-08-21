@@ -40,6 +40,11 @@ env:
 jobs:
   verify-version:
     name: Verify release identity
+    # Reads the private half of the update signing key to reject a half configuration. A
+    # repository-scoped secret would be readable from any branch a workflow_dispatch can
+    # select, so the key belongs to this environment and every job that names it has to
+    # declare the environment too.
+    environment: release
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.identity.outputs.version }}
@@ -364,6 +369,8 @@ jobs:
   windows:
     name: Build Windows installer
     needs: verify-version
+    # Signs the update packages with CLOAKFRAME_UPDATE_PRIVATE_KEY.
+    environment: release
     runs-on: windows-2025
     timeout-minutes: 60
     env:
@@ -566,6 +573,8 @@ jobs:
   linux:
     name: Build Linux AppImage
     needs: verify-version
+    # Signs the update packages with CLOAKFRAME_UPDATE_PRIVATE_KEY.
+    environment: release
     runs-on: ubuntu-26.04
     timeout-minutes: 60
     env:
