@@ -78,7 +78,7 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
-      - name: Check the update signing key is configured in both halves
+      - name: Check the update signing key
         env:
           CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
           CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
@@ -94,6 +94,17 @@ jobs:
           if [[ -z "$CLOAKFRAME_UPDATE_PUBLIC_KEY" && -n "$CLOAKFRAME_UPDATE_PRIVATE_KEY" ]]; then
             echo "CLOAKFRAME_UPDATE_PRIVATE_KEY is set but the app pins no public key, so the" \
               "signature would never be checked. Set the CLOAKFRAME_UPDATE_PUBLIC_KEY variable." >&2
+            exit 1
+          fi
+          # Neither half set builds a client that takes the release feed's word for what an
+          # update is. That is a reasonable way to exercise this workflow from a branch and no
+          # way to publish, so a tag has to carry the pair. The checks above already tie the
+          # private half to the public one.
+          if [[ "$GITHUB_REF_TYPE" == "tag" && -z "$CLOAKFRAME_UPDATE_PUBLIC_KEY" ]]; then
+            echo "A tagged release must pin an update key. Set the CLOAKFRAME_UPDATE_PUBLIC_KEY" \
+              "variable and the CLOAKFRAME_UPDATE_PRIVATE_KEY secret on the release" \
+              "environment; without them every Windows and Linux client accepts whatever the" \
+              "release feed offers it." >&2
             exit 1
           fi
 
