@@ -905,12 +905,12 @@ Check these results before sharing them.</source>
         <translation>图像过大，%1 × %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="889"/>
+        <location filename="../src/ProcessorWorker.cpp" line="910"/>
         <source>needs about %1 MB of memory, over the %2 MB limit</source>
         <translation>需要约 %1 MB 内存，超过 %2 MB 上限</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="549"/>
+        <location filename="../src/ProcessorWorker.cpp" line="570"/>
         <source>Output name collision: &apos;%1&apos; and &apos;%2&apos; would both write to &apos;%3&apos;</source>
         <translation>输出名称冲突：“%1”和“%2”都将写入“%3”</translation>
     </message>
@@ -972,19 +972,19 @@ Check these results before sharing them.</source>
         <translation>正在扫描输入...</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="509"/>
+        <location filename="../src/ProcessorWorker.cpp" line="510"/>
         <source>Preflight: found %n supported file(s).</source>
         <translation>
             <numerusform>预检：找到 %n 个支持的文件。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="520"/>
+        <location filename="../src/ProcessorWorker.cpp" line="541"/>
         <source>No supported files were found.</source>
         <translation>未找到支持的文件。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="530"/>
+        <location filename="../src/ProcessorWorker.cpp" line="551"/>
         <source>Cannot create output directory: %1</source>
         <translation>无法创建输出目录：%1</translation>
     </message>
@@ -993,17 +993,17 @@ Check these results before sharing them.</source>
         <translation type="vanished">拒绝运行，因为多个输入将写入同一输出路径。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="543"/>
+        <location filename="../src/ProcessorWorker.cpp" line="564"/>
         <source>Refusing to run because an output path is already in use.</source>
         <translation>拒绝运行，因为某个输出路径已被占用。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="556"/>
+        <location filename="../src/ProcessorWorker.cpp" line="577"/>
         <source>Existing output would be overwritten: &apos;%1&apos;</source>
         <translation>现有输出将被覆盖：“%1”</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="561"/>
+        <location filename="../src/ProcessorWorker.cpp" line="582"/>
         <source>Additional output conflicts omitted.</source>
         <translation>已省略其他输出冲突。</translation>
     </message>
@@ -1012,12 +1012,12 @@ Check these results before sharing them.</source>
         <translation type="vanished">预检：输出路径互不重复。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="565"/>
+        <location filename="../src/ProcessorWorker.cpp" line="586"/>
         <source>Preflight: output paths are available.</source>
         <translation>预检：输出路径可用。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="748"/>
+        <location filename="../src/ProcessorWorker.cpp" line="769"/>
         <source>Skipped unsafe output path for: %1</source>
         <translation>因输出路径不安全而跳过：%1</translation>
     </message>
@@ -1026,63 +1026,63 @@ Check these results before sharing them.</source>
         <translation type="vanished">已跳过（无法创建父目录）：%1 — %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="791"/>
+        <location filename="../src/ProcessorWorker.cpp" line="812"/>
         <source>Skipped (file too large, %1 MB): %2</source>
         <translation>已跳过（文件过大，%1 MB）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="853"/>
+        <location filename="../src/ProcessorWorker.cpp" line="874"/>
         <source>Loading</source>
         <translation>正在加载</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="873"/>
-        <location filename="../src/ProcessorWorker.cpp" line="888"/>
+        <location filename="../src/ProcessorWorker.cpp" line="894"/>
+        <location filename="../src/ProcessorWorker.cpp" line="909"/>
         <source>Skipped (%1): %2</source>
         <translation>已跳过（%1）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="859"/>
+        <location filename="../src/ProcessorWorker.cpp" line="880"/>
         <source>Skipped (animated or multi-page images are not supported): %1</source>
         <translation>已跳过（不支持动画或多页图像）：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="695"/>
+        <location filename="../src/ProcessorWorker.cpp" line="716"/>
         <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
         <translation>
             <numerusform>警告：有 %n 个文件在结束时仍留有输出未遮盖的区域。分享前请检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="772"/>
-        <location filename="../src/ProcessorWorker.cpp" line="916"/>
+        <location filename="../src/ProcessorWorker.cpp" line="793"/>
+        <location filename="../src/ProcessorWorker.cpp" line="937"/>
         <source>Skipped unreadable image: %1</source>
         <translation>已跳过无法读取的图像：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="783"/>
+        <location filename="../src/ProcessorWorker.cpp" line="804"/>
         <source>Source file changed during processing: %1</source>
         <translation>源文件在处理过程中发生了更改：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="803"/>
-        <location filename="../src/ProcessorWorker.cpp" line="830"/>
-        <location filename="../src/ProcessorWorker.cpp" line="840"/>
+        <location filename="../src/ProcessorWorker.cpp" line="824"/>
+        <location filename="../src/ProcessorWorker.cpp" line="851"/>
+        <location filename="../src/ProcessorWorker.cpp" line="861"/>
         <source>Failed to create a private source snapshot: %1</source>
         <translation>无法创建源文件的私有快照：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="944"/>
+        <location filename="../src/ProcessorWorker.cpp" line="965"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
         <translation>已跳过（图像过大，%1 × %2）：%3</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="954"/>
+        <location filename="../src/ProcessorWorker.cpp" line="975"/>
         <source>Detecting</source>
         <translation>正在检测</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="985"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1006"/>
         <source>Reviewing</source>
         <translation>正在检查</translation>
     </message>
@@ -1091,109 +1091,109 @@ Check these results before sharing them.</source>
         <translation type="vanished">检查桥接不可用；已跳过检查并保存。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1040"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1061"/>
         <source>Skipped without saving: %1</source>
         <translation>未保存并跳过：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1054"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1110"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1075"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1131"/>
         <source>Saving</source>
         <translation>正在保存</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1082"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1103"/>
         <source>Failed to copy: %1</source>
         <translation>复制失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1088"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1109"/>
         <source>Skipped (original copied): %1</source>
         <translation>已跳过（已复制原文件）：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1094"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1115"/>
         <source>Applying anonymization</source>
         <translation>正在应用匿名化</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1130"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1151"/>
         <source>Failed to save: %1</source>
         <translation>保存失败：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1149"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1484"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1170"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1505"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>已遮盖 %n 个区域：%1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1139"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1160"/>
         <source>Saved, but could not copy metadata: %1</source>
         <translation>已保存，但无法复制元数据：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1144"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1478"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1165"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1499"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>保存时未遮盖任何区域：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="757"/>
+        <location filename="../src/ProcessorWorker.cpp" line="778"/>
         <source>Skipped (source and destination are the same file): %1</source>
         <translation>已跳过（源文件与目标文件相同）：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1168"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1189"/>
         <source>Error processing %1: %2</source>
         <translation>处理 %1 时出错：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="727"/>
+        <location filename="../src/ProcessorWorker.cpp" line="748"/>
         <source>Unexpected error — processing stopped.</source>
         <translation>意外错误——处理已停止。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="663"/>
+        <location filename="../src/ProcessorWorker.cpp" line="684"/>
         <source>Summary: %1 redacted, %2 saved without redaction, %3 copied, %4 skipped, %5 failed (of %6).</source>
         <translation>摘要：已遮盖 %1 个，未遮盖保存 %2 个，已复制 %3 个，已跳过 %4 个，失败 %5 个（共 %6 个）。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="684"/>
+        <location filename="../src/ProcessorWorker.cpp" line="705"/>
         <source>Warning: %n image(s) were saved with no regions redacted. Check them before sharing.</source>
         <translation>
             <numerusform>警告：%n 张图像在未遮盖任何区域的情况下保存。请在分享前检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="715"/>
+        <location filename="../src/ProcessorWorker.cpp" line="736"/>
         <source>Done.</source>
         <translation>完成。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="710"/>
+        <location filename="../src/ProcessorWorker.cpp" line="731"/>
         <source>Completed with warnings. Review the summary before sharing.</source>
         <translation>已完成，但有警告。请在分享前检查摘要。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="721"/>
+        <location filename="../src/ProcessorWorker.cpp" line="742"/>
         <source>Error: %1</source>
         <translation>错误：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1176"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1197"/>
         <source>Error processing %1</source>
         <translation>处理 %1 时出错</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1349"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1370"/>
         <source>Reviewing video tracks</source>
         <translation>正在检查视频轨迹</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1194"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1215"/>
         <source>Metadata preservation is not available for videos; metadata was removed: %1</source>
         <translation>视频无法保留元数据；已移除元数据：%1</translation>
     </message>
@@ -1203,112 +1203,129 @@ Check these results before sharing them.</source>
         <translation>错误：已启用检查，但没有可用的检查窗口。未处理任何文件。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1006"/>
+        <location filename="../src/ProcessorWorker.cpp" line="515"/>
+        <source>Could not read input &apos;%1&apos;: %2</source>
+        <translation>无法读取输入“%1”：%2</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="521"/>
+        <source>Additional unreadable inputs omitted.</source>
+        <translation>已省略其他无法读取的输入。</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ProcessorWorker.cpp" line="526"/>
+        <source>Warning: %n input(s) could not be read, so nothing below covers them.</source>
+        <translation>
+            <numerusform>警告：有 %n 个输入无法读取，下面的结果不包含它们。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1027"/>
         <source>Failed (review could not be shown, nothing was saved): %1</source>
         <translation>失败（无法显示检查，未保存）：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1157"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1507"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1178"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1528"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告：有 %n 个检测到的区域超出安全上限，在 %1 中未被遮盖。分享前请检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1203"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1213"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1224"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1234"/>
         <source>Failed (%1): %2</source>
         <translation>失败（%1）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1208"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1229"/>
         <source>Inspecting</source>
         <translation>正在检查</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1221"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1242"/>
         <source>Failed (unsupported video: %1): %2</source>
         <translation>失败（不支持的视频：%1）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1228"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1249"/>
         <source>Note: variable frame rate is converted to a constant frame rate: %1</source>
         <translation>注意：可变帧率将转换为恒定帧率：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1327"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1348"/>
         <source>Analyzing %1%</source>
         <translation>正在分析 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1327"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1348"/>
         <source>Encoding %1%</source>
         <translation>正在编码 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1516"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1537"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>警告：在 %1 中丢弃了 %n 条没有任何可信检测的轨迹。分享前请检查。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1525"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1546"/>
         <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
         <translation>
             <numerusform>警告：%1 中有 %n 帧位于被跟踪的区域内，但输出并未遮盖。分享前请检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1530"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1551"/>
         <source>Uncovered frame ranges in %1: %2</source>
         <translation>%1 中未遮盖的帧范围：%2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1534"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1555"/>
         <source>%n further uncovered range(s) are not listed.</source>
         <translation>
             <numerusform>另有 %n 段未遮盖的范围未在此列出。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1547"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1568"/>
         <source>Failed to process video %1: %2</source>
         <translation>处理视频 %1 失败：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1249"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1270"/>
         <source>Loading face detection model for video...</source>
         <translation>正在加载视频人脸检测模型...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1264"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1285"/>
         <source>GPU acceleration can&apos;t run the video face model at %1 px; using the CPU instead.</source>
         <translation>GPU 加速无法以 %1 像素运行视频人脸模型，已改用 CPU。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1275"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1296"/>
         <source>Video face detection: %1 px · %2</source>
         <translation>视频人脸检测：%1 像素 · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1334"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1355"/>
         <source>%1m %2s left</source>
         <translation>剩余 %1 分 %2 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1335"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1356"/>
         <source>%1s left</source>
         <translation>剩余 %1 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1491"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1512"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>已处理 %1 帧，用时 %2 秒（实时速度的 %3 倍）：%4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1499"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1520"/>
         <source>Video encoder: %1</source>
         <translation>视频编码器：%1</translation>
     </message>

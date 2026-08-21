@@ -504,9 +504,30 @@ namespace cloakframe
             }
 
             emit logMessage(tr("Scanning inputs..."));
-            const auto images = scanMedia(inputs_, recursive_, true);
+            std::vector<ScanIssue> scanIssues;
+            const auto images = scanMedia(inputs_, recursive_, true, &scanIssues);
             const int total = static_cast<int>(images.size());
             emit logMessage(tr("Preflight: found %n supported file(s).", nullptr, total));
+
+            constexpr std::size_t kReportedScanIssues = 10;
+            for (std::size_t i = 0; i < scanIssues.size() && i < kReportedScanIssues; ++i)
+            {
+                emit logMessage(tr("Could not read input '%1': %2")
+                        .arg(pathToQString(scanIssues[i].path),
+                            QString::fromStdString(scanIssues[i].error.message())));
+            }
+            if (scanIssues.size() > kReportedScanIssues)
+            {
+                emit logMessage(tr("Additional unreadable inputs omitted."));
+            }
+            if (!scanIssues.empty())
+            {
+                emit logMessage(
+                    tr("Warning: %n input(s) could not be read, so nothing below covers them.",
+                        nullptr,
+                        static_cast<int>(std::min<std::size_t>(
+                            scanIssues.size(), std::numeric_limits<int>::max()))));
+            }
             emit progressChanged(0, total);
 
             if (cancelled_.load(std::memory_order_acquire))
@@ -705,7 +726,7 @@ namespace cloakframe
             }
 
             if (failedCount > 0 || skippedCount > 0 || unredactedCount > 0 || copiedCount > 0
-                || warningCount > 0 || uncoveredCount > 0)
+                || warningCount > 0 || uncoveredCount > 0 || !scanIssues.empty())
             {
                 emit logMessage(tr("Completed with warnings. Review the summary before sharing."));
                 emit finished(RunOutcome::CompletedWithWarnings);

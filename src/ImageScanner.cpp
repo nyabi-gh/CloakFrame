@@ -66,15 +66,27 @@ namespace cloakframe
                || extension == ".webp";
     }
 
-    std::vector<ScanResult> scanImages(const QStringList &inputs, bool recursive)
+    std::vector<ScanResult> scanImages(
+        const QStringList &inputs, bool recursive, std::vector<ScanIssue> *issues)
     {
-        return scanMedia(inputs, recursive, false);
+        return scanMedia(inputs, recursive, false, issues);
     }
 
-    std::vector<ScanResult> scanMedia(
-        const QStringList &inputs, bool recursive, const bool includeVideos)
+    std::vector<ScanResult> scanMedia(const QStringList &inputs,
+        bool recursive,
+        const bool includeVideos,
+        std::vector<ScanIssue> *issues)
     {
         std::vector<ScanResult> results;
+
+        const auto recordIssue =
+            [issues](const std::filesystem::path &path, const std::error_code &error)
+        {
+            if (issues)
+            {
+                issues->push_back({path, error});
+            }
+        };
 
         std::unordered_set<std::string> visitedCanonical;
         const auto markVisited = [&visitedCanonical](const std::filesystem::path &file) -> bool
@@ -101,38 +113,63 @@ namespace cloakframe
 
             if (!info.isDir())
             {
+                std::error_code existsError;
+                if (!std::filesystem::exists(path, existsError) || existsError)
+                {
+                    recordIssue(path,
+                        existsError ? existsError
+                                    : std::make_error_code(std::errc::no_such_file_or_directory));
+                }
                 continue;
             }
 
-            std::error_code error;
+            const auto walk = [&](auto it, const std::filesystem::path &base)
+            {
+                const decltype(it) end{};
+                while (it != end)
+                {
+                    std::error_code entryError;
+                    if (it->is_regular_file(entryError) && markVisited(it->path()))
+                    {
+                        appendFile(results, it->path(), base, includeVideos);
+                    }
+                    if (entryError)
+                    {
+                        recordIssue(it->path(), entryError);
+                    }
+                    std::error_code advanceError;
+                    it.increment(advanceError);
+                    if (advanceError)
+                    {
+                        // A failed increment leaves the iterator unusable, so the rest of this
+                        // tree is unreachable rather than merely skipped over.
+                        recordIssue(base, advanceError);
+                        return;
+                    }
+                }
+            };
 
+            std::error_code openError;
             constexpr auto options = std::filesystem::directory_options::skip_permission_denied;
             if (recursive)
             {
-                auto it = std::filesystem::recursive_directory_iterator(path, options, error);
-                const auto end = std::filesystem::recursive_directory_iterator{};
-                while (!error && it != end)
+                auto it = std::filesystem::recursive_directory_iterator(path, options, openError);
+                if (openError)
                 {
-                    if (it->is_regular_file(error) && markVisited(it->path()))
-                    {
-                        appendFile(results, it->path(), path, includeVideos);
-                    }
-                    it.increment(error);
+                    recordIssue(path, openError);
+                    continue;
                 }
+                walk(std::move(it), path);
             }
             else
             {
-                for (const auto &entry : std::filesystem::directory_iterator(path, options, error))
+                std::filesystem::directory_iterator it(path, options, openError);
+                if (openError)
                 {
-                    if (error)
-                    {
-                        break;
-                    }
-                    if (entry.is_regular_file() && markVisited(entry.path()))
-                    {
-                        appendFile(results, entry.path(), path, includeVideos);
-                    }
+                    recordIssue(path, openError);
+                    continue;
                 }
+                walk(std::move(it), path);
             }
         }
 

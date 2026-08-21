@@ -237,6 +237,44 @@ namespace
         assert(relativePaths.contains("nested/two.png"));
     }
 
+    void testScanReportsInputsItCannotRead()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+
+        QDir root(temp.path());
+        assert(root.mkpath("a"));
+        const QString present = root.filePath("a/one.JPG");
+        writeBytes(present);
+
+        const QString missingFile = root.filePath("a/gone.jpg");
+        const QString missingDir = root.filePath("nowhere");
+
+        std::vector<cloakframe::ScanIssue> issues;
+        const auto found =
+            cloakframe::scanImages({root.filePath("a"), missingFile, missingDir}, true, &issues);
+        assert(found.size() == 1);
+        assert(issues.size() == 2);
+        for (const auto &issue : issues)
+        {
+            assert(issue.error);
+        }
+
+        std::set<std::string> reported;
+        for (const auto &issue : issues)
+        {
+            reported.insert(issue.path.filename().generic_string());
+        }
+        assert(reported.contains("gone.jpg"));
+        assert(reported.contains("nowhere"));
+
+        // A readable tree still reports nothing, so the caller can treat a non-empty list as
+        // the only reason to warn.
+        std::vector<cloakframe::ScanIssue> clean;
+        assert(cloakframe::scanImages({root.filePath("a")}, true, &clean).size() == 1);
+        assert(clean.empty());
+    }
+
     void testOutputPlanRejectsExistingAndDuplicateDestinations()
     {
         QTemporaryDir temp;
@@ -2303,6 +2341,7 @@ int main(int argc, char **argv)
     testBuiltinModelDigests();
     testSupportedImageExtensions();
     testScanImagesRecursesAndDeduplicates();
+    testScanReportsInputsItCannotRead();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
     testWorkerReportsCopiedOriginalAsWarning();
