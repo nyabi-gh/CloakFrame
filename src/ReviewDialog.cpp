@@ -80,6 +80,16 @@ namespace cloakframe
             return result;
         }
 
+        [[nodiscard]] qsizetype detectedCount() const
+        {
+            return std::count_if(boxes_.begin(),
+                boxes_.end(),
+                [](const Box &box)
+                {
+                    return box.detected;
+                });
+        }
+
         [[nodiscard]] bool canUndo() const
         {
             return !undoStack_.empty();
@@ -791,6 +801,21 @@ namespace cloakframe
             this,
             [this]
             {
+                if (reviewClearedEveryDetection(
+                        canvas_->detectedCount(), canvas_->finalBoxes().size()))
+                {
+                    const auto answer = QMessageBox::warning(this,
+                        tr("Save with nothing covered?"),
+                        tr("Every region the detector found has been excluded and none were "
+                           "added in their place, so this image will be saved with nothing "
+                           "covered.\n\nContinue?"),
+                        QMessageBox::Yes | QMessageBox::No,
+                        QMessageBox::No);
+                    if (answer != QMessageBox::Yes)
+                    {
+                        return;
+                    }
+                }
                 decision_ = ReviewDecision::Save;
                 accept();
             });

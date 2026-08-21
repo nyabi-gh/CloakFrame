@@ -1333,32 +1333,32 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ReviewDialog</name>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="652"/>
+        <location filename="../src/ReviewDialog.cpp" line="662"/>
         <source>Review — %1</source>
         <translation>检查 — %1</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="676"/>
+        <location filename="../src/ReviewDialog.cpp" line="686"/>
         <source>Click or Return toggles a box · Drag an empty area to add · Arrow keys move the selection · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · Esc skips this image without saving</source>
         <translation>单击或按 Return 切换检测框 · 在空白区域拖动以添加 · 方向键移动所选框 · 按住空格预览结果 · 滚轮缩放，右键拖动平移，按 0 重置 · %1 / %2 撤销/重做 · Esc 跳过此图像且不保存</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="671"/>
+        <location filename="../src/ReviewDialog.cpp" line="681"/>
         <source>Review image</source>
         <translation>检查图像</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="690"/>
+        <location filename="../src/ReviewDialog.cpp" line="700"/>
         <source>Cancel All</source>
         <translation>全部取消</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="730"/>
+        <location filename="../src/ReviewDialog.cpp" line="740"/>
         <source>Cancel All?</source>
         <translation>全部取消？</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ReviewDialog.cpp" line="731"/>
+        <location filename="../src/ReviewDialog.cpp" line="741"/>
         <source>Stop reviewing and cancel the remaining %n image(s)?
 
 Images already saved are kept.</source>
@@ -1369,37 +1369,37 @@ Images already saved are kept.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="693"/>
+        <location filename="../src/ReviewDialog.cpp" line="703"/>
         <source>Undo</source>
         <translation>撤销</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="697"/>
+        <location filename="../src/ReviewDialog.cpp" line="707"/>
         <source>Redo</source>
         <translation>重做</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="701"/>
+        <location filename="../src/ReviewDialog.cpp" line="711"/>
         <source>Do Not Save</source>
         <translation>不保存</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="704"/>
+        <location filename="../src/ReviewDialog.cpp" line="714"/>
         <source>Copy Original</source>
         <translation>复制原图</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="707"/>
+        <location filename="../src/ReviewDialog.cpp" line="717"/>
         <source>Saves the image without anonymizing it.</source>
         <translation>保存图像但不进行匿名化。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="778"/>
+        <location filename="../src/ReviewDialog.cpp" line="788"/>
         <source>Copy Original?</source>
         <translation>复制原图？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="779"/>
+        <location filename="../src/ReviewDialog.cpp" line="789"/>
         <source>This image will not be anonymized.
 
 %1
@@ -1412,17 +1412,31 @@ Continue?</source>
 继续？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="773"/>
+        <location filename="../src/ReviewDialog.cpp" line="808"/>
+        <source>Save with nothing covered?</source>
+        <translation>不遮挡任何内容就保存？</translation>
+    </message>
+    <message>
+        <location filename="../src/ReviewDialog.cpp" line="809"/>
+        <source>Every region the detector found has been excluded and none were added in their place, so this image will be saved with nothing covered.
+
+Continue?</source>
+        <translation>检测到的区域已全部排除，也没有添加任何区域来替代，因此保存后的图像不会遮挡任何内容。
+
+继续？</translation>
+    </message>
+    <message>
+        <location filename="../src/ReviewDialog.cpp" line="783"/>
         <source>The unredacted original will be saved to the output folder, including its original metadata (EXIF, GPS, timestamps).</source>
         <translation>未遮盖的原图及其原始元数据（EXIF、GPS、时间戳）将保存到输出文件夹。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="775"/>
+        <location filename="../src/ReviewDialog.cpp" line="785"/>
         <source>The unredacted original will be saved to the output folder (re-encoded without metadata).</source>
         <translation>未遮盖的原图将保存到输出文件夹（重新编码且不含元数据）。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="709"/>
+        <location filename="../src/ReviewDialog.cpp" line="719"/>
         <source>Save &amp;&amp; Next</source>
         <translation>保存并继续</translation>
     </message>
@@ -1770,22 +1784,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewCanvas</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="140"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="143"/>
         <source>Loading frame preview…</source>
         <translation>正在加载帧预览…</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="142"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="145"/>
         <source>Could not load this frame preview.</source>
         <translation>无法加载此帧预览。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="178"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="181"/>
         <source>Track %1</source>
         <translation>轨迹 %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="205"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="208"/>
         <source>Manual %1</source>
         <translation>手动 %1</translation>
     </message>
@@ -1793,32 +1807,32 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="445"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="448"/>
         <source>Review video tracks — %1</source>
         <translation>检查视频轨迹 — %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="451"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="454"/>
         <source>Scrub the timeline and uncheck false detections. To cover a missed region, draw a manual track and add keyframes as it moves; the boxes between keyframes are interpolated before encoding.</source>
         <translation>浏览时间线并取消勾选误检项。要遮盖漏检区域，请绘制手动轨迹并随其移动添加关键帧；关键帧之间的框会在编码前自动插值。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="463"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="466"/>
         <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are excluded by default — check any that cover a real face or plate.</source>
         <translation>标记为“低置信度”的轨迹因可靠检测过少而默认被排除。如果某条轨迹覆盖了真实的人脸或车牌，请勾选它。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="470"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="473"/>
         <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
         <translation>时间轴上的红色标记表示轨迹丢失目标过久、无法推断路径的区间。那里没有任何遮盖，重要的位置请手动绘制轨迹。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="509"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="512"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>轨迹 %1  ·  %2–%3</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="514"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="517"/>
         <source>%1  ·  low confidence</source>
         <translation>%1  ·  低置信度</translation>
     </message>
@@ -1827,84 +1841,98 @@ Continue?</source>
         <translation type="vanished">可靠检测较少，默认被排除。如仍要遮盖此轨迹，请勾选。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="520"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="523"/>
         <source>Few confident detections — included by default. Uncheck it to leave this track unredacted.</source>
         <translation>高置信度检测较少 — 默认包含。取消勾选可让该轨道保持未遮盖。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="574"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="577"/>
         <source>Add missed track</source>
         <translation>添加漏检轨迹</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="575"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="578"/>
         <source>Add / update keyframe</source>
         <translation>添加 / 更新关键帧</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="576"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="579"/>
         <source>Set start here</source>
         <translation>将此处设为起点</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="577"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="580"/>
         <source>Set end here</source>
         <translation>将此处设为终点</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="578"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="581"/>
         <source>Remove manual track</source>
         <translation>删除手动轨迹</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="618"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="621"/>
         <source>Include all</source>
         <translation>全部包括</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="619"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="622"/>
         <source>Exclude all</source>
         <translation>全部排除</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="685"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="688"/>
         <source>Cancel all</source>
         <translation>全部取消</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="686"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="689"/>
         <source>Encode video</source>
         <translation>编码视频</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="731"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="701"/>
+        <source>Encode with nothing covered?</source>
+        <translation>不遮挡任何内容就编码？</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="702"/>
+        <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
+
+Continue?</source>
+        <translation>检测到的轨迹已全部排除，也没有添加任何轨迹来替代，因此编码后的视频不会遮挡任何内容。
+
+继续？</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="756"/>
         <source>%1 / %2</source>
         <translation>%1 / %2</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="922"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="947"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>请在当前帧拖出一个框，圈住漏检区域。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="923"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>请在此帧为手动轨迹 %1 拖出新框。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1099"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1124"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>手动 %1  ·  %2–%3  ·  %n 个关键帧</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1113"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1138"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>已包含 %2 条自动轨迹中的 %1 条 · %3 条手动轨迹</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1120"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
         <source>%n uncovered range(s)</source>
         <translation>
             <numerusform>未遮盖的范围 %n 段</numerusform>

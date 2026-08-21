@@ -1205,7 +1205,7 @@ Check these results before sharing them.</source>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="515"/>
         <source>Could not read input &apos;%1&apos;: %2</source>
-        <translation>入力 '%1' を読み取れません: %2</translation>
+        <translation>入力 &apos;%1&apos; を読み取れません: %2</translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="521"/>
@@ -1333,32 +1333,32 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ReviewDialog</name>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="652"/>
+        <location filename="../src/ReviewDialog.cpp" line="662"/>
         <source>Review — %1</source>
         <translation>確認 — %1</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="676"/>
+        <location filename="../src/ReviewDialog.cpp" line="686"/>
         <source>Click or Return toggles a box · Drag an empty area to add · Arrow keys move the selection · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · Esc skips this image without saving</source>
         <translation>クリックまたは Return で枠を切り替え · 空いた場所をドラッグして追加 · 矢印キーで選択を移動 · Space を押している間は結果をプレビュー · スクロールで拡大縮小、右ドラッグで移動、0 でリセット · %1 / %2 で元に戻す・やり直し · Esc は保存せずにこの画像をスキップ</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="671"/>
+        <location filename="../src/ReviewDialog.cpp" line="681"/>
         <source>Review image</source>
         <translation>画像を確認</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="690"/>
+        <location filename="../src/ReviewDialog.cpp" line="700"/>
         <source>Cancel All</source>
         <translation>すべてキャンセル</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="730"/>
+        <location filename="../src/ReviewDialog.cpp" line="740"/>
         <source>Cancel All?</source>
         <translation>すべてキャンセルしますか？</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ReviewDialog.cpp" line="731"/>
+        <location filename="../src/ReviewDialog.cpp" line="741"/>
         <source>Stop reviewing and cancel the remaining %n image(s)?
 
 Images already saved are kept.</source>
@@ -1369,37 +1369,37 @@ Images already saved are kept.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="693"/>
+        <location filename="../src/ReviewDialog.cpp" line="703"/>
         <source>Undo</source>
         <translation>元に戻す</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="697"/>
+        <location filename="../src/ReviewDialog.cpp" line="707"/>
         <source>Redo</source>
         <translation>やり直す</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="701"/>
+        <location filename="../src/ReviewDialog.cpp" line="711"/>
         <source>Do Not Save</source>
         <translation>保存しない</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="704"/>
+        <location filename="../src/ReviewDialog.cpp" line="714"/>
         <source>Copy Original</source>
         <translation>オリジナルをコピー</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="707"/>
+        <location filename="../src/ReviewDialog.cpp" line="717"/>
         <source>Saves the image without anonymizing it.</source>
         <translation>画像を匿名化せずに保存します。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="778"/>
+        <location filename="../src/ReviewDialog.cpp" line="788"/>
         <source>Copy Original?</source>
         <translation>オリジナルをコピーしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="779"/>
+        <location filename="../src/ReviewDialog.cpp" line="789"/>
         <source>This image will not be anonymized.
 
 %1
@@ -1412,17 +1412,31 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="773"/>
+        <location filename="../src/ReviewDialog.cpp" line="808"/>
+        <source>Save with nothing covered?</source>
+        <translation>何も覆わずに保存しますか？</translation>
+    </message>
+    <message>
+        <location filename="../src/ReviewDialog.cpp" line="809"/>
+        <source>Every region the detector found has been excluded and none were added in their place, so this image will be saved with nothing covered.
+
+Continue?</source>
+        <translation>検出された領域をすべて除外し、代わりに追加した領域もありません。このまま保存すると何も覆われません。
+
+続行しますか？</translation>
+    </message>
+    <message>
+        <location filename="../src/ReviewDialog.cpp" line="783"/>
         <source>The unredacted original will be saved to the output folder, including its original metadata (EXIF, GPS, timestamps).</source>
         <translation>匿名化していない元の画像が、メタデータ（EXIF、GPS、撮影日時）を含んだまま出力フォルダーに保存されます。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="775"/>
+        <location filename="../src/ReviewDialog.cpp" line="785"/>
         <source>The unredacted original will be saved to the output folder (re-encoded without metadata).</source>
         <translation>匿名化していない元の画像が出力フォルダーに保存されます（メタデータなしで再エンコードされます）。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="709"/>
+        <location filename="../src/ReviewDialog.cpp" line="719"/>
         <source>Save &amp;&amp; Next</source>
         <translation>保存して次へ</translation>
     </message>
@@ -1770,22 +1784,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewCanvas</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="140"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="143"/>
         <source>Loading frame preview…</source>
         <translation>フレームプレビューを読み込み中…</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="142"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="145"/>
         <source>Could not load this frame preview.</source>
         <translation>このフレームのプレビューを読み込めませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="178"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="181"/>
         <source>Track %1</source>
         <translation>トラック %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="205"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="208"/>
         <source>Manual %1</source>
         <translation>手動 %1</translation>
     </message>
@@ -1793,32 +1807,32 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="445"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="448"/>
         <source>Review video tracks — %1</source>
         <translation>動画トラックを確認 — %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="451"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="454"/>
         <source>Scrub the timeline and uncheck false detections. To cover a missed region, draw a manual track and add keyframes as it moves; the boxes between keyframes are interpolated before encoding.</source>
         <translation>タイムラインを移動して誤検出のチェックを外してください。見逃した領域を覆うには、手動トラックを描画し、動きに合わせてキーフレームを追加します。キーフレーム間のボックスはエンコード前に補間されます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="463"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="466"/>
         <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are excluded by default — check any that cover a real face or plate.</source>
         <translation>「低信頼度」と表示されたトラックは確実な検出が少なすぎるため、既定で除外されます。実際の顔やナンバープレートを覆うトラックにはチェックを入れてください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="470"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="473"/>
         <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
         <translation>タイムラインの赤い印は、トラックが対象を長く見失い、経路を推定できなかった区間です。そこでは何も覆われないため、重要な箇所には手動トラックを描いてください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="509"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="512"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>トラック %1  ·  %2–%3</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="514"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="517"/>
         <source>%1  ·  low confidence</source>
         <translation>%1  ·  低信頼度</translation>
     </message>
@@ -1827,84 +1841,98 @@ Continue?</source>
         <translation type="vanished">確実な検出が少ないため既定で除外されます。このトラックを隠すにはチェックを入れてください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="520"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="523"/>
         <source>Few confident detections — included by default. Uncheck it to leave this track unredacted.</source>
         <translation>確度の高い検出が少ないトラックです — 既定で含まれます。隠さない場合はチェックを外してください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="574"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="577"/>
         <source>Add missed track</source>
         <translation>見逃したトラックを追加</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="575"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="578"/>
         <source>Add / update keyframe</source>
         <translation>キーフレームを追加 / 更新</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="576"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="579"/>
         <source>Set start here</source>
         <translation>ここを開始位置に設定</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="577"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="580"/>
         <source>Set end here</source>
         <translation>ここを終了位置に設定</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="578"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="581"/>
         <source>Remove manual track</source>
         <translation>手動トラックを削除</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="618"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="621"/>
         <source>Include all</source>
         <translation>すべて含める</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="619"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="622"/>
         <source>Exclude all</source>
         <translation>すべて除外</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="685"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="688"/>
         <source>Cancel all</source>
         <translation>すべてキャンセル</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="686"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="689"/>
         <source>Encode video</source>
         <translation>動画をエンコード</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="731"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="701"/>
+        <source>Encode with nothing covered?</source>
+        <translation>何も覆わずにエンコードしますか？</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="702"/>
+        <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
+
+Continue?</source>
+        <translation>検出されたトラックをすべて除外し、代わりに追加したトラックもありません。このままエンコードすると何も覆われません。
+
+続行しますか？</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="756"/>
         <source>%1 / %2</source>
         <translation>%1 / %2</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="922"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="947"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>現在のフレームで、見逃した領域を囲むボックスをドラッグしてください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="923"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>このフレームで手動トラック %1 の新しいボックスをドラッグしてください。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1099"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1124"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>手動 %1  ·  %2–%3  ·  キーフレーム %n 件</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1113"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1138"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>自動トラック %2 件中 %1 件を含む · 手動 %3 件</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1120"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
         <source>%n uncovered range(s)</source>
         <translation>
             <numerusform>覆われていない範囲 %n 件</numerusform>

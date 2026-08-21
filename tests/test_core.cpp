@@ -406,6 +406,23 @@ namespace
         assert(std::filesystem::exists(output / "input.png"));
     }
 
+    void testReviewConfirmsOnlyWhenDetectionsWereCleared()
+    {
+        // Nothing was found, so nothing was cleared. An ordinary photo with no face in it must
+        // not raise the prompt, or the prompt stops meaning anything.
+        assert(!cloakframe::reviewClearedEveryDetection(0, 0));
+        // Found nothing, and the reader drew a region anyway.
+        assert(!cloakframe::reviewClearedEveryDetection(0, 2));
+        // Found regions and kept some or all of them.
+        assert(!cloakframe::reviewClearedEveryDetection(3, 1));
+        assert(!cloakframe::reviewClearedEveryDetection(3, 3));
+        // Found regions, excluded them, and put manual regions in their place.
+        assert(!cloakframe::reviewClearedEveryDetection(3, 2));
+        // Found regions and excluded every one with nothing left behind.
+        assert(cloakframe::reviewClearedEveryDetection(1, 0));
+        assert(cloakframe::reviewClearedEveryDetection(64, 0));
+    }
+
     void testWorkerFailsWhenTheReviewReceiverIsMissing()
     {
         QTemporaryDir temp;
@@ -2345,6 +2362,7 @@ int main(int argc, char **argv)
     testOutputPlanRejectsExistingAndDuplicateDestinations();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
     testWorkerReportsCopiedOriginalAsWarning();
+    testReviewConfirmsOnlyWhenDetectionsWereCleared();
     testWorkerFailsWhenTheReviewReceiverIsMissing();
     testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun();
     testWorkerSavesNothingWhenTheReviewSlotIsMissing();

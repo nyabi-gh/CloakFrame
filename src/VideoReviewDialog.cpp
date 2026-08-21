@@ -1,10 +1,13 @@
 #include "cloakframe/VideoReviewDialog.hpp"
 
+#include "cloakframe/ReviewTypes.hpp"
+
 #include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QMouseEvent>
 #include <QPainter>
 #include <QProcess>
@@ -685,7 +688,29 @@ namespace cloakframe
         auto *cancel = buttons->addButton(tr("Cancel all"), QDialogButtonBox::RejectRole);
         auto *encode = buttons->addButton(tr("Encode video"), QDialogButtonBox::AcceptRole);
         connect(cancel, &QPushButton::clicked, this, &VideoReviewDialog::reject);
-        connect(encode, &QPushButton::clicked, this, &QDialog::accept);
+        connect(encode,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                const qsizetype remaining =
+                    request_.tracks.size() - excludedTrackIds_.size() + manualTracks_.size();
+                if (reviewClearedEveryDetection(request_.tracks.size(), remaining))
+                {
+                    const auto answer = QMessageBox::warning(this,
+                        tr("Encode with nothing covered?"),
+                        tr("Every track the detector found has been excluded and none were "
+                           "added in their place, so this video will be encoded with nothing "
+                           "covered.\n\nContinue?"),
+                        QMessageBox::Yes | QMessageBox::No,
+                        QMessageBox::No);
+                    if (answer != QMessageBox::Yes)
+                    {
+                        return;
+                    }
+                }
+                accept();
+            });
         root->addWidget(buttons);
 
         updateSummary();
