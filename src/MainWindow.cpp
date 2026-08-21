@@ -645,7 +645,7 @@ namespace cloakframe
                 {
                     reviewCheck_->setText(tr("Review before saving"));
                 });
-            reviewCheck_->setChecked(false);
+            reviewCheck_->setChecked(true);
             addRetranslation(
                 [this]
                 {
@@ -1951,7 +1951,7 @@ namespace cloakframe
         }
 
         recursiveCheck_->setChecked(settings.value("recursive", true).toBool());
-        reviewCheck_->setChecked(settings.value("review", false).toBool());
+        reviewCheck_->setChecked(settings.value("review", true).toBool());
         preserveMetaCheck_->setChecked(
             metadataSupportAvailable() && settings.value("preserveMetadata", false).toBool());
 
