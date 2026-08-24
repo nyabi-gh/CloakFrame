@@ -69,9 +69,10 @@ namespace cloakframe
         , sessionOptions_()
         , session_(nullptr)
     {
-        accelerator_ = configureOrtSessionOptions(sessionOptions_, enableAcceleration);
         const std::filesystem::path modelFsPath = modelPathFromUtf8(modelPath);
         const auto modelBytes = readModelFile(modelFsPath, expectedSha256);
+        accelerator_ = configureOrtSessionOptions(
+            sessionOptions_, enableAcceleration, ortModelCacheTag(modelBytes, expectedSha256));
         session_ = Ort::Session(env_, modelBytes.data(), modelBytes.size(), sessionOptions_);
 
         Ort::AllocatorWithDefaultOptions allocator;

@@ -1,5 +1,8 @@
 #include "cloakframe/OrtAcceleration.hpp"
 
+#include <QByteArrayView>
+#include <QCryptographicHash>
+
 #include <spdlog/spdlog.h>
 
 #include <algorithm>
@@ -8,17 +11,58 @@
 #include <unordered_map>
 #include <vector>
 
+#if defined(__APPLE__)
+#include <QDateTime>
+#include <QDir>
+#include <QStandardPaths>
+#endif
+
 namespace cloakframe
 {
     namespace
     {
+#if defined(__APPLE__)
+        // Compiled-model cache directories are content-addressed by model hash, so an entry
+        // left behind by a removed or updated model is never read again; anything but the
+        // active tag that has not been written to for this long is deleted.
+        constexpr int kCoremlCachePruneDays = 60;
+
+        QString coremlModelCacheDirectory(const QString &modelCacheTag)
+        {
+            const QString cacheBase =
+                QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+            if (cacheBase.isEmpty() || modelCacheTag.isEmpty())
+            {
+                return {};
+            }
+            QDir root(cacheBase + QStringLiteral("/coreml-models"));
+            if (!root.mkpath(modelCacheTag))
+            {
+                return {};
+            }
+            const QDateTime cutoff =
+                QDateTime::currentDateTimeUtc().addDays(-kCoremlCachePruneDays);
+            const auto siblings = root.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot);
+            for (const auto &sibling : siblings)
+            {
+                if (sibling.fileName() != modelCacheTag && sibling.lastModified() < cutoff)
+                {
+                    QDir(sibling.absoluteFilePath()).removeRecursively();
+                }
+            }
+            return root.filePath(modelCacheTag);
+        }
+#endif
+
         bool providerAvailable(const char *providerName)
         {
             const auto providers = Ort::GetAvailableProviders();
             return std::ranges::find(providers, std::string(providerName)) != providers.end();
         }
 
-        OrtAccelerator applyOrtAcceleration(Ort::SessionOptions &options, const bool enabled)
+        OrtAccelerator applyOrtAcceleration(Ort::SessionOptions &options,
+            const bool enabled,
+            [[maybe_unused]] const QString &modelCacheTag)
         {
             if (!enabled)
             {
@@ -30,10 +74,17 @@ namespace cloakframe
             {
                 try
                 {
-                    const std::unordered_map<std::string, std::string> coremlOptions = {
+                    std::unordered_map<std::string, std::string> coremlOptions = {
                         {"ModelFormat", "MLProgram"},
                         {"MLComputeUnits", "ALL"},
                     };
+                    const QString cacheDirectory = coremlModelCacheDirectory(modelCacheTag);
+                    if (!cacheDirectory.isEmpty())
+                    {
+                        coremlOptions.emplace("ModelCacheDirectory", cacheDirectory.toStdString());
+                        spdlog::info(
+                            "CoreML compiled-model cache: {}", cacheDirectory.toStdString());
+                    }
                     options.AppendExecutionProvider("CoreML", coremlOptions);
                     return OrtAccelerator::CoreML;
                 }
@@ -141,10 +192,24 @@ namespace cloakframe
         return "CPU";
     }
 
-    OrtAccelerator configureOrtSessionOptions(
-        Ort::SessionOptions &options, const bool enableAcceleration)
+    QString ortModelCacheTag(
+        const std::vector<std::uint8_t> &modelBytes, const QByteArray &expectedSha256)
     {
-        const OrtAccelerator accelerator = applyOrtAcceleration(options, enableAcceleration);
+        if (!expectedSha256.isEmpty())
+        {
+            return QString::fromLatin1(expectedSha256.toHex());
+        }
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        hash.addData(QByteArrayView(reinterpret_cast<const char *>(modelBytes.data()),
+            static_cast<qsizetype>(modelBytes.size())));
+        return QString::fromLatin1(hash.result().toHex());
+    }
+
+    OrtAccelerator configureOrtSessionOptions(
+        Ort::SessionOptions &options, const bool enableAcceleration, const QString &modelCacheTag)
+    {
+        const OrtAccelerator accelerator =
+            applyOrtAcceleration(options, enableAcceleration, modelCacheTag);
         // Layout optimizations (the step from EXTENDED to ALL) only help nodes the CPU
         // provider executes, and can rewrite nodes into forms an accelerator's provider no
         // longer claims, so ALL is reserved for CPU-only sessions.

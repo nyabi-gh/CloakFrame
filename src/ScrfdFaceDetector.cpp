@@ -125,6 +125,10 @@ namespace cloakframe
         , sessionOptions_()
         , session_(nullptr)
     {
+        // No compiled-model cache tag here: these options create sessions for both the
+        // original and the dimension-patched graph, which share input/output names — the
+        // only key ONNX Runtime has for a from-memory model — so their cached CoreML models
+        // would collide.
         accelerator_ = configureOrtSessionOptions(sessionOptions_, enableAcceleration);
         const std::u8string modelU8(modelPath.begin(), modelPath.end());
         const std::filesystem::path modelFsPath(modelU8);

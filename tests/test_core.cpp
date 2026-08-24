@@ -16,6 +16,7 @@
 #include "cloakframe/YuNetFaceDetector.hpp"
 
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
 #include <QImage>
@@ -109,6 +110,22 @@ namespace
                == "MIGraphX");
         assert(std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::ROCm))
                == "ROCm");
+    }
+
+    void testModelCacheTagIsContentDerived()
+    {
+        const std::vector<std::uint8_t> bytes = {'m', 'o', 'd', 'e', 'l'};
+        const QByteArray digest =
+            QCryptographicHash::hash(QByteArrayView("model", 5), QCryptographicHash::Sha256);
+
+        // A caller-supplied digest wins; without one the tag is computed from the bytes, and
+        // both spellings must agree so the same model never lands in two cache directories.
+        assert(cloakframe::ortModelCacheTag(bytes, digest) == QString::fromLatin1(digest.toHex()));
+        assert(cloakframe::ortModelCacheTag(bytes, {}) == QString::fromLatin1(digest.toHex()));
+
+        const std::vector<std::uint8_t> otherBytes = {'o', 't', 'h', 'e', 'r'};
+        assert(cloakframe::ortModelCacheTag(otherBytes, {})
+               != cloakframe::ortModelCacheTag(bytes, {}));
     }
 
     void testBuiltinModelDigests()
@@ -2355,6 +2372,7 @@ int main(int argc, char **argv)
 {
     QCoreApplication app(argc, argv);
     testAccelerationBackendNames();
+    testModelCacheTagIsContentDerived();
     testBuiltinModelDigests();
     testSupportedImageExtensions();
     testScanImagesRecursesAndDeduplicates();

@@ -113,10 +113,10 @@ namespace cloakframe
         , sessionOptions_()
         , session_(nullptr)
     {
-        accelerator_ = configureOrtSessionOptions(sessionOptions_, enableAcceleration);
-
         const std::u8string modelU8(modelPath.begin(), modelPath.end());
         const auto modelBytes = readModelFile(std::filesystem::path(modelU8), expectedSha256);
+        accelerator_ = configureOrtSessionOptions(
+            sessionOptions_, enableAcceleration, ortModelCacheTag(modelBytes, expectedSha256));
         session_ = Ort::Session(env_, modelBytes.data(), modelBytes.size(), sessionOptions_);
 
         if (session_.GetInputCount() != 1 || session_.GetOutputCount() != 1)
