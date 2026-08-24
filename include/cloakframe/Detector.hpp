@@ -25,6 +25,10 @@ namespace cloakframe
     public:
         virtual ~Detector() = default;
 
+        // Safe to call concurrently. Preparing the input and decoding the output run on the
+        // caller's thread; access to the shared inference state is synchronized inside each
+        // implementation, so parallel callers overlap their CPU work with each other's
+        // inference instead of queueing for all three stages.
         virtual DetectionResult detect(
             const cv::Mat &bgrImage, float scoreThreshold, float nmsThreshold) = 0;
 

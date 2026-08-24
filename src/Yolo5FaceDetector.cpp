@@ -201,21 +201,21 @@ namespace cloakframe
         const int left = static_cast<int>(padX);
         const int top = static_cast<int>(padY);
 
-        // The buffers are members so a video pass reuses one allocation per frame instead of
-        // asking for a fresh 4.7 MiB tensor 17,000 times over.
-        if (canvas_.empty())
-        {
-            canvas_.create(kInputSize, kInputSize, CV_8UC3);
-        }
-        canvas_.setTo(cv::Scalar(114, 114, 114));
-        cv::Mat letterbox = canvas_(cv::Rect(left, top, resizedWidth, resizedHeight));
+        // One scratch pair per thread: a video pass keeps reusing one allocation per frame
+        // instead of asking for a fresh 4.7 MiB tensor 17,000 times over, and concurrent
+        // callers each prepare into their own buffers.
+        static thread_local cv::Mat canvas;
+        static thread_local cv::Mat blob;
+        canvas.create(kInputSize, kInputSize, CV_8UC3);
+        canvas.setTo(cv::Scalar(114, 114, 114));
+        cv::Mat letterbox = canvas(cv::Rect(left, top, resizedWidth, resizedHeight));
         cv::resize(bgrImage, letterbox, letterbox.size(), 0.0, 0.0, cv::INTER_LINEAR);
 
         // Same normalise and HWC→CHW as the scalar loop it replaces — scale 1/255, and
         // swapRB because the source is BGR — but vectorised, and it writes into the existing
         // buffer once the shape matches.
-        cv::dnn::blobFromImage(canvas_,
-            blob_,
+        cv::dnn::blobFromImage(canvas,
+            blob,
             1.0 / 255.0,
             cv::Size(),
             cv::Scalar(),
@@ -225,15 +225,19 @@ namespace cloakframe
 
         std::array<int64_t, 4> inputShape = {1, kChannels, kInputSize, kInputSize};
         auto inputTensor = Ort::Value::CreateTensor<float>(memoryInfo_,
-            blob_.ptr<float>(),
+            blob.ptr<float>(),
             static_cast<std::size_t>(kChannels) * kInputSize * kInputSize,
             inputShape.data(),
             inputShape.size());
         const char *inputName = inputName_.c_str();
         const char *outputName = outputName_.c_str();
         stage.emplace(inferenceMicros_);
-        auto outputs =
-            session_.Run(Ort::RunOptions{nullptr}, &inputName, &inputTensor, 1, &outputName, 1);
+        std::vector<Ort::Value> outputs;
+        {
+            const std::scoped_lock runLock(runMutex_);
+            outputs =
+                session_.Run(Ort::RunOptions{nullptr}, &inputName, &inputTensor, 1, &outputName, 1);
+        }
         stage.emplace(postprocessMicros_);
 
         if (outputs.size() != 1 || !outputs.front().IsTensor())

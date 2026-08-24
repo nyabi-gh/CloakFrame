@@ -6,6 +6,7 @@
 
 #include <opencv2/objdetect/face.hpp>
 
+#include <mutex>
 #include <string>
 
 namespace cloakframe
@@ -30,6 +31,9 @@ namespace cloakframe
         }
 
     private:
+        // cv::FaceDetectorYN keeps mutable state across detect calls, so the whole inference
+        // is serialized; only the letterbox preparation and the output parsing run unlocked.
+        std::mutex detectMutex_;
         cv::Ptr<cv::FaceDetectorYN> detector_;
     };
 }

@@ -167,7 +167,6 @@ namespace cloakframe
         // instead of waiting for a reservation that will never be granted.
         std::uint64_t imageMemoryBudget_ = 0;
         std::uint64_t imageMemoryAvailable_ = 0;
-        std::mutex detectMutex_;
         std::shared_ptr<Detector> detector_;
         std::shared_ptr<PlateDetector> plateDetector_;
         std::shared_ptr<Detector> videoDetector_;

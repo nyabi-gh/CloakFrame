@@ -337,12 +337,16 @@ namespace cloakframe
             inputShape.data(),
             inputShape.size());
 
-        auto outputs = session_.Run(Ort::RunOptions{nullptr},
-            inputNamePtrs_.data(),
-            &inputTensor,
-            1,
-            outputNamePtrs_.data(),
-            outputNamePtrs_.size());
+        std::vector<Ort::Value> outputs;
+        {
+            const std::scoped_lock runLock(runMutex_);
+            outputs = session_.Run(Ort::RunOptions{nullptr},
+                inputNamePtrs_.data(),
+                &inputTensor,
+                1,
+                outputNamePtrs_.data(),
+                outputNamePtrs_.size());
+        }
 
         return decode(outputs, prepared, scoreThreshold, nmsThreshold);
     }

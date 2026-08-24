@@ -144,10 +144,13 @@ namespace cloakframe
         resized.copyTo(canvas(
             cv::Rect(static_cast<int>(padX), static_cast<int>(padY), resizedWidth, resizedHeight)));
 
-        detector_->setScoreThreshold(std::clamp(scoreThreshold, 0.0F, 1.0F));
-        detector_->setNMSThreshold(std::clamp(nmsThreshold, 0.0F, 1.0F));
         cv::Mat faces;
-        detector_->detect(canvas, faces);
+        {
+            const std::scoped_lock lock(detectMutex_);
+            detector_->setScoreThreshold(std::clamp(scoreThreshold, 0.0F, 1.0F));
+            detector_->setNMSThreshold(std::clamp(nmsThreshold, 0.0F, 1.0F));
+            detector_->detect(canvas, faces);
+        }
         if (faces.empty())
         {
             return {};

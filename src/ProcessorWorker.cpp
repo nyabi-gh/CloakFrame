@@ -975,22 +975,19 @@ namespace cloakframe
             emit stageChanged(index, total, tr("Detecting"), fileName);
             FaceDetections detected;
             int omittedDetections = 0;
+            if (detectFaces_ && detector_)
             {
-                std::lock_guard lock(detectMutex_);
-                if (detectFaces_ && detector_)
-                {
-                    auto faces = detector_->detect(detectMat, scoreThreshold_, nmsThreshold_);
-                    detected = std::move(faces.detections);
-                    omittedDetections += faces.omitted;
-                }
-                if (detectPlates_ && plateDetector_)
-                {
-                    auto plates = plateDetector_->detect(detectMat, scoreThreshold_, nmsThreshold_);
-                    detected.insert(detected.end(),
-                        std::make_move_iterator(plates.detections.begin()),
-                        std::make_move_iterator(plates.detections.end()));
-                    omittedDetections += plates.omitted;
-                }
+                auto faces = detector_->detect(detectMat, scoreThreshold_, nmsThreshold_);
+                detected = std::move(faces.detections);
+                omittedDetections += faces.omitted;
+            }
+            if (detectPlates_ && plateDetector_)
+            {
+                auto plates = plateDetector_->detect(detectMat, scoreThreshold_, nmsThreshold_);
+                detected.insert(detected.end(),
+                    std::make_move_iterator(plates.detections.begin()),
+                    std::make_move_iterator(plates.detections.end()));
+                omittedDetections += plates.omitted;
             }
             if (cancelled_.load(std::memory_order_acquire))
             {
@@ -1300,11 +1297,10 @@ namespace cloakframe
 
         const float detectionThreshold =
             std::min(options.tracker.lowScoreThreshold, scoreThreshold_);
-        // Guarded by detectMutex_, which the lambda holds for its whole body.
+        // Only pass 1's single detection loop calls this, so the accumulator needs no lock.
         int omittedDetections = 0;
         const auto detect = [this, detectionThreshold, &omittedDetections](const cv::Mat &frame)
         {
-            std::lock_guard lock(detectMutex_);
             FaceDetections detections;
             if (detectFaces_ && videoDetector_)
             {

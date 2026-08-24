@@ -9,6 +9,7 @@
 
 #include <onnxruntime_cxx_api.h>
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -46,10 +47,10 @@ namespace cloakframe
         Ort::Session session_;
         std::string inputName_;
         std::string outputName_;
-        // Reused across calls; detect() is never entered concurrently on one detector.
         Ort::MemoryInfo memoryInfo_ =
             Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
-        cv::Mat canvas_;
-        cv::Mat blob_;
+        // Serializes session_.Run: the DirectML execution provider does not support
+        // concurrent Run calls on one session.
+        std::mutex runMutex_;
     };
 }
