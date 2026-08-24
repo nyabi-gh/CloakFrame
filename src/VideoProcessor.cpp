@@ -350,17 +350,28 @@ namespace cloakframe
         plan.frameBytes = pixels > std::numeric_limits<qint64>::max() / 8
                               ? std::numeric_limits<qint64>::max()
                               : pixels * 8;
+        const qint64 decodedFrameBytes = pixels > std::numeric_limits<qint64>::max() / 3
+                                             ? std::numeric_limits<qint64>::max()
+                                             : pixels * 3;
 
         const unsigned int availableThreads = hardwareThreads == 0 ? 1 : hardwareThreads;
         const int requestedWorkers =
             static_cast<int>(std::min<unsigned int>(availableThreads, kMaxMaskWorkers));
         const qint64 budget = memoryBudget > 0 ? memoryBudget : videoMaskingMemoryBudget();
+        // A batch frame costs frameBytes: the decoded pixels plus the masking copies and
+        // encoder backlog behind them. A queued frame holds decoded pixels only, and one is
+        // budgeted per batch frame so the decoder can run a whole batch ahead.
+        const qint64 inFlightFrameBytes =
+            plan.frameBytes > std::numeric_limits<qint64>::max() - decodedFrameBytes
+                ? std::numeric_limits<qint64>::max()
+                : plan.frameBytes + decodedFrameBytes;
         const qint64 framesWithinBudget = std::clamp<qint64>(
-            (budget - kVideoMaskingFixedHeadroom) / std::max<qint64>(1, plan.frameBytes),
+            (budget - kVideoMaskingFixedHeadroom) / std::max<qint64>(1, inFlightFrameBytes),
             1,
             kMaxMaskBatchFrames);
         plan.batchFrames = std::min(requestedWorkers * 2, static_cast<int>(framesWithinBudget));
         plan.workerCount = std::min(requestedWorkers, plan.batchFrames);
+        plan.prefetchFrames = plan.batchFrames;
         return plan;
     }
 
@@ -741,8 +752,17 @@ namespace cloakframe
         const auto runEncodePass = [&](const bool allowHardwareEncoder) -> EncodeAttempt
         {
             EncodeAttempt attempt;
-            VideoFrameReader reader;
-            if (!reader.open(tools, processingSource, activeInfo))
+            // The encode pass reads at native size, so the plan can be computed from the
+            // stream dimensions before the decoder starts; the reader would report the same.
+            const VideoMaskingPlan maskingPlan = videoMaskingPlan(activeInfo.displayWidth(),
+                activeInfo.displayHeight(),
+                std::thread::hardware_concurrency());
+            PrefetchingVideoFrameReader reader(tools,
+                processingSource,
+                activeInfo,
+                makeContinueGuard(),
+                static_cast<std::size_t>(maskingPlan.prefetchFrames));
+            if (!reader.waitForOpen())
             {
                 result.error = reader.errorString();
                 return attempt;
@@ -780,13 +800,13 @@ namespace cloakframe
             StageTimer readTimer;
             StageTimer maskTimer;
             StageTimer writeTimer;
-            const VideoMaskingPlan maskingPlan = videoMaskingPlan(
-                reader.frameWidth(), reader.frameHeight(), std::thread::hardware_concurrency());
             const int workerCount = maskingPlan.workerCount;
             const int batchCap = maskingPlan.batchFrames;
-            spdlog::info("Video masking plan: {} worker(s), {} frame batch, {} MiB raw-frame cap",
+            spdlog::info("Video masking plan: {} worker(s), {} frame batch, {} frame prefetch, "
+                         "{} MiB raw-frame cap",
                 workerCount,
                 batchCap,
+                maskingPlan.prefetchFrames,
                 (maskingPlan.frameBytes * static_cast<qint64>(batchCap)) / (qint64{1024} * 1024));
             const ScopedCvThreads maskThreads(1);
             MaskWorkerPool maskPool(hasTrackedRegions ? workerCount : 1);
@@ -804,7 +824,7 @@ namespace cloakframe
                         break;
                     }
                     cv::Mat frame;
-                    if (!reader.readFrame(frame, canContinue))
+                    if (!reader.next(frame))
                     {
                         break;
                     }
@@ -914,6 +934,7 @@ namespace cloakframe
                         return attempt;
                     }
                     ++frameIndex;
+                    reader.recycle(std::move(frame));
                     if (progress)
                     {
                         progress(2, frameIndex, frameCount);

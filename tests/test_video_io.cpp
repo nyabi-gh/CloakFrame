@@ -303,30 +303,39 @@ namespace
         constexpr qint64 constrainedBudget = 256LL * 1024 * 1024;
         constexpr qint64 performanceBudget = 1024LL * 1024 * 1024;
         constexpr qint64 headroom = 48LL * 1024 * 1024;
+        // frameBytes is 8 bytes per pixel; a prefetched frame holds only the 3 decoded bytes.
+        const auto withinBudget = [](const cloakframe::VideoMaskingPlan &plan, qint64 budget)
+        {
+            const qint64 decodedFrameBytes = plan.frameBytes / 8 * 3;
+            return plan.batchFrames * plan.frameBytes + plan.prefetchFrames * decodedFrameBytes
+                       + headroom
+                   <= budget;
+        };
 
         const auto fullHd = cloakframe::videoMaskingPlan(1920, 1080, 64, constrainedBudget);
         assert(fullHd.workerCount <= 8);
         assert(fullHd.batchFrames <= 16);
-        assert(fullHd.batchFrames * fullHd.frameBytes + headroom <= constrainedBudget);
+        assert(fullHd.prefetchFrames == fullHd.batchFrames);
+        assert(withinBudget(fullHd, constrainedBudget));
 
         const auto constrainedFourK =
             cloakframe::videoMaskingPlan(3840, 2160, 64, constrainedBudget);
-        assert(constrainedFourK.workerCount == 3);
-        assert(constrainedFourK.batchFrames == 3);
-        assert(constrainedFourK.batchFrames * constrainedFourK.frameBytes + headroom
-               <= constrainedBudget);
+        assert(constrainedFourK.workerCount == 2);
+        assert(constrainedFourK.batchFrames == 2);
+        assert(constrainedFourK.prefetchFrames == 2);
+        assert(withinBudget(constrainedFourK, constrainedBudget));
 
         const auto performanceFourK =
             cloakframe::videoMaskingPlan(3840, 2160, 64, performanceBudget);
         assert(performanceFourK.workerCount == 8);
-        assert(performanceFourK.batchFrames == 15);
-        assert(performanceFourK.batchFrames * performanceFourK.frameBytes + headroom
-               <= performanceBudget);
+        assert(performanceFourK.batchFrames == 11);
+        assert(performanceFourK.prefetchFrames == 11);
+        assert(withinBudget(performanceFourK, performanceBudget));
 
         const auto eightK = cloakframe::videoMaskingPlan(7680, 4320, 64, performanceBudget);
-        assert(eightK.workerCount == 3);
-        assert(eightK.batchFrames == 3);
-        assert(eightK.batchFrames * eightK.frameBytes + headroom <= performanceBudget);
+        assert(eightK.workerCount == 2);
+        assert(eightK.batchFrames == 2);
+        assert(withinBudget(eightK, performanceBudget));
 
         const auto unknownCpuCount = cloakframe::videoMaskingPlan(320, 240, 0, constrainedBudget);
         assert(unknownCpuCount.workerCount == 1);

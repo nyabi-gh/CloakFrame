@@ -69,6 +69,10 @@ namespace cloakframe
         qint64 frameBytes = 0;
         int workerCount = 1;
         int batchFrames = 1;
+        // Decoded frames the prefetching reader may hold beyond the batch. Sized like the
+        // batch so the decoder can produce a whole batch while the previous one is masked
+        // and encoded.
+        int prefetchFrames = 1;
     };
 
     [[nodiscard]] float videoStrongScoreThreshold(float scoreThreshold);
