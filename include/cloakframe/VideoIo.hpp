@@ -5,10 +5,15 @@
 
 #include <opencv2/core.hpp>
 
+#include <condition_variable>
+#include <cstddef>
+#include <deque>
 #include <filesystem>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <optional>
+#include <thread>
 #include <vector>
 
 class QLocalServer;
@@ -123,6 +128,65 @@ namespace cloakframe
         int frameHeight_ = 0;
         bool atEnd_ = false;
         QString error_;
+    };
+
+    // Runs a VideoFrameReader on a thread of its own so the caller can process frame N while
+    // the decoder produces frame N+1. The reader is created, used and destroyed entirely on
+    // that thread, which is what Qt's thread-affinity rules require of the process and socket
+    // objects inside it.
+    class PrefetchingVideoFrameReader
+    {
+    public:
+        PrefetchingVideoFrameReader(const FfmpegTools &tools,
+            const QString &path,
+            const VideoInfo &info,
+            std::function<bool()> continueGuard,
+            std::size_t capacity,
+            int decodeLongEdge = 0);
+        ~PrefetchingVideoFrameReader();
+
+        PrefetchingVideoFrameReader(const PrefetchingVideoFrameReader &) = delete;
+        PrefetchingVideoFrameReader &operator=(const PrefetchingVideoFrameReader &) = delete;
+
+        // Blocks until the decoder has started. False means it could not; errorString()
+        // explains why.
+        [[nodiscard]] bool waitForOpen();
+
+        // Valid once waitForOpen() has returned true.
+        [[nodiscard]] int frameWidth() const;
+        [[nodiscard]] int frameHeight() const;
+
+        // Blocks until the next decoded frame is available; false once decoding ended.
+        // Ownership of the frame passes to the caller; handing it back through recycle()
+        // lets the decoder reuse its buffer.
+        [[nodiscard]] bool next(cv::Mat &frame);
+        void recycle(cv::Mat frame);
+
+        [[nodiscard]] QString errorString() const;
+
+    private:
+        void readLoop();
+
+        const FfmpegTools tools_;
+        const QString path_;
+        const VideoInfo info_;
+        const int decodeLongEdge_;
+        const std::function<bool()> continueGuard_;
+        const std::size_t capacity_;
+
+        mutable std::mutex mutex_;
+        std::condition_variable frameAvailable_;
+        std::condition_variable spaceAvailable_;
+        std::deque<cv::Mat> filled_;
+        std::vector<cv::Mat> spare_;
+        int frameWidth_ = 0;
+        int frameHeight_ = 0;
+        bool openDone_ = false;
+        bool opened_ = false;
+        bool finished_ = false;
+        bool stopping_ = false;
+        QString error_;
+        std::thread thread_;
     };
 
     class VideoFrameWriter

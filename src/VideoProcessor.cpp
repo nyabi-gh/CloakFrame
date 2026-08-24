@@ -51,6 +51,9 @@ namespace cloakframe
         constexpr std::size_t kMaxVideoTrackedRegions = 8'000'000;
         constexpr int kMaxMaskWorkers = 8;
         constexpr int kMaxMaskBatchFrames = 16;
+        // Analysis frames are at most `analysisLongEdge` wide, so a few of them cost a couple
+        // of megabytes while decoupling the decode thread from detection latency spikes.
+        constexpr std::size_t kAnalysisPrefetchFrames = 4;
 
         qint64 videoMaskingMemoryBudget()
         {
@@ -445,25 +448,32 @@ namespace cloakframe
             const auto current = captureVideoSourceSnapshot(processingSource);
             return current && *current == *processingSnapshot;
         };
-        auto lastSourceCheck = std::chrono::steady_clock::time_point{};
-        const auto canContinue = [&]()
+        // Each guard instance carries its own rate limit, so the decode thread and the encode
+        // loop can each hold one without sharing mutable state across threads.
+        const auto makeContinueGuard = [&cancelled, &sourceIsUnchanged]
         {
-            if (cancelled.load(std::memory_order_acquire))
+            return [&cancelled,
+                       &sourceIsUnchanged,
+                       lastSourceCheck = std::chrono::steady_clock::time_point{}]() mutable
             {
-                return false;
-            }
-            const auto now = std::chrono::steady_clock::now();
-            if (now - lastSourceCheck < std::chrono::milliseconds(500))
-            {
+                if (cancelled.load(std::memory_order_acquire))
+                {
+                    return false;
+                }
+                const auto now = std::chrono::steady_clock::now();
+                if (now - lastSourceCheck < std::chrono::milliseconds(500))
+                {
+                    return true;
+                }
+                if (!sourceIsUnchanged())
+                {
+                    return false;
+                }
+                lastSourceCheck = now;
                 return true;
-            }
-            if (!sourceIsUnchanged())
-            {
-                return false;
-            }
-            lastSourceCheck = now;
-            return true;
+            };
         };
+        const auto canContinue = makeContinueGuard();
 
         QString probeError;
         const auto inspectedInfo = probeVideo(tools, processingSource, &probeError);
@@ -493,8 +503,16 @@ namespace cloakframe
         float scaleY = 1.0F;
         SceneCutDetector cutDetector;
         {
-            VideoFrameReader reader;
-            if (!reader.open(tools, processingSource, activeInfo, options.analysisLongEdge))
+            // The decoder runs on a thread of its own so detecting frame N overlaps decoding
+            // frame N+1. Without that, the pipe from ffmpeg is far too small on macOS and
+            // Linux to keep the decoder busy while a frame is being detected.
+            PrefetchingVideoFrameReader reader(tools,
+                processingSource,
+                activeInfo,
+                makeContinueGuard(),
+                kAnalysisPrefetchFrames,
+                options.analysisLongEdge);
+            if (!reader.waitForOpen())
             {
                 result.error = reader.errorString();
                 return result;
@@ -504,17 +522,16 @@ namespace cloakframe
             scaleY = static_cast<float>(activeInfo.displayHeight())
                      / static_cast<float>(reader.frameHeight());
 
-            // `readTimer` measures only the wait on the decoder, which runs as its own
-            // process feeding a pipe. A small figure means detection kept the pipe full, not
-            // that decoding was cheap.
+            // `readTimer` measures only the wait on the prefetched decoder. A small figure
+            // means decoding kept up with detection, not that decoding was cheap.
             StageTimer readTimer;
             StageTimer sceneTimer;
             StageTimer detectTimer;
-            cv::Mat frame;
             for (;;)
             {
+                cv::Mat frame;
                 const auto readMark = StageTimer::now();
-                const bool got = reader.readFrame(frame, canContinue);
+                const bool got = reader.next(frame);
                 readTimer.add(readMark);
                 if (!got)
                 {
@@ -566,6 +583,7 @@ namespace cloakframe
                 detectionMemory += additional;
                 frameDetections.push_back(std::move(detections));
                 detectTimer.add(detectMark);
+                reader.recycle(std::move(frame));
                 if (progress)
                 {
                     progress(1,

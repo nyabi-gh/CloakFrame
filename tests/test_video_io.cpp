@@ -394,6 +394,81 @@ namespace
         }
     }
 
+    void testPrefetchingReaderMatchesDirectReader(
+        const cloakframe::FfmpegTools &tools, const QString &directory)
+    {
+        const QString source = directory + "/prefetch.mp4";
+        assert(generateSample(tools, source));
+        const auto info = cloakframe::probeVideo(tools, source);
+        assert(info);
+
+        const auto frameHash = [](const cv::Mat &frame)
+        {
+            return QCryptographicHash::hash(
+                QByteArrayView(
+                    frame.data, static_cast<qsizetype>(frame.total() * frame.elemSize())),
+                QCryptographicHash::Md5);
+        };
+
+        std::vector<QByteArray> directFrames;
+        {
+            cloakframe::VideoFrameReader reader;
+            assert(reader.open(tools, source, *info));
+            cv::Mat frame;
+            while (reader.readFrame(frame))
+            {
+                directFrames.push_back(frameHash(frame));
+            }
+            assert(reader.errorString().isEmpty());
+        }
+        assert(!directFrames.empty());
+
+        {
+            cloakframe::PrefetchingVideoFrameReader reader(tools, source, *info, {}, 4);
+            assert(reader.waitForOpen());
+            assert(reader.frameWidth() == info->displayWidth());
+            assert(reader.frameHeight() == info->displayHeight());
+            std::vector<QByteArray> prefetchedFrames;
+            for (;;)
+            {
+                cv::Mat frame;
+                if (!reader.next(frame))
+                {
+                    break;
+                }
+                prefetchedFrames.push_back(frameHash(frame));
+                reader.recycle(std::move(frame));
+            }
+            assert(reader.errorString().isEmpty());
+            assert(prefetchedFrames == directFrames);
+        }
+
+        // Destroying the reader mid-stream must stop the decode thread promptly.
+        {
+            cloakframe::PrefetchingVideoFrameReader reader(tools, source, *info, {}, 2);
+            assert(reader.waitForOpen());
+            cv::Mat frame;
+            assert(reader.next(frame));
+        }
+
+        // A guard that refuses ends the stream without reporting an error.
+        {
+            cloakframe::PrefetchingVideoFrameReader reader(
+                tools,
+                source,
+                *info,
+                []
+                {
+                    return false;
+                },
+                2);
+            assert(reader.waitForOpen());
+            cv::Mat frame;
+            assert(!reader.next(frame));
+            assert(reader.errorString().isEmpty());
+        }
+    }
+
     // CF-009: anamorphic sources must not be published as square-pixel.
     void testAnamorphicOutputKeepsDisplayAspect(
         const cloakframe::FfmpegTools &tools, const QString &directory)
@@ -683,6 +758,8 @@ int main(int argc, char **argv)
 
     testPreviewAndReaderAgreeOnFrameIndex(*tools, tempDir.path());
     std::puts("preview and reader frame identity: ok");
+    testPrefetchingReaderMatchesDirectReader(*tools, tempDir.path());
+    std::puts("prefetching reader frame identity: ok");
     testAnamorphicOutputKeepsDisplayAspect(*tools, tempDir.path());
     std::puts("anamorphic display aspect preserved: ok");
     testRecoveredDecodeErrorsDoNotPublish(*tools, tempDir.path());

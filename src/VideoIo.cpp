@@ -913,6 +913,178 @@ namespace cloakframe
         return error_;
     }
 
+    PrefetchingVideoFrameReader::PrefetchingVideoFrameReader(const FfmpegTools &tools,
+        const QString &path,
+        const VideoInfo &info,
+        std::function<bool()> continueGuard,
+        const std::size_t capacity,
+        const int decodeLongEdge)
+        : tools_(tools)
+        , path_(path)
+        , info_(info)
+        , decodeLongEdge_(decodeLongEdge)
+        , continueGuard_(std::move(continueGuard))
+        , capacity_(std::max<std::size_t>(1, capacity))
+        , thread_(
+              [this]
+              {
+                  readLoop();
+              })
+    {
+    }
+
+    PrefetchingVideoFrameReader::~PrefetchingVideoFrameReader()
+    {
+        {
+            const std::scoped_lock lock(mutex_);
+            stopping_ = true;
+        }
+        spaceAvailable_.notify_all();
+        thread_.join();
+    }
+
+    bool PrefetchingVideoFrameReader::waitForOpen()
+    {
+        std::unique_lock lock(mutex_);
+        frameAvailable_.wait(lock,
+            [this]
+            {
+                return openDone_;
+            });
+        return opened_;
+    }
+
+    int PrefetchingVideoFrameReader::frameWidth() const
+    {
+        const std::scoped_lock lock(mutex_);
+        return frameWidth_;
+    }
+
+    int PrefetchingVideoFrameReader::frameHeight() const
+    {
+        const std::scoped_lock lock(mutex_);
+        return frameHeight_;
+    }
+
+    bool PrefetchingVideoFrameReader::next(cv::Mat &frame)
+    {
+        std::unique_lock lock(mutex_);
+        // Buffered frames are still delivered after the decoder finishes, so the end of the
+        // stream is only reported once the queue has drained.
+        frameAvailable_.wait(lock,
+            [this]
+            {
+                return !filled_.empty() || finished_;
+            });
+        if (filled_.empty())
+        {
+            return false;
+        }
+        frame = std::move(filled_.front());
+        filled_.pop_front();
+        lock.unlock();
+        spaceAvailable_.notify_one();
+        return true;
+    }
+
+    void PrefetchingVideoFrameReader::recycle(cv::Mat frame)
+    {
+        const std::scoped_lock lock(mutex_);
+        spare_.push_back(std::move(frame));
+    }
+
+    QString PrefetchingVideoFrameReader::errorString() const
+    {
+        const std::scoped_lock lock(mutex_);
+        return error_;
+    }
+
+    void PrefetchingVideoFrameReader::readLoop()
+    {
+        VideoFrameReader reader;
+        const bool opened = reader.open(tools_, path_, info_, decodeLongEdge_);
+        {
+            const std::scoped_lock lock(mutex_);
+            frameWidth_ = reader.frameWidth();
+            frameHeight_ = reader.frameHeight();
+            opened_ = opened;
+            openDone_ = true;
+            if (!opened)
+            {
+                error_ = reader.errorString();
+                finished_ = true;
+            }
+        }
+        frameAvailable_.notify_all();
+        if (!opened)
+        {
+            return;
+        }
+
+        const auto continueReading = [this]
+        {
+            {
+                const std::scoped_lock lock(mutex_);
+                if (stopping_)
+                {
+                    return false;
+                }
+            }
+            return !continueGuard_ || continueGuard_();
+        };
+
+        QString failure;
+        try
+        {
+            for (;;)
+            {
+                cv::Mat frame;
+                {
+                    std::unique_lock lock(mutex_);
+                    spaceAvailable_.wait(lock,
+                        [this]
+                        {
+                            return stopping_ || filled_.size() < capacity_;
+                        });
+                    if (stopping_)
+                    {
+                        break;
+                    }
+                    if (!spare_.empty())
+                    {
+                        frame = std::move(spare_.back());
+                        spare_.pop_back();
+                    }
+                }
+                if (!reader.readFrame(frame, continueReading))
+                {
+                    break;
+                }
+                {
+                    const std::scoped_lock lock(mutex_);
+                    if (stopping_)
+                    {
+                        break;
+                    }
+                    filled_.push_back(std::move(frame));
+                }
+                frameAvailable_.notify_one();
+            }
+            failure = reader.errorString();
+        }
+        catch (const std::exception &exception)
+        {
+            failure = trVideo(QT_TRANSLATE_NOOP("cloakframe::VideoIo", "Decoding failed: %1"))
+                          .arg(QString::fromUtf8(exception.what()));
+        }
+        {
+            const std::scoped_lock lock(mutex_);
+            error_ = failure;
+            finished_ = true;
+        }
+        frameAvailable_.notify_all();
+    }
+
     VideoFrameWriter::VideoFrameWriter() = default;
 
     VideoFrameWriter::~VideoFrameWriter()
