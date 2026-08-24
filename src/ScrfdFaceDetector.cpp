@@ -17,7 +17,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <thread>
 
 namespace cloakframe
 {
@@ -126,12 +125,7 @@ namespace cloakframe
         , sessionOptions_()
         , session_(nullptr)
     {
-        sessionOptions_.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_EXTENDED);
-        accelerator_ = applyOrtAcceleration(sessionOptions_, enableAcceleration);
-        sessionOptions_.SetIntraOpNumThreads(
-            accelerator_ == OrtAccelerator::None
-                ? static_cast<int>(std::max(1U, std::thread::hardware_concurrency()))
-                : 1);
+        accelerator_ = configureOrtSessionOptions(sessionOptions_, enableAcceleration);
         const std::u8string modelU8(modelPath.begin(), modelPath.end());
         const std::filesystem::path modelFsPath(modelU8);
         const auto modelBytes = readModelFile(modelFsPath, expectedSha256);

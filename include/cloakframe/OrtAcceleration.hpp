@@ -16,5 +16,8 @@ namespace cloakframe
 
     [[nodiscard]] const char *ortAcceleratorName(OrtAccelerator accelerator);
 
-    OrtAccelerator applyOrtAcceleration(Ort::SessionOptions &options, bool enabled);
+    // Applies the platform accelerator when enabled, then sets the graph-optimization and
+    // threading policy that matches the execution provider actually in use.
+    OrtAccelerator configureOrtSessionOptions(
+        Ort::SessionOptions &options, bool enableAcceleration);
 }
