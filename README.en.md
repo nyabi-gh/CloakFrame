@@ -71,6 +71,13 @@ Enable **Review before saving** to:
 - Exclude a false video track for its entire duration.
 - Add manual tracks and adjust keyframes as an object moves.
 
+Select a **Tracking gaps (before review)** entry to jump to its first frame.
+**Previous gap / Next gap** move to the preceding or following gap start relative
+to the current frame, visiting shared start times once. Use the Left/Right arrow
+keys or the buttons beside the timeline to move one frame at a time. Times are
+relative to the video start and displayed frame numbers begin at 1. Visiting a
+gap does not clear its warning.
+
 A job ends as **Done** only when every item was redacted successfully. A failed
 or skipped item, or a file saved without a detection, changes the result to
 **Review required** and shows a summary. After the run, choose **File results…**

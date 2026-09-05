@@ -49,6 +49,8 @@ namespace cloakframe
         void setDrawingMode(bool enabled, int trackId = 0);
         void updateManualTrackItem(int id);
         void updateSummary();
+        void navigateGap(bool next);
+        void updateNavigation();
 
         [[nodiscard]] VideoReviewManualTrack *manualTrack(int id);
         [[nodiscard]] const VideoReviewManualTrack *manualTrack(int id) const;
@@ -61,6 +63,11 @@ namespace cloakframe
         VideoReviewCanvas *canvas_ = nullptr;
         VideoTimeline *timeline_ = nullptr;
         QListWidget *trackList_ = nullptr;
+        QListWidget *gapList_ = nullptr;
+        QPushButton *previousGapButton_ = nullptr;
+        QPushButton *nextGapButton_ = nullptr;
+        QPushButton *previousFrameButton_ = nullptr;
+        QPushButton *nextFrameButton_ = nullptr;
         QLabel *timeLabel_ = nullptr;
         QLabel *summaryLabel_ = nullptr;
         QLabel *drawStatusLabel_ = nullptr;

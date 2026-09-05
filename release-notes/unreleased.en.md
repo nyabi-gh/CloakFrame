@@ -1,5 +1,10 @@
 ## Result reliability
 
+- Video review now lists tracking gaps chronologically with millisecond times
+  and frame ranges, plus previous/next gap navigation.
+- Move one frame at a time with Left/Right arrow keys or timeline buttons.
+  Changing frames cancels an in-progress box drag so it cannot affect another frame.
+
 - After a run, use **File results…** to filter attention items or failures,
   inspect details, and open input or output folders. The output folder action
   is available only for published results. Results reset on the next run.

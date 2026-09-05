@@ -12,6 +12,7 @@
 #include <QPainter>
 #include <QProcess>
 #include <QPushButton>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QStyle>
@@ -58,6 +59,17 @@ namespace cloakframe
                        : QStringLiteral("%1:%2").arg(minutes).arg(secs, 2, 10, QLatin1Char('0'));
         }
 
+        QString frameTime(const VideoReviewRequest &request, int frame)
+        {
+            const double fps = request.fpsNum > 0 && request.fpsDen > 0
+                                   ? static_cast<double>(request.fpsNum) / request.fpsDen
+                                   : request.fps;
+            const qint64 milliseconds = fps > 0.0 ? std::llround(frame * 1000.0 / fps) : 0;
+            return QStringLiteral("%1.%2")
+                .arg(formatTime(static_cast<double>(milliseconds) / 1000.0))
+                .arg(milliseconds % 1000, 3, 10, QLatin1Char('0'));
+        }
+
     }
 
     class VideoReviewCanvas final : public QWidget
@@ -81,6 +93,7 @@ namespace cloakframe
 
         void setFrame(int frame, QImage image)
         {
+            drawing_ = false;
             frame_ = frame;
             image_ = std::move(image);
             loading_ = false;
@@ -89,6 +102,7 @@ namespace cloakframe
 
         void setLoadingFrame(int frame)
         {
+            drawing_ = false;
             frame_ = frame;
             image_ = {};
             loading_ = true;
@@ -503,6 +517,7 @@ namespace cloakframe
         summaryLabel_ = new QLabel(this);
         side->addWidget(summaryLabel_);
         trackList_ = new QListWidget(this);
+        trackList_->setObjectName("videoTracks");
         trackList_->setMinimumWidth(260);
         for (const auto &track : request_.tracks)
         {
@@ -574,6 +589,84 @@ namespace cloakframe
                 }
             });
         side->addWidget(trackList_, 1);
+
+        auto *gapLabel = new QLabel(tr("Tracking gaps (before review)"), this);
+        side->addWidget(gapLabel);
+        gapList_ = new QListWidget(this);
+        gapList_->setObjectName("trackingGaps");
+        gapList_->setAccessibleName(gapLabel->text());
+        gapList_->setMaximumHeight(100);
+        auto gaps = request_.uncoveredSpans;
+        std::stable_sort(gaps.begin(),
+            gaps.end(),
+            [](const UncoveredSpan &a, const UncoveredSpan &b)
+            {
+                return a.firstFrame < b.firstFrame;
+            });
+        for (const auto &gap : gaps)
+        {
+            if (gap.firstFrame < 0 || gap.lastFrame < gap.firstFrame
+                || gap.lastFrame >= request_.frameCount)
+            {
+                continue;
+            }
+            const QString text =
+                tr("Track %1 · %2–%3 · Frames %4–%5")
+                    .arg(gap.trackId)
+                    .arg(frameTime(request_, gap.firstFrame), frameTime(request_, gap.lastFrame))
+                    .arg(gap.firstFrame + 1)
+                    .arg(gap.lastFrame + 1);
+            auto *item = new QListWidgetItem(text, gapList_);
+            item->setData(Qt::UserRole, gap.firstFrame);
+            item->setToolTip(text);
+        }
+        side->addWidget(gapList_);
+        auto *noGaps = new QLabel(tr("No tracking gaps were reported."), this);
+        noGaps->setWordWrap(true);
+        noGaps->setVisible(gapList_->count() == 0);
+        gapList_->setVisible(gapList_->count() != 0);
+        side->addWidget(noGaps);
+        auto *gapButtons = new QHBoxLayout();
+        previousGapButton_ = new QPushButton(tr("Previous gap"), this);
+        nextGapButton_ = new QPushButton(tr("Next gap"), this);
+        previousGapButton_->setObjectName("previousGap");
+        nextGapButton_->setObjectName("nextGap");
+        previousGapButton_->setAutoDefault(false);
+        nextGapButton_->setAutoDefault(false);
+        gapButtons->addWidget(previousGapButton_);
+        gapButtons->addWidget(nextGapButton_);
+        side->addLayout(gapButtons);
+        connect(previousGapButton_,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                navigateGap(false);
+            });
+        connect(nextGapButton_,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                navigateGap(true);
+            });
+        connect(gapList_,
+            &QListWidget::currentRowChanged,
+            this,
+            [this](int row)
+            {
+                if (row >= 0)
+                {
+                    timeline_->setValue(gapList_->item(row)->data(Qt::UserRole).toInt());
+                }
+            });
+        connect(gapList_,
+            &QListWidget::itemClicked,
+            this,
+            [this](QListWidgetItem *item)
+            {
+                timeline_->setValue(item->data(Qt::UserRole).toInt());
+            });
 
         addManualTrackButton_ = new QPushButton(tr("Add missed track"), this);
         addKeyframeButton_ = new QPushButton(tr("Add / update keyframe"), this);
@@ -670,11 +763,47 @@ namespace cloakframe
 
         auto *timeRow = new QHBoxLayout();
         timeline_ = new VideoTimeline(this);
+        timeline_->setObjectName("videoTimeline");
         timeline_->setRange(0, std::max(0, request_.frameCount - 1));
         timeline_->setPageStep(std::max(1, static_cast<int>(std::lround(request_.fps))));
         timeline_->setData(&request_, &excludedTrackIds_, &manualTracks_);
         timeLabel_ = new QLabel(this);
+        timeLabel_->setObjectName("videoFramePosition");
         timeLabel_->setMinimumWidth(120);
+        previousFrameButton_ = new QPushButton(QStringLiteral("‹"), this);
+        nextFrameButton_ = new QPushButton(QStringLiteral("›"), this);
+        previousFrameButton_->setObjectName("previousFrame");
+        nextFrameButton_->setObjectName("nextFrame");
+        previousFrameButton_->setToolTip(tr("Previous frame (Left arrow)"));
+        nextFrameButton_->setToolTip(tr("Next frame (Right arrow)"));
+        for (auto *button : {previousFrameButton_, nextFrameButton_})
+        {
+            button->setAccessibleName(button->toolTip());
+            button->setAutoDefault(false);
+            button->setMaximumWidth(40);
+            timeRow->addWidget(button);
+        }
+        connect(previousFrameButton_,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                timeline_->setValue(std::max(0, currentFrame_ - 1));
+            });
+        connect(nextFrameButton_,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                timeline_->setValue(std::min(timeline_->maximum(), currentFrame_ + 1));
+            });
+        auto *previousFrameShortcut = new QShortcut(QKeySequence(Qt::Key_Left), this);
+        auto *nextFrameShortcut = new QShortcut(QKeySequence(Qt::Key_Right), this);
+        connect(previousFrameShortcut,
+            &QShortcut::activated,
+            previousFrameButton_,
+            &QPushButton::click);
+        connect(nextFrameShortcut, &QShortcut::activated, nextFrameButton_, &QPushButton::click);
         timeRow->addWidget(timeline_, 1);
         timeRow->addWidget(timeLabel_);
         root->addLayout(timeRow);
@@ -750,11 +879,12 @@ namespace cloakframe
     void VideoReviewDialog::setFrame(int frame)
     {
         currentFrame_ = std::clamp(frame, 0, std::max(0, request_.frameCount - 1));
-        const double currentSeconds = request_.fps > 0.0 ? currentFrame_ / request_.fps : 0.0;
-        const double totalSeconds =
-            request_.fps > 0.0 ? (request_.frameCount - 1) / request_.fps : 0.0;
-        timeLabel_->setText(
-            tr("%1 / %2").arg(formatTime(currentSeconds), formatTime(totalSeconds)));
+        timeLabel_->setText(tr("%1 / %2 · Frame %3 / %4")
+                .arg(frameTime(request_, currentFrame_),
+                    frameTime(request_, std::max(0, request_.frameCount - 1)))
+                .arg(request_.frameCount > 0 ? currentFrame_ + 1 : 0)
+                .arg(request_.frameCount));
+        updateNavigation();
         if (frameCache_.contains(currentFrame_))
         {
             seekTimer_->stop();
@@ -769,6 +899,43 @@ namespace cloakframe
             canvas_->setLoadingFrame(currentFrame_);
             seekTimer_->start();
         }
+    }
+
+    void VideoReviewDialog::navigateGap(bool next)
+    {
+        for (int offset = 0; offset < gapList_->count(); ++offset)
+        {
+            const int row = next ? offset : gapList_->count() - 1 - offset;
+            const int frame = gapList_->item(row)->data(Qt::UserRole).toInt();
+            if (next ? frame > currentFrame_ : frame < currentFrame_)
+            {
+                timeline_->setValue(frame);
+                return;
+            }
+        }
+    }
+
+    void VideoReviewDialog::updateNavigation()
+    {
+        previousFrameButton_->setEnabled(currentFrame_ > 0);
+        nextFrameButton_->setEnabled(currentFrame_ < request_.frameCount - 1);
+        bool previous = false;
+        bool next = false;
+        int selected = -1;
+        for (int row = 0; row < gapList_->count(); ++row)
+        {
+            const int frame = gapList_->item(row)->data(Qt::UserRole).toInt();
+            previous |= frame < currentFrame_;
+            next |= frame > currentFrame_;
+            if (frame == currentFrame_ && (selected < 0 || row == gapList_->currentRow()))
+            {
+                selected = row;
+            }
+        }
+        previousGapButton_->setEnabled(previous);
+        nextGapButton_->setEnabled(next);
+        const QSignalBlocker blocker(gapList_);
+        gapList_->setCurrentRow(selected);
     }
 
     void VideoReviewDialog::loadFramePreview()

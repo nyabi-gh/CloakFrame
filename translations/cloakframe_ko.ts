@@ -1825,6 +1825,38 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
+        <source>Tracking gaps (before review)</source>
+        <translation>추적 공백 (검토 전)</translation>
+    </message>
+    <message>
+        <source>Track %1 · %2–%3 · Frames %4–%5</source>
+        <translation>트랙 %1 · %2–%3 · 프레임 %4–%5</translation>
+    </message>
+    <message>
+        <source>No tracking gaps were reported.</source>
+        <translation>보고된 추적 공백이 없습니다.</translation>
+    </message>
+    <message>
+        <source>Previous gap</source>
+        <translation>이전 공백</translation>
+    </message>
+    <message>
+        <source>Next gap</source>
+        <translation>다음 공백</translation>
+    </message>
+    <message>
+        <source>Previous frame (Left arrow)</source>
+        <translation>이전 프레임 (왼쪽 방향키)</translation>
+    </message>
+    <message>
+        <source>Next frame (Right arrow)</source>
+        <translation>다음 프레임 (오른쪽 방향키)</translation>
+    </message>
+    <message>
+        <source>%1 / %2 · Frame %3 / %4</source>
+        <translation>%1 / %2 · 프레임 %3 / %4</translation>
+    </message>
+    <message>
         <location filename="../src/VideoReviewDialog.cpp" line="448"/>
         <source>Review video tracks — %1</source>
         <translation>동영상 트랙 검토 — %1</translation>

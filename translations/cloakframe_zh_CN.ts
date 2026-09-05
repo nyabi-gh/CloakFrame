@@ -1825,6 +1825,38 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
+        <source>Tracking gaps (before review)</source>
+        <translation>跟踪空白（检查前）</translation>
+    </message>
+    <message>
+        <source>Track %1 · %2–%3 · Frames %4–%5</source>
+        <translation>轨迹 %1 · %2–%3 · 帧 %4–%5</translation>
+    </message>
+    <message>
+        <source>No tracking gaps were reported.</source>
+        <translation>未报告跟踪空白。</translation>
+    </message>
+    <message>
+        <source>Previous gap</source>
+        <translation>上一个空白</translation>
+    </message>
+    <message>
+        <source>Next gap</source>
+        <translation>下一个空白</translation>
+    </message>
+    <message>
+        <source>Previous frame (Left arrow)</source>
+        <translation>上一帧（左方向键）</translation>
+    </message>
+    <message>
+        <source>Next frame (Right arrow)</source>
+        <translation>下一帧（右方向键）</translation>
+    </message>
+    <message>
+        <source>%1 / %2 · Frame %3 / %4</source>
+        <translation>%1 / %2 · 帧 %3 / %4</translation>
+    </message>
+    <message>
         <location filename="../src/VideoReviewDialog.cpp" line="448"/>
         <source>Review video tracks — %1</source>
         <translation>检查视频轨迹 — %1</translation>
