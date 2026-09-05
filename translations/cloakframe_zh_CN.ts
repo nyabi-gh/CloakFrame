@@ -783,15 +783,29 @@ Copied: %4
 Skipped: %5
 Failed: %6
 
+Files with detection or tracking warnings: %7
+Omitted detection regions: %8
+Tracking gap frames (before review): %9
+Dropped tracks: %10
+Files with metadata warnings: %11
+Unreadable input paths: %12
+
 Check these results before sharing them.</source>
-        <translation>处理已完成，但部分结果需要注意。
+        <translation>处理已完成，但部分结果需要检查。
 
 总计：%1
-已遮盖：%2
-未遮盖保存：%3
+已遮挡：%2
+未遮挡直接保存：%3
 已复制：%4
 已跳过：%5
 失败：%6
+
+存在检测或跟踪警告的文件：%7
+因超出限制而忽略的检测区域：%8
+检查前的跟踪空白帧：%9
+已丢弃的轨迹：%10
+存在元数据警告的文件：%11
+无法读取的输入路径：%12
 
 请在分享前检查这些结果。</translation>
     </message>
@@ -1048,9 +1062,9 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="716"/>
-        <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
+        <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
-            <numerusform>警告：有 %n 个文件在结束时仍留有输出未遮盖的区域。分享前请检查。</numerusform>
+            <numerusform>警告：%n 个文件存在检测或跟踪警告。请在分享前检查。</numerusform>
         </translation>
     </message>
     <message>
@@ -1272,21 +1286,21 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1546"/>
-        <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
+        <source>Warning: tracking could not locate the subject in %n frame(s) of %1 before review. Manual masks do not verify its position. Check these frames before sharing.</source>
         <translation>
-            <numerusform>警告：%1 中有 %n 帧位于被跟踪的区域内，但输出并未遮盖。分享前请检查。</numerusform>
+            <numerusform>警告：检查前，跟踪无法确定 %1 中 %n 帧的目标位置。手动遮罩并不能验证目标的位置。请在分享前检查这些帧。</numerusform>
         </translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1551"/>
-        <source>Uncovered frame ranges in %1: %2</source>
-        <translation>%1 中未遮盖的帧范围：%2</translation>
+        <source>Tracking gaps found before review in %1: %2</source>
+        <translation>%1 中检查前发现的跟踪空白区间：%2</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1555"/>
-        <source>%n further uncovered range(s) are not listed.</source>
+        <source>%n further tracking gap(s) are not listed.</source>
         <translation>
-            <numerusform>另有 %n 段未遮盖的范围未在此列出。</numerusform>
+            <numerusform>另有 %n 个跟踪空白区间未列出。</numerusform>
         </translation>
     </message>
     <message>
@@ -1818,13 +1832,13 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="466"/>
-        <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are excluded by default — check any that cover a real face or plate.</source>
-        <translation>标记为“低置信度”的轨迹因可靠检测过少而默认被排除。如果某条轨迹覆盖了真实的人脸或车牌，请勾选它。</translation>
+        <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are included by default — uncheck only false detections.</source>
+        <translation>标记为“低置信度”的轨迹缺少足够的可靠检测，但默认仍会包含。请仅取消勾选误检轨迹。</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="473"/>
-        <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
-        <translation>时间轴上的红色标记表示轨迹丢失目标过久、无法推断路径的区间。那里没有任何遮盖，重要的位置请手动绘制轨迹。</translation>
+        <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject's position.</source>
+        <translation>红色标记表示检查前跟踪无法确定目标位置的区间。请在需要的位置添加手动遮罩。添加遮罩并不能验证目标的实际位置，因此编辑后仍会保留这些标记。</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="512"/>
@@ -1933,9 +1947,9 @@ Continue?</source>
     </message>
     <message numerus="yes">
         <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
-        <source>%n uncovered range(s)</source>
+        <source>%n tracking gap(s) found before review</source>
         <translation>
-            <numerusform>未遮盖的范围 %n 段</numerusform>
+            <numerusform>检查前发现 %n 个跟踪空白区间</numerusform>
         </translation>
     </message>
 </context>

@@ -84,9 +84,12 @@ namespace cloakframe
         int skipped = 0;
         int failed = 0;
         int unredacted = 0;
-        // Regions a detector or tracker found but the output does not cover. Any
-        // nonzero value must keep the run out of a clean Completed state.
-        int uncovered = 0;
+        qint64 omittedRegions = 0;
+        qint64 trackingGapFrames = 0;
+        qint64 droppedTracks = 0;
+        int coverageWarningFiles = 0;
+        int warningFiles = 0;
+        qint64 unreadableInputs = 0;
     };
 
     class ProcessorWorker final : public QObject

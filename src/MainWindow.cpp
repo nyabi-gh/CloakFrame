@@ -1838,13 +1838,23 @@ namespace cloakframe
                 tr("Processing finished, but some results need attention.\n\n"
                    "Total: %1\nRedacted: %2\nSaved without redaction: %3\nCopied: %4\n"
                    "Skipped: %5\nFailed: %6\n\n"
+                   "Files with detection or tracking warnings: %7\n"
+                   "Omitted detection regions: %8\nTracking gap frames (before review): %9\n"
+                   "Dropped tracks: %10\nFiles with metadata warnings: %11\n"
+                   "Unreadable input paths: %12\n\n"
                    "Check these results before sharing them.")
                     .arg(lastRunSummary_.total)
                     .arg(lastRunSummary_.redacted)
                     .arg(lastRunSummary_.unredacted)
                     .arg(lastRunSummary_.copied)
                     .arg(lastRunSummary_.skipped)
-                    .arg(lastRunSummary_.failed));
+                    .arg(lastRunSummary_.failed)
+                    .arg(lastRunSummary_.coverageWarningFiles)
+                    .arg(lastRunSummary_.omittedRegions)
+                    .arg(lastRunSummary_.trackingGapFrames)
+                    .arg(lastRunSummary_.droppedTracks)
+                    .arg(lastRunSummary_.warningFiles)
+                    .arg(lastRunSummary_.unreadableInputs));
             break;
         case RunOutcome::Cancelled:
             appendLog(tr("Cancelled."));

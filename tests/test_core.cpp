@@ -292,6 +292,82 @@ namespace
         assert(clean.empty());
     }
 
+    void testScanReportsDeniedDirectoriesAndContinues()
+    {
+#ifndef _WIN32
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto input = root / "input";
+        const auto denied = input / "denied";
+        const auto readable = input / "readable";
+        std::filesystem::create_directories(denied);
+        std::filesystem::create_directories(readable);
+        const cv::Mat image(24, 24, CV_8UC3, cv::Scalar(20, 40, 60));
+        assert(cv::imwrite((denied / "private.png").string(), image));
+        assert(cv::imwrite((readable / "visible.png").string(), image));
+        assert(cv::imwrite((input / "top.png").string(), image));
+        std::filesystem::create_directory_symlink(input, readable / "loop");
+        std::filesystem::permissions(denied, std::filesystem::perms::none);
+        std::error_code permissionError;
+        const std::filesystem::directory_iterator probe(denied, permissionError);
+        if (!permissionError)
+        {
+            std::filesystem::permissions(denied, std::filesystem::perms::owner_all);
+            std::puts(
+                "skipping denied-directory test: this account bypasses directory permissions");
+            return;
+        }
+
+        std::vector<cloakframe::ScanIssue> recursiveIssues;
+        const auto recursive = cloakframe::scanImages(
+            {QString::fromStdString(input.string())}, true, &recursiveIssues);
+        std::vector<cloakframe::ScanIssue> directIssues;
+        const auto direct =
+            cloakframe::scanImages({QString::fromStdString(denied.string())}, false, &directIssues);
+        std::vector<cloakframe::ScanIssue> shallowIssues;
+        const auto shallow =
+            cloakframe::scanImages({QString::fromStdString(input.string())}, false, &shallowIssues);
+
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(input.string())};
+        request.outputDirectory = QString::fromStdString((root / "output").string());
+        request.detectFaces = false;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        cloakframe::RunSummary summary;
+        cloakframe::RunOutcome outcome = cloakframe::RunOutcome::Completed;
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::summaryAvailable,
+            [&](const cloakframe::RunSummary value)
+            {
+                summary = value;
+            });
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::finished,
+            [&](const cloakframe::RunOutcome value)
+            {
+                outcome = value;
+            });
+        worker.process();
+        std::filesystem::permissions(denied, std::filesystem::perms::owner_all);
+
+        assert(permissionError == std::errc::permission_denied);
+        assert(recursive.size() == 2);
+        assert(recursiveIssues.size() == 1);
+        assert(recursiveIssues.front().path == denied);
+        assert(recursiveIssues.front().error == std::errc::permission_denied);
+        assert(direct.empty() && directIssues.size() == 1);
+        assert(directIssues.front().path == denied);
+        assert(shallow.size() == 1 && shallowIssues.empty());
+        assert(summary.total == 2 && summary.unreadableInputs == 1);
+        assert(summary.coverageWarningFiles == 0 && summary.warningFiles == 0);
+        assert(outcome == cloakframe::RunOutcome::CompletedWithWarnings);
+#else
+        std::puts(
+            "skipping denied-directory test: POSIX permission fixture is not supported on Windows");
+#endif
+    }
+
     void testOutputPlanRejectsExistingAndDuplicateDestinations()
     {
         QTemporaryDir temp;
@@ -618,7 +694,10 @@ namespace
         worker.process();
 
         assert(summary.redacted == 1);
-        assert(summary.uncovered == 3);
+        assert(summary.omittedRegions == 3);
+        assert(summary.trackingGapFrames == 0);
+        assert(summary.droppedTracks == 0);
+        assert(summary.coverageWarningFiles == 1);
         assert(result == cloakframe::RunOutcome::CompletedWithWarnings);
     }
 
@@ -2377,6 +2456,7 @@ int main(int argc, char **argv)
     testSupportedImageExtensions();
     testScanImagesRecursesAndDeduplicates();
     testScanReportsInputsItCannotRead();
+    testScanReportsDeniedDirectoriesAndContinues();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
     testWorkerReportsCopiedOriginalAsWarning();

@@ -123,15 +123,30 @@ namespace cloakframe
                 continue;
             }
 
-            const auto walk = [&](auto it, const std::filesystem::path &base)
+            std::vector<std::filesystem::path> pending{path};
+            while (!pending.empty())
             {
-                const decltype(it) end{};
+                const auto directory = std::move(pending.back());
+                pending.pop_back();
+                std::error_code openError;
+                std::filesystem::directory_iterator it(directory, openError);
+                if (openError)
+                {
+                    recordIssue(directory, openError);
+                    continue;
+                }
+                const std::filesystem::directory_iterator end;
                 while (it != end)
                 {
                     std::error_code entryError;
                     if (it->is_regular_file(entryError) && markVisited(it->path()))
                     {
-                        appendFile(results, it->path(), base, includeVideos);
+                        appendFile(results, it->path(), path, includeVideos);
+                    }
+                    if (!entryError && recursive && it->is_directory(entryError)
+                        && !it->is_symlink(entryError))
+                    {
+                        pending.push_back(it->path());
                     }
                     if (entryError)
                     {
@@ -141,35 +156,10 @@ namespace cloakframe
                     it.increment(advanceError);
                     if (advanceError)
                     {
-                        // A failed increment leaves the iterator unusable, so the rest of this
-                        // tree is unreachable rather than merely skipped over.
-                        recordIssue(base, advanceError);
-                        return;
+                        recordIssue(directory, advanceError);
+                        break;
                     }
                 }
-            };
-
-            std::error_code openError;
-            constexpr auto options = std::filesystem::directory_options::skip_permission_denied;
-            if (recursive)
-            {
-                auto it = std::filesystem::recursive_directory_iterator(path, options, openError);
-                if (openError)
-                {
-                    recordIssue(path, openError);
-                    continue;
-                }
-                walk(std::move(it), path);
-            }
-            else
-            {
-                std::filesystem::directory_iterator it(path, options, openError);
-                if (openError)
-                {
-                    recordIssue(path, openError);
-                    continue;
-                }
-                walk(std::move(it), path);
             }
         }
 

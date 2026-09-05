@@ -1138,14 +1138,14 @@ int main(int argc, char **argv)
         std::puts("custom-image video masking and analysis-to-native coordinate scaling: ok");
     }
 
+    for (const bool addUnrelatedMask : {false, true})
     {
-        // A hole the tracker refuses to interpolate has to reach the caller as a located
-        // range. A bare count leaves a reviewer with nowhere to look.
         cloakframe::VideoProcessOptions options;
         options.analysisLongEdge = 160;
         options.postProcess.maxInterpolationGap = 2;
         options.postProcess.extensionFrames = 0;
-        const QString gappedPath = tempDir.filePath("gapped.mp4");
+        const QString gappedPath =
+            tempDir.filePath(addUnrelatedMask ? "gapped-with-manual-mask.mp4" : "gapped.mp4");
         std::atomic<bool> cancelled{false};
         int detectedFrame = 0;
         bool reviewSawSpan = false;
@@ -1167,7 +1167,7 @@ int main(int argc, char **argv)
             },
             cancelled,
             {},
-            [&reviewSawSpan](std::vector<cloakframe::Track> &,
+            [&reviewSawSpan, addUnrelatedMask](std::vector<cloakframe::Track> &tracks,
                 const std::vector<cloakframe::UncoveredSpan> &uncoveredSpans,
                 qint64,
                 const QString &,
@@ -1177,6 +1177,16 @@ int main(int argc, char **argv)
                 // missing.
                 reviewSawSpan = uncoveredSpans.size() == 1 && uncoveredSpans[0].firstFrame == 10
                                 && uncoveredSpans[0].lastFrame == 15;
+                if (addUnrelatedMask)
+                {
+                    cloakframe::Track manual;
+                    manual.id = 100;
+                    for (int frame = 10; frame <= 15; ++frame)
+                    {
+                        manual.boxes.push_back({frame, cv::Rect2f(0.0F, 0.0F, 10.0F, 10.0F), 1.0F});
+                    }
+                    tracks.push_back(std::move(manual));
+                }
                 return true;
             });
         assert(result.status == cloakframe::VideoProcessStatus::Completed);
@@ -1186,6 +1196,7 @@ int main(int argc, char **argv)
         assert(result.uncoveredSpans[0].firstFrame == 10);
         assert(result.uncoveredSpans[0].lastFrame == 15);
         assert(result.uncoveredSpans[0].frameCount() == result.uncoveredFrames);
+        assert(result.trackCount == (addUnrelatedMask ? 2 : 1));
         std::puts("uncovered frame ranges reach the caller: ok");
     }
 

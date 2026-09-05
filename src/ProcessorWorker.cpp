@@ -365,7 +365,9 @@ namespace cloakframe
         int failed = 0;
         int unredacted = 0;
         int warnings = 0;
-        int uncovered = 0;
+        qint64 omittedRegions = 0;
+        qint64 trackingGapFrames = 0;
+        qint64 droppedTracks = 0;
         bool cancelled = false;
     };
 
@@ -592,7 +594,9 @@ namespace cloakframe
             int failedCount = 0;
             int unredactedCount = 0;
             int warningCount = 0;
-            int uncoveredCount = 0;
+            qint64 omittedRegionCount = 0;
+            qint64 trackingGapFrameCount = 0;
+            qint64 droppedTrackCount = 0;
             int uncoveredFileCount = 0;
 
             const auto applyOutcome = [&](ItemOutcome &&outcome)
@@ -607,8 +611,11 @@ namespace cloakframe
                 failedCount += outcome.failed;
                 unredactedCount += outcome.unredacted;
                 warningCount += outcome.warnings;
-                uncoveredCount += outcome.uncovered;
-                if (outcome.uncovered > 0)
+                omittedRegionCount += outcome.omittedRegions;
+                trackingGapFrameCount += outcome.trackingGapFrames;
+                droppedTrackCount += outcome.droppedTracks;
+                if (outcome.omittedRegions > 0 || outcome.trackingGapFrames > 0
+                    || outcome.droppedTracks > 0)
                 {
                     ++uncoveredFileCount;
                 }
@@ -697,7 +704,12 @@ namespace cloakframe
             summary.skipped = skippedCount;
             summary.failed = failedCount;
             summary.unredacted = unredactedCount;
-            summary.uncovered = uncoveredCount;
+            summary.omittedRegions = omittedRegionCount;
+            summary.trackingGapFrames = trackingGapFrameCount;
+            summary.droppedTracks = droppedTrackCount;
+            summary.coverageWarningFiles = uncoveredFileCount;
+            summary.warningFiles = warningCount;
+            summary.unreadableInputs = static_cast<qint64>(scanIssues.size());
             emit summaryAvailable(summary);
 
             if (unredactedCount > 0)
@@ -712,11 +724,10 @@ namespace cloakframe
             // one only has to say how many files carry any of it.
             if (uncoveredFileCount > 0)
             {
-                emit logMessage(
-                    tr("Warning: %n file(s) finished with regions the output does not cover. "
-                       "Review them before sharing.",
-                        nullptr,
-                        uncoveredFileCount));
+                emit logMessage(tr("Warning: %n file(s) have detection or tracking warnings. "
+                                   "Review them before sharing.",
+                    nullptr,
+                    uncoveredFileCount));
             }
 
             if (cancelled_.load(std::memory_order_acquire))
@@ -726,7 +737,7 @@ namespace cloakframe
             }
 
             if (failedCount > 0 || skippedCount > 0 || unredactedCount > 0 || copiedCount > 0
-                || warningCount > 0 || uncoveredCount > 0 || !scanIssues.empty())
+                || warningCount > 0 || uncoveredFileCount > 0 || !scanIssues.empty())
             {
                 emit logMessage(tr("Completed with warnings. Review the summary before sharing."));
                 emit finished(RunOutcome::CompletedWithWarnings);
@@ -1177,7 +1188,7 @@ namespace cloakframe
                             nullptr,
                             omittedDetections)
                             .arg(fileName));
-                    outcome.uncovered = omittedDetections;
+                    outcome.omittedRegions = omittedDetections;
                 }
             }
         }
@@ -1539,22 +1550,25 @@ namespace cloakframe
             if (result.uncoveredFrames > 0)
             {
                 outcome.logs.push_back(
-                    tr("Warning: %n frame(s) of %1 fall inside a tracked region that the "
-                       "output does not cover. Review before sharing.",
+                    tr("Warning: tracking could not locate the subject in %n frame(s) of %1 "
+                       "before review. Manual masks do not verify its position. "
+                       "Check these frames before sharing.",
                         nullptr,
                         result.uncoveredFrames)
                         .arg(fileName));
-                outcome.logs.push_back(tr("Uncovered frame ranges in %1: %2")
+                outcome.logs.push_back(tr("Tracking gaps found before review in %1: %2")
                         .arg(fileName, formatUncoveredSpans(result.uncoveredSpans)));
                 if (result.uncoveredSpans.size() > kMaxReportedUncoveredSpans)
                 {
-                    outcome.logs.push_back(tr("%n further uncovered range(s) are not listed.",
+                    outcome.logs.push_back(tr("%n further tracking gap(s) are not listed.",
                         nullptr,
                         static_cast<int>(
                             result.uncoveredSpans.size() - kMaxReportedUncoveredSpans)));
                 }
             }
-            outcome.uncovered = omittedDetections + result.uncoveredFrames + result.droppedTracks;
+            outcome.omittedRegions = omittedDetections;
+            outcome.trackingGapFrames = result.uncoveredFrames;
+            outcome.droppedTracks = result.droppedTracks;
             break;
         case VideoProcessStatus::Cancelled:
             outcome.cancelled = true;

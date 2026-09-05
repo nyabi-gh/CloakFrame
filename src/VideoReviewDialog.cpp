@@ -464,15 +464,16 @@ namespace cloakframe
         {
             hintText += QStringLiteral(" ");
             hintText += tr("Tracks marked \"low confidence\" had too few confident "
-                           "detections and are excluded by default — check any that "
-                           "cover a real face or plate.");
+                           "detections and are included by default — uncheck only false "
+                           "detections.");
         }
         if (!request_.uncoveredSpans.isEmpty())
         {
             hintText += QStringLiteral(" ");
-            hintText += tr("The red marks on the timeline are stretches where a track lost "
-                           "its subject for too long to guess the path. Nothing is masked "
-                           "there, so draw a manual track over any that matter.");
+            hintText += tr("The red marks show gaps found before review where tracking could not "
+                           "locate the subject. Add manual masks where needed. These marks remain "
+                           "after editing because adding a mask does not verify the subject's "
+                           "position.");
         }
         auto *hint = new QLabel(hintText, this);
         hint->setWordWrap(true);
@@ -1142,7 +1143,7 @@ namespace cloakframe
         if (!request_.uncoveredSpans.isEmpty())
         {
             text += QStringLiteral(" · ")
-                    + tr("%n uncovered range(s)",
+                    + tr("%n tracking gap(s) found before review",
                         nullptr,
                         static_cast<int>(request_.uncoveredSpans.size()));
         }

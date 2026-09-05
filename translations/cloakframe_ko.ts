@@ -783,17 +783,31 @@ Copied: %4
 Skipped: %5
 Failed: %6
 
+Files with detection or tracking warnings: %7
+Omitted detection regions: %8
+Tracking gap frames (before review): %9
+Dropped tracks: %10
+Files with metadata warnings: %11
+Unreadable input paths: %12
+
 Check these results before sharing them.</source>
         <translation>처리가 끝났지만 확인이 필요한 결과가 있습니다.
 
 전체: %1
-가림 완료: %2
-가리지 않고 저장됨: %3
+가림 처리: %2
+가림 없이 저장: %3
 복사: %4
 건너뜀: %5
 실패: %6
 
-공유하기 전에 이 결과를 확인하세요.</translation>
+검출·추적 경고가 있는 파일: %7
+제한으로 제외된 검출 영역: %8
+검토 전 추적 공백 프레임: %9
+제외된 트랙: %10
+메타데이터 경고가 있는 파일: %11
+읽지 못한 입력 경로: %12
+
+공유하기 전에 해당 결과를 확인하세요.</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1855"/>
@@ -1048,9 +1062,9 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="716"/>
-        <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
+        <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
-            <numerusform>경고: 파일 %n개가 출력이 가리지 못한 영역을 남긴 채 끝났습니다. 공유하기 전에 확인하세요.</numerusform>
+            <numerusform>경고: 파일 %n개에 검출 또는 추적 경고가 있습니다. 공유하기 전에 검토하세요.</numerusform>
         </translation>
     </message>
     <message>
@@ -1272,21 +1286,21 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1546"/>
-        <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
+        <source>Warning: tracking could not locate the subject in %n frame(s) of %1 before review. Manual masks do not verify its position. Check these frames before sharing.</source>
         <translation>
-            <numerusform>경고: %1의 프레임 %n개가 추적된 영역 안에 있는데도 출력에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
+            <numerusform>경고: 검토 전 %1의 %n개 프레임에서 추적이 대상의 위치를 찾지 못했습니다. 수동 마스크는 대상의 위치를 검증하지 않습니다. 공유 전에 해당 프레임을 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1551"/>
-        <source>Uncovered frame ranges in %1: %2</source>
-        <translation>%1에서 가려지지 않은 프레임 구간: %2</translation>
+        <source>Tracking gaps found before review in %1: %2</source>
+        <translation>%1에서 검토 전 발견한 추적 공백: %2</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1555"/>
-        <source>%n further uncovered range(s) are not listed.</source>
+        <source>%n further tracking gap(s) are not listed.</source>
         <translation>
-            <numerusform>가려지지 않은 구간 %n개는 목록에서 생략했습니다.</numerusform>
+            <numerusform>추가 추적 공백 %n개는 표시하지 않습니다.</numerusform>
         </translation>
     </message>
     <message>
@@ -1818,13 +1832,13 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="466"/>
-        <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are excluded by default — check any that cover a real face or plate.</source>
-        <translation>&quot;신뢰도 낮음&quot;으로 표시된 트랙은 확실한 탐지가 너무 적어 기본적으로 제외됩니다. 실제 얼굴이나 번호판을 가리는 트랙이라면 체크하세요.</translation>
+        <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are included by default — uncheck only false detections.</source>
+        <translation>‘낮은 신뢰도’ 트랙은 확실한 검출이 적었지만 기본적으로 포함됩니다. 잘못 검출된 트랙만 선택 해제하세요.</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="473"/>
-        <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
-        <translation>타임라인의 빨간 표시는 트랙이 대상을 너무 오래 놓쳐 경로를 추정할 수 없었던 구간입니다. 그 구간은 아무것도 가려지지 않으므로, 중요한 곳에는 수동 트랙을 그리세요.</translation>
+        <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject's position.</source>
+        <translation>빨간 표시는 검토 전에 추적이 대상의 위치를 찾지 못한 구간입니다. 필요한 곳에 수동 마스크를 추가하세요. 마스크를 추가해도 대상의 실제 위치가 검증되지는 않으므로 편집 후에도 표시는 유지됩니다.</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="512"/>
@@ -1933,9 +1947,9 @@ Continue?</source>
     </message>
     <message numerus="yes">
         <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
-        <source>%n uncovered range(s)</source>
+        <source>%n tracking gap(s) found before review</source>
         <translation>
-            <numerusform>가려지지 않은 구간 %n개</numerusform>
+            <numerusform>검토 전 추적 공백 %n개</numerusform>
         </translation>
     </message>
 </context>

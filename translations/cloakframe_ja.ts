@@ -783,17 +783,31 @@ Copied: %4
 Skipped: %5
 Failed: %6
 
+Files with detection or tracking warnings: %7
+Omitted detection regions: %8
+Tracking gap frames (before review): %9
+Dropped tracks: %10
+Files with metadata warnings: %11
+Unreadable input paths: %12
+
 Check these results before sharing them.</source>
-        <translation>処理は終わりましたが、確認が必要な結果があります。
+        <translation>処理は終了しましたが、確認が必要な結果があります。
 
-合計: %1
-匿名化: %2
-匿名化せずに保存: %3
-コピー: %4
-スキップ: %5
-失敗: %6
+合計：%1
+マスク処理：%2
+マスクなしで保存：%3
+コピー：%4
+スキップ：%5
+失敗：%6
 
-共有する前にこれらの結果を確認してください。</translation>
+検出・追跡の警告があるファイル：%7
+上限により除外された検出領域：%8
+確認前の追跡の空白フレーム：%9
+除外されたトラック：%10
+メタデータの警告があるファイル：%11
+読み取れなかった入力パス：%12
+
+共有前に該当する結果を確認してください。</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1855"/>
@@ -1048,9 +1062,9 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="716"/>
-        <source>Warning: %n file(s) finished with regions the output does not cover. Review them before sharing.</source>
+        <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
-            <numerusform>警告: %n 件のファイルが、出力で覆えなかった領域を残したまま終わりました。共有する前に確認してください。</numerusform>
+            <numerusform>警告：%n個のファイルに検出または追跡の警告があります。共有前に確認してください。</numerusform>
         </translation>
     </message>
     <message>
@@ -1272,21 +1286,21 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1546"/>
-        <source>Warning: %n frame(s) of %1 fall inside a tracked region that the output does not cover. Review before sharing.</source>
+        <source>Warning: tracking could not locate the subject in %n frame(s) of %1 before review. Manual masks do not verify its position. Check these frames before sharing.</source>
         <translation>
-            <numerusform>警告: %1 の %n フレームが、追跡された領域の内側にありながら出力で覆われていません。共有する前に確認してください。</numerusform>
+            <numerusform>警告：確認前の追跡で、%1の%nフレームにおいて対象の位置を特定できませんでした。手動マスクは対象の位置を検証するものではありません。共有前に該当フレームを確認してください。</numerusform>
         </translation>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1551"/>
-        <source>Uncovered frame ranges in %1: %2</source>
-        <translation>%1 で覆われていないフレーム範囲: %2</translation>
+        <source>Tracking gaps found before review in %1: %2</source>
+        <translation>%1で確認前に見つかった追跡の空白区間：%2</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1555"/>
-        <source>%n further uncovered range(s) are not listed.</source>
+        <source>%n further tracking gap(s) are not listed.</source>
         <translation>
-            <numerusform>覆われていない範囲 %n 件は一覧に含めていません。</numerusform>
+            <numerusform>ほか%n件の追跡の空白区間は表示していません。</numerusform>
         </translation>
     </message>
     <message>
@@ -1818,13 +1832,13 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="466"/>
-        <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are excluded by default — check any that cover a real face or plate.</source>
-        <translation>「低信頼度」と表示されたトラックは確実な検出が少なすぎるため、既定で除外されます。実際の顔やナンバープレートを覆うトラックにはチェックを入れてください。</translation>
+        <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are included by default — uncheck only false detections.</source>
+        <translation>「低信頼度」のトラックは確実な検出が少ないものの、初期状態では含まれます。誤検出だけチェックを外してください。</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="473"/>
-        <source>The red marks on the timeline are stretches where a track lost its subject for too long to guess the path. Nothing is masked there, so draw a manual track over any that matter.</source>
-        <translation>タイムラインの赤い印は、トラックが対象を長く見失い、経路を推定できなかった区間です。そこでは何も覆われないため、重要な箇所には手動トラックを描いてください。</translation>
+        <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject's position.</source>
+        <translation>赤い印は、確認前の追跡で対象の位置を特定できなかった区間です。必要な場所に手動マスクを追加してください。マスクの追加だけでは対象の位置を検証できないため、編集後も印は残ります。</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="512"/>
@@ -1933,9 +1947,9 @@ Continue?</source>
     </message>
     <message numerus="yes">
         <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
-        <source>%n uncovered range(s)</source>
+        <source>%n tracking gap(s) found before review</source>
         <translation>
-            <numerusform>覆われていない範囲 %n 件</numerusform>
+            <numerusform>確認前の追跡の空白区間：%n件</numerusform>
         </translation>
     </message>
 </context>
