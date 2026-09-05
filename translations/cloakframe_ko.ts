@@ -4,6 +4,10 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
+        <source>File results…</source>
+        <translation>파일별 결과…</translation>
+    </message>
+    <message>
         <location filename="../src/ModelDownloader.cpp" line="32"/>
         <source>Downloading model…</source>
         <translation>모델 다운로드 중…</translation>
@@ -1951,6 +1955,97 @@ Continue?</source>
         <translation>
             <numerusform>검토 전 추적 공백 %n개</numerusform>
         </translation>
+    </message>
+</context>
+<context>
+    <name>cloakframe::ResultsDialog</name>
+    <message>
+        <source>File results</source>
+        <translation>파일별 결과</translation>
+    </message>
+    <message>
+        <source>Results from the last run. Only reported files and input errors are listed; files that never started are not shown.</source>
+        <translation>마지막 작업의 결과입니다. 보고된 파일과 입력 오류만 표시하며, 처리를 시작하지 않은 파일은 표시하지 않습니다.</translation>
+    </message>
+    <message>
+        <source>Filter results</source>
+        <translation>결과 필터</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>모든 결과</translation>
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation>확인 필요</translation>
+    </message>
+    <message>
+        <source>Failures</source>
+        <translation>실패</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>입력</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>상태</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>출력</translation>
+    </message>
+    <message>
+        <source>Not saved</source>
+        <translation>저장되지 않음</translation>
+    </message>
+    <message>
+        <source>Result details</source>
+        <translation>결과 상세</translation>
+    </message>
+    <message>
+        <source>Select a result to see its details.</source>
+        <translation>결과를 선택하면 상세 내용을 표시합니다.</translation>
+    </message>
+    <message>
+        <source>Open input folder</source>
+        <translation>입력 폴더 열기</translation>
+    </message>
+    <message>
+        <source>Open output folder</source>
+        <translation>출력 폴더 열기</translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation>저장됨</translation>
+    </message>
+    <message>
+        <source>Review required</source>
+        <translation>검토 필요</translation>
+    </message>
+    <message>
+        <source>Skipped without saving</source>
+        <translation>저장 없이 건너뜀</translation>
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation>실패</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>취소됨</translation>
+    </message>
+    <message>
+        <source>Unreadable input</source>
+        <translation>읽을 수 없는 입력</translation>
+    </message>
+    <message>
+        <source>Cannot open folder</source>
+        <translation>폴더를 열 수 없음</translation>
+    </message>
+    <message>
+        <source>Could not open: %1</source>
+        <translation>열 수 없습니다: %1</translation>
     </message>
 </context>
 </TS>

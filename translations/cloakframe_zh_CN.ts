@@ -4,6 +4,10 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
+        <source>File results…</source>
+        <translation>文件结果…</translation>
+    </message>
+    <message>
         <location filename="../src/ModelDownloader.cpp" line="32"/>
         <source>Downloading model…</source>
         <translation>正在下载模型…</translation>
@@ -1951,6 +1955,97 @@ Continue?</source>
         <translation>
             <numerusform>检查前发现 %n 个跟踪空白区间</numerusform>
         </translation>
+    </message>
+</context>
+<context>
+    <name>cloakframe::ResultsDialog</name>
+    <message>
+        <source>File results</source>
+        <translation>文件结果</translation>
+    </message>
+    <message>
+        <source>Results from the last run. Only reported files and input errors are listed; files that never started are not shown.</source>
+        <translation>这是上次任务的结果。仅列出已报告的文件和输入错误，未开始处理的文件不会显示。</translation>
+    </message>
+    <message>
+        <source>Filter results</source>
+        <translation>筛选结果</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>全部结果</translation>
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation>需要关注</translation>
+    </message>
+    <message>
+        <source>Failures</source>
+        <translation>失败</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>输入</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>状态</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>输出</translation>
+    </message>
+    <message>
+        <source>Not saved</source>
+        <translation>未保存</translation>
+    </message>
+    <message>
+        <source>Result details</source>
+        <translation>结果详情</translation>
+    </message>
+    <message>
+        <source>Select a result to see its details.</source>
+        <translation>选择一项结果以查看详情。</translation>
+    </message>
+    <message>
+        <source>Open input folder</source>
+        <translation>打开输入文件夹</translation>
+    </message>
+    <message>
+        <source>Open output folder</source>
+        <translation>打开输出文件夹</translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation>已保存</translation>
+    </message>
+    <message>
+        <source>Review required</source>
+        <translation>需要检查</translation>
+    </message>
+    <message>
+        <source>Skipped without saving</source>
+        <translation>已跳过，未保存</translation>
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation>失败</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <source>Unreadable input</source>
+        <translation>无法读取的输入</translation>
+    </message>
+    <message>
+        <source>Cannot open folder</source>
+        <translation>无法打开文件夹</translation>
+    </message>
+    <message>
+        <source>Could not open: %1</source>
+        <translation>无法打开：%1</translation>
     </message>
 </context>
 </TS>

@@ -73,8 +73,10 @@ Enable **Review before saving** to:
 
 A job ends as **Done** only when every item was redacted successfully. A failed
 or skipped item, or a file saved without a detection, changes the result to
-**Review required** and shows a summary. Use the activity log to find and
-inspect those files.
+**Review required** and shows a summary. After the run, choose **File results…**
+in Activity to filter items needing attention or failures, read the details,
+and open input or output folders. Results reset when the next run starts;
+files that never started processing are not listed.
 
 ## Supported files and processing
 

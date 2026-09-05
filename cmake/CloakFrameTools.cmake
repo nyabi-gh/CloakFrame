@@ -136,6 +136,7 @@ if(CLOAKFRAME_CLANG_TIDY AND CLOAKFRAME_RUN_CLANG_TIDY_COMMAND)
         cloakframe_parallel_tests
         cloakframe_video_io_tests
         cloakframe_video_review_tests
+        cloakframe_results_tests
     )
         if(TARGET ${target})
             add_dependencies(cloakframe_tidy ${target})

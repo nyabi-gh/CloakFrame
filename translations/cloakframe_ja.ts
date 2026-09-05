@@ -4,6 +4,10 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
+        <source>File results…</source>
+        <translation>ファイル別の結果…</translation>
+    </message>
+    <message>
         <location filename="../src/ModelDownloader.cpp" line="32"/>
         <source>Downloading model…</source>
         <translation>モデルをダウンロード中…</translation>
@@ -1951,6 +1955,97 @@ Continue?</source>
         <translation>
             <numerusform>確認前の追跡の空白区間：%n件</numerusform>
         </translation>
+    </message>
+</context>
+<context>
+    <name>cloakframe::ResultsDialog</name>
+    <message>
+        <source>File results</source>
+        <translation>ファイル別の結果</translation>
+    </message>
+    <message>
+        <source>Results from the last run. Only reported files and input errors are listed; files that never started are not shown.</source>
+        <translation>前回の処理結果です。報告されたファイルと入力エラーのみを表示し、処理を開始しなかったファイルは表示しません。</translation>
+    </message>
+    <message>
+        <source>Filter results</source>
+        <translation>結果の絞り込み</translation>
+    </message>
+    <message>
+        <source>All results</source>
+        <translation>すべての結果</translation>
+    </message>
+    <message>
+        <source>Needs attention</source>
+        <translation>要確認</translation>
+    </message>
+    <message>
+        <source>Failures</source>
+        <translation>失敗</translation>
+    </message>
+    <message>
+        <source>Input</source>
+        <translation>入力</translation>
+    </message>
+    <message>
+        <source>Status</source>
+        <translation>状態</translation>
+    </message>
+    <message>
+        <source>Output</source>
+        <translation>出力</translation>
+    </message>
+    <message>
+        <source>Not saved</source>
+        <translation>未保存</translation>
+    </message>
+    <message>
+        <source>Result details</source>
+        <translation>結果の詳細</translation>
+    </message>
+    <message>
+        <source>Select a result to see its details.</source>
+        <translation>結果を選択すると詳細を表示します。</translation>
+    </message>
+    <message>
+        <source>Open input folder</source>
+        <translation>入力フォルダーを開く</translation>
+    </message>
+    <message>
+        <source>Open output folder</source>
+        <translation>出力フォルダーを開く</translation>
+    </message>
+    <message>
+        <source>Saved</source>
+        <translation>保存済み</translation>
+    </message>
+    <message>
+        <source>Review required</source>
+        <translation>確認が必要</translation>
+    </message>
+    <message>
+        <source>Skipped without saving</source>
+        <translation>保存せずにスキップ</translation>
+    </message>
+    <message>
+        <source>Failed</source>
+        <translation>失敗</translation>
+    </message>
+    <message>
+        <source>Cancelled</source>
+        <translation>キャンセル済み</translation>
+    </message>
+    <message>
+        <source>Unreadable input</source>
+        <translation>読み取れない入力</translation>
+    </message>
+    <message>
+        <source>Cannot open folder</source>
+        <translation>フォルダーを開けません</translation>
+    </message>
+    <message>
+        <source>Could not open: %1</source>
+        <translation>開けませんでした：%1</translation>
     </message>
 </context>
 </TS>

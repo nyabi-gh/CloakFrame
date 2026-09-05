@@ -223,6 +223,7 @@ namespace cloakframe
         QPushButton *startButton_ = nullptr;
         QPushButton *stopButton_ = nullptr;
         QPushButton *openOutputButton_ = nullptr;
+        QPushButton *resultsButton_ = nullptr;
         QLabel *statusLabel_ = nullptr;
         QLabel *samplePreview_ = nullptr;
         QToolButton *advancedToggle_ = nullptr;
@@ -255,6 +256,7 @@ namespace cloakframe
         bool processing_ = false;
         bool shuttingDown_ = false;
         RunSummary lastRunSummary_;
+        QVector<FileResult> fileResults_;
         std::vector<std::function<void()>> retranslators_;
     };
 }

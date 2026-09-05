@@ -4,6 +4,7 @@
 #include <cassert>
 #include <chrono>
 #include <cstdio>
+#include <latch>
 #include <stdexcept>
 #include <thread>
 #include <vector>
@@ -100,6 +101,38 @@ namespace
 
         assert(consumedCount >= 20);
         assert(consumedCount < count);
+    }
+
+    void testCancellationRetainsResultsFromRunningProducers()
+    {
+        std::atomic<bool> cancelled{false};
+        std::latch started(2);
+        std::vector<std::size_t> consumed;
+        cloakframe::processOrdered<std::size_t>(
+            10,
+            2,
+            2,
+            cancelled,
+            [&](std::size_t index)
+            {
+                started.count_down();
+                started.wait();
+                if (index == 0)
+                {
+                    cancelled.store(true, std::memory_order_release);
+                }
+                else
+                {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                }
+                return index;
+            },
+            [&](std::size_t index, std::size_t &&value)
+            {
+                assert(index == value);
+                consumed.push_back(index);
+            });
+        assert((consumed == std::vector<std::size_t>{0, 1}));
     }
 
     void testSingleThreadAndEmpty()
@@ -212,6 +245,7 @@ int main()
     testRespectsInFlightBound();
     std::puts("in-flight bound: ok");
     testStopsAfterCancellation();
+    testCancellationRetainsResultsFromRunningProducers();
     std::puts("cancellation: ok");
     testSingleThreadAndEmpty();
     std::puts("edge cases: ok");

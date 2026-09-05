@@ -160,5 +160,12 @@ namespace cloakframe
         {
             std::rethrow_exception(workerError);
         }
+
+        // Cancellation stops admission, but an already running producer may have published
+        // its output. Deliver its result after joining so it cannot disappear from the report.
+        for (auto &[index, result] : ready)
+        {
+            consume(index, std::move(result));
+        }
     }
 }

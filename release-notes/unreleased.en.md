@@ -1,5 +1,10 @@
 ## Result reliability
 
+- After a run, use **File results…** to filter attention items or failures,
+  inspect details, and open input or output folders. The output folder action
+  is available only for published results. Results reset on the next run.
+- Retain results from already running files when parallel processing is cancelled.
+
 - Report inaccessible subfolders with their exact paths and continue scanning
   other readable folders. Directory symlinks are not followed recursively.
 - Correct the video review instructions: low-confidence tracks are included

@@ -512,6 +512,15 @@ namespace cloakframe
             emit logMessage(tr("Preflight: found %n supported file(s).", nullptr, total));
 
             constexpr std::size_t kReportedScanIssues = 10;
+            for (const auto &issue : scanIssues)
+            {
+                const QString source = pathToQString(issue.path);
+                emit fileResultAvailable({source,
+                    {},
+                    FileResultStatus::UnreadableInput,
+                    {tr("Could not read input '%1': %2")
+                            .arg(source, QString::fromStdString(issue.error.message()))}});
+            }
             for (std::size_t i = 0; i < scanIssues.size() && i < kReportedScanIssues; ++i)
             {
                 emit logMessage(tr("Could not read input '%1': %2")
@@ -566,19 +575,23 @@ namespace cloakframe
                 emit logMessage(tr("Refusing to run because an output path is already in use."));
                 for (const auto &conflict : outputConflicts)
                 {
+                    QString message;
                     if (conflict.kind == OutputConflict::Kind::DuplicateDestination)
                     {
-                        emit logMessage(
+                        message =
                             tr("Output name collision: '%1' and '%2' would both write to '%3'")
                                 .arg(pathToQString(conflict.otherSource),
                                     pathToQString(conflict.source),
-                                    pathToQString(conflict.destination)));
+                                    pathToQString(conflict.destination));
                     }
                     else
                     {
-                        emit logMessage(tr("Existing output would be overwritten: '%1'")
-                                .arg(pathToQString(conflict.destination)));
+                        message = tr("Existing output would be overwritten: '%1'")
+                                      .arg(pathToQString(conflict.destination));
                     }
+                    emit logMessage(message);
+                    emit fileResultAvailable(
+                        {pathToQString(conflict.source), {}, FileResultStatus::Failed, {message}});
                 }
                 if (outputConflicts.size() >= 10)
                     emit logMessage(tr("Additional output conflicts omitted."));
@@ -599,8 +612,38 @@ namespace cloakframe
             qint64 droppedTrackCount = 0;
             int uncoveredFileCount = 0;
 
-            const auto applyOutcome = [&](ItemOutcome &&outcome)
+            const auto applyOutcome = [&](const ScanResult &item, ItemOutcome &&outcome)
             {
+                FileResult fileResult;
+                fileResult.sourcePath = pathToQString(item.sourcePath);
+                fileResult.messages = outcome.logs;
+                if (outcome.redacted > 0 || outcome.unredacted > 0 || outcome.copied > 0)
+                {
+                    fileResult.outputPath = pathToQString(safeRoot / outputRelativePath(item));
+                }
+                if (outcome.cancelled)
+                {
+                    fileResult.status = FileResultStatus::Cancelled;
+                }
+                else if (outcome.failed > 0)
+                {
+                    fileResult.status = FileResultStatus::Failed;
+                }
+                else if (outcome.skipped > 0)
+                {
+                    fileResult.status = FileResultStatus::Skipped;
+                }
+                else if (outcome.warnings > 0 || outcome.omittedRegions > 0
+                         || outcome.trackingGapFrames > 0 || outcome.droppedTracks > 0
+                         || outcome.unredacted > 0 || outcome.copied > 0)
+                {
+                    fileResult.status = FileResultStatus::NeedsReview;
+                }
+                else if (!fileResult.outputPath.isEmpty())
+                {
+                    fileResult.status = FileResultStatus::Saved;
+                }
+                emit fileResultAvailable(std::move(fileResult));
                 for (const auto &message : outcome.logs)
                 {
                     emit logMessage(message);
@@ -637,7 +680,7 @@ namespace cloakframe
                     }
                     auto outcome = processItem(item, safeRoot, index, total, true);
                     const bool stop = outcome.cancelled;
-                    applyOutcome(std::move(outcome));
+                    applyOutcome(item, std::move(outcome));
                     if (stop)
                     {
                         break;
@@ -666,9 +709,9 @@ namespace cloakframe
                         return processItem(
                             images[i], safeRoot, static_cast<int>(i) + 1, total, false);
                     },
-                    [&](std::size_t, ItemOutcome &&outcome)
+                    [&](std::size_t k, ItemOutcome &&outcome)
                     {
-                        applyOutcome(std::move(outcome));
+                        applyOutcome(images[imageIndexes[k]], std::move(outcome));
                     });
 
                 for (const auto i : videoIndexes)
@@ -680,7 +723,7 @@ namespace cloakframe
                     auto outcome =
                         processItem(images[i], safeRoot, static_cast<int>(i) + 1, total, false);
                     const bool stop = outcome.cancelled;
-                    applyOutcome(std::move(outcome));
+                    applyOutcome(images[i], std::move(outcome));
                     if (stop)
                     {
                         break;

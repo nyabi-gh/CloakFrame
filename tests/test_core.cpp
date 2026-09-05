@@ -18,7 +18,9 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QEvent>
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QTemporaryDir>
 #include <QThread>
@@ -450,6 +452,74 @@ namespace
         second->process();
         assert(secondOutcome == cloakframe::RunOutcome::Failed);
         assert(std::filesystem::file_size(output / "input.png") == savedSize);
+    }
+
+    void testWorkerEmitsFileResultsWithPublishedPaths()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto input = root / "input";
+        const auto output = root / "output";
+        std::filesystem::create_directories(input);
+        const cv::Mat image(24, 24, CV_8UC3, cv::Scalar(20, 40, 60));
+        assert(cv::imwrite((input / "a.png").string(), image));
+        assert(cv::imwrite((input / "b.png").string(), image));
+        writeBytes(QString::fromStdString((input / "broken.png").string()));
+        const QString missing = QString::fromStdString((root / "missing").string());
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(input.string()), missing};
+        request.outputDirectory = QString::fromStdString(output.string());
+        request.detectFaces = false;
+        cloakframe::ProcessorWorker worker(request);
+        QVector<cloakframe::FileResult> results;
+        qRegisterMetaType<cloakframe::FileResult>();
+        QObject receiver;
+        QObject::connect(
+            &worker,
+            &cloakframe::ProcessorWorker::fileResultAvailable,
+            &receiver,
+            [&](cloakframe::FileResult result)
+            {
+                results.push_back(std::move(result));
+            },
+            Qt::QueuedConnection);
+        worker.process();
+        QCoreApplication::sendPostedEvents(&receiver, QEvent::MetaCall);
+        assert(results.size() == 4);
+        assert(results[0].sourcePath == missing);
+        assert(results[0].status == cloakframe::FileResultStatus::UnreadableInput);
+        assert(results[0].outputPath.isEmpty());
+        for (int i = 1; i <= 2; ++i)
+        {
+            assert(results[i].status == cloakframe::FileResultStatus::NeedsReview);
+            assert(!results[i].messages.isEmpty());
+            const QFileInfo source(results[i].sourcePath);
+            const QFileInfo destination(results[i].outputPath);
+            assert(destination.exists());
+            assert(source.fileName() == destination.fileName());
+            assert(source.absoluteFilePath() != destination.absoluteFilePath());
+        }
+        assert(results[3].status == cloakframe::FileResultStatus::Skipped);
+        assert(results[3].sourcePath.endsWith("broken.png"));
+        assert(results[3].outputPath.isEmpty());
+
+        cloakframe::ProcessorWorker repeated(request);
+        QVector<cloakframe::FileResult> conflicts;
+        QObject::connect(&repeated,
+            &cloakframe::ProcessorWorker::fileResultAvailable,
+            [&](cloakframe::FileResult result)
+            {
+                conflicts.push_back(std::move(result));
+            });
+        repeated.process();
+        assert(conflicts.size() == 3);
+        for (const auto &conflict : conflicts)
+        {
+            assert(conflict.outputPath.isEmpty());
+            assert(conflict.status == cloakframe::FileResultStatus::Failed
+                   || conflict.status == cloakframe::FileResultStatus::UnreadableInput);
+        }
     }
 
     void testWorkerReportsCopiedOriginalAsWarning()
@@ -2459,6 +2529,7 @@ int main(int argc, char **argv)
     testScanReportsDeniedDirectoriesAndContinues();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
+    testWorkerEmitsFileResultsWithPublishedPaths();
     testWorkerReportsCopiedOriginalAsWarning();
     testReviewConfirmsOnlyWhenDetectionsWereCleared();
     testWorkerFailsWhenTheReviewReceiverIsMissing();

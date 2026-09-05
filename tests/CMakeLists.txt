@@ -25,3 +25,8 @@ add_cloakframe_test(cloakframe_video_review_tests
     ${PROJECT_SOURCE_DIR}/src/VideoReviewDialog.cpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoReviewDialog.hpp)
 target_link_libraries(cloakframe_video_review_tests PRIVATE Qt6::Widgets)
+add_cloakframe_test(cloakframe_results_tests
+    test_results.cpp
+    ${PROJECT_SOURCE_DIR}/src/ResultsDialog.cpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/ResultsDialog.hpp)
+target_link_libraries(cloakframe_results_tests PRIVATE Qt6::Widgets)

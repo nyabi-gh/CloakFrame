@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cloakframe/FileResult.hpp"
 #include "cloakframe/ImageScanner.hpp"
 #include "cloakframe/ModelCatalog.hpp"
 #include "cloakframe/Mosaic.hpp"
@@ -120,6 +121,8 @@ namespace cloakframe
         void logMessage(const QString &message);
 
         void summaryAvailable(cloakframe::RunSummary summary);
+
+        void fileResultAvailable(cloakframe::FileResult result);
 
         void finished(cloakframe::RunOutcome outcome);
 

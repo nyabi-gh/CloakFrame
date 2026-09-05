@@ -10,6 +10,7 @@
 #include "cloakframe/PlateDetector.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
 #include "cloakframe/ReleaseNotes.hpp"
+#include "cloakframe/ResultsDialog.hpp"
 #include "cloakframe/ReviewDialog.hpp"
 #include "cloakframe/SelfUpdater.hpp"
 #include "cloakframe/SettingsDialog.hpp"
@@ -395,6 +396,7 @@ namespace cloakframe
         : QMainWindow(parent)
     {
         qRegisterMetaType<VideoReviewRequest>();
+        qRegisterMetaType<FileResult>();
         qRegisterMetaType<VideoReviewResult>();
         setWindowTitle("CloakFrame");
         setAcceptDrops(true);
@@ -1070,7 +1072,25 @@ namespace cloakframe
             cardLayout->setSpacing(10);
 
             auto *activityTitle = makeSectionTitle(card);
-            cardLayout->addWidget(activityTitle);
+            auto *activityHeader = new QHBoxLayout();
+            activityHeader->addWidget(activityTitle, 1);
+            resultsButton_ = new QPushButton(card);
+            resultsButton_->setEnabled(false);
+            activityHeader->addWidget(resultsButton_);
+            cardLayout->addLayout(activityHeader);
+            addRetranslation(
+                [this]
+                {
+                    resultsButton_->setText(tr("File results…"));
+                });
+            connect(resultsButton_,
+                &QPushButton::clicked,
+                this,
+                [this]
+                {
+                    ResultsDialog dialog(fileResults_, this);
+                    dialog.exec();
+                });
             addRetranslation(
                 [activityTitle]
                 {
@@ -1707,6 +1727,7 @@ namespace cloakframe
         runTimer_.start();
         progressBar_->setValue(0);
         lastRunSummary_ = {};
+        fileResults_.clear();
         statusLabel_->setText(tr("Starting…"));
 
         workerThread_ = new QThread(this);
@@ -1720,6 +1741,13 @@ namespace cloakframe
         worker_->moveToThread(workerThread_);
         connect(workerThread_, &QThread::started, worker_, &ProcessorWorker::process);
         connect(worker_, &ProcessorWorker::logMessage, this, &MainWindow::appendLog);
+        connect(worker_,
+            &ProcessorWorker::fileResultAvailable,
+            this,
+            [this](FileResult result)
+            {
+                fileResults_.push_back(std::move(result));
+            });
         connect(worker_,
             &ProcessorWorker::summaryAvailable,
             this,
@@ -2530,6 +2558,7 @@ namespace cloakframe
         startButton_->setEnabled(!processing);
         stopButton_->setEnabled(processing);
         settingsButton_->setEnabled(!processing);
+        resultsButton_->setEnabled(!processing && !fileResults_.isEmpty());
         settingsShortcut_->setEnabled(!processing);
         detectCombo_->setEnabled(!processing);
         modelCombo_->setEnabled(!processing);

@@ -41,6 +41,7 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/DetectionGeometry.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Detector.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/FaceDetection.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/FileResult.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ImageIo.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ImageScanner.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/MemoryBudget.hpp
@@ -99,6 +100,7 @@ qt_add_executable(CloakFrame ${CLOAKFRAME_APP_OPTIONS}
     MainWindow.cpp
     ModelDownloader.cpp
     ReviewDialog.cpp
+    ResultsDialog.cpp
     SettingsDialog.cpp
     Theme.cpp
     UpdateChecker.cpp
@@ -106,6 +108,7 @@ qt_add_executable(CloakFrame ${CLOAKFRAME_APP_OPTIONS}
     ${PROJECT_SOURCE_DIR}/include/cloakframe/MainWindow.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelDownloader.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ReviewDialog.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/ResultsDialog.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SelfUpdater.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SettingsDialog.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Theme.hpp
