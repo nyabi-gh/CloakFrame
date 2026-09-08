@@ -4,8 +4,8 @@
 
 # CloakFrame
 
-[![Latest Release](https://img.shields.io/github/v/release/nyattic/CloakFrame?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e&color=6366f1)](https://github.com/nyattic/CloakFrame/releases/latest)
-[![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnyattic%2FCloakFrame%2Fdownload-badge%2Fdownloads.json&style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e)](https://github.com/nyattic/CloakFrame/releases)
+[![Latest Release](https://img.shields.io/github/v/release/nyabi-gh/CloakFrame?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e&color=6366f1)](https://github.com/nyabi-gh/CloakFrame/releases/latest)
+[![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnyabi-gh%2FCloakFrame%2Fdownload-badge%2Fdownloads.json&style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e)](https://github.com/nyabi-gh/CloakFrame/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-6366f1?style=for-the-badge&logo=gnu&logoColor=white&labelColor=1e1b2e)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-6366f1?style=for-the-badge&logo=qt&logoColor=white&labelColor=1e1b2e)
 
@@ -27,9 +27,9 @@
 
 | プラットフォーム | 対応環境 | ダウンロード |
 | --- | --- | --- |
-| Windows | Windows 10以降、64ビット | [Windows版をダウンロード](https://github.com/nyattic/CloakFrame/releases/latest) |
-| macOS | macOS 15以降、Apple Silicon | [macOS版をダウンロード](https://github.com/nyattic/CloakFrame/releases/latest) |
-| Linux | x86_64 | [Linux版をダウンロード](https://github.com/nyattic/CloakFrame/releases/latest) |
+| Windows | Windows 10以降、64ビット | [Windows版をダウンロード](https://github.com/nyabi-gh/CloakFrame/releases/latest) |
+| macOS | macOS 15以降、Apple Silicon | [macOS版をダウンロード](https://github.com/nyabi-gh/CloakFrame/releases/latest) |
+| Linux | x86_64 | [Linux版をダウンロード](https://github.com/nyabi-gh/CloakFrame/releases/latest) |
 
 リンクを開き、**Assets**から各プラットフォーム用のファイルを選んでください。
 v1.11.0以降は、Windowsでは`CloakFrame-Windows-x64-Setup.exe`、macOSでは

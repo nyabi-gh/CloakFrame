@@ -339,9 +339,9 @@ jobs:
           cp "release-notes/${CLOAKFRAME_VERSION}.zh.md" "artifacts/${MACOS_ASSET_NAME%.dmg}.zh.md"
           generator="build-release/_deps/sparkle-src/bin/generate_appcast"
           args=(
-            --link "https://github.com/nyattic/CloakFrame"
-            --download-url-prefix "https://github.com/nyattic/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
-            --release-notes-url-prefix "https://github.com/nyattic/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
+            --link "https://github.com/nyabi-gh/CloakFrame"
+            --download-url-prefix "https://github.com/nyabi-gh/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
+            --release-notes-url-prefix "https://github.com/nyabi-gh/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
             --embed-release-notes
             artifacts
           )

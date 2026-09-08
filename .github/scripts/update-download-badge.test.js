@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Copyright (C) 2026 Nyabi (nyattic)
+// Copyright (C) 2026 Nyabi (nyabi-gh)
 
 const assert = require('node:assert/strict')
 const test = require('node:test')

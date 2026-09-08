@@ -8,7 +8,7 @@ versions, so upgrading is the supported way to receive a fix.
 ## Reporting a vulnerability
 
 Report privately through GitHub:
-[**Report a vulnerability**](https://github.com/nyattic/CloakFrame/security/advisories/new).
+[**Report a vulnerability**](https://github.com/nyabi-gh/CloakFrame/security/advisories/new).
 
 Do not open a public issue for a security problem. Public issues are the right
 place for ordinary bugs, as described in [CONTRIBUTING.md](CONTRIBUTING.md).

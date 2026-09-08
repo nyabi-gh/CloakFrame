@@ -28,9 +28,9 @@ namespace cloakframe
 {
     namespace
     {
-        constexpr auto kRepoUrl = "https://github.com/nyattic/CloakFrame";
+        constexpr auto kRepoUrl = "https://github.com/nyabi-gh/CloakFrame";
         constexpr auto kReleaseDownloadPrefix =
-            "https://github.com/nyattic/CloakFrame/releases/download/v";
+            "https://github.com/nyabi-gh/CloakFrame/releases/download/v";
 
 #ifdef __linux__
         // Velopack 1.2.0 caches Linux packages here (locator.rs). It offers no way to ask for
