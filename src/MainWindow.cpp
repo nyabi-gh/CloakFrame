@@ -3,6 +3,7 @@
 #include "cloakframe/Detector.hpp"
 #include "cloakframe/ImageIo.hpp"
 #include "cloakframe/ImageScanner.hpp"
+#include "cloakframe/Logging.hpp"
 #include "cloakframe/ModelCatalog.hpp"
 #include "cloakframe/ModelDownloader.hpp"
 #include "cloakframe/Mosaic.hpp"
@@ -15,6 +16,7 @@
 #include "cloakframe/SelfUpdater.hpp"
 #include "cloakframe/SettingsDialog.hpp"
 #include "cloakframe/Theme.hpp"
+#include "cloakframe/ThumbnailLoader.hpp"
 #include "cloakframe/UpdateChecker.hpp"
 #include "cloakframe/VideoIo.hpp"
 #include "cloakframe/VideoReviewDialog.hpp"
@@ -67,6 +69,7 @@
 #include <QTimer>
 #include <QToolButton>
 #include <QUrl>
+#include <QUuid>
 #include <QWidget>
 
 #include <opencv2/imgproc.hpp>
@@ -214,47 +217,6 @@ namespace cloakframe
             auto *label = new QLabel(parent);
             label->setProperty("role", "fieldLabel");
             return label;
-        }
-
-        QIcon videoThumbnailIcon(const QString &path)
-        {
-            const auto tools = locateFfmpegTools();
-            if (!tools)
-            {
-                return {};
-            }
-            QProcess process;
-            process.start(tools->ffmpegPath,
-                {"-v",
-                    "error",
-                    "-ss",
-                    "0",
-                    "-i",
-                    path,
-                    "-frames:v",
-                    "1",
-                    "-vf",
-                    "scale=80:-2",
-                    "-f",
-                    "image2pipe",
-                    "-c:v",
-                    "png",
-                    "-"});
-            if (!process.waitForStarted(3000) || !process.waitForFinished(3000))
-            {
-                process.kill();
-                return {};
-            }
-            if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
-            {
-                return {};
-            }
-            QImage image;
-            if (!image.loadFromData(process.readAllStandardOutput(), "PNG") || image.isNull())
-            {
-                return {};
-            }
-            return QIcon(QPixmap::fromImage(image));
         }
 
         QFrame *makeCard(QWidget *parent)
@@ -597,6 +559,7 @@ namespace cloakframe
 
             auto *dropList = new DropListWidget(card);
             inputList_ = dropList;
+            new ThumbnailLoader(inputList_);
             inputList_->setSelectionMode(QAbstractItemView::ExtendedSelection);
             inputList_->setMinimumHeight(140);
             inputList_->setAlternatingRowColors(false);
@@ -1089,7 +1052,37 @@ namespace cloakframe
                 [this]
                 {
                     ResultsDialog dialog(fileResults_, this);
+                    QString retryPath;
+                    int retryFrame = -1;
+                    connect(&dialog,
+                        &ResultsDialog::retryRequested,
+                        &dialog,
+                        [&](const QString &path, int frame)
+                        {
+                            retryPath = path;
+                            retryFrame = frame;
+                        });
                     dialog.exec();
+                    if (!retryPath.isEmpty())
+                    {
+                        QString base = outputDirEdit_->text().trimmed();
+                        if (base.isEmpty())
+                            base =
+                                QFileDialog::getExistingDirectory(this, tr("Choose output folder"));
+                        if (base.isEmpty())
+                            return;
+                        const QString folder = QDir(base).filePath(QStringLiteral("review-%1-%2")
+                                .arg(QDateTime::currentDateTime().toString(
+                                         QStringLiteral("yyyyMMdd-HHmmss")),
+                                    QUuid::createUuid().toString(QUuid::WithoutBraces)));
+                        inputList_->clear();
+                        addInputPath(retryPath);
+                        outputDirEdit_->setText(folder);
+                        reviewCheck_->setChecked(true);
+                        pendingVideoReviewSource_ = retryPath;
+                        pendingVideoReviewFrame_ = retryFrame;
+                        startProcessing();
+                    }
                 });
             addRetranslation(
                 [activityTitle]
@@ -1611,6 +1604,8 @@ namespace cloakframe
         request.faceModelKind =
             selectedBuiltin != nullptr ? selectedBuiltin->faceKind : FaceModelKind::Scrfd;
         request.inputs = inputPaths();
+        if (request.inputs.size() == 1 && request.inputs.front() == pendingVideoReviewSource_)
+            request.initialVideoReviewFrame = pendingVideoReviewFrame_;
         request.outputDirectory = outputDirEdit_->text();
         request.plateModelPath = plateModelPath;
         request.reviewReceiver = this;
@@ -1737,6 +1732,8 @@ namespace cloakframe
         cache.plate = std::move(plateForRun);
         cache.videoFace = std::move(videoDetectorForRun);
         worker_ = new ProcessorWorker(std::move(request), std::move(cache));
+        pendingVideoReviewFrame_ = -1;
+        pendingVideoReviewSource_.clear();
 
         worker_->moveToThread(workerThread_);
         connect(workerThread_, &QThread::started, worker_, &ProcessorWorker::process);
@@ -1846,6 +1843,11 @@ namespace cloakframe
         const QString elapsed = seconds >= 60
                                     ? QStringLiteral("%1m %2s").arg(seconds / 60).arg(seconds % 60)
                                     : QStringLiteral("%1s").arg(seconds);
+        logDiagnostic(QStringLiteral("Run outcome=%1 total=%2 failed=%3 unreadable=%4")
+                .arg(static_cast<int>(outcome))
+                .arg(lastRunSummary_.total)
+                .arg(lastRunSummary_.failed)
+                .arg(lastRunSummary_.unreadableInputs));
         switch (outcome)
         {
         case RunOutcome::Completed:
@@ -1869,7 +1871,9 @@ namespace cloakframe
                    "Files with detection or tracking warnings: %7\n"
                    "Omitted detection regions: %8\nTracking gap frames (before review): %9\n"
                    "Dropped tracks: %10\nFiles with metadata warnings: %11\n"
-                   "Unreadable input paths: %12\n\n"
+                   "Unreadable input paths: %12\n"
+                   "Tracking gap frames pending user review: %13\n"
+                   "Tracks excluded during review: %14\n\n"
                    "Check these results before sharing them.")
                     .arg(lastRunSummary_.total)
                     .arg(lastRunSummary_.redacted)
@@ -1882,7 +1886,9 @@ namespace cloakframe
                     .arg(lastRunSummary_.trackingGapFrames)
                     .arg(lastRunSummary_.droppedTracks)
                     .arg(lastRunSummary_.warningFiles)
-                    .arg(lastRunSummary_.unreadableInputs));
+                    .arg(lastRunSummary_.unreadableInputs)
+                    .arg(lastRunSummary_.pendingTrackingGapFrames)
+                    .arg(lastRunSummary_.excludedTracks));
             break;
         case RunOutcome::Cancelled:
             appendLog(tr("Cancelled."));
@@ -2043,7 +2049,7 @@ namespace cloakframe
 
         themeMode_ = themeModeFromString(settings.value("theme", "system").toString());
         checkForUpdatesOnStartup_ = settings.value("checkForUpdates", true).toBool();
-        fileLogging_ = settings.value("fileLogging", true).toBool();
+        fileLogging_ = settings.value("detailedLogging", false).toBool();
         gpuAcceleration_ = settings.value("gpuAcceleration", true).toBool();
         videoQuality_ = std::clamp(settings.value("videoQuality", 0).toInt(), 0, 2);
         videoCodec_ = std::clamp(settings.value("videoCodec", 0).toInt(), 0, 1);
@@ -2141,7 +2147,7 @@ namespace cloakframe
 
         settings.setValue("theme", themeModeToString(themeMode_));
         settings.setValue("checkForUpdates", checkForUpdatesOnStartup_);
-        settings.setValue("fileLogging", fileLogging_);
+        settings.setValue("detailedLogging", fileLogging_);
         settings.setValue("gpuAcceleration", gpuAcceleration_);
         settings.setValue("videoQuality", videoQuality_);
         settings.setValue("videoCodec", videoCodec_);
@@ -2375,6 +2381,7 @@ namespace cloakframe
             [this](bool enabled)
             {
                 fileLogging_ = enabled;
+                setDetailedLogging(enabled);
                 saveSettings();
             });
         connect(&dialog,
@@ -2515,26 +2522,11 @@ namespace cloakframe
         if (info.isDir())
         {
             item->setIcon(style()->standardIcon(QStyle::SP_DirIcon));
-        }
-        else if (isSupportedVideo(pathFromQString(path)))
-        {
-            const QIcon thumbnail = videoThumbnailIcon(path);
-            item->setIcon(
-                thumbnail.isNull() ? style()->standardIcon(QStyle::SP_FileIcon) : thumbnail);
+            item->setData(Qt::UserRole + 10, true);
         }
         else
         {
-            QImageReader reader(path);
-            reader.setAutoTransform(true);
-            QSize thumbSize = reader.size();
-            if (thumbSize.isValid())
-            {
-                thumbSize.scale(40, 40, Qt::KeepAspectRatio);
-                reader.setScaledSize(thumbSize);
-            }
-            const QImage thumb = reader.read();
-            item->setIcon(thumb.isNull() ? style()->standardIcon(QStyle::SP_FileIcon)
-                                         : QIcon(QPixmap::fromImage(thumb)));
+            item->setIcon(style()->standardIcon(QStyle::SP_FileIcon));
         }
         inputList_->addItem(item);
     }

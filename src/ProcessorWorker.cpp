@@ -367,12 +367,16 @@ namespace cloakframe
         int warnings = 0;
         qint64 omittedRegions = 0;
         qint64 trackingGapFrames = 0;
+        qint64 pendingTrackingGapFrames = 0;
+        qint64 excludedTracks = 0;
+        QVector<FileIssue> issues;
         qint64 droppedTracks = 0;
         bool cancelled = false;
     };
 
     ProcessorWorker::ProcessorWorker(ProcessingRequest request, DetectorCache cache)
-        : modelPath_(std::move(request.modelPath))
+        : initialVideoReviewFrame_(request.initialVideoReviewFrame)
+        , modelPath_(std::move(request.modelPath))
         , modelSha256_(std::move(request.modelSha256))
         , faceModelKind_(request.faceModelKind)
         , inputs_(std::move(request.inputs))
@@ -519,7 +523,8 @@ namespace cloakframe
                     {},
                     FileResultStatus::UnreadableInput,
                     {tr("Could not read input '%1': %2")
-                            .arg(source, QString::fromStdString(issue.error.message()))}});
+                            .arg(source, QString::fromStdString(issue.error.message()))},
+                    {{FileIssueKind::ScanFailure, 1}}});
             }
             for (std::size_t i = 0; i < scanIssues.size() && i < kReportedScanIssues; ++i)
             {
@@ -590,8 +595,11 @@ namespace cloakframe
                                       .arg(pathToQString(conflict.destination));
                     }
                     emit logMessage(message);
-                    emit fileResultAvailable(
-                        {pathToQString(conflict.source), {}, FileResultStatus::Failed, {message}});
+                    emit fileResultAvailable({pathToQString(conflict.source),
+                        {},
+                        FileResultStatus::Failed,
+                        {message},
+                        {{FileIssueKind::OutputConflict, 1}}});
                 }
                 if (outputConflicts.size() >= 10)
                     emit logMessage(tr("Additional output conflicts omitted."));
@@ -609,6 +617,8 @@ namespace cloakframe
             int warningCount = 0;
             qint64 omittedRegionCount = 0;
             qint64 trackingGapFrameCount = 0;
+            qint64 pendingGapFrameCount = 0;
+            qint64 excludedTrackCount = 0;
             qint64 droppedTrackCount = 0;
             int uncoveredFileCount = 0;
 
@@ -617,6 +627,17 @@ namespace cloakframe
                 FileResult fileResult;
                 fileResult.sourcePath = pathToQString(item.sourcePath);
                 fileResult.messages = outcome.logs;
+                fileResult.issues = outcome.issues;
+                for (const auto &[kind, count] :
+                    std::initializer_list<std::pair<FileIssueKind, qint64>>{
+                        {FileIssueKind::OmittedRegions, outcome.omittedRegions},
+                        {FileIssueKind::DroppedTracks, outcome.droppedTracks},
+                        {FileIssueKind::ExcludedTracks, outcome.excludedTracks},
+                        {FileIssueKind::MetadataWarning, outcome.warnings},
+                        {FileIssueKind::ProcessingFailure, outcome.failed},
+                        {FileIssueKind::UnredactedOutput, outcome.unredacted + outcome.copied}})
+                    if (count > 0)
+                        fileResult.issues.push_back({kind, count});
                 if (outcome.redacted > 0 || outcome.unredacted > 0 || outcome.copied > 0)
                 {
                     fileResult.outputPath = pathToQString(safeRoot / outputRelativePath(item));
@@ -634,8 +655,9 @@ namespace cloakframe
                     fileResult.status = FileResultStatus::Skipped;
                 }
                 else if (outcome.warnings > 0 || outcome.omittedRegions > 0
-                         || outcome.trackingGapFrames > 0 || outcome.droppedTracks > 0
-                         || outcome.unredacted > 0 || outcome.copied > 0)
+                         || outcome.pendingTrackingGapFrames > 0 || outcome.excludedTracks > 0
+                         || outcome.droppedTracks > 0 || outcome.unredacted > 0
+                         || outcome.copied > 0)
                 {
                     fileResult.status = FileResultStatus::NeedsReview;
                 }
@@ -656,9 +678,11 @@ namespace cloakframe
                 warningCount += outcome.warnings;
                 omittedRegionCount += outcome.omittedRegions;
                 trackingGapFrameCount += outcome.trackingGapFrames;
+                pendingGapFrameCount += outcome.pendingTrackingGapFrames;
+                excludedTrackCount += outcome.excludedTracks;
                 droppedTrackCount += outcome.droppedTracks;
-                if (outcome.omittedRegions > 0 || outcome.trackingGapFrames > 0
-                    || outcome.droppedTracks > 0)
+                if (outcome.omittedRegions > 0 || outcome.pendingTrackingGapFrames > 0
+                    || outcome.excludedTracks > 0 || outcome.droppedTracks > 0)
                 {
                     ++uncoveredFileCount;
                 }
@@ -749,6 +773,8 @@ namespace cloakframe
             summary.unredacted = unredactedCount;
             summary.omittedRegions = omittedRegionCount;
             summary.trackingGapFrames = trackingGapFrameCount;
+            summary.pendingTrackingGapFrames = pendingGapFrameCount;
+            summary.excludedTracks = excludedTrackCount;
             summary.droppedTracks = droppedTrackCount;
             summary.coverageWarningFiles = uncoveredFileCount;
             summary.warningFiles = warningCount;
@@ -1408,10 +1434,13 @@ namespace cloakframe
             emit stageChanged(index, total, stage, fileName);
         };
 
+        QVector<int> acknowledgedGaps;
+        qint64 excludedTracks = 0;
         VideoTrackReviewFn review;
         if (reviewEnabled_)
         {
-            review = [this, &tools, &fileName, index, total](std::vector<Track> &tracks,
+            review = [this, &tools, &fileName, &acknowledgedGaps, &excludedTracks, index, total](
+                         std::vector<Track> &tracks,
                          const std::vector<UncoveredSpan> &uncoveredSpans,
                          qint64 frameCount,
                          const QString &reviewSourcePath,
@@ -1420,6 +1449,7 @@ namespace cloakframe
                 emit stageChanged(index, total, tr("Reviewing video tracks"), fileName);
                 VideoReviewRequest request;
                 request.sourcePath = reviewSourcePath;
+                request.initialFrame = initialVideoReviewFrame_;
                 request.ffmpegPath = tools->ffmpegPath;
                 request.sourceName = fileName;
                 request.frameSize = QSize(reviewInfo.displayWidth(), reviewInfo.displayHeight());
@@ -1462,6 +1492,16 @@ namespace cloakframe
                     cancelled_.store(true, std::memory_order_release);
                     return false;
                 }
+                for (const int gap : reviewResult.acknowledgedGapIndices)
+                    if (gap >= 0 && gap < request.uncoveredSpans.size()
+                        && !acknowledgedGaps.contains(gap))
+                        acknowledgedGaps.push_back(gap);
+                excludedTracks = static_cast<qint64>(std::count_if(tracks.begin(),
+                    tracks.end(),
+                    [&](const Track &track)
+                    {
+                        return reviewResult.excludedTrackIds.contains(track.id);
+                    }));
                 std::erase_if(tracks,
                     [&](const Track &track)
                     {
@@ -1593,9 +1633,8 @@ namespace cloakframe
             if (result.uncoveredFrames > 0)
             {
                 outcome.logs.push_back(
-                    tr("Warning: tracking could not locate the subject in %n frame(s) of %1 "
-                       "before review. Manual masks do not verify its position. "
-                       "Check these frames before sharing.",
+                    tr("Tracking could not locate the subject in %n frame(s) of %1 before review. "
+                       "See the per-gap review status in File results.",
                         nullptr,
                         result.uncoveredFrames)
                         .arg(fileName));
@@ -1611,6 +1650,28 @@ namespace cloakframe
             }
             outcome.omittedRegions = omittedDetections;
             outcome.trackingGapFrames = result.uncoveredFrames;
+            outcome.excludedTracks = excludedTracks;
+            for (size_t i = 0; i < result.uncoveredSpans.size(); ++i)
+            {
+                const auto &gap = result.uncoveredSpans[i];
+                const bool acknowledged = acknowledgedGaps.contains(static_cast<int>(i));
+                outcome.issues.push_back({FileIssueKind::TrackingGap,
+                    gap.frameCount(),
+                    gap.firstFrame,
+                    gap.lastFrame,
+                    gap.trackId,
+                    acknowledged});
+                if (!acknowledged)
+                    outcome.pendingTrackingGapFrames += gap.frameCount();
+            }
+            if (result.uncoveredFrames > 0)
+                outcome.logs.push_back(
+                    tr("Tracking gap frames: %1 before review, %2 pending user review. "
+                       "Review acknowledgement does not verify coverage.")
+                        .arg(result.uncoveredFrames)
+                        .arg(outcome.pendingTrackingGapFrames));
+            if (excludedTracks > 0)
+                outcome.logs.push_back(tr("Tracks excluded during review: %1").arg(excludedTracks));
             outcome.droppedTracks = result.droppedTracks;
             break;
         case VideoProcessStatus::Cancelled:

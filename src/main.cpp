@@ -1,3 +1,4 @@
+#include "cloakframe/Logging.hpp"
 #include "cloakframe/MainWindow.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
 #include "cloakframe/ReviewTypes.hpp"
@@ -64,39 +65,6 @@ namespace
         currentSettings.sync();
     }
 
-    void setupLogging()
-    {
-        try
-        {
-            std::vector<spdlog::sink_ptr> sinks;
-            sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
-
-            const bool fileLogging = QSettings().value("fileLogging", true).toBool();
-            const auto dataDir =
-                QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation);
-            if (fileLogging && !dataDir.isEmpty())
-            {
-                const auto logDir = dataDir + "/CloakFrame/logs";
-                if (QDir().mkpath(logDir))
-                {
-                    const auto logFile = (logDir + "/cloakframe.log").toStdString();
-                    sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(
-                        logFile, 1024 * 1024, 3));
-                }
-            }
-
-            auto logger =
-                std::make_shared<spdlog::logger>("cloakframe", sinks.begin(), sinks.end());
-            logger->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] %v");
-            logger->flush_on(spdlog::level::info);
-            spdlog::set_default_logger(logger);
-            spdlog::set_level(spdlog::level::info);
-        }
-        catch (const std::exception &)
-        {
-            spdlog::set_level(spdlog::level::off);
-        }
-    }
 }
 
 int main(int argc, char *argv[])
@@ -107,7 +75,8 @@ int main(int argc, char *argv[])
 
     configureApplicationAndMigrateSettings();
 
-    setupLogging();
+    cloakframe::configureLogging(
+        cloakframe::localLogDirectory(), QSettings().value("detailedLogging", false).toBool());
 
     // A run that was killed leaves its private copy of the source behind. Sweep on a worker
     // thread: one of the roots may be on a slow mount, and nothing here has to finish before

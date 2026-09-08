@@ -16,7 +16,9 @@ add_library(cloakframe_core STATIC
     CustomModelConsent.cpp
     ImageIo.cpp
     ImageScanner.cpp
+    Logging.cpp
     MemoryBudget.cpp
+    ModelDownload.cpp
     ModelCatalog.cpp
     ModelStore.cpp
     Mosaic.cpp
@@ -44,6 +46,8 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/FileResult.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ImageIo.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ImageScanner.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/Logging.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelDownload.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/MemoryBudget.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelCatalog.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelStore.hpp
@@ -102,6 +106,7 @@ qt_add_executable(CloakFrame ${CLOAKFRAME_APP_OPTIONS}
     ReviewDialog.cpp
     ResultsDialog.cpp
     SettingsDialog.cpp
+    ThumbnailLoader.cpp
     Theme.cpp
     UpdateChecker.cpp
     VideoReviewDialog.cpp
@@ -111,6 +116,7 @@ qt_add_executable(CloakFrame ${CLOAKFRAME_APP_OPTIONS}
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ResultsDialog.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SelfUpdater.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SettingsDialog.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/ThumbnailLoader.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Theme.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/UpdateChecker.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoReviewDialog.hpp

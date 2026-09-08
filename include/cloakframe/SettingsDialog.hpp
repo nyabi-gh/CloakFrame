@@ -58,6 +58,8 @@ namespace cloakframe
         QCheckBox *updateCheck_ = nullptr;
         QCheckBox *logCheck_ = nullptr;
         QCheckBox *gpuCheck_ = nullptr;
+        QPushButton *openLogsButton_ = nullptr;
+        QPushButton *clearLogsButton_ = nullptr;
         QPushButton *closeButton_ = nullptr;
     };
 }

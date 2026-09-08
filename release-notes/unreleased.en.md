@@ -1,3 +1,11 @@
+## Review, results, and responsiveness
+
+- Mark each tracking gap as reviewed and see pending frame counts separately. Editing masks resets these checks. Acknowledgement records user review, not verified coverage.
+- Filter file results by issue type, open an input, or review again starting at a selected gap. Reprocessing uses current settings and a new output folder; previous edits are not retained.
+- Image and video thumbnails load in the background, with at most two active jobs.
+- Basic local logs omit file names. Detailed logging requires a separate opt-in and changes take effect immediately. Settings now offer log-folder access and log deletion.
+- Model downloads have a 30-second inactivity limit, a 15-minute overall limit, and up to three attempts. Cancellation, timeout, network, and integrity failures are distinguished.
+
 ## Result reliability
 
 - Video review now lists tracking gaps chronologically with millisecond times

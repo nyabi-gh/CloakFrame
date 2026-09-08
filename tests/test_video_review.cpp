@@ -121,9 +121,18 @@ int main(int argc, char **argv)
         gapExplained |= label->text().contains("adding a mask does not verify");
     }
     assert(inclusionExplained && gapExplained);
+    gaps->item(1)->setCheckState(Qt::Checked);
+    assert(dialog.reviewResult().acknowledgedGapIndices == QVector<int>{1});
+    gaps->setCurrentRow(4);
+    assert(dialog.reviewResult().acknowledgedGapIndices == QVector<int>{1});
     list->item(0)->setCheckState(Qt::Unchecked);
+    assert(dialog.reviewResult().acknowledgedGapIndices.isEmpty());
     assert(dialog.reviewResult().excludedTrackIds == QVector<int>{7});
     list->item(0)->setCheckState(Qt::Checked);
     assert(dialog.reviewResult().excludedTrackIds.isEmpty());
+    auto jumpRequest = request;
+    jumpRequest.initialFrame = 45;
+    cloakframe::VideoReviewDialog jumped(jumpRequest);
+    assert(jumped.findChild<QSlider *>("videoTimeline")->value() == 45);
     return 0;
 }

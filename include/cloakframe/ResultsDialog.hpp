@@ -6,6 +6,7 @@
 #include <QVector>
 
 class QComboBox;
+class QListWidget;
 class QPlainTextEdit;
 class QPushButton;
 class QTableWidget;
@@ -19,6 +20,9 @@ namespace cloakframe
     public:
         explicit ResultsDialog(QVector<FileResult> results, QWidget *parent = nullptr);
 
+    signals:
+        void retryRequested(const QString &sourcePath, int firstFrame);
+
     private:
         void filterRows();
         void updateSelection();
@@ -28,6 +32,10 @@ namespace cloakframe
 
         QVector<FileResult> results_;
         QComboBox *filter_ = nullptr;
+        QComboBox *issueFilter_ = nullptr;
+        QListWidget *issues_ = nullptr;
+        QPushButton *retry_ = nullptr;
+        QPushButton *openFile_ = nullptr;
         QTableWidget *table_ = nullptr;
         QPlainTextEdit *details_ = nullptr;
         QPushButton *openSource_ = nullptr;

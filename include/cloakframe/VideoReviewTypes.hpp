@@ -48,6 +48,7 @@ namespace cloakframe
         int fpsNum = 0;
         int fpsDen = 1;
         int frameCount = 0;
+        int initialFrame = -1;
         QVector<VideoReviewTrack> tracks;
         // Frame ranges post-processing refused to interpolate. They are exactly the places a
         // manual track is worth drawing, so the timeline marks them.
@@ -69,6 +70,8 @@ namespace cloakframe
         VideoReviewDecision decision = VideoReviewDecision::Encode;
         QVector<int> excludedTrackIds;
         QVector<VideoReviewManualTrack> addedTracks;
+        // Indices into the original request, never proof of spatial coverage.
+        QVector<int> acknowledgedGapIndices;
     };
 
     [[nodiscard]] std::optional<QRectF> manualTrackRectAtFrame(

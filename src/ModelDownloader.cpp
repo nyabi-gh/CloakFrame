@@ -1,6 +1,7 @@
 #include "cloakframe/ModelDownloader.hpp"
 
 #include "cloakframe/ModelCatalog.hpp"
+#include "cloakframe/ModelDownload.hpp"
 #include "cloakframe/ModelStore.hpp"
 
 #include <QCoreApplication>
@@ -23,11 +24,6 @@ namespace cloakframe
     bool downloadModelWithProgress(
         QWidget *parent, const BuiltinModel &model, const QString &destPath)
     {
-        QNetworkAccessManager manager;
-        QNetworkRequest request{QUrl(model.url)};
-        request.setAttribute(
-            QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::NoLessSafeRedirectPolicy);
-
         QProgressDialog progress(
             QCoreApplication::translate("cloakframe::MainWindow", "Downloading model…"),
             QCoreApplication::translate("cloakframe::MainWindow", "Cancel"),
@@ -39,69 +35,64 @@ namespace cloakframe
         progress.setAutoClose(false);
         progress.setAutoReset(false);
 
-        QNetworkReply *reply = manager.get(request);
-
-        const qint64 maxBytes = std::max<qint64>(model.approxBytes * 4, 64LL * 1024 * 1024);
-        bool tooLarge = false;
-
-        QObject::connect(reply,
-            &QNetworkReply::downloadProgress,
-            &progress,
-            [&progress, &tooLarge, reply, maxBytes](qint64 received, qint64 total)
+        const auto result = downloadModelData(
+            QUrl(model.url),
+            std::max<qint64>(model.approxBytes * 4, 64LL * 1024 * 1024),
+            model.sha256,
+            [&progress]
             {
-                if (received > maxBytes || (total > 0 && total > maxBytes))
-                {
-                    tooLarge = true;
-                    reply->abort();
-                    return;
-                }
+                return progress.wasCanceled();
+            },
+            [&progress](qint64 received, qint64 total)
+            {
                 if (total > 0)
                 {
                     progress.setMaximum(100);
-                    progress.setValue(static_cast<int>(received * 100 / total));
+                    progress.setValue(
+                        static_cast<int>(std::clamp<qint64>(received * 100 / total, 0, 100)));
+                }
+                else
+                {
+                    progress.setMaximum(0);
                 }
             });
-
-        QEventLoop loop;
-        QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
-        QObject::connect(&progress, &QProgressDialog::canceled, reply, &QNetworkReply::abort);
-        loop.exec();
         progress.close();
-
-        if (tooLarge)
+        if (result.status == ModelDownloadStatus::Cancelled)
+            return false;
+        QString error;
+        switch (result.status)
+        {
+        case ModelDownloadStatus::Success:
+            break;
+        case ModelDownloadStatus::Cancelled:
+            return false;
+        case ModelDownloadStatus::TimedOut:
+            error = QCoreApplication::translate("cloakframe::MainWindow",
+                "The model download timed out. Check your connection and try again.");
+            break;
+        case ModelDownloadStatus::NetworkError:
+            error = QCoreApplication::translate("cloakframe::MainWindow",
+                "The model download failed after %1 attempt(s). Check your connection and try "
+                "again.")
+                        .arg(result.attempts);
+            break;
+        case ModelDownloadStatus::TooLarge:
+            error = QCoreApplication::translate("cloakframe::MainWindow",
+                "The download was much larger than expected and was stopped.");
+            break;
+        case ModelDownloadStatus::IntegrityError:
+            error = QCoreApplication::translate("cloakframe::MainWindow",
+                "The downloaded model failed its integrity check and was discarded.");
+            break;
+        }
+        if (!error.isEmpty())
         {
             QMessageBox::warning(parent,
                 QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
-                QCoreApplication::translate("cloakframe::MainWindow",
-                    "The download was much larger than expected and was stopped."));
+                error);
             return false;
         }
-
-        if (reply->error() != QNetworkReply::NoError)
-        {
-            if (reply->error() != QNetworkReply::OperationCanceledError)
-            {
-                QMessageBox::warning(parent,
-                    QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
-                    QCoreApplication::translate(
-                        "cloakframe::MainWindow", "Could not download the model.\n\n%1")
-                        .arg(reply->errorString()));
-            }
-            return false;
-        }
-
-        const QByteArray data = reply->readAll();
-        const auto actual =
-            QString::fromLatin1(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
-        if (actual.compare(model.sha256, Qt::CaseInsensitive) != 0)
-        {
-            QMessageBox::warning(parent,
-                QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
-                QCoreApplication::translate("cloakframe::MainWindow",
-                    "The downloaded model failed its integrity check and was discarded."));
-            return false;
-        }
-
+        const QByteArray &data = result.data;
         switch (saveModelFile(destPath, data, model.sha256))
         {
         case ModelSaveResult::Saved:

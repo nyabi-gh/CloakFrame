@@ -3,6 +3,7 @@
 #include <QMetaType>
 #include <QString>
 #include <QStringList>
+#include <QVector>
 
 namespace cloakframe
 {
@@ -16,6 +17,28 @@ namespace cloakframe
         UnreadableInput,
     };
 
+    enum class FileIssueKind
+    {
+        OmittedRegions,
+        TrackingGap,
+        DroppedTracks,
+        ExcludedTracks,
+        ScanFailure,
+        MetadataWarning,
+        OutputConflict,
+        ProcessingFailure,
+        UnredactedOutput
+    };
+    struct FileIssue
+    {
+        FileIssueKind kind = FileIssueKind::ProcessingFailure;
+        qint64 count = 0;
+        int firstFrame = -1;
+        int lastFrame = -1;
+        int trackId = 0;
+        bool acknowledged = false;
+    };
+
     struct FileResult
     {
         QString sourcePath;
@@ -23,6 +46,7 @@ namespace cloakframe
         QString outputPath;
         FileResultStatus status = FileResultStatus::Failed;
         QStringList messages;
+        QVector<FileIssue> issues{};
     };
 }
 
