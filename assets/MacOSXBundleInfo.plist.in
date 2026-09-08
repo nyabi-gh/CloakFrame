@@ -33,7 +33,7 @@
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUFeedURL</key>
-	<string>https://github.com/nyattic/CloakFrame/releases/latest/download/appcast.xml</string>
+	<string>https://github.com/nyabi-gh/CloakFrame/releases/latest/download/appcast.xml</string>
 	${CLOAKFRAME_SPARKLE_PUBLIC_KEY_ENTRY}
 </dict>
 </plist>

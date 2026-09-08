@@ -4,8 +4,8 @@
 
 # CloakFrame
 
-[![Latest Release](https://img.shields.io/github/v/release/nyattic/CloakFrame?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e&color=6366f1)](https://github.com/nyattic/CloakFrame/releases/latest)
-[![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnyattic%2FCloakFrame%2Fdownload-badge%2Fdownloads.json&style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e)](https://github.com/nyattic/CloakFrame/releases)
+[![Latest Release](https://img.shields.io/github/v/release/nyabi-gh/CloakFrame?style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e&color=6366f1)](https://github.com/nyabi-gh/CloakFrame/releases/latest)
+[![Downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnyabi-gh%2FCloakFrame%2Fdownload-badge%2Fdownloads.json&style=for-the-badge&logo=github&logoColor=white&labelColor=1e1b2e)](https://github.com/nyabi-gh/CloakFrame/releases)
 [![License](https://img.shields.io/badge/license-GPL--3.0--or--later-6366f1?style=for-the-badge&logo=gnu&logoColor=white&labelColor=1e1b2e)](LICENSE)
 ![Platform](https://img.shields.io/badge/platform-macOS%20%7C%20Windows%20%7C%20Linux-6366f1?style=for-the-badge&logo=qt&logoColor=white&labelColor=1e1b2e)
 
@@ -25,9 +25,9 @@
 
 | 平台 | 运行环境 | 下载 |
 | --- | --- | --- |
-| Windows | Windows 10 或更高版本，64 位 | [下载 Windows 版](https://github.com/nyattic/CloakFrame/releases/latest) |
-| macOS | macOS 15 或更高版本，Apple Silicon | [下载 macOS 版](https://github.com/nyattic/CloakFrame/releases/latest) |
-| Linux | x86_64 | [下载 Linux 版](https://github.com/nyattic/CloakFrame/releases/latest) |
+| Windows | Windows 10 或更高版本，64 位 | [下载 Windows 版](https://github.com/nyabi-gh/CloakFrame/releases/latest) |
+| macOS | macOS 15 或更高版本，Apple Silicon | [下载 macOS 版](https://github.com/nyabi-gh/CloakFrame/releases/latest) |
+| Linux | x86_64 | [下载 Linux 版](https://github.com/nyabi-gh/CloakFrame/releases/latest) |
 
 打开链接后，在 **Assets** 中选择适合你平台的文件。从 v1.11.0 起，Windows 使用
 `CloakFrame-Windows-x64-Setup.exe`，macOS 使用 `CloakFrame-macOS-arm64.dmg`，

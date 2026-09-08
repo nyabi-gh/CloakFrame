@@ -15,8 +15,8 @@ namespace cloakframe
     namespace
     {
         constexpr auto kReleasesApiUrl =
-            "https://api.github.com/repos/nyattic/CloakFrame/releases/latest";
-        constexpr auto kReleasesPageUrl = "https://github.com/nyattic/CloakFrame/releases/latest";
+            "https://api.github.com/repos/nyabi-gh/CloakFrame/releases/latest";
+        constexpr auto kReleasesPageUrl = "https://github.com/nyabi-gh/CloakFrame/releases/latest";
 
         QString stripVersionPrefix(QString value)
         {
