@@ -515,6 +515,7 @@ namespace cloakframe
 
         auto *side = new QVBoxLayout();
         summaryLabel_ = new QLabel(this);
+        summaryLabel_->setWordWrap(true);
         side->addWidget(summaryLabel_);
         trackList_ = new QListWidget(this);
         trackList_->setObjectName("videoTracks");
@@ -596,15 +597,20 @@ namespace cloakframe
         gapList_->setObjectName("trackingGaps");
         gapList_->setAccessibleName(gapLabel->text());
         gapList_->setMaximumHeight(100);
-        auto gaps = request_.uncoveredSpans;
-        std::stable_sort(gaps.begin(),
-            gaps.end(),
-            [](const UncoveredSpan &a, const UncoveredSpan &b)
+        QVector<qsizetype> gapIndices;
+        gapIndices.reserve(request_.uncoveredSpans.size());
+        for (qsizetype i = 0; i < request_.uncoveredSpans.size(); ++i)
+            gapIndices.push_back(i);
+        std::stable_sort(gapIndices.begin(),
+            gapIndices.end(),
+            [this](qsizetype a, qsizetype b)
             {
-                return a.firstFrame < b.firstFrame;
+                return request_.uncoveredSpans[a].firstFrame
+                       < request_.uncoveredSpans[b].firstFrame;
             });
-        for (const auto &gap : gaps)
+        for (const qsizetype gapIndex : gapIndices)
         {
+            const auto &gap = request_.uncoveredSpans[gapIndex];
             if (gap.firstFrame < 0 || gap.lastFrame < gap.firstFrame
                 || gap.lastFrame >= request_.frameCount)
             {
@@ -619,7 +625,23 @@ namespace cloakframe
             auto *item = new QListWidgetItem(text, gapList_);
             item->setData(Qt::UserRole, gap.firstFrame);
             item->setToolTip(text);
+            item->setData(Qt::UserRole + 1, gapIndex);
+            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setCheckState(Qt::Unchecked);
         }
+        auto *reviewHint = new QLabel(tr("Check a gap after reviewing the entire interval. "
+                                         "This records your review, not verified coverage. Editing "
+                                         "masks resets these checks."),
+            this);
+        reviewHint->setWordWrap(true);
+        side->addWidget(reviewHint);
+        connect(gapList_,
+            &QListWidget::itemChanged,
+            this,
+            [this]
+            {
+                updateSummary();
+            });
         side->addWidget(gapList_);
         auto *noGaps = new QLabel(tr("No tracking gaps were reported."), this);
         noGaps->setWordWrap(true);
@@ -850,6 +872,9 @@ namespace cloakframe
         {
             initialFrame = request_.tracks.front().boxes.front().frame;
         }
+        if (request_.initialFrame >= 0)
+            initialFrame =
+                std::clamp(request_.initialFrame, 0, std::max(0, request_.frameCount - 1));
         timeline_->setValue(initialFrame);
         setFrame(initialFrame);
         loadFramePreview();
@@ -867,6 +892,10 @@ namespace cloakframe
         result.excludedTrackIds = excludedTrackIds_.values();
         std::sort(result.excludedTrackIds.begin(), result.excludedTrackIds.end());
         result.addedTracks = manualTracks_;
+        for (int row = 0; row < gapList_->count(); ++row)
+            if (gapList_->item(row)->checkState() == Qt::Checked)
+                result.acknowledgedGapIndices.push_back(
+                    gapList_->item(row)->data(Qt::UserRole + 1).toInt());
         return result;
     }
 
@@ -1038,6 +1067,7 @@ namespace cloakframe
 
     void VideoReviewDialog::setTrackIncluded(int id, bool included)
     {
+        invalidateGapAcknowledgements();
         if (included)
         {
             excludedTrackIds_.remove(id);
@@ -1132,6 +1162,7 @@ namespace cloakframe
             return;
         }
 
+        invalidateGapAcknowledgements();
         VideoReviewManualTrack *track = manualTrack(drawingTrackId_);
         if (track == nullptr)
         {
@@ -1186,6 +1217,7 @@ namespace cloakframe
             return;
         }
 
+        invalidateGapAcknowledgements();
         auto boundaryRect = manualTrackRectAtFrame(*track, currentFrame_);
         if (!boundaryRect)
         {
@@ -1230,6 +1262,7 @@ namespace cloakframe
         {
             return;
         }
+        invalidateGapAcknowledgements();
         manualTracks_.removeIf(
             [id](const VideoReviewManualTrack &track)
             {
@@ -1300,6 +1333,16 @@ namespace cloakframe
         }
     }
 
+    void VideoReviewDialog::invalidateGapAcknowledgements()
+    {
+        if (!gapList_)
+            return;
+        const QSignalBlocker blocker(gapList_);
+        for (int row = 0; row < gapList_->count(); ++row)
+            gapList_->item(row)->setCheckState(Qt::Unchecked);
+        updateSummary();
+    }
+
     void VideoReviewDialog::updateSummary()
     {
         const qsizetype includedAutomatic = request_.tracks.size() - excludedTrackIds_.size();
@@ -1314,6 +1357,12 @@ namespace cloakframe
                         nullptr,
                         static_cast<int>(request_.uncoveredSpans.size()));
         }
+        int checked = 0;
+        for (int row = 0; row < gapList_->count(); ++row)
+            checked += gapList_->item(row)->checkState() == Qt::Checked;
+        if (gapList_->count() > 0)
+            text += QStringLiteral(" · ")
+                    + tr("%1 reviewed · %2 pending").arg(checked).arg(gapList_->count() - checked);
         summaryLabel_->setText(text);
     }
 }

@@ -1,12 +1,17 @@
 #include "cloakframe/SettingsDialog.hpp"
 
+#include "cloakframe/Logging.hpp"
+
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDesktopServices>
 #include <QDialogButtonBox>
 #include <QEvent>
 #include <QFormLayout>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPushButton>
+#include <QUrl>
 #include <QVBoxLayout>
 
 namespace cloakframe
@@ -76,8 +81,32 @@ namespace cloakframe
         root->addWidget(updateCheck_);
 
         logCheck_ = new QCheckBox(this);
+        logCheck_->setObjectName("detailedLogging");
         logCheck_->setChecked(fileLogging);
         root->addWidget(logCheck_);
+
+        openLogsButton_ = new QPushButton(this);
+        clearLogsButton_ = new QPushButton(this);
+        root->addWidget(openLogsButton_);
+        root->addWidget(clearLogsButton_);
+        connect(openLogsButton_,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                if (!QDesktopServices::openUrl(QUrl::fromLocalFile(localLogDirectory())))
+                    QMessageBox::warning(
+                        this, tr("Local logs"), tr("Could not open the log folder."));
+            });
+        connect(clearLogsButton_,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                if (!clearLocalLogs())
+                    QMessageBox::warning(
+                        this, tr("Local logs"), tr("Could not delete all local logs."));
+            });
 
         gpuCheck_ = new QCheckBox(this);
         gpuCheck_->setChecked(gpuAcceleration);
@@ -152,9 +181,13 @@ namespace cloakframe
         themeCombo_->setItemText(1, tr("Light"));
         themeCombo_->setItemText(2, tr("Dark"));
         updateCheck_->setText(tr("Check for updates on startup"));
-        logCheck_->setText(tr("Write a local log file"));
-        logCheck_->setToolTip(tr("The log may include the names of files you process. "
-                                 "Stored on this device only. Takes effect on the next launch."));
+        logCheck_->setText(tr("Include file names in detailed local logs"));
+        logCheck_->setToolTip(
+            tr("Off by default. Basic diagnostics contain no file names. "
+               "Detailed logs may contain file names and paths. Stored on this device only. "
+               "Changes apply immediately; existing logs remain until deleted."));
+        openLogsButton_->setText(tr("Open log folder"));
+        clearLogsButton_->setText(tr("Delete local logs"));
         gpuCheck_->setText(tr("Use GPU acceleration"));
         gpuCheck_->setToolTip(tr("Runs detection models and video encoding on the GPU "
                                  "when available. Applies from the next run."));

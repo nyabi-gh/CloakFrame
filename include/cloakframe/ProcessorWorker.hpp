@@ -36,6 +36,7 @@ namespace cloakframe
 
     struct ProcessingRequest
     {
+        int initialVideoReviewFrame = -1;
         QString modelPath;
         QByteArray modelSha256;
         FaceModelKind faceModelKind = FaceModelKind::Scrfd;
@@ -87,6 +88,8 @@ namespace cloakframe
         int unredacted = 0;
         qint64 omittedRegions = 0;
         qint64 trackingGapFrames = 0;
+        qint64 pendingTrackingGapFrames = 0;
+        qint64 excludedTracks = 0;
         qint64 droppedTracks = 0;
         int coverageWarningFiles = 0;
         int warningFiles = 0;
@@ -141,6 +144,7 @@ namespace cloakframe
             int index,
             int total);
 
+        int initialVideoReviewFrame_ = -1;
         QString modelPath_;
         QByteArray modelSha256_;
         FaceModelKind faceModelKind_;

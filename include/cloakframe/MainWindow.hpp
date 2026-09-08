@@ -249,10 +249,12 @@ namespace cloakframe
         QString language_;
         ThemeMode themeMode_ = ThemeMode::System;
         bool checkForUpdatesOnStartup_ = true;
-        bool fileLogging_ = true;
+        bool fileLogging_ = false;
         bool gpuAcceleration_ = true;
         int videoQuality_ = 0;
         int videoCodec_ = 0;
+        QString pendingVideoReviewSource_;
+        int pendingVideoReviewFrame_ = -1;
         bool processing_ = false;
         bool shuttingDown_ = false;
         RunSummary lastRunSummary_;

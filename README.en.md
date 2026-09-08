@@ -78,12 +78,22 @@ keys or the buttons beside the timeline to move one frame at a time. Times are
 relative to the video start and displayed frame numbers begin at 1. Visiting a
 gap does not clear its warning.
 
-A job ends as **Done** only when every item was redacted successfully. A failed
+A job ends as **Done** when processing finishes without reported pending warnings. This does not guarantee that every piece of personal information was detected and masked. A failed
 or skipped item, or a file saved without a detection, changes the result to
 **Review required** and shows a summary. After the run, choose **File results…**
 in Activity to filter items needing attention or failures, read the details,
 and open input or output folders. Results reset when the next run starts;
 files that never started processing are not listed.
+
+Check a tracking gap after reviewing its entire interval to record your acknowledgement.
+Editing masks resets the checks; acknowledgement is separate from verified coverage.
+File results offer issue-type filters and **Review / retry selected input**. Select a
+gap to start review at that frame. Reprocessing uses current settings and a new output
+folder; previous edits are not retained.
+
+Thumbnails load in the background with at most two active jobs. Basic disk logs contain
+only diagnostics without file names. Detailed logs require a separate opt-in in Settings.
+Logging changes apply immediately; Settings also let you open and delete existing logs.
 
 ## Supported files and processing
 

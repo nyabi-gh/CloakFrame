@@ -30,3 +30,15 @@ add_cloakframe_test(cloakframe_results_tests
     ${PROJECT_SOURCE_DIR}/src/ResultsDialog.cpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ResultsDialog.hpp)
 target_link_libraries(cloakframe_results_tests PRIVATE Qt6::Widgets)
+add_cloakframe_test(cloakframe_model_download_tests test_model_download.cpp)
+add_cloakframe_test(cloakframe_logging_tests test_logging.cpp)
+add_cloakframe_test(cloakframe_thumbnail_tests test_thumbnails.cpp
+    ${PROJECT_SOURCE_DIR}/src/ThumbnailLoader.cpp)
+target_link_libraries(cloakframe_thumbnail_tests PRIVATE Qt6::Widgets)
+add_cloakframe_test(cloakframe_worker_video_review_tests test_worker_video_review.cpp)
+set_tests_properties(cloakframe_worker_video_review_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 90)
+
+add_cloakframe_test(cloakframe_settings_tests test_settings.cpp
+    ${PROJECT_SOURCE_DIR}/src/SettingsDialog.cpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/SettingsDialog.hpp)
+target_link_libraries(cloakframe_settings_tests PRIVATE Qt6::Widgets)

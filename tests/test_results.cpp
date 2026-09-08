@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QComboBox>
+#include <QListWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
@@ -95,10 +96,41 @@ int main(int argc, char **argv)
             assert(translator.load(translation));
             application.installTranslator(&translator);
         }
-        cloakframe::ResultsDialog preview(results);
+        auto previewResults = results;
+        previewResults.push_front({"/photos/0-video.mp4",
+            "/results/0-video.mp4",
+            FileResultStatus::NeedsReview,
+            {QStringLiteral("Video")},
+            {{cloakframe::FileIssueKind::TrackingGap, 6, 10, 15, 7, false},
+                {cloakframe::FileIssueKind::TrackingGap, 6, 40, 45, 8, true}}});
+        cloakframe::ResultsDialog preview(previewResults);
         preview.show();
         application.processEvents();
         assert(preview.grab().save(screenshot));
     }
+    cloakframe::FileResult video{"/video.mp4",
+        "/output.mp4",
+        FileResultStatus::NeedsReview,
+        {"Tracking gap"},
+        {{cloakframe::FileIssueKind::TrackingGap, 6, 10, 15, 7, false},
+            {cloakframe::FileIssueKind::MetadataWarning, 1}}};
+    cloakframe::ResultsDialog typed({results.front(), video});
+    auto *issueFilter = typed.findChild<QComboBox *>("issueFilter");
+    issueFilter->setCurrentIndex(
+        issueFilter->findData(static_cast<int>(cloakframe::FileIssueKind::TrackingGap)));
+    auto *issues = typed.findChild<QListWidget *>("resultIssues");
+    assert(issues->count() == 2 && issues->item(0)->text().contains("Frames 11–16"));
+    QString retryPath;
+    int retryFrame = -1;
+    QObject::connect(&typed,
+        &cloakframe::ResultsDialog::retryRequested,
+        &typed,
+        [&](const QString &path, int frame)
+        {
+            retryPath = path;
+            retryFrame = frame;
+        });
+    typed.findChild<QPushButton *>("retryInput")->click();
+    assert(retryPath == "/video.mp4" && retryFrame == 10);
     return 0;
 }

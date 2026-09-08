@@ -4,49 +4,57 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
+        <location filename="../src/MainWindow.cpp" line="1047"/>
         <source>File results…</source>
         <translation>文件结果…</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="32"/>
+        <location filename="../src/ModelDownloader.cpp" line="28"/>
         <source>Downloading model…</source>
         <translation>正在下载模型…</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="33"/>
+        <location filename="../src/ModelDownloader.cpp" line="29"/>
         <source>Cancel</source>
         <translation>取消</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="74"/>
-        <location filename="../src/ModelDownloader.cpp" line="85"/>
-        <location filename="../src/ModelDownloader.cpp" line="99"/>
-        <location filename="../src/ModelDownloader.cpp" line="111"/>
-        <location filename="../src/ModelDownloader.cpp" line="123"/>
+        <location filename="../src/ModelDownloader.cpp" line="91"/>
+        <location filename="../src/ModelDownloader.cpp" line="102"/>
+        <location filename="../src/ModelDownloader.cpp" line="114"/>
         <source>Download Failed</source>
         <translation>下载失败</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="86"/>
         <source>Could not download the model.
 
 %1</source>
-        <translation>无法下载模型。
+        <translation type="vanished">无法下载模型。
 
 %1</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="100"/>
+        <location filename="../src/ModelDownloader.cpp" line="84"/>
         <source>The downloaded model failed its integrity check and was discarded.</source>
         <translation>下载的模型未通过完整性检查，已被丢弃。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="75"/>
+        <location filename="../src/ModelDownloader.cpp" line="80"/>
         <source>The download was much larger than expected and was stopped.</source>
         <translation>下载量远超预期，已停止下载。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="112"/>
+        <location filename="../src/ModelDownloader.cpp" line="70"/>
+        <source>The model download timed out. Check your connection and try again.</source>
+        <translation>模型下载超时。请检查网络连接后重试。</translation>
+    </message>
+    <message>
+        <location filename="../src/ModelDownloader.cpp" line="74"/>
+        <source>The model download failed after %1 attempt(s). Check your connection and try again.</source>
+        <translation>尝试 %1 次后模型下载失败。请检查网络连接后重试。</translation>
+    </message>
+    <message>
+        <location filename="../src/ModelDownloader.cpp" line="103"/>
         <source>Another account can change the model folder, so the download was not saved.
 
 %1</source>
@@ -55,12 +63,12 @@
 %1</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="124"/>
+        <location filename="../src/ModelDownloader.cpp" line="115"/>
         <source>Could not save the model file.</source>
         <translation>无法保存模型文件。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="136"/>
+        <location filename="../src/ModelDownloader.cpp" line="127"/>
         <source>The %1 model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%2 MB) from the yolov5-face-onnx-inference project on GitHub. The model is based on the GPL-3.0-licensed YOLO5Face project and was trained on the WIDER FACE dataset, so treat it as non-commercial only. Your images are never uploaded.
@@ -73,7 +81,7 @@ CloakFrame 可以从 GitHub 上的 yolov5-face-onnx-inference 项目下载一次
 立即下载？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="144"/>
+        <location filename="../src/ModelDownloader.cpp" line="135"/>
         <source>The %1 model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%2 MB) from the OpenCV Zoo project on GitHub (MIT-licensed). Your images are never uploaded.
@@ -86,7 +94,7 @@ CloakFrame 可以从 GitHub 上的 OpenCV Zoo 项目下载一次（%2 MB，MIT �
 立即下载？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="152"/>
+        <location filename="../src/ModelDownloader.cpp" line="143"/>
         <source>The %1 model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%2 MB) from its source project. Your images are never uploaded.
@@ -99,13 +107,13 @@ CloakFrame 可以从模型来源项目下载一次（%2 MB）。您的图像绝�
 立即下载？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="165"/>
-        <location filename="../src/ModelDownloader.cpp" line="182"/>
+        <location filename="../src/ModelDownloader.cpp" line="156"/>
+        <location filename="../src/ModelDownloader.cpp" line="173"/>
         <source>Download Model</source>
         <translation>下载模型</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="183"/>
+        <location filename="../src/ModelDownloader.cpp" line="174"/>
         <source>The license plate detection model isn&apos;t on this computer yet.
 
 CloakFrame can download it once (%1 MB) from the open-image-models project (MIT-licensed). Your images are never uploaded.
@@ -118,38 +126,38 @@ CloakFrame 可以从 open-image-models 项目下载一次（%1 MB，MIT 许可�
 立即下载？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="203"/>
-        <location filename="../src/ModelDownloader.cpp" line="211"/>
+        <location filename="../src/ModelDownloader.cpp" line="194"/>
+        <location filename="../src/ModelDownloader.cpp" line="202"/>
         <source>Invalid Model</source>
         <translation>模型无效</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="204"/>
+        <location filename="../src/ModelDownloader.cpp" line="195"/>
         <source>Choose an existing ONNX model file.</source>
         <translation>请选择现有的 ONNX 模型文件。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="212"/>
+        <location filename="../src/ModelDownloader.cpp" line="203"/>
         <source>The selected model must use the .onnx extension.</source>
         <translation>所选模型必须使用 .onnx 扩展名。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="219"/>
+        <location filename="../src/ModelDownloader.cpp" line="210"/>
         <source>Model Too Large</source>
         <translation>模型过大</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="220"/>
+        <location filename="../src/ModelDownloader.cpp" line="211"/>
         <source>The selected ONNX file is larger than 512 MB. Choose a smaller SCRFD model.</source>
         <translation>所选 ONNX 文件超过 512 MB。请选择较小的 SCRFD 模型。</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="232"/>
+        <location filename="../src/ModelDownloader.cpp" line="223"/>
         <source>Load Custom Model</source>
         <translation>加载自定义模型</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="233"/>
+        <location filename="../src/ModelDownloader.cpp" line="224"/>
         <source>Only load ONNX models from sources you trust.
 
 Model: %1
@@ -164,12 +172,12 @@ Continue?</source>
 继续？</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="247"/>
+        <location filename="../src/ModelDownloader.cpp" line="238"/>
         <source>Model File Changed</source>
         <translation>模型文件已改变</translation>
     </message>
     <message>
-        <location filename="../src/ModelDownloader.cpp" line="248"/>
+        <location filename="../src/ModelDownloader.cpp" line="239"/>
         <source>This file is no longer the model you approved.
 
 Model: %1
@@ -188,69 +196,69 @@ Load it anyway?</source>
 仍要加载吗？</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="473"/>
+        <location filename="../src/MainWindow.cpp" line="437"/>
         <source>Local, private redaction of faces and license plates in photos and videos</source>
         <translation>在本地私密遮盖照片和视频中的人脸与车牌</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="373"/>
+        <location filename="../src/MainWindow.cpp" line="336"/>
         <source>Remove Selected</source>
         <translation>移除所选项</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="376"/>
+        <location filename="../src/MainWindow.cpp" line="339"/>
         <source>Clear All</source>
         <translation>全部清除</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/MainWindow.cpp" line="1304"/>
+        <location filename="../src/MainWindow.cpp" line="1317"/>
         <source>Ignored %n unsupported file(s).</source>
         <translation>
             <numerusform>已忽略 %n 个不支持的文件。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1007"/>
+        <location filename="../src/MainWindow.cpp" line="972"/>
         <source>Preview</source>
         <translation>预览</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="999"/>
+        <location filename="../src/MainWindow.cpp" line="964"/>
         <source>Anonymization style preview</source>
         <translation>匿名化样式预览</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1001"/>
+        <location filename="../src/MainWindow.cpp" line="966"/>
         <source>Sample of the current anonymization style and block size.</source>
         <translation>当前匿名化样式和马赛克块大小的示例。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="606"/>
+        <location filename="../src/MainWindow.cpp" line="571"/>
         <source>Input images and folders</source>
         <translation>输入图像和文件夹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="608"/>
+        <location filename="../src/MainWindow.cpp" line="573"/>
         <source>Right-click for options · Delete removes selected items</source>
         <translation>右键单击查看更多选项 · Delete 键移除所选项</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1114"/>
+        <location filename="../src/MainWindow.cpp" line="1127"/>
         <source>Processing progress</source>
         <translation>处理进度</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1121"/>
+        <location filename="../src/MainWindow.cpp" line="1134"/>
         <source>Open Output Folder</source>
         <translation>打开输出文件夹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="491"/>
+        <location filename="../src/MainWindow.cpp" line="455"/>
         <source>Model</source>
         <translation>模型</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="500"/>
+        <location filename="../src/MainWindow.cpp" line="464"/>
         <source>Choose speed vs. accuracy, or load a custom SCRFD ONNX file.</source>
         <translation>选择速度或准确度，也可加载自定义 SCRFD ONNX 文件。</translation>
     </message>
@@ -259,58 +267,58 @@ Load it anyway?</source>
         <translation type="vanished">内置 SCRFD 模型路径</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="554"/>
-        <location filename="../src/MainWindow.cpp" line="843"/>
+        <location filename="../src/MainWindow.cpp" line="518"/>
+        <location filename="../src/MainWindow.cpp" line="808"/>
         <source>Browse…</source>
         <translation>浏览…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="546"/>
+        <location filename="../src/MainWindow.cpp" line="510"/>
         <source>Download</source>
         <translation>下载</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="584"/>
+        <location filename="../src/MainWindow.cpp" line="548"/>
         <source>Inputs</source>
         <translation>输入</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="593"/>
+        <location filename="../src/MainWindow.cpp" line="557"/>
         <source>Drag images, videos, or folders here, or use the buttons below.</source>
         <translation>将图像、视频或文件夹拖到此处，或使用下方按钮。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="605"/>
+        <location filename="../src/MainWindow.cpp" line="570"/>
         <source>Drop images, videos, or folders here</source>
         <translation>将图像、视频或文件夹拖到此处</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="618"/>
+        <location filename="../src/MainWindow.cpp" line="583"/>
         <source>Add Files</source>
         <translation>添加文件</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="624"/>
+        <location filename="../src/MainWindow.cpp" line="589"/>
         <source>Add Folder</source>
         <translation>添加文件夹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="630"/>
+        <location filename="../src/MainWindow.cpp" line="595"/>
         <source>Clear</source>
         <translation>清除</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="639"/>
+        <location filename="../src/MainWindow.cpp" line="604"/>
         <source>Include subfolders</source>
         <translation>包括子文件夹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="646"/>
+        <location filename="../src/MainWindow.cpp" line="611"/>
         <source>Review before saving</source>
         <translation>保存前检查</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="653"/>
+        <location filename="../src/MainWindow.cpp" line="618"/>
         <source>Review detections before output:
   • Images: exclude boxes or add missed regions
   • Videos: scrub the timeline, exclude false tracks, or add missed tracks with keyframes</source>
@@ -319,127 +327,127 @@ Load it anyway?</source>
   • 视频：浏览时间线，排除误检轨迹，或通过关键帧添加漏检轨迹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="685"/>
+        <location filename="../src/MainWindow.cpp" line="650"/>
         <source>Output</source>
         <translation>输出</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="694"/>
+        <location filename="../src/MainWindow.cpp" line="659"/>
         <source>Anonymized copies are written here, preserving folder structure.</source>
         <translation>匿名化副本将写入此处，并保留文件夹结构。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="704"/>
+        <location filename="../src/MainWindow.cpp" line="669"/>
         <source>Choose…</source>
         <translation>选择…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="719"/>
+        <location filename="../src/MainWindow.cpp" line="684"/>
         <source>Preserve selected EXIF metadata</source>
         <translation>保留选定的 EXIF 元数据</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="728"/>
+        <location filename="../src/MainWindow.cpp" line="693"/>
         <source>Off (default): output carries no metadata — GPS, camera, and timestamps are removed.
 On: copies selected EXIF fields such as camera, timestamps, and location. Embedded previews, IPTC, XMP, comments, and color profiles are removed. Format and bit depth are preserved at maximum quality.</source>
         <translation>关（默认）：输出不含任何元数据，GPS、相机和时间戳将被移除。
 开：仅复制相机、时间戳和位置等选定的 EXIF 字段。嵌入式预览、IPTC、XMP、注释和色彩配置文件将被移除，并以最高质量保留格式和位深度。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="739"/>
+        <location filename="../src/MainWindow.cpp" line="704"/>
         <source>Metadata preservation is unavailable in this build. Output metadata will be removed.</source>
         <translation>此构建不支持保留元数据。输出元数据将被移除。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="764"/>
+        <location filename="../src/MainWindow.cpp" line="729"/>
         <source>Advanced Options</source>
         <translation>高级选项</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="776"/>
+        <location filename="../src/MainWindow.cpp" line="741"/>
         <source>Reset to defaults</source>
         <translation>恢复默认设置</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="439"/>
-        <location filename="../src/MainWindow.cpp" line="440"/>
+        <location filename="../src/MainWindow.cpp" line="403"/>
+        <location filename="../src/MainWindow.cpp" line="404"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2181"/>
+        <location filename="../src/MainWindow.cpp" line="2225"/>
         <source>Update available: %1</source>
         <translation>有可用更新：%1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2190"/>
+        <location filename="../src/MainWindow.cpp" line="2234"/>
         <source>Update Available</source>
         <translation>有可用更新</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2193"/>
+        <location filename="../src/MainWindow.cpp" line="2237"/>
         <source>CloakFrame %1 is available. What&apos;s new:</source>
         <translation>CloakFrame %1 已发布。更新内容：</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2196"/>
+        <location filename="../src/MainWindow.cpp" line="2240"/>
         <source>No release notes were provided for this update.</source>
         <translation>此更新未提供发行说明。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2199"/>
+        <location filename="../src/MainWindow.cpp" line="2243"/>
         <source>Update</source>
         <translation>更新</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2200"/>
-        <location filename="../src/MainWindow.cpp" line="2272"/>
+        <location filename="../src/MainWindow.cpp" line="2244"/>
+        <location filename="../src/MainWindow.cpp" line="2316"/>
         <source>Later</source>
         <translation>稍后</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="511"/>
+        <location filename="../src/MainWindow.cpp" line="475"/>
         <source>Faces</source>
         <translation>人脸</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="512"/>
+        <location filename="../src/MainWindow.cpp" line="476"/>
         <source>License plates</source>
         <translation>车牌</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="513"/>
+        <location filename="../src/MainWindow.cpp" line="477"/>
         <source>Faces + license plates</source>
         <translation>人脸 + 车牌</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="795"/>
+        <location filename="../src/MainWindow.cpp" line="760"/>
         <source>Tweak detection and anonymization behavior. Defaults work for most photos.</source>
         <translation>调整检测和匿名化效果。默认值适用于大多数照片。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="807"/>
+        <location filename="../src/MainWindow.cpp" line="772"/>
         <source>Mosaic (pixelate)</source>
         <translation>马赛克（像素化）</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="808"/>
+        <location filename="../src/MainWindow.cpp" line="773"/>
         <source>Gaussian blur</source>
         <translation>高斯模糊</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="809"/>
+        <location filename="../src/MainWindow.cpp" line="774"/>
         <source>Solid fill (blackout)</source>
         <translation>纯色填充（涂黑）</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="810"/>
-        <location filename="../src/MainWindow.cpp" line="948"/>
+        <location filename="../src/MainWindow.cpp" line="775"/>
+        <location filename="../src/MainWindow.cpp" line="913"/>
         <source>Custom image</source>
         <translation>自定义图像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="816"/>
+        <location filename="../src/MainWindow.cpp" line="781"/>
         <source>How detected faces are obscured.
 Mosaic = pixelation (block size below).
 Gaussian blur = strong smoothing scaled to face size.
@@ -452,7 +460,7 @@ Custom image = place your selected image over every detected region. Default: Mo
 自定义图像 = 将所选图像放置在每个检测区域上。默认值：马赛克</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="886"/>
+        <location filename="../src/MainWindow.cpp" line="851"/>
         <source>Minimum confidence to accept a face.
 Higher = fewer false positives but may miss small or side-profile faces.
 Lower = catches more faces but may blur non-face regions. Default: 0.50</source>
@@ -461,7 +469,7 @@ Lower = catches more faces but may blur non-face regions. Default: 0.50</source>
 越低 = 检出更多人脸，但可能模糊非人脸区域。默认：0.50</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="901"/>
+        <location filename="../src/MainWindow.cpp" line="866"/>
         <source>Non-Maximum Suppression overlap threshold for duplicate boxes.
 Lower = more aggressively removes overlapping detections.
 Higher = allows more overlap. Default: 0.40</source>
@@ -470,7 +478,7 @@ Higher = allows more overlap. Default: 0.40</source>
 越高 = 允许更多重叠。默认：0.40</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="913"/>
+        <location filename="../src/MainWindow.cpp" line="878"/>
         <source>Mosaic block size in pixels.
 Larger = coarser blocks, harder to un-blur.
 Smaller = finer mosaic, higher recovery risk. Default: 14</source>
@@ -479,7 +487,7 @@ Smaller = finer mosaic, higher recovery risk. Default: 14</source>
 越小 = 马赛克越细，恢复风险越高。默认：14</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="927"/>
+        <location filename="../src/MainWindow.cpp" line="892"/>
         <source>Extra margin around each detected face, as a fraction of its size.
 Covers ears, hairline, and chin that the detector may miss.
 0.00 = exact box, 0.18 = ~18% larger. Default: 0.18</source>
@@ -488,45 +496,45 @@ Covers ears, hairline, and chin that the detector may miss.
 0.00 = 原始框，0.18 = 约扩大 18%。默认：0.18</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="941"/>
+        <location filename="../src/MainWindow.cpp" line="906"/>
         <source>Anonymization</source>
         <translation>匿名化</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="955"/>
+        <location filename="../src/MainWindow.cpp" line="920"/>
         <source>Shape</source>
         <translation>形状</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="870"/>
-        <location filename="../src/MainWindow.cpp" line="962"/>
+        <location filename="../src/MainWindow.cpp" line="835"/>
+        <location filename="../src/MainWindow.cpp" line="927"/>
         <source>Soft edges</source>
         <translation>柔化边缘</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="872"/>
+        <location filename="../src/MainWindow.cpp" line="837"/>
         <source>Fades the edge of the obscured region into the photo instead of a hard cutoff.
 The fade only extends outward, so the detected area stays fully covered. Default: off</source>
         <translation>让遮盖区域边缘淡入照片，而不是生硬截断。
 渐变仅向外延伸，因此检测区域仍会被完全覆盖。默认：关</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="853"/>
+        <location filename="../src/MainWindow.cpp" line="818"/>
         <source>Rectangle</source>
         <translation>矩形</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="539"/>
+        <location filename="../src/MainWindow.cpp" line="503"/>
         <source>Face model path</source>
         <translation>人脸模型路径</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="854"/>
+        <location filename="../src/MainWindow.cpp" line="819"/>
         <source>Rounded (ellipse)</source>
         <translation>圆角（椭圆）</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="859"/>
+        <location filename="../src/MainWindow.cpp" line="824"/>
         <source>Shape of the obscured region.
 Rectangle = full padded box.
 Rounded = elliptical mask that follows the face and leaves corners untouched. Default: Rectangle</source>
@@ -535,146 +543,192 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
 圆角 = 贴合人脸的椭圆遮罩，四角不遮盖。默认：矩形</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="969"/>
+        <location filename="../src/MainWindow.cpp" line="934"/>
         <source>Score threshold</source>
         <translation>置信度阈值</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="976"/>
+        <location filename="../src/MainWindow.cpp" line="941"/>
         <source>NMS threshold</source>
         <translation>NMS 阈值</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="983"/>
+        <location filename="../src/MainWindow.cpp" line="948"/>
         <source>Mosaic block size</source>
         <translation>马赛克块大小</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="990"/>
+        <location filename="../src/MainWindow.cpp" line="955"/>
         <source>Face padding</source>
         <translation>人脸边距</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1077"/>
+        <location filename="../src/MainWindow.cpp" line="1071"/>
+        <source>Choose output folder</source>
+        <translation>选择输出文件夹</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="1090"/>
         <source>Activity</source>
         <translation>活动</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1103"/>
+        <location filename="../src/MainWindow.cpp" line="1116"/>
         <source>Ready</source>
         <translation>就绪</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1142"/>
+        <location filename="../src/MainWindow.cpp" line="1155"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1152"/>
+        <location filename="../src/MainWindow.cpp" line="1165"/>
         <source>Start</source>
         <translation>开始</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1174"/>
+        <location filename="../src/MainWindow.cpp" line="1187"/>
         <source>Ready. Drop images, videos, or folders to begin.</source>
         <translation>已就绪。拖入图像、视频或文件夹即可开始。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1316"/>
+        <location filename="../src/MainWindow.cpp" line="1329"/>
         <source>Select SCRFD ONNX Model</source>
         <translation>选择 SCRFD ONNX 模型</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1316"/>
+        <location filename="../src/MainWindow.cpp" line="1329"/>
         <source>ONNX Models (*.onnx)</source>
         <translation>ONNX 模型 (*.onnx)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1326"/>
-        <location filename="../src/MainWindow.cpp" line="2688"/>
-        <location filename="../src/MainWindow.cpp" line="2707"/>
+        <location filename="../src/MainWindow.cpp" line="1339"/>
+        <location filename="../src/MainWindow.cpp" line="2719"/>
+        <location filename="../src/MainWindow.cpp" line="2738"/>
         <source>Could not read the custom model file.</source>
         <translation>无法读取自定义模型文件。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1331"/>
-        <location filename="../src/MainWindow.cpp" line="1942"/>
+        <location filename="../src/MainWindow.cpp" line="1344"/>
+        <location filename="../src/MainWindow.cpp" line="1986"/>
         <source>Custom — %1</source>
         <translation>自定义 — %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1375"/>
+        <location filename="../src/MainWindow.cpp" line="1388"/>
         <source>Select Images or Videos</source>
         <translation>选择图像或视频</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1377"/>
+        <location filename="../src/MainWindow.cpp" line="1390"/>
         <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</source>
         <translation>图像与视频 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1392"/>
+        <location filename="../src/MainWindow.cpp" line="1405"/>
         <source>Select Folder</source>
         <translation>选择文件夹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1407"/>
+        <location filename="../src/MainWindow.cpp" line="1420"/>
         <source>Select Output Folder</source>
         <translation>选择输出文件夹</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2211"/>
+        <location filename="../src/MainWindow.cpp" line="1868"/>
+        <source>Processing finished, but some results need attention.
+
+Total: %1
+Redacted: %2
+Saved without redaction: %3
+Copied: %4
+Skipped: %5
+Failed: %6
+
+Files with detection or tracking warnings: %7
+Omitted detection regions: %8
+Tracking gap frames (before review): %9
+Dropped tracks: %10
+Files with metadata warnings: %11
+Unreadable input paths: %12
+Tracking gap frames pending user review: %13
+Tracks excluded during review: %14
+
+Check these results before sharing them.</source>
+        <translation>处理已完成，但部分结果需要检查。
+
+总计：%1
+已遮挡：%2
+未遮挡直接保存：%3
+已复制：%4
+已跳过：%5
+失败：%6
+
+存在检测或跟踪警告的文件：%7
+因超出限制而忽略的检测区域：%8
+检查前的跟踪空白帧：%9
+已丢弃的轨迹：%10
+存在元数据警告的文件：%11
+无法读取的输入路径：%12
+待用户检查的跟踪空缺帧：%13
+检查时排除的轨迹：%14
+
+请在分享前检查这些结果。</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="2255"/>
         <source>Downloading CloakFrame %1…</source>
         <translation>正在下载 CloakFrame %1…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2230"/>
+        <location filename="../src/MainWindow.cpp" line="2274"/>
         <source>Update Failed</source>
         <translation>更新失败</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2233"/>
+        <location filename="../src/MainWindow.cpp" line="2277"/>
         <source>The update could not be installed: %1</source>
         <translation>无法安装更新：%1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2235"/>
+        <location filename="../src/MainWindow.cpp" line="2279"/>
         <source>Open Download Page</source>
         <translation>打开下载页面</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2258"/>
-        <location filename="../src/MainWindow.cpp" line="2265"/>
+        <location filename="../src/MainWindow.cpp" line="2302"/>
+        <location filename="../src/MainWindow.cpp" line="2309"/>
         <source>Update Ready</source>
         <translation>更新已就绪</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2259"/>
+        <location filename="../src/MainWindow.cpp" line="2303"/>
         <source>CloakFrame %1 will finish installing the next time the app starts.</source>
         <translation>下次启动应用时将完成 CloakFrame %1 的安装。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2269"/>
+        <location filename="../src/MainWindow.cpp" line="2313"/>
         <source>CloakFrame %1 has been downloaded. Restart now to finish installing?</source>
         <translation>CloakFrame %1 已下载完成。现在重新启动以完成安装？</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2271"/>
+        <location filename="../src/MainWindow.cpp" line="2315"/>
         <source>Restart Now</source>
         <translation>立即重新启动</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2596"/>
+        <location filename="../src/MainWindow.cpp" line="2627"/>
         <source>Accurate  ·  YOLO5Face-n</source>
         <translation>精确  ·  YOLO5Face-n</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2597"/>
+        <location filename="../src/MainWindow.cpp" line="2628"/>
         <source>Fast  ·  YuNet</source>
         <translation>快速  ·  YuNet</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2701"/>
+        <location filename="../src/MainWindow.cpp" line="2732"/>
         <source>The custom model was not approved, so nothing was processed.</source>
         <translation>自定义模型未获批准，因此没有处理任何内容。</translation>
     </message>
@@ -687,97 +741,96 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
         <translation type="vanished">请先选择有效的 SCRFD ONNX 模型。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1513"/>
-        <location filename="../src/MainWindow.cpp" line="1538"/>
-        <location filename="../src/MainWindow.cpp" line="1632"/>
-        <location filename="../src/MainWindow.cpp" line="2623"/>
+        <location filename="../src/MainWindow.cpp" line="1526"/>
+        <location filename="../src/MainWindow.cpp" line="1551"/>
+        <location filename="../src/MainWindow.cpp" line="1647"/>
+        <location filename="../src/MainWindow.cpp" line="2654"/>
         <source>Downloading %1…</source>
         <translation>正在下载 %1…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1516"/>
-        <location filename="../src/MainWindow.cpp" line="1541"/>
-        <location filename="../src/MainWindow.cpp" line="1637"/>
-        <location filename="../src/MainWindow.cpp" line="2630"/>
+        <location filename="../src/MainWindow.cpp" line="1529"/>
+        <location filename="../src/MainWindow.cpp" line="1554"/>
+        <location filename="../src/MainWindow.cpp" line="1652"/>
+        <location filename="../src/MainWindow.cpp" line="2661"/>
         <source>Model download was cancelled or failed.</source>
         <translation>模型下载已取消或失败。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1520"/>
-        <location filename="../src/MainWindow.cpp" line="1544"/>
-        <location filename="../src/MainWindow.cpp" line="1650"/>
-        <location filename="../src/MainWindow.cpp" line="2626"/>
+        <location filename="../src/MainWindow.cpp" line="1533"/>
+        <location filename="../src/MainWindow.cpp" line="1557"/>
+        <location filename="../src/MainWindow.cpp" line="1665"/>
+        <location filename="../src/MainWindow.cpp" line="2657"/>
         <source>Model ready: %1</source>
         <translation>模型已就绪：%1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1550"/>
+        <location filename="../src/MainWindow.cpp" line="1563"/>
         <source>Add at least one image or folder.</source>
         <translation>请至少添加一张图像或一个文件夹。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1556"/>
+        <location filename="../src/MainWindow.cpp" line="1569"/>
         <source>Choose an output folder.</source>
         <translation>请选择输出文件夹。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1581"/>
+        <location filename="../src/MainWindow.cpp" line="1594"/>
         <source>Refusing to run: output folder is inside input &apos;%1&apos;. Pick a different output folder so originals aren&apos;t overwritten.</source>
         <translation>拒绝运行：输出文件夹位于输入“%1”内。请选择其他输出文件夹，以免覆盖原文件。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1710"/>
-        <location filename="../src/MainWindow.cpp" line="1753"/>
+        <location filename="../src/MainWindow.cpp" line="1726"/>
+        <location filename="../src/MainWindow.cpp" line="1778"/>
         <source>Starting…</source>
         <translation>正在启动…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1761"/>
+        <location filename="../src/MainWindow.cpp" line="1786"/>
         <source>Stopping after the current processing step…</source>
         <translation>将在当前处理步骤结束后停止…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1762"/>
+        <location filename="../src/MainWindow.cpp" line="1787"/>
         <source>Stopping…</source>
         <translation>正在停止…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1850"/>
+        <location filename="../src/MainWindow.cpp" line="1894"/>
         <source>Cancelled.</source>
         <translation>已取消。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1824"/>
+        <location filename="../src/MainWindow.cpp" line="1854"/>
         <source>Finished.</source>
         <translation>已完成。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1851"/>
+        <location filename="../src/MainWindow.cpp" line="1895"/>
         <source>Cancelled</source>
         <translation>已取消</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1825"/>
+        <location filename="../src/MainWindow.cpp" line="1855"/>
         <source>Done</source>
         <translation>完成</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1829"/>
+        <location filename="../src/MainWindow.cpp" line="1859"/>
         <source>Completed with warnings — review the results before sharing.</source>
         <translation>已完成，但有警告——请在分享前检查结果。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1834"/>
+        <location filename="../src/MainWindow.cpp" line="1864"/>
         <source>Review required</source>
         <translation>需要检查</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1837"/>
+        <location filename="../src/MainWindow.cpp" line="1867"/>
         <source>Review Required</source>
         <translation>需要检查</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1838"/>
         <source>Processing finished, but some results need attention.
 
 Total: %1
@@ -795,7 +848,7 @@ Files with metadata warnings: %11
 Unreadable input paths: %12
 
 Check these results before sharing them.</source>
-        <translation>处理已完成，但部分结果需要检查。
+        <translation type="vanished">处理已完成，但部分结果需要检查。
 
 总计：%1
 已遮挡：%2
@@ -814,12 +867,12 @@ Check these results before sharing them.</source>
 请在分享前检查这些结果。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1855"/>
+        <location filename="../src/MainWindow.cpp" line="1899"/>
         <source>Failed — check the log for details.</source>
         <translation>失败——请查看日志了解详情。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1859"/>
+        <location filename="../src/MainWindow.cpp" line="1903"/>
         <source>Failed — check the log</source>
         <translation>失败——请查看日志</translation>
     </message>
@@ -832,80 +885,80 @@ Check these results before sharing them.</source>
         <translation type="vanished">精确  ·  SCRFD 10G</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2643"/>
+        <location filename="../src/MainWindow.cpp" line="2674"/>
         <source>Not downloaded yet — click Download</source>
         <translation>尚未下载——请单击“下载”</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="104"/>
-        <location filename="../src/MainWindow.cpp" line="112"/>
+        <location filename="../src/MainWindow.cpp" line="108"/>
+        <location filename="../src/MainWindow.cpp" line="116"/>
         <source>Choose an existing image file.</source>
         <translation>请选择现有的图像文件。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="119"/>
+        <location filename="../src/MainWindow.cpp" line="123"/>
         <source>The selected image must be no larger than 64 MB.</source>
         <translation>所选图像不得大于 64 MB。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="129"/>
+        <location filename="../src/MainWindow.cpp" line="133"/>
         <source>The selected file is not a supported image.</source>
         <translation>所选文件不是受支持的图像。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="138"/>
+        <location filename="../src/MainWindow.cpp" line="142"/>
         <source>The selected image has invalid dimensions.</source>
         <translation>所选图像的尺寸信息无效。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="155"/>
+        <location filename="../src/MainWindow.cpp" line="159"/>
         <source>The selected image could not be decoded: %1</source>
         <translation>无法解码所选图像：%1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="838"/>
+        <location filename="../src/MainWindow.cpp" line="803"/>
         <source>Choose an image to cover detected faces</source>
         <translation>选择用于遮挡检测到的人脸的图像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="840"/>
+        <location filename="../src/MainWindow.cpp" line="805"/>
         <source>The image keeps its aspect ratio and follows detected face tilt when available. Transparent pixels reveal a safety mosaic instead of the original image.</source>
         <translation>图像会保持宽高比，并在可用时跟随检测到的人脸倾斜。透明像素会显示安全马赛克，而不是原始图像。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="844"/>
+        <location filename="../src/MainWindow.cpp" line="809"/>
         <source>Choose custom image</source>
         <translation>选择自定义图像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1349"/>
+        <location filename="../src/MainWindow.cpp" line="1362"/>
         <source>Select Custom Image</source>
         <translation>选择自定义图像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1351"/>
+        <location filename="../src/MainWindow.cpp" line="1364"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</source>
         <translation>图像 (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1360"/>
+        <location filename="../src/MainWindow.cpp" line="1373"/>
         <source>Invalid Custom Image</source>
         <translation>无效的自定义图像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1501"/>
+        <location filename="../src/MainWindow.cpp" line="1514"/>
         <source>Choose a face ONNX model first.</source>
         <translation>请先选择人脸 ONNX 模型。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1510"/>
-        <location filename="../src/MainWindow.cpp" line="1667"/>
+        <location filename="../src/MainWindow.cpp" line="1523"/>
+        <location filename="../src/MainWindow.cpp" line="1682"/>
         <source>Choose a valid face ONNX model first.</source>
         <translation>请先选择有效的人脸 ONNX 模型。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1630"/>
-        <location filename="../src/MainWindow.cpp" line="1647"/>
+        <location filename="../src/MainWindow.cpp" line="1645"/>
+        <location filename="../src/MainWindow.cpp" line="1662"/>
         <source>Built-in model integrity check failed: %1</source>
         <translation>内置模型完整性检查失败：%1</translation>
     </message>
@@ -923,12 +976,12 @@ Check these results before sharing them.</source>
         <translation>图像过大，%1 × %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="910"/>
+        <location filename="../src/ProcessorWorker.cpp" line="990"/>
         <source>needs about %1 MB of memory, over the %2 MB limit</source>
         <translation>需要约 %1 MB 内存，超过 %2 MB 上限</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="570"/>
+        <location filename="../src/ProcessorWorker.cpp" line="587"/>
         <source>Output name collision: &apos;%1&apos; and &apos;%2&apos; would both write to &apos;%3&apos;</source>
         <translation>输出名称冲突：“%1”和“%2”都将写入“%3”</translation>
     </message>
@@ -945,64 +998,64 @@ Check these results before sharing them.</source>
         <translation type="vanished">正在复用已加载的 SCRFD 模型。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="441"/>
+        <location filename="../src/ProcessorWorker.cpp" line="447"/>
         <source>Loading face detection model...</source>
         <translation>正在加载人脸检测模型...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="467"/>
+        <location filename="../src/ProcessorWorker.cpp" line="473"/>
         <source>Reusing loaded face detection model.</source>
         <translation>正在复用已加载的人脸检测模型。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="469"/>
+        <location filename="../src/ProcessorWorker.cpp" line="475"/>
         <source>Face detection backend: %1</source>
         <translation>人脸检测后端：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="454"/>
+        <location filename="../src/ProcessorWorker.cpp" line="460"/>
         <source>GPU acceleration can&apos;t run the face model; using the CPU instead.</source>
         <translation>GPU 加速无法运行人脸模型，已改用 CPU。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="501"/>
+        <location filename="../src/ProcessorWorker.cpp" line="507"/>
         <source>License plate detection backend: %1</source>
         <translation>车牌检测后端：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="477"/>
+        <location filename="../src/ProcessorWorker.cpp" line="483"/>
         <source>Loading license plate detection model...</source>
         <translation>正在加载车牌检测模型...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="499"/>
+        <location filename="../src/ProcessorWorker.cpp" line="505"/>
         <source>Reusing loaded license plate detection model.</source>
         <translation>正在复用已加载的车牌检测模型。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="489"/>
+        <location filename="../src/ProcessorWorker.cpp" line="495"/>
         <source>GPU acceleration can&apos;t run the license plate model; using the CPU instead.</source>
         <translation>GPU 加速无法运行车牌模型，已改用 CPU。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="506"/>
+        <location filename="../src/ProcessorWorker.cpp" line="512"/>
         <source>Scanning inputs...</source>
         <translation>正在扫描输入...</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="510"/>
+        <location filename="../src/ProcessorWorker.cpp" line="516"/>
         <source>Preflight: found %n supported file(s).</source>
         <translation>
             <numerusform>预检：找到 %n 个支持的文件。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="541"/>
+        <location filename="../src/ProcessorWorker.cpp" line="557"/>
         <source>No supported files were found.</source>
         <translation>未找到支持的文件。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="551"/>
+        <location filename="../src/ProcessorWorker.cpp" line="567"/>
         <source>Cannot create output directory: %1</source>
         <translation>无法创建输出目录：%1</translation>
     </message>
@@ -1011,17 +1064,17 @@ Check these results before sharing them.</source>
         <translation type="vanished">拒绝运行，因为多个输入将写入同一输出路径。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="564"/>
+        <location filename="../src/ProcessorWorker.cpp" line="580"/>
         <source>Refusing to run because an output path is already in use.</source>
         <translation>拒绝运行，因为某个输出路径已被占用。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="577"/>
+        <location filename="../src/ProcessorWorker.cpp" line="594"/>
         <source>Existing output would be overwritten: &apos;%1&apos;</source>
         <translation>现有输出将被覆盖：“%1”</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="582"/>
+        <location filename="../src/ProcessorWorker.cpp" line="605"/>
         <source>Additional output conflicts omitted.</source>
         <translation>已省略其他输出冲突。</translation>
     </message>
@@ -1030,12 +1083,12 @@ Check these results before sharing them.</source>
         <translation type="vanished">预检：输出路径互不重复。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="586"/>
+        <location filename="../src/ProcessorWorker.cpp" line="609"/>
         <source>Preflight: output paths are available.</source>
         <translation>预检：输出路径可用。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="769"/>
+        <location filename="../src/ProcessorWorker.cpp" line="849"/>
         <source>Skipped unsafe output path for: %1</source>
         <translation>因输出路径不安全而跳过：%1</translation>
     </message>
@@ -1044,63 +1097,63 @@ Check these results before sharing them.</source>
         <translation type="vanished">已跳过（无法创建父目录）：%1 — %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="812"/>
+        <location filename="../src/ProcessorWorker.cpp" line="892"/>
         <source>Skipped (file too large, %1 MB): %2</source>
         <translation>已跳过（文件过大，%1 MB）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="874"/>
+        <location filename="../src/ProcessorWorker.cpp" line="954"/>
         <source>Loading</source>
         <translation>正在加载</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="894"/>
-        <location filename="../src/ProcessorWorker.cpp" line="909"/>
+        <location filename="../src/ProcessorWorker.cpp" line="974"/>
+        <location filename="../src/ProcessorWorker.cpp" line="989"/>
         <source>Skipped (%1): %2</source>
         <translation>已跳过（%1）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="880"/>
+        <location filename="../src/ProcessorWorker.cpp" line="960"/>
         <source>Skipped (animated or multi-page images are not supported): %1</source>
         <translation>已跳过（不支持动画或多页图像）：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="716"/>
+        <location filename="../src/ProcessorWorker.cpp" line="796"/>
         <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
             <numerusform>警告：%n 个文件存在检测或跟踪警告。请在分享前检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="793"/>
-        <location filename="../src/ProcessorWorker.cpp" line="937"/>
+        <location filename="../src/ProcessorWorker.cpp" line="873"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1017"/>
         <source>Skipped unreadable image: %1</source>
         <translation>已跳过无法读取的图像：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="804"/>
+        <location filename="../src/ProcessorWorker.cpp" line="884"/>
         <source>Source file changed during processing: %1</source>
         <translation>源文件在处理过程中发生了更改：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="824"/>
-        <location filename="../src/ProcessorWorker.cpp" line="851"/>
-        <location filename="../src/ProcessorWorker.cpp" line="861"/>
+        <location filename="../src/ProcessorWorker.cpp" line="904"/>
+        <location filename="../src/ProcessorWorker.cpp" line="931"/>
+        <location filename="../src/ProcessorWorker.cpp" line="941"/>
         <source>Failed to create a private source snapshot: %1</source>
         <translation>无法创建源文件的私有快照：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="965"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1045"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
         <translation>已跳过（图像过大，%1 × %2）：%3</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="975"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1055"/>
         <source>Detecting</source>
         <translation>正在检测</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1006"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1083"/>
         <source>Reviewing</source>
         <translation>正在检查</translation>
     </message>
@@ -1109,243 +1162,466 @@ Check these results before sharing them.</source>
         <translation type="vanished">检查桥接不可用；已跳过检查并保存。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1061"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1138"/>
         <source>Skipped without saving: %1</source>
         <translation>未保存并跳过：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1075"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1131"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1152"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1208"/>
         <source>Saving</source>
         <translation>正在保存</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1103"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1180"/>
         <source>Failed to copy: %1</source>
         <translation>复制失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1109"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1186"/>
         <source>Skipped (original copied): %1</source>
         <translation>已跳过（已复制原文件）：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1115"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1192"/>
         <source>Applying anonymization</source>
         <translation>正在应用匿名化</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1151"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1228"/>
         <source>Failed to save: %1</source>
         <translation>保存失败：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1170"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1505"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1247"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1595"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>已遮盖 %n 个区域：%1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1160"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1237"/>
         <source>Saved, but could not copy metadata: %1</source>
         <translation>已保存，但无法复制元数据：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1165"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1499"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1242"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1589"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>保存时未遮盖任何区域：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="778"/>
+        <location filename="../src/ProcessorWorker.cpp" line="858"/>
         <source>Skipped (source and destination are the same file): %1</source>
         <translation>已跳过（源文件与目标文件相同）：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1189"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1266"/>
         <source>Error processing %1: %2</source>
         <translation>处理 %1 时出错：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="748"/>
+        <location filename="../src/ProcessorWorker.cpp" line="828"/>
         <source>Unexpected error — processing stopped.</source>
         <translation>意外错误——处理已停止。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="684"/>
+        <location filename="../src/ProcessorWorker.cpp" line="758"/>
         <source>Summary: %1 redacted, %2 saved without redaction, %3 copied, %4 skipped, %5 failed (of %6).</source>
         <translation>摘要：已遮盖 %1 个，未遮盖保存 %2 个，已复制 %3 个，已跳过 %4 个，失败 %5 个（共 %6 个）。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="705"/>
+        <location filename="../src/ProcessorWorker.cpp" line="786"/>
         <source>Warning: %n image(s) were saved with no regions redacted. Check them before sharing.</source>
         <translation>
             <numerusform>警告：%n 张图像在未遮盖任何区域的情况下保存。请在分享前检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="736"/>
+        <location filename="../src/ProcessorWorker.cpp" line="816"/>
         <source>Done.</source>
         <translation>完成。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="731"/>
+        <location filename="../src/ProcessorWorker.cpp" line="811"/>
         <source>Completed with warnings. Review the summary before sharing.</source>
         <translation>已完成，但有警告。请在分享前检查摘要。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="742"/>
+        <location filename="../src/ProcessorWorker.cpp" line="822"/>
         <source>Error: %1</source>
         <translation>错误：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1197"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1274"/>
         <source>Error processing %1</source>
         <translation>处理 %1 时出错</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1370"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1449"/>
         <source>Reviewing video tracks</source>
         <translation>正在检查视频轨迹</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1215"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1292"/>
         <source>Metadata preservation is not available for videos; metadata was removed: %1</source>
         <translation>视频无法保留元数据；已移除元数据：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="431"/>
+        <location filename="../src/ProcessorWorker.cpp" line="437"/>
         <source>Error: review is on but no review window is available. Nothing was processed.</source>
         <translation>错误：已启用检查，但没有可用的检查窗口。未处理任何文件。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="515"/>
+        <location filename="../src/ProcessorWorker.cpp" line="525"/>
+        <location filename="../src/ProcessorWorker.cpp" line="531"/>
         <source>Could not read input &apos;%1&apos;: %2</source>
         <translation>无法读取输入“%1”：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="521"/>
+        <location filename="../src/ProcessorWorker.cpp" line="537"/>
         <source>Additional unreadable inputs omitted.</source>
         <translation>已省略其他无法读取的输入。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="526"/>
+        <location filename="../src/ProcessorWorker.cpp" line="542"/>
         <source>Warning: %n input(s) could not be read, so nothing below covers them.</source>
         <translation>
             <numerusform>警告：有 %n 个输入无法读取，下面的结果不包含它们。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1027"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1104"/>
         <source>Failed (review could not be shown, nothing was saved): %1</source>
         <translation>失败（无法显示检查，未保存）：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1178"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1528"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1255"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1618"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告：有 %n 个检测到的区域超出安全上限，在 %1 中未被遮盖。分享前请检查。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1224"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1234"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1301"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1311"/>
         <source>Failed (%1): %2</source>
         <translation>失败（%1）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1229"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1306"/>
         <source>Inspecting</source>
         <translation>正在检查</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1242"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1319"/>
         <source>Failed (unsupported video: %1): %2</source>
         <translation>失败（不支持的视频：%1）：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1249"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1326"/>
         <source>Note: variable frame rate is converted to a constant frame rate: %1</source>
         <translation>注意：可变帧率将转换为恒定帧率：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1348"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1424"/>
         <source>Analyzing %1%</source>
         <translation>正在分析 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1348"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1424"/>
         <source>Encoding %1%</source>
         <translation>正在编码 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1537"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1627"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>警告：在 %1 中丢弃了 %n 条没有任何可信检测的轨迹。分享前请检查。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1546"/>
-        <source>Warning: tracking could not locate the subject in %n frame(s) of %1 before review. Manual masks do not verify its position. Check these frames before sharing.</source>
+        <location filename="../src/ProcessorWorker.cpp" line="1636"/>
+        <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
+            <numerusform>检查前无法在 %1 的 %n 帧中跟踪目标。请在文件结果中查看各空缺的检查状态。</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <source>Warning: tracking could not locate the subject in %n frame(s) of %1 before review. Manual masks do not verify its position. Check these frames before sharing.</source>
+        <translation type="vanished">
             <numerusform>警告：检查前，跟踪无法确定 %1 中 %n 帧的目标位置。手动遮罩并不能验证目标的位置。请在分享前检查这些帧。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1551"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1641"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1 中检查前发现的跟踪空白区间：%2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1555"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1645"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>另有 %n 个跟踪空白区间未列出。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1568"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1669"/>
+        <source>Tracking gap frames: %1 before review, %2 pending user review. Review acknowledgement does not verify coverage.</source>
+        <translation>跟踪空缺帧：检查前 %1 帧，待用户检查 %2 帧。标记已检查不代表遮盖范围已验证。</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1674"/>
+        <source>Tracks excluded during review: %1</source>
+        <translation>检查时排除的轨迹：%1</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1682"/>
         <source>Failed to process video %1: %2</source>
         <translation>处理视频 %1 失败：%2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1270"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1347"/>
         <source>Loading face detection model for video...</source>
         <translation>正在加载视频人脸检测模型...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1285"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1362"/>
         <source>GPU acceleration can&apos;t run the video face model at %1 px; using the CPU instead.</source>
         <translation>GPU 加速无法以 %1 像素运行视频人脸模型，已改用 CPU。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1296"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1373"/>
         <source>Video face detection: %1 px · %2</source>
         <translation>视频人脸检测：%1 像素 · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1355"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1431"/>
         <source>%1m %2s left</source>
         <translation>剩余 %1 分 %2 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1356"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1432"/>
         <source>%1s left</source>
         <translation>剩余 %1 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1512"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1602"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>已处理 %1 帧，用时 %2 秒（实时速度的 %3 倍）：%4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1520"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1610"/>
         <source>Video encoder: %1</source>
         <translation>视频编码器：%1</translation>
+    </message>
+</context>
+<context>
+    <name>cloakframe::ResultsDialog</name>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="26"/>
+        <location filename="../src/ResultsDialog.cpp" line="57"/>
+        <source>File results</source>
+        <translation>文件结果</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="29"/>
+        <source>Results from the last run. Only reported files and input errors are listed; files that never started are not shown.</source>
+        <translation>这是上次任务的结果。仅列出已报告的文件和输入错误，未开始处理的文件不会显示。</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="35"/>
+        <source>Filter results</source>
+        <translation>筛选结果</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="36"/>
+        <source>All results</source>
+        <translation>全部结果</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="36"/>
+        <source>Needs attention</source>
+        <translation>需要关注</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="36"/>
+        <source>Failures</source>
+        <translation>失败</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="41"/>
+        <location filename="../src/ResultsDialog.cpp" line="42"/>
+        <source>All issue types</source>
+        <translation>所有问题类型</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="44"/>
+        <source>Omitted regions</source>
+        <translation>未处理区域</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="45"/>
+        <source>Tracking gaps</source>
+        <translation>跟踪空缺</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="46"/>
+        <source>Dropped tracks</source>
+        <translation>自动丢弃的轨迹</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="47"/>
+        <source>Excluded tracks</source>
+        <translation>用户排除的轨迹</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="48"/>
+        <source>Scan failures</source>
+        <translation>扫描失败</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="49"/>
+        <source>Metadata warnings</source>
+        <translation>元数据警告</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="50"/>
+        <source>Output conflicts</source>
+        <translation>输出冲突</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="51"/>
+        <source>Processing failures</source>
+        <translation>处理失败</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="52"/>
+        <source>Unredacted outputs</source>
+        <translation>未遮盖的输出</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="58"/>
+        <source>Input</source>
+        <translation>输入</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="58"/>
+        <source>Status</source>
+        <translation>状态</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="58"/>
+        <source>Output</source>
+        <translation>输出</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="75"/>
+        <source>Not saved</source>
+        <translation>未保存</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="84"/>
+        <source>Result details</source>
+        <translation>结果详情</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="85"/>
+        <source>Select a result to see its details.</source>
+        <translation>选择一项结果以查看详情。</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="90"/>
+        <source>Issues in selected file</source>
+        <translation>所选文件的问题</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="93"/>
+        <source>Open input file</source>
+        <translation>打开输入文件</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="94"/>
+        <source>Review / retry selected input</source>
+        <translation>重新检查／处理所选输入</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="96"/>
+        <source>Reprocess this input with current settings in a new output folder. Select a tracking gap to start video review at that frame. Previous edits are not retained.</source>
+        <translation>使用当前设置重新处理此输入并保存到新的输出文件夹。选择跟踪空缺可从对应帧开始检查视频。不会保留之前的编辑。</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="123"/>
+        <source>Cannot open file</source>
+        <translation>无法打开文件</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="128"/>
+        <source>Open input folder</source>
+        <translation>打开输入文件夹</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="129"/>
+        <source>Open output folder</source>
+        <translation>打开输出文件夹</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="158"/>
+        <source>Saved</source>
+        <translation>已保存</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="160"/>
+        <source>Review required</source>
+        <translation>需要检查</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="162"/>
+        <source>Skipped without saving</source>
+        <translation>已跳过，未保存</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="164"/>
+        <source>Failed</source>
+        <translation>失败</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="166"/>
+        <source>Cancelled</source>
+        <translation>已取消</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="168"/>
+        <source>Unreadable input</source>
+        <translation>无法读取的输入</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="235"/>
+        <source>Track %1 · Frames %2–%3 · %4</source>
+        <translation>轨迹 %1 · 帧 %2–%3 · %4</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="239"/>
+        <source>Reviewed by user (coverage not verified)</source>
+        <translation>用户已检查（遮盖范围未验证）</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="240"/>
+        <source>Pending review</source>
+        <translation>待检查</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="267"/>
+        <source>Cannot open folder</source>
+        <translation>无法打开文件夹</translation>
+    </message>
+    <message>
+        <location filename="../src/ResultsDialog.cpp" line="124"/>
+        <location filename="../src/ResultsDialog.cpp" line="267"/>
+        <source>Could not open: %1</source>
+        <translation>无法打开：%1</translation>
     </message>
 </context>
 <context>
@@ -1462,107 +1738,141 @@ Continue?</source>
 <context>
     <name>cloakframe::SettingsDialog</name>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="148"/>
+        <location filename="../src/SettingsDialog.cpp" line="177"/>
         <source>Settings</source>
         <translation>设置</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="149"/>
+        <location filename="../src/SettingsDialog.cpp" line="178"/>
         <source>Theme</source>
         <translation>主题</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="150"/>
+        <location filename="../src/SettingsDialog.cpp" line="179"/>
         <source>Language</source>
         <translation>语言</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="151"/>
+        <location filename="../src/SettingsDialog.cpp" line="180"/>
         <source>System</source>
         <translation>跟随系统</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="152"/>
+        <location filename="../src/SettingsDialog.cpp" line="181"/>
         <source>Light</source>
         <translation>浅色</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="153"/>
+        <location filename="../src/SettingsDialog.cpp" line="182"/>
         <source>Dark</source>
         <translation>深色</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="154"/>
+        <location filename="../src/SettingsDialog.cpp" line="183"/>
         <source>Check for updates on startup</source>
         <translation>启动时检查更新</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="155"/>
         <source>Write a local log file</source>
-        <translation>写入本地日志文件</translation>
+        <translation type="vanished">写入本地日志文件</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="156"/>
         <source>The log may include the names of files you process. Stored on this device only. Takes effect on the next launch.</source>
-        <translation>日志可能包含您处理的文件名。日志仅存储在此设备上，并在下次启动时生效。</translation>
+        <translation type="vanished">日志可能包含您处理的文件名。日志仅存储在此设备上，并在下次启动时生效。</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="158"/>
+        <location filename="../src/SettingsDialog.cpp" line="99"/>
+        <location filename="../src/SettingsDialog.cpp" line="108"/>
+        <source>Local logs</source>
+        <translation>本地日志</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="99"/>
+        <source>Could not open the log folder.</source>
+        <translation>无法打开日志文件夹。</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="108"/>
+        <source>Could not delete all local logs.</source>
+        <translation>无法删除全部本地日志。</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="184"/>
+        <source>Include file names in detailed local logs</source>
+        <translation>在详细本地日志中包含文件名</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="186"/>
+        <source>Off by default. Basic diagnostics contain no file names. Detailed logs may contain file names and paths. Stored on this device only. Changes apply immediately; existing logs remain until deleted.</source>
+        <translation>默认关闭。基本诊断不包含文件名。详细日志可能包含文件名和路径，仅保存在此设备上。更改立即生效，现有日志将保留至删除。</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="189"/>
+        <source>Open log folder</source>
+        <translation>打开日志文件夹</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="190"/>
+        <source>Delete local logs</source>
+        <translation>删除本地日志</translation>
+    </message>
+    <message>
+        <location filename="../src/SettingsDialog.cpp" line="191"/>
         <source>Use GPU acceleration</source>
         <translation>使用 GPU 加速</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="159"/>
+        <location filename="../src/SettingsDialog.cpp" line="192"/>
         <source>Runs detection models and video encoding on the GPU when available. Applies from the next run.</source>
         <translation>可用时使用 GPU 运行检测模型和视频编码。从下次运行起生效。</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="161"/>
+        <location filename="../src/SettingsDialog.cpp" line="194"/>
         <source>Video quality</source>
         <translation>视频质量</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="162"/>
+        <location filename="../src/SettingsDialog.cpp" line="195"/>
         <source>High (near-original)</source>
         <translation>高（接近原始质量）</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="163"/>
+        <location filename="../src/SettingsDialog.cpp" line="196"/>
         <source>Balanced</source>
         <translation>均衡</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="164"/>
+        <location filename="../src/SettingsDialog.cpp" line="197"/>
         <source>Smaller files</source>
         <translation>较小文件</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="165"/>
+        <location filename="../src/SettingsDialog.cpp" line="198"/>
         <source>Quality of re-encoded videos. Higher quality produces larger files.</source>
         <translation>重新编码视频的质量。质量越高，文件越大。</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="167"/>
+        <location filename="../src/SettingsDialog.cpp" line="200"/>
         <source>Video codec</source>
         <translation>视频编解码器</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="168"/>
+        <location filename="../src/SettingsDialog.cpp" line="201"/>
         <source>H.264 (most compatible)</source>
         <translation>H.264（兼容性最佳）</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="169"/>
+        <location filename="../src/SettingsDialog.cpp" line="202"/>
         <source>HEVC (smaller files)</source>
         <translation>HEVC（文件更小）</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="170"/>
+        <location filename="../src/SettingsDialog.cpp" line="203"/>
         <source>Codec for re-encoded videos. HEVC produces smaller files but may not play on older devices.</source>
         <translation>重新编码视频使用的编解码器。HEVC 文件更小，但可能无法在旧设备上播放。</translation>
     </message>
     <message>
-        <location filename="../src/SettingsDialog.cpp" line="174"/>
+        <location filename="../src/SettingsDialog.cpp" line="207"/>
         <source>Close</source>
         <translation>关闭</translation>
     </message>
@@ -1651,7 +1961,7 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="702"/>
-        <location filename="../src/VideoIo.cpp" line="940"/>
+        <location filename="../src/VideoIo.cpp" line="1112"/>
         <source>Invalid video dimensions.</source>
         <translation>视频尺寸无效。</translation>
     </message>
@@ -1664,6 +1974,7 @@ Continue?</source>
     <message>
         <location filename="../src/VideoIo.cpp" line="787"/>
         <location filename="../src/VideoIo.cpp" line="860"/>
+        <location filename="../src/VideoIo.cpp" line="1077"/>
         <source>Decoding failed: %1</source>
         <translation>解码失败：%1</translation>
     </message>
@@ -1678,41 +1989,41 @@ Continue?</source>
         <translation>解码超时。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1065"/>
+        <location filename="../src/VideoIo.cpp" line="1237"/>
         <source>Could not start FFmpeg for encoding.</source>
         <translation>无法启动 FFmpeg 进行编码。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="968"/>
+        <location filename="../src/VideoIo.cpp" line="1140"/>
         <source>Could not create a temporary directory for encoding.</source>
         <translation>无法创建用于编码的临时目录。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1083"/>
-        <location filename="../src/VideoIo.cpp" line="1113"/>
-        <location filename="../src/VideoIo.cpp" line="1132"/>
-        <location filename="../src/VideoIo.cpp" line="1140"/>
-        <location filename="../src/VideoIo.cpp" line="1185"/>
+        <location filename="../src/VideoIo.cpp" line="1255"/>
+        <location filename="../src/VideoIo.cpp" line="1285"/>
+        <location filename="../src/VideoIo.cpp" line="1304"/>
+        <location filename="../src/VideoIo.cpp" line="1312"/>
+        <location filename="../src/VideoIo.cpp" line="1357"/>
         <source>Encoding failed: %1</source>
         <translation>编码失败：%1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1089"/>
+        <location filename="../src/VideoIo.cpp" line="1261"/>
         <source>Internal error: frame does not match the video format.</source>
         <translation>内部错误：帧与视频格式不匹配。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1174"/>
+        <location filename="../src/VideoIo.cpp" line="1346"/>
         <source>Encoding timed out while finalizing.</source>
         <translation>编码在完成阶段超时。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1253"/>
+        <location filename="../src/VideoIo.cpp" line="1425"/>
         <source>Could not move the finished video into place.</source>
         <translation>无法将完成的视频移动到目标位置。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1251"/>
+        <location filename="../src/VideoIo.cpp" line="1423"/>
         <source>The output file already exists.</source>
         <translation>输出文件已存在。</translation>
     </message>
@@ -1737,9 +2048,9 @@ Continue?</source>
         <translation>视频帧数超过安全限制</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1166"/>
-        <location filename="../src/VideoIo.cpp" line="1195"/>
-        <location filename="../src/VideoIo.cpp" line="1245"/>
+        <location filename="../src/VideoIo.cpp" line="1338"/>
+        <location filename="../src/VideoIo.cpp" line="1367"/>
+        <location filename="../src/VideoIo.cpp" line="1417"/>
         <source>The source video changed during processing.</source>
         <translation>源视频在处理过程中发生了更改。</translation>
     </message>
@@ -1747,54 +2058,54 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoProcessor</name>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="606"/>
-        <location filename="../src/VideoProcessor.cpp" line="927"/>
+        <location filename="../src/VideoProcessor.cpp" line="635"/>
+        <location filename="../src/VideoProcessor.cpp" line="966"/>
         <source>No frames could be decoded.</source>
         <translation>无法解码任何帧。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="380"/>
+        <location filename="../src/VideoProcessor.cpp" line="394"/>
         <source>Could not inspect the source video.</source>
         <translation>无法检查源视频。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="402"/>
-        <location filename="../src/VideoProcessor.cpp" line="429"/>
-        <location filename="../src/VideoProcessor.cpp" line="439"/>
+        <location filename="../src/VideoProcessor.cpp" line="416"/>
+        <location filename="../src/VideoProcessor.cpp" line="443"/>
+        <location filename="../src/VideoProcessor.cpp" line="453"/>
         <source>Could not create a private snapshot of the source video.</source>
         <translation>无法创建源视频的私有快照。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="391"/>
+        <location filename="../src/VideoProcessor.cpp" line="405"/>
         <source>The source video changed during processing. Start the operation again.</source>
         <translation>源视频在处理过程中发生了更改。请重新开始操作。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="534"/>
+        <location filename="../src/VideoProcessor.cpp" line="562"/>
         <source>The video frame count exceeds the safety limit.</source>
         <translation>视频帧数超过安全限制。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="546"/>
-        <location filename="../src/VideoProcessor.cpp" line="555"/>
-        <location filename="../src/VideoProcessor.cpp" line="562"/>
+        <location filename="../src/VideoProcessor.cpp" line="574"/>
+        <location filename="../src/VideoProcessor.cpp" line="583"/>
+        <location filename="../src/VideoProcessor.cpp" line="590"/>
         <source>Video detection data exceeds the safety limit.</source>
         <translation>视频检测数据超过安全限制。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="640"/>
-        <location filename="../src/VideoProcessor.cpp" line="698"/>
+        <location filename="../src/VideoProcessor.cpp" line="669"/>
+        <location filename="../src/VideoProcessor.cpp" line="727"/>
         <source>Video tracking data exceeds the safety limit.</source>
         <translation>视频跟踪数据超过安全限制。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="808"/>
-        <location filename="../src/VideoProcessor.cpp" line="933"/>
+        <location filename="../src/VideoProcessor.cpp" line="846"/>
+        <location filename="../src/VideoProcessor.cpp" line="972"/>
         <source>The source video changed during processing (frame count differs between passes).</source>
         <translation>源视频在处理过程中发生了更改（两次处理的帧数不同）。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="858"/>
+        <location filename="../src/VideoProcessor.cpp" line="896"/>
         <source>Video redaction failed.</source>
         <translation>视频遮盖失败。</translation>
     </message>
@@ -1802,22 +2113,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewCanvas</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="143"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="157"/>
         <source>Loading frame preview…</source>
         <translation>正在加载帧预览…</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="145"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="159"/>
         <source>Could not load this frame preview.</source>
         <translation>无法加载此帧预览。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="181"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="195"/>
         <source>Track %1</source>
         <translation>轨迹 %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="208"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="222"/>
         <source>Manual %1</source>
         <translation>手动 %1</translation>
     </message>
@@ -1825,64 +2136,72 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="594"/>
         <source>Tracking gaps (before review)</source>
         <translation>跟踪空白（检查前）</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="620"/>
         <source>Track %1 · %2–%3 · Frames %4–%5</source>
         <translation>轨迹 %1 · %2–%3 · 帧 %4–%5</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="646"/>
         <source>No tracking gaps were reported.</source>
         <translation>未报告跟踪空白。</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="652"/>
         <source>Previous gap</source>
         <translation>上一个空白</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="653"/>
         <source>Next gap</source>
         <translation>下一个空白</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="799"/>
         <source>Previous frame (Left arrow)</source>
         <translation>上一帧（左方向键）</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="800"/>
         <source>Next frame (Right arrow)</source>
         <translation>下一帧（右方向键）</translation>
     </message>
     <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="911"/>
         <source>%1 / %2 · Frame %3 / %4</source>
         <translation>%1 / %2 · 帧 %3 / %4</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="448"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="462"/>
         <source>Review video tracks — %1</source>
         <translation>检查视频轨迹 — %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="454"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="468"/>
         <source>Scrub the timeline and uncheck false detections. To cover a missed region, draw a manual track and add keyframes as it moves; the boxes between keyframes are interpolated before encoding.</source>
         <translation>浏览时间线并取消勾选误检项。要遮盖漏检区域，请绘制手动轨迹并随其移动添加关键帧；关键帧之间的框会在编码前自动插值。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="466"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="480"/>
         <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are included by default — uncheck only false detections.</source>
         <translation>标记为“低置信度”的轨迹缺少足够的可靠检测，但默认仍会包含。请仅取消勾选误检轨迹。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="473"/>
-        <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject's position.</source>
+        <location filename="../src/VideoReviewDialog.cpp" line="487"/>
+        <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject&apos;s position.</source>
         <translation>红色标记表示检查前跟踪无法确定目标位置的区间。请在需要的位置添加手动遮罩。添加遮罩并不能验证目标的实际位置，因此编辑后仍会保留这些标记。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="512"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="529"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>轨迹 %1  ·  %2–%3</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="517"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="534"/>
         <source>%1  ·  low confidence</source>
         <translation>%1  ·  低置信度</translation>
     </message>
@@ -1891,62 +2210,67 @@ Continue?</source>
         <translation type="vanished">可靠检测较少，默认被排除。如仍要遮盖此轨迹，请勾选。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="523"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="540"/>
         <source>Few confident detections — included by default. Uncheck it to leave this track unredacted.</source>
         <translation>高置信度检测较少 — 默认包含。取消勾选可让该轨道保持未遮盖。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="577"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="632"/>
+        <source>Check a gap after reviewing the entire interval. This records your review, not verified coverage. Editing masks resets these checks.</source>
+        <translation>检查完整空缺区间后再勾选。这仅记录您的检查，不代表遮盖范围已验证。编辑遮罩会重置这些勾选。</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="693"/>
         <source>Add missed track</source>
         <translation>添加漏检轨迹</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="578"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="694"/>
         <source>Add / update keyframe</source>
         <translation>添加 / 更新关键帧</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="579"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="695"/>
         <source>Set start here</source>
         <translation>将此处设为起点</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="580"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="696"/>
         <source>Set end here</source>
         <translation>将此处设为终点</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="581"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="697"/>
         <source>Remove manual track</source>
         <translation>删除手动轨迹</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="621"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="737"/>
         <source>Include all</source>
         <translation>全部包括</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="622"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="738"/>
         <source>Exclude all</source>
         <translation>全部排除</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="688"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="840"/>
         <source>Cancel all</source>
         <translation>全部取消</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="689"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="841"/>
         <source>Encode video</source>
         <translation>编码视频</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="701"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="853"/>
         <source>Encode with nothing covered?</source>
         <translation>不遮挡任何内容就编码？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="702"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="854"/>
         <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
 
 Continue?</source>
@@ -1955,129 +2279,42 @@ Continue?</source>
 继续？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="756"/>
-        <source>%1 / %2</source>
-        <translation>%1 / %2</translation>
+        <location filename="../src/VideoReviewDialog.cpp" line="1365"/>
+        <source>%1 reviewed · %2 pending</source>
+        <translation>已检查 %1 · 待检查 %2</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="947"/>
+        <source>%1 / %2</source>
+        <translation type="vanished">%1 / %2</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>请在当前帧拖出一个框，圈住漏检区域。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1146"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>请在此帧为手动轨迹 %1 拖出新框。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1124"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1325"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>手动 %1  ·  %2–%3  ·  %n 个关键帧</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1138"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1349"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>已包含 %2 条自动轨迹中的 %1 条 · %3 条手动轨迹</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1145"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1356"/>
         <source>%n tracking gap(s) found before review</source>
         <translation>
             <numerusform>检查前发现 %n 个跟踪空白区间</numerusform>
         </translation>
-    </message>
-</context>
-<context>
-    <name>cloakframe::ResultsDialog</name>
-    <message>
-        <source>File results</source>
-        <translation>文件结果</translation>
-    </message>
-    <message>
-        <source>Results from the last run. Only reported files and input errors are listed; files that never started are not shown.</source>
-        <translation>这是上次任务的结果。仅列出已报告的文件和输入错误，未开始处理的文件不会显示。</translation>
-    </message>
-    <message>
-        <source>Filter results</source>
-        <translation>筛选结果</translation>
-    </message>
-    <message>
-        <source>All results</source>
-        <translation>全部结果</translation>
-    </message>
-    <message>
-        <source>Needs attention</source>
-        <translation>需要关注</translation>
-    </message>
-    <message>
-        <source>Failures</source>
-        <translation>失败</translation>
-    </message>
-    <message>
-        <source>Input</source>
-        <translation>输入</translation>
-    </message>
-    <message>
-        <source>Status</source>
-        <translation>状态</translation>
-    </message>
-    <message>
-        <source>Output</source>
-        <translation>输出</translation>
-    </message>
-    <message>
-        <source>Not saved</source>
-        <translation>未保存</translation>
-    </message>
-    <message>
-        <source>Result details</source>
-        <translation>结果详情</translation>
-    </message>
-    <message>
-        <source>Select a result to see its details.</source>
-        <translation>选择一项结果以查看详情。</translation>
-    </message>
-    <message>
-        <source>Open input folder</source>
-        <translation>打开输入文件夹</translation>
-    </message>
-    <message>
-        <source>Open output folder</source>
-        <translation>打开输出文件夹</translation>
-    </message>
-    <message>
-        <source>Saved</source>
-        <translation>已保存</translation>
-    </message>
-    <message>
-        <source>Review required</source>
-        <translation>需要检查</translation>
-    </message>
-    <message>
-        <source>Skipped without saving</source>
-        <translation>已跳过，未保存</translation>
-    </message>
-    <message>
-        <source>Failed</source>
-        <translation>失败</translation>
-    </message>
-    <message>
-        <source>Cancelled</source>
-        <translation>已取消</translation>
-    </message>
-    <message>
-        <source>Unreadable input</source>
-        <translation>无法读取的输入</translation>
-    </message>
-    <message>
-        <source>Cannot open folder</source>
-        <translation>无法打开文件夹</translation>
-    </message>
-    <message>
-        <source>Could not open: %1</source>
-        <translation>无法打开：%1</translation>
     </message>
 </context>
 </TS>

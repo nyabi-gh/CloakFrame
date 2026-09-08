@@ -49,6 +49,7 @@ namespace cloakframe
         void setDrawingMode(bool enabled, int trackId = 0);
         void updateManualTrackItem(int id);
         void updateSummary();
+        void invalidateGapAcknowledgements();
         void navigateGap(bool next);
         void updateNavigation();
 
