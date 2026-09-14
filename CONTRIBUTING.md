@@ -60,6 +60,14 @@ Avoid changing supported operating-system, Qt, OpenCV, ONNX Runtime, model, or
 FFmpeg baselines without updating CI, packaging scripts, and documentation in
 the same pull request.
 
+Two documents record where these properties still have a gap, each in priority
+order and with the evidence for every item as it was last checked.
+[The open-work list](docs/open-work.md) carries the audit-lineage findings,
+release engineering, and performance; [the project review](docs/PROJECT_REVIEW.ko.md)
+carries the R1-R8 track and its progress log. Read whichever covers the area you
+are touching before working on privacy coverage, the video timeline,
+publication, or the updater, and update it when an item changes state.
+
 ## Dependencies and licenses
 
 Record any new runtime dependency and its license in
