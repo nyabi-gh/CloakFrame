@@ -687,6 +687,7 @@ jobs:
           test -x "$appdir/AppRun"
           test -e "$appdir/cloakframe.desktop"
           test -e "$appdir/cloakframe.png"
+          test -e "$appdir/.DirIcon"
           test -x "$appdir/usr/bin/CloakFrame"
           test -x "$appdir/usr/bin/ffmpeg/ffmpeg"
           test -x "$appdir/usr/bin/ffmpeg/ffprobe"

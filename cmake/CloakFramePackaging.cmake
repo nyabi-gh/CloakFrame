@@ -145,5 +145,7 @@ if(UNIX AND NOT APPLE AND CLOAKFRAME_APPIMAGE_LAYOUT)
             "$ENV{DESTDIR}/cloakframe.desktop" SYMBOLIC)
         file(CREATE_LINK "usr/share/icons/hicolor/512x512/apps/cloakframe.png"
             "$ENV{DESTDIR}/cloakframe.png" SYMBOLIC)
+        file(CREATE_LINK "cloakframe.png"
+            "$ENV{DESTDIR}/.DirIcon" SYMBOLIC)
     ]])
 endif()
