@@ -4,6 +4,7 @@
 #include <QStringList>
 
 #include <filesystem>
+#include <map>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -34,13 +35,18 @@ namespace cloakframe
     // A comparison key for `path`: its text, case-folded when `foldCase` is true.
     [[nodiscard]] std::string pathKey(const std::filesystem::path &path, bool foldCase);
 
+    // Files the scan found but cannot process, counted by lowercase extension ("" for none).
+    // Hidden files and the folder files Windows writes are not counted.
+    using SkippedTypes = std::map<std::string, int>;
+
     std::vector<ScanResult> scanImages(
         const QStringList &inputs, bool recursive, std::vector<ScanIssue> *issues = nullptr);
 
     std::vector<ScanResult> scanMedia(const QStringList &inputs,
         bool recursive,
         bool includeVideos,
-        std::vector<ScanIssue> *issues = nullptr);
+        std::vector<ScanIssue> *issues = nullptr,
+        SkippedTypes *skipped = nullptr);
 
     bool isSupportedImage(const std::filesystem::path &path);
 }

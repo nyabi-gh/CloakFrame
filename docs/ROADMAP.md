@@ -33,8 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **Skipped file types** [A-10]. Unsupported files in a folder (HEIC, AVIF, GIF, MKV)
-  are dropped silently. Show their count by extension.
 - **Leftovers** [A-12, A-5]. Publication temp directories in the output folder survive a
   crash, and `stage-roots.txt` keeps up to 32 output folder paths. Sweep the former and
   forget roots that have no stage left; include the file in "Delete logs".

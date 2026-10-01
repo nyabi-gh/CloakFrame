@@ -116,6 +116,26 @@ namespace cloakframe
             return parts.join(QStringLiteral(", "));
         }
 
+        // ".heic 11, .gif 1", most frequent first.
+        QString formatSkippedTypes(const SkippedTypes &skipped, const QString &noExtension)
+        {
+            std::vector<std::pair<std::string, int>> types(skipped.begin(), skipped.end());
+            std::ranges::stable_sort(types,
+                [](const auto &a, const auto &b)
+                {
+                    return a.second > b.second;
+                });
+            QStringList parts;
+            for (const auto &[extension, count] : types)
+            {
+                parts << QStringLiteral("%1 %2")
+                             .arg(extension.empty() ? noExtension
+                                                    : QString::fromStdString(extension))
+                             .arg(count);
+            }
+            return parts.join(QStringLiteral(", "));
+        }
+
         std::shared_ptr<Detector> makeFaceDetector(const FaceModelKind kind,
             const QString &modelPath,
             const int scrfdInputSize,
@@ -554,9 +574,28 @@ namespace cloakframe
 
             emit logMessage(tr("Scanning inputs..."));
             std::vector<ScanIssue> scanIssues;
-            const auto images = scanMedia(inputs_, recursive_, true, &scanIssues);
+            SkippedTypes skippedTypes;
+            const auto images = scanMedia(inputs_, recursive_, true, &scanIssues, &skippedTypes);
             const int total = static_cast<int>(images.size());
             emit logMessage(tr("Preflight: found %n supported file(s).", nullptr, total));
+            // A folder that also holds HEIC or MKV files is not fully processed, and the output
+            // folder alone does not show that.
+            int skippedTypeCount = 0;
+            for (const auto &entry : skippedTypes)
+            {
+                skippedTypeCount += entry.second;
+            }
+            const QString skippedTypesMessage =
+                skippedTypeCount > 0
+                    ? tr("Not processed: %n file(s) of a type CloakFrame does not support (%1).",
+                          nullptr,
+                          skippedTypeCount)
+                          .arg(formatSkippedTypes(skippedTypes, tr("no extension")))
+                    : QString();
+            if (!skippedTypesMessage.isEmpty())
+            {
+                emit logMessage(skippedTypesMessage);
+            }
 
             constexpr std::size_t kReportedScanIssues = 10;
             for (const auto &issue : scanIssues)
@@ -808,6 +847,10 @@ namespace cloakframe
                     .arg(skippedCount)
                     .arg(failedCount)
                     .arg(total));
+            if (!skippedTypesMessage.isEmpty())
+            {
+                emit logMessage(skippedTypesMessage);
+            }
 
             RunSummary summary;
             summary.total = total;

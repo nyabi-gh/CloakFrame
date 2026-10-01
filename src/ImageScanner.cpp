@@ -39,13 +39,26 @@ namespace cloakframe
             return false;
         }
 
+        bool isSystemFile(const std::filesystem::path &file)
+        {
+            const QString name = pathToQString(file.filename());
+            return name.startsWith(QLatin1Char('.'))
+                   || name.compare(QStringLiteral("Thumbs.db"), Qt::CaseInsensitive) == 0
+                   || name.compare(QStringLiteral("desktop.ini"), Qt::CaseInsensitive) == 0;
+        }
+
         void appendFile(std::vector<ScanResult> &results,
             const std::filesystem::path &file,
             const std::filesystem::path &base,
-            const bool includeVideos)
+            const bool includeVideos,
+            SkippedTypes *skipped)
         {
             if (!isSupportedImage(file) && !(includeVideos && isSupportedVideo(file)))
             {
+                if (skipped != nullptr && !isSystemFile(file))
+                {
+                    ++(*skipped)[lowercaseExtension(file)];
+                }
                 return;
             }
 
@@ -120,7 +133,8 @@ namespace cloakframe
     std::vector<ScanResult> scanMedia(const QStringList &inputs,
         bool recursive,
         const bool includeVideos,
-        std::vector<ScanIssue> *issues)
+        std::vector<ScanIssue> *issues,
+        SkippedTypes *skipped)
     {
         std::vector<ScanResult> results;
 
@@ -160,7 +174,7 @@ namespace cloakframe
             {
                 if (markVisited(path))
                 {
-                    appendFile(results, path, path.parent_path(), includeVideos);
+                    appendFile(results, path, path.parent_path(), includeVideos, skipped);
                 }
                 continue;
             }
@@ -195,7 +209,7 @@ namespace cloakframe
                     std::error_code entryError;
                     if (it->is_regular_file(entryError) && markVisited(it->path()))
                     {
-                        appendFile(results, it->path(), path, includeVideos);
+                        appendFile(results, it->path(), path, includeVideos, skipped);
                     }
                     if (!entryError && recursive && it->is_directory(entryError)
                         && !it->is_symlink(entryError))

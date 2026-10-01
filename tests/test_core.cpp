@@ -262,6 +262,36 @@ namespace
         assert(relativePaths.contains("nested/two.png"));
     }
 
+    void testScanCountsUnsupportedFilesByType()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        QDir root(temp.path());
+        assert(root.mkpath("photos/nested"));
+        for (const char *name : {"photos/one.jpg",
+                 "photos/two.HEIC",
+                 "photos/nested/three.heic",
+                 "photos/clip.mkv",
+                 "photos/README",
+                 "photos/.DS_Store",
+                 "photos/Thumbs.db",
+                 "photos/desktop.ini"})
+        {
+            writeBytes(root.filePath(name));
+        }
+
+        cloakframe::SkippedTypes skipped;
+        const auto media =
+            cloakframe::scanMedia({root.filePath("photos")}, true, true, nullptr, &skipped);
+        assert(media.size() == 1);
+        assert((skipped == cloakframe::SkippedTypes{{".heic", 2}, {".mkv", 1}, {"", 1}}));
+
+        // Without videos, a video is one of the files left behind.
+        cloakframe::SkippedTypes imagesOnly;
+        (void)cloakframe::scanMedia({root.filePath("photos")}, true, false, nullptr, &imagesOnly);
+        assert(imagesOnly.at(".mkv") == 1);
+    }
+
     void testScanReportsInputsItCannotRead()
     {
         QTemporaryDir temp;
@@ -2914,6 +2944,7 @@ int main(int argc, char **argv)
     testBuiltinModelDigests();
     testSupportedImageExtensions();
     testScanImagesRecursesAndDeduplicates();
+    testScanCountsUnsupportedFilesByType();
     testScanReportsInputsItCannotRead();
     testScanReportsDeniedDirectoriesAndContinues();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
