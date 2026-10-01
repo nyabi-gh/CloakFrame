@@ -157,6 +157,10 @@ namespace cloakframe
                 timedOut ? ModelDownloadStatus::TimedOut : ModelDownloadStatus::NetworkError;
             const int http = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             const auto error = reply->error();
+            result.errorDetail =
+                timedOut ? QString()
+                         : (http > 0 ? QStringLiteral("HTTP %1 · ").arg(http) : QString())
+                               + reply->errorString();
             const bool transient = timedOut || http == 429 || http >= 500
                                    || error == QNetworkReply::TimeoutError
                                    || error == QNetworkReply::TemporaryNetworkFailureError

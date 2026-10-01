@@ -4,23 +4,51 @@
 #include "cloakframe/ModelDownload.hpp"
 #include "cloakframe/ModelStore.hpp"
 
+#include <QClipboard>
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
 #include <QProgressDialog>
+#include <QPushButton>
 #include <QUrl>
 
 #include <algorithm>
 
 namespace cloakframe
 {
+    namespace
+    {
+        void showDownloadFailure(QWidget *parent,
+            const BuiltinModel &model,
+            const QString &destPath,
+            const QString &reason)
+        {
+            QMessageBox box(QMessageBox::Warning,
+                QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
+                reason + QStringLiteral("\n\n")
+                    + QCoreApplication::translate("cloakframe::MainWindow",
+                        "To install the model by hand, download\n%1\nand save it as\n%2")
+                        .arg(model.url, QDir::toNativeSeparators(destPath)),
+                QMessageBox::Close,
+                parent);
+            box.setTextInteractionFlags(Qt::TextSelectableByMouse);
+            const auto *copy = box.addButton(
+                QCoreApplication::translate("cloakframe::MainWindow", "Copy Download Link"),
+                QMessageBox::ActionRole);
+            box.exec();
+            if (box.clickedButton() == copy)
+                QGuiApplication::clipboard()->setText(model.url);
+        }
+    }
+
     bool downloadModelWithProgress(
         QWidget *parent, const BuiltinModel &model, const QString &destPath)
     {
@@ -75,6 +103,8 @@ namespace cloakframe
                 "The model download failed after %1 attempt(s). Check your connection and try "
                 "again.")
                         .arg(result.attempts);
+            if (!result.errorDetail.isEmpty())
+                error += QStringLiteral("\n") + result.errorDetail;
             break;
         case ModelDownloadStatus::TooLarge:
             error = QCoreApplication::translate("cloakframe::MainWindow",
@@ -87,9 +117,7 @@ namespace cloakframe
         }
         if (!error.isEmpty())
         {
-            QMessageBox::warning(parent,
-                QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
-                error);
+            showDownloadFailure(parent, model, destPath, error);
             return false;
         }
         const QByteArray &data = result.data;
@@ -110,8 +138,9 @@ namespace cloakframe
         case ModelSaveResult::PublishFailed:
             break;
         }
-        QMessageBox::warning(parent,
-            QCoreApplication::translate("cloakframe::MainWindow", "Download Failed"),
+        showDownloadFailure(parent,
+            model,
+            destPath,
             QCoreApplication::translate(
                 "cloakframe::MainWindow", "Could not save the model file."));
         return false;
@@ -156,7 +185,7 @@ namespace cloakframe
             QCoreApplication::translate("cloakframe::MainWindow", "Download Model"),
             builtinModelConsentText(model).arg(model.fileName, sizeMb),
             QMessageBox::Yes | QMessageBox::No,
-            QMessageBox::Yes);
+            QMessageBox::No);
         if (answer != QMessageBox::Yes)
         {
             return false;
@@ -177,7 +206,7 @@ namespace cloakframe
                 "project (MIT-licensed). Your images are never uploaded.\n\nDownload now?")
                 .arg(sizeMb),
             QMessageBox::Yes | QMessageBox::No,
-            QMessageBox::Yes);
+            QMessageBox::No);
         if (answer != QMessageBox::Yes)
         {
             return false;

@@ -35,8 +35,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Review screens and everyday use
 
-- **Model download failures** [E-7]. No reason is shown and there is no manual install
-  path; Yes is the default button.
 - **Minor** [E-9]. The progress bar counts files only; a missing FFmpeg is reported per
   video; Space repeats Undo after clicking it.
 - **Accessibility** [E-10]. No keyboard way to add regions; canvas and timeline lack

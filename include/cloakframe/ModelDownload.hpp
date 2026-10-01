@@ -27,6 +27,8 @@ namespace cloakframe
         ModelDownloadStatus status = ModelDownloadStatus::NetworkError;
         QByteArray data;
         int attempts = 0;
+        // The network layer's own wording, untranslated, for a NetworkError.
+        QString errorDetail;
     };
     [[nodiscard]] ModelDownloadResult downloadModelData(const QUrl &url,
         qint64 maxBytes,

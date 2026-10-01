@@ -108,6 +108,7 @@ int main(int argc, char **argv)
            && result.attempts == 1);
     result = run(Mode::NotFound);
     assert(result.status == ModelDownloadStatus::NetworkError && result.attempts == 1);
+    assert(result.errorDetail.startsWith("HTTP 404 · "));
     result = run(Mode::Success, true);
     assert(result.status == ModelDownloadStatus::Cancelled && result.attempts == 0);
     mode = Mode::Stall;
