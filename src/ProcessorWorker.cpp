@@ -733,6 +733,24 @@ namespace cloakframe
                 return;
             }
             emit logMessage(tr("Preflight: output paths are available."));
+            const auto videoCount = std::count_if(images.cbegin(),
+                images.cend(),
+                [](const ScanResult &item)
+                {
+                    return isSupportedVideo(item.sourcePath);
+                });
+            if (videoCount > 0)
+            {
+                QString toolsError;
+                ffmpegTools_ = locateFfmpegTools(&toolsError);
+                if (!ffmpegTools_)
+                {
+                    emit logMessage(tr("%n video(s) in this run cannot be processed: %1",
+                        nullptr,
+                        static_cast<int>(videoCount))
+                            .arg(toolsError));
+                }
+            }
             const OutputRootGuard outputRootGuard(pathToQString(safeRoot));
 
             int completed = 0;
@@ -1441,11 +1459,10 @@ namespace cloakframe
             outcome.warnings = 1;
         }
 
-        QString toolsError;
-        const auto tools = locateFfmpegTools(&toolsError);
+        const auto &tools = ffmpegTools_;
         if (!tools)
         {
-            outcome.logs.push_back(tr("Failed (%1): %2").arg(toolsError, fileName));
+            outcome.logs.push_back(tr("Failed (FFmpeg is not available): %1").arg(fileName));
             outcome.failed = 1;
             return outcome;
         }

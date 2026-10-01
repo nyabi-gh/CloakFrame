@@ -81,6 +81,7 @@ namespace
         cloakframe::RunOutcome outcome = cloakframe::RunOutcome::Failed;
         cloakframe::RunSummary summary;
         QVector<cloakframe::FileResult> files;
+        QStringList logs;
     };
 
     WorkerRun runWorker(QCoreApplication &app, const cloakframe::ProcessingRequest &request)
@@ -94,6 +95,13 @@ namespace
         WorkerRun run;
         QEventLoop loop;
         QObject::connect(&thread, &QThread::started, worker, &cloakframe::ProcessorWorker::process);
+        QObject::connect(worker,
+            &cloakframe::ProcessorWorker::logMessage,
+            &app,
+            [&](const QString &message)
+            {
+                run.logs.push_back(message);
+            });
         QObject::connect(worker,
             &cloakframe::ProcessorWorker::summaryAvailable,
             &app,
@@ -129,6 +137,32 @@ int main(int argc, char **argv)
     QCoreApplication app(argc, argv);
     qRegisterMetaType<cloakframe::VideoReviewRequest>();
     qRegisterMetaType<cloakframe::VideoReviewResult>();
+
+    // Must run before anything finds FFmpeg, because a found FFmpeg is cached.
+    const QByteArray path = qgetenv("PATH");
+    qputenv("PATH", "");
+    if (!cloakframe::locateFfmpegTools())
+    {
+        QTemporaryDir inputs;
+        assert(inputs.isValid());
+        cloakframe::ProcessingRequest request;
+        for (const auto *name : {"a.mp4", "b.mov"})
+        {
+            QFile file(inputs.filePath(name));
+            assert(file.open(QIODevice::WriteOnly) && file.write("not a video") > 0);
+            request.inputs.push_back(file.fileName());
+        }
+        QTemporaryDir output;
+        request.outputDirectory = output.filePath("out");
+        const auto run = runWorker(app, request);
+        assert(run.logs.filter("2 video(s) in this run cannot be processed").size() == 1);
+        assert(run.files.size() == 2);
+        for (const auto &file : run.files)
+            assert(file.status == cloakframe::FileResultStatus::Failed
+                   && file.messages.join('\n').contains("FFmpeg is not available"));
+    }
+    qputenv("PATH", path);
+
     const auto tools = cloakframe::locateFfmpegTools();
     if (!tools)
         return 77;

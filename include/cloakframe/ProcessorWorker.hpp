@@ -184,6 +184,8 @@ namespace cloakframe
         int videoCrf_;
         VideoCodec videoCodec_;
         bool removeAudio_;
+        // Looked up once, before any item runs, when the run has a video.
+        std::optional<FfmpegTools> ffmpegTools_;
         std::atomic<bool> cancelled_{false};
         std::mutex imageMemoryMutex_;
         std::condition_variable imageMemoryCv_;
