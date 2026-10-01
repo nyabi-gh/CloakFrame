@@ -36,7 +36,7 @@ close it. Check the caller and the full scope before recording a change of state
 ## Review screens and everyday use
 
 - **Minor** [E-9]. The progress bar counts files only; a missing FFmpeg is reported per
-  video; Space repeats Undo after clicking it.
+  video.
 - **Accessibility** [E-10]. No keyboard way to add regions; canvas and timeline lack
   accessible names; placeholder text and timeline marks fail contrast; included and
   excluded tracks differ by color only; Tab order runs right to left in the options row.

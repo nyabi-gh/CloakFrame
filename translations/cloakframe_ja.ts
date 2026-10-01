@@ -1680,12 +1680,12 @@ Check these results before sharing them.</source>
         <translation>すべてキャンセル</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="742"/>
+        <location filename="../src/ReviewDialog.cpp" line="746"/>
         <source>Cancel All?</source>
         <translation>すべてキャンセルしますか？</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ReviewDialog.cpp" line="743"/>
+        <location filename="../src/ReviewDialog.cpp" line="747"/>
         <source>Stop reviewing and cancel the remaining %n image(s)?
 
 Images already saved are kept.</source>
@@ -1721,12 +1721,12 @@ Images already saved are kept.</source>
         <translation>画像を匿名化せずに保存します。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="790"/>
+        <location filename="../src/ReviewDialog.cpp" line="794"/>
         <source>Copy Original?</source>
         <translation>オリジナルをコピーしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="791"/>
+        <location filename="../src/ReviewDialog.cpp" line="795"/>
         <source>This image will not be anonymized.
 
 %1
@@ -1739,12 +1739,12 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="810"/>
+        <location filename="../src/ReviewDialog.cpp" line="814"/>
         <source>Save with nothing covered?</source>
         <translation>何も覆わずに保存しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="811"/>
+        <location filename="../src/ReviewDialog.cpp" line="815"/>
         <source>Every region the detector found has been excluded and none were added in their place, so this image will be saved with nothing covered.
 
 Continue?</source>
@@ -1753,12 +1753,12 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="785"/>
+        <location filename="../src/ReviewDialog.cpp" line="789"/>
         <source>The unredacted original will be saved to the output folder, including its original metadata (EXIF, GPS, timestamps).</source>
         <translation>匿名化していない元の画像が、メタデータ（EXIF、GPS、撮影日時）を含んだまま出力フォルダーに保存されます。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="787"/>
+        <location filename="../src/ReviewDialog.cpp" line="791"/>
         <source>The unredacted original will be saved to the output folder (re-encoded without metadata).</source>
         <translation>匿名化していない元の画像が出力フォルダーに保存されます（メタデータなしで再エンコードされます）。</translation>
     </message>

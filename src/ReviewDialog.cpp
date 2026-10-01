@@ -723,6 +723,10 @@ namespace cloakframe
         save->setToolTip(
             QKeySequence(Qt::CTRL | Qt::Key_Return).toString(QKeySequence::NativeText));
 
+        // A click leaves the keyboard on the canvas, where Space previews the result.
+        for (auto *button : {cancelAll, undoButton, redoButton, doNotSave, copyOriginal, save})
+            button->setFocusPolicy(Qt::TabFocus);
+
         buttonRow->addWidget(cancelAll);
         buttonRow->addWidget(undoButton);
         buttonRow->addWidget(redoButton);

@@ -1680,12 +1680,12 @@ Check these results before sharing them.</source>
         <translation>모두 취소</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="742"/>
+        <location filename="../src/ReviewDialog.cpp" line="746"/>
         <source>Cancel All?</source>
         <translation>모두 취소할까요?</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ReviewDialog.cpp" line="743"/>
+        <location filename="../src/ReviewDialog.cpp" line="747"/>
         <source>Stop reviewing and cancel the remaining %n image(s)?
 
 Images already saved are kept.</source>
@@ -1721,12 +1721,12 @@ Images already saved are kept.</source>
         <translation>이미지를 가리지 않고 저장합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="790"/>
+        <location filename="../src/ReviewDialog.cpp" line="794"/>
         <source>Copy Original?</source>
         <translation>원본을 복사할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="791"/>
+        <location filename="../src/ReviewDialog.cpp" line="795"/>
         <source>This image will not be anonymized.
 
 %1
@@ -1739,12 +1739,12 @@ Continue?</source>
 계속할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="810"/>
+        <location filename="../src/ReviewDialog.cpp" line="814"/>
         <source>Save with nothing covered?</source>
         <translation>아무것도 가리지 않고 저장할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="811"/>
+        <location filename="../src/ReviewDialog.cpp" line="815"/>
         <source>Every region the detector found has been excluded and none were added in their place, so this image will be saved with nothing covered.
 
 Continue?</source>
@@ -1753,12 +1753,12 @@ Continue?</source>
 계속할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="785"/>
+        <location filename="../src/ReviewDialog.cpp" line="789"/>
         <source>The unredacted original will be saved to the output folder, including its original metadata (EXIF, GPS, timestamps).</source>
         <translation>가리지 않은 원본이 메타데이터(EXIF, GPS, 촬영 시간)를 그대로 담은 채 출력 폴더에 저장됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="787"/>
+        <location filename="../src/ReviewDialog.cpp" line="791"/>
         <source>The unredacted original will be saved to the output folder (re-encoded without metadata).</source>
         <translation>가리지 않은 원본이 출력 폴더에 저장됩니다(메타데이터 없이 다시 인코딩됨).</translation>
     </message>

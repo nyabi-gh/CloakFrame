@@ -1,6 +1,7 @@
 #include "cloakframe/ReviewDialog.hpp"
 
 #include <QApplication>
+#include <QPushButton>
 #include <QTest>
 
 #include <algorithm>
@@ -38,6 +39,21 @@ int main(int argc, char **argv)
         }
     }
     assert(dialog.reviewResult().finalBoxes.size() == 1);
+
+    (*canvas)->setFocus();
+    application.processEvents();
+    QTest::keyClick(*canvas, Qt::Key_Right);
+    QTest::keyClick(*canvas, Qt::Key_Delete);
+    assert(dialog.reviewResult().finalBoxes.isEmpty());
+    QPushButton *undo = nullptr;
+    for (auto *button : dialog.findChildren<QPushButton *>())
+        if (button->text() == "Undo")
+            undo = button;
+    assert(undo != nullptr && undo->isEnabled());
+    QTest::mouseClick(undo, Qt::LeftButton);
+    application.processEvents();
+    assert(dialog.reviewResult().finalBoxes.size() == 1);
+    assert(QApplication::focusWidget() == *canvas);
 
     (*canvas)->setFocus();
     application.processEvents();
