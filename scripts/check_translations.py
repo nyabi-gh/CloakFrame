@@ -32,6 +32,12 @@ def check(path: Path, strict_source_equality: bool) -> tuple[list[str], list[str
             seen.add(key)
 
             translation = message.find("translation")
+            # lupdate marks an entry vanished when no scanned source uses it any more, and
+            # lrelease leaves it out. If the source string still exists, that string now shows
+            # in English; if it does not, the entry is dead. Either way it must not stay.
+            if translation is not None and translation.get("type") in ("vanished", "obsolete"):
+                errors.append(f"{context_name}: vanished: {source!r}")
+                continue
             if translation is None or translation.get("type") == "unfinished":
                 errors.append(f"{context_name}: unfinished: {source!r}")
                 continue

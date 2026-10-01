@@ -614,6 +614,45 @@ namespace
         assert(!std::filesystem::exists(output / "input.png"));
     }
 
+    void testAModelThatFailsToLoadIsReportedInTheInterfaceLanguage()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto source = root / "input.png";
+        const auto model = root / "broken.onnx";
+        assert(cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60))));
+        const QByteArray bytes("not an onnx model");
+        writeBytes(model, std::vector<uchar>(bytes.begin(), bytes.end()));
+
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(source.string())};
+        request.outputDirectory = QString::fromStdString((root / "out").string());
+        request.modelPath = QString::fromStdString(model.string());
+        request.modelSha256 = QCryptographicHash::hash(bytes, QCryptographicHash::Sha256);
+        request.faceModelKind = cloakframe::FaceModelKind::Scrfd;
+
+        cloakframe::RunOutcome result = cloakframe::RunOutcome::Completed;
+        QStringList log;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::finished,
+            [&](const cloakframe::RunOutcome value)
+            {
+                result = value;
+            });
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::logMessage,
+            [&](const QString &message)
+            {
+                log.push_back(message);
+            });
+        worker.process();
+
+        assert(result == cloakframe::RunOutcome::Failed);
+        assert(log.filter("The face detection model could not be loaded: ").size() == 1);
+    }
+
     void testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun()
     {
         QTemporaryDir temp;
@@ -2499,6 +2538,7 @@ int main(int argc, char **argv)
     testReviewConfirmsOnlyWhenDetectionsWereCleared();
     testWorkerFailsWhenTheReviewReceiverIsMissing();
     testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun();
+    testAModelThatFailsToLoadIsReportedInTheInterfaceLanguage();
     testWorkerSavesNothingWhenTheReviewSlotIsMissing();
     testWorkerHonoursCancelRequestedBeforeProcess();
     testDroppedDetectionsKeepTheRunOutOfCleanCompletion();

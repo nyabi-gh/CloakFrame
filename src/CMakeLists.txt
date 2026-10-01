@@ -169,8 +169,11 @@ if(Qt6LinguistTools_FOUND)
     # cloakframe_core has to be scanned as well: it holds the worker, video and publication
     # messages. A target lupdate does not see has its strings marked obsolete, and lrelease
     # drops obsolete strings, so those messages would appear in English in every language.
+    # The Velopack updater is part of the target only on Windows and Linux; naming it here
+    # keeps its messages in the catalogs when lupdate runs on macOS.
     qt_add_translations(CloakFrame
         SOURCE_TARGETS CloakFrame cloakframe_core
+        SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/SelfUpdaterVelopack.cpp
         TS_FILES ${PROJECT_SOURCE_DIR}/translations/cloakframe_ko.ts
                  ${PROJECT_SOURCE_DIR}/translations/cloakframe_ja.ts
     )

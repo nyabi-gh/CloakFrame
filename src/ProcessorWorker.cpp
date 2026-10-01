@@ -39,13 +39,32 @@
 #include <exception>
 #include <filesystem>
 #include <limits>
+#include <stdexcept>
 #include <system_error>
 #include <thread>
+#include <utility>
 
 namespace cloakframe
 {
     namespace
     {
+        // A detector's own errors are English diagnostics. Loading a model is where the user
+        // can act on one, by choosing another model or turning off GPU acceleration, so a
+        // failure there leads with a translated sentence and keeps the diagnostic as detail.
+        template <typename Load> void loadModel(const QString &failure, Load &&load)
+        {
+            try
+            {
+                std::forward<Load>(load)();
+            }
+            catch (const std::exception &error)
+            {
+                throw std::runtime_error(
+                    (failure + QStringLiteral(": ") + QString::fromUtf8(error.what()))
+                        .toStdString());
+            }
+        }
+
         constexpr std::uintmax_t kMaxInputFileBytes = 2ULL * 1024ULL * 1024ULL * 1024ULL;
         constexpr long long kMaxPixelCount = 512LL * 1000LL * 1000LL;
         constexpr long long kMaxJpegPixelCount = 512LL * 1000LL * 1000LL;
@@ -445,28 +464,35 @@ namespace cloakframe
                 if (!detector_)
                 {
                     emit logMessage(tr("Loading face detection model..."));
-                    try
-                    {
-                        detector_ = makeFaceDetector(
-                            faceModelKind_, modelPath_, 640, gpuAcceleration_, modelSha256_);
-                        const cv::Mat warmupFrame(detector_->inputSize(),
-                            detector_->inputSize(),
-                            CV_8UC3,
-                            cv::Scalar(0, 0, 0));
-                        detector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
-                    }
-                    catch (const Ort::Exception &)
-                    {
-                        emit logMessage(tr("GPU acceleration can't run the face model; "
-                                           "using the CPU instead."));
-                        detector_ =
-                            makeFaceDetector(faceModelKind_, modelPath_, 640, false, modelSha256_);
-                        const cv::Mat warmupFrame(detector_->inputSize(),
-                            detector_->inputSize(),
-                            CV_8UC3,
-                            cv::Scalar(0, 0, 0));
-                        detector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
-                    }
+                    loadModel(tr("The face detection model could not be loaded"),
+                        [&]
+                        {
+                            try
+                            {
+                                detector_ = makeFaceDetector(faceModelKind_,
+                                    modelPath_,
+                                    640,
+                                    gpuAcceleration_,
+                                    modelSha256_);
+                                const cv::Mat warmupFrame(detector_->inputSize(),
+                                    detector_->inputSize(),
+                                    CV_8UC3,
+                                    cv::Scalar(0, 0, 0));
+                                detector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
+                            }
+                            catch (const Ort::Exception &)
+                            {
+                                emit logMessage(tr("GPU acceleration can't run the face model; "
+                                                   "using the CPU instead."));
+                                detector_ = makeFaceDetector(
+                                    faceModelKind_, modelPath_, 640, false, modelSha256_);
+                                const cv::Mat warmupFrame(detector_->inputSize(),
+                                    detector_->inputSize(),
+                                    CV_8UC3,
+                                    cv::Scalar(0, 0, 0));
+                                detector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
+                            }
+                        });
                 }
                 else
                 {
@@ -481,24 +507,31 @@ namespace cloakframe
                 if (!plateDetector_)
                 {
                     emit logMessage(tr("Loading license plate detection model..."));
-                    try
-                    {
-                        plateDetector_ = std::make_shared<PlateDetector>(
-                            pathToUtf8(pathFromQString(plateModelPath_)),
-                            gpuAcceleration_,
-                            plateModelSha256_);
-                        const cv::Mat warmupFrame(512, 512, CV_8UC3, cv::Scalar(0, 0, 0));
-                        plateDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
-                    }
-                    catch (const Ort::Exception &)
-                    {
-                        emit logMessage(tr("GPU acceleration can't run the license plate model; "
-                                           "using the CPU instead."));
-                        plateDetector_ = std::make_shared<PlateDetector>(
-                            pathToUtf8(pathFromQString(plateModelPath_)), false, plateModelSha256_);
-                        const cv::Mat warmupFrame(512, 512, CV_8UC3, cv::Scalar(0, 0, 0));
-                        plateDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
-                    }
+                    loadModel(tr("The license plate detection model could not be loaded"),
+                        [&]
+                        {
+                            try
+                            {
+                                plateDetector_ = std::make_shared<PlateDetector>(
+                                    pathToUtf8(pathFromQString(plateModelPath_)),
+                                    gpuAcceleration_,
+                                    plateModelSha256_);
+                                const cv::Mat warmupFrame(512, 512, CV_8UC3, cv::Scalar(0, 0, 0));
+                                plateDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
+                            }
+                            catch (const Ort::Exception &)
+                            {
+                                emit logMessage(
+                                    tr("GPU acceleration can't run the license plate model; "
+                                       "using the CPU instead."));
+                                plateDetector_ = std::make_shared<PlateDetector>(
+                                    pathToUtf8(pathFromQString(plateModelPath_)),
+                                    false,
+                                    plateModelSha256_);
+                                const cv::Mat warmupFrame(512, 512, CV_8UC3, cv::Scalar(0, 0, 0));
+                                plateDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
+                            }
+                        });
                 }
                 else
                 {
@@ -1347,29 +1380,37 @@ namespace cloakframe
             emit logMessage(tr("Loading face detection model for video..."));
             const int videoInputSize =
                 faceModelKind_ == FaceModelKind::Scrfd ? kVideoDetectionInputSize : 640;
-            try
-            {
-                videoDetector_ = makeFaceDetector(
-                    faceModelKind_, modelPath_, videoInputSize, gpuAcceleration_, modelSha256_);
-                const cv::Mat warmupFrame(videoDetector_->inputSize(),
-                    videoDetector_->inputSize(),
-                    CV_8UC3,
-                    cv::Scalar(0, 0, 0));
-                videoDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
-            }
-            catch (const Ort::Exception &)
-            {
-                emit logMessage(tr("GPU acceleration can't run the video face model at %1 px; "
-                                   "using the CPU instead.")
-                        .arg(videoInputSize));
-                videoDetector_ = makeFaceDetector(
-                    faceModelKind_, modelPath_, videoInputSize, false, modelSha256_);
-                const cv::Mat warmupFrame(videoDetector_->inputSize(),
-                    videoDetector_->inputSize(),
-                    CV_8UC3,
-                    cv::Scalar(0, 0, 0));
-                videoDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
-            }
+            loadModel(tr("The face detection model could not be loaded"),
+                [&]
+                {
+                    try
+                    {
+                        videoDetector_ = makeFaceDetector(faceModelKind_,
+                            modelPath_,
+                            videoInputSize,
+                            gpuAcceleration_,
+                            modelSha256_);
+                        const cv::Mat warmupFrame(videoDetector_->inputSize(),
+                            videoDetector_->inputSize(),
+                            CV_8UC3,
+                            cv::Scalar(0, 0, 0));
+                        videoDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
+                    }
+                    catch (const Ort::Exception &)
+                    {
+                        emit logMessage(
+                            tr("GPU acceleration can't run the video face model at %1 px; "
+                               "using the CPU instead.")
+                                .arg(videoInputSize));
+                        videoDetector_ = makeFaceDetector(
+                            faceModelKind_, modelPath_, videoInputSize, false, modelSha256_);
+                        const cv::Mat warmupFrame(videoDetector_->inputSize(),
+                            videoDetector_->inputSize(),
+                            CV_8UC3,
+                            cv::Scalar(0, 0, 0));
+                        videoDetector_->detect(warmupFrame, scoreThreshold_, nmsThreshold_);
+                    }
+                });
             emit logMessage(tr("Video face detection: %1 px · %2")
                     .arg(videoDetector_->inputSize())
                     .arg(QString::fromLatin1(videoDetector_->backendName())));

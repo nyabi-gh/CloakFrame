@@ -31,11 +31,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Model hashing on the GUI thread** [E-8, OW 8]. Each run hashes the selected model
   once on the GUI thread before starting; a custom model may be 512 MB. Move it to a
   worker and keep the single digest it produces for consent and loading.
-- **Untranslated updater messages** [E-11]. The strings in `SelfUpdaterVelopack.cpp`
-  are marked vanished in the catalogs because translation sources are scanned per
-  target and the Velopack source is conditional. Add it to the translation sources and
-  make `check_translations.py` fail on a vanished entry still present in the source.
-  Detector exception text also reaches the activity log in English.
 - **Metadata regression tests** [D-1]. Nothing asserts that a default-path image output
   carries no EXIF, XMP, ICC, PNG text or WebP metadata chunks, or that a video output
   drops subtitle, data and attachment streams and per-stream tags.
