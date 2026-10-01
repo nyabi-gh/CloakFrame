@@ -1,15 +1,116 @@
+#include "cloakframe/VideoIo.hpp"
 #include "cloakframe/VideoReviewDialog.hpp"
 
 #include <QApplication>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
+#include <QProcess>
 #include <QPushButton>
 #include <QSlider>
+#include <QTemporaryDir>
 #include <QTest>
 #include <QTranslator>
 
 #include <cassert>
+#include <cstdio>
+
+namespace
+{
+    bool userCheckable(const QListWidgetItem *item)
+    {
+        return item->flags().testFlag(Qt::ItemIsUserCheckable);
+    }
+
+    QPushButton *buttonWithText(const QWidget &parent, const QString &text)
+    {
+        for (auto *button : parent.findChildren<QPushButton *>())
+        {
+            if (button->text() == text)
+            {
+                return button;
+            }
+        }
+        return nullptr;
+    }
+
+    // A gap can be acknowledged only after its first, middle and last frames were on screen,
+    // and editing the masks takes that away again. Needs FFmpeg to render real frames.
+    void testGapChecksFollowWhatWasShown(QApplication &application)
+    {
+        const auto tools = cloakframe::locateFfmpegTools();
+        if (!tools)
+        {
+            std::puts("SKIP gap checks follow what was shown: FFmpeg not found");
+            return;
+        }
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const QString source = temp.filePath("clip.mp4");
+        QProcess generate;
+        generate.start(tools->ffmpegPath,
+            {"-v",
+                "error",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc=size=320x240:rate=30",
+                "-t",
+                "1",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:v",
+                "mpeg4",
+                source});
+        assert(generate.waitForFinished(60000) && generate.exitCode() == 0);
+
+        cloakframe::VideoReviewRequest request;
+        request.sourcePath = source;
+        request.ffmpegPath = tools->ffmpegPath;
+        request.frameSize = QSize(320, 240);
+        request.fps = 30.0;
+        request.fpsNum = 30;
+        request.fpsDen = 1;
+        request.frameCount = 30;
+        request.tracks.push_back({7, true, {{0, QRectF(20, 20, 40, 40), false}}});
+        request.uncoveredSpans = {{7, 10, 20}};
+        request.initialFrame = 0;
+        cloakframe::VideoReviewDialog dialog(request);
+        dialog.show();
+        auto *gaps = dialog.findChild<QListWidget *>("trackingGaps");
+        auto *timeline = dialog.findChild<QSlider *>("videoTimeline");
+        auto *tracks = dialog.findChild<QListWidget *>("videoTracks");
+        const auto show = [&](int frame)
+        {
+            timeline->setValue(frame);
+            assert(QTest::qWaitFor(
+                [&]
+                {
+                    return dialog.property("lastViewedFrame").toInt() == frame;
+                },
+                30000));
+            application.processEvents();
+        };
+
+        show(10);
+        show(20);
+        assert(!userCheckable(gaps->item(0)));
+        show(15);
+        assert(userCheckable(gaps->item(0)));
+        gaps->item(0)->setCheckState(Qt::Checked);
+        assert(dialog.reviewResult().acknowledgedGapIndices == QVector<int>{0});
+
+        // An edit clears both the check and the record of what was seen before it.
+        tracks->item(0)->setCheckState(Qt::Unchecked);
+        assert(gaps->item(0)->checkState() == Qt::Unchecked);
+        assert(!userCheckable(gaps->item(0)));
+        tracks->item(0)->setCheckState(Qt::Checked);
+        show(10);
+        show(20);
+        assert(userCheckable(gaps->item(0)));
+        std::puts("gap checks follow what was shown: ok");
+    }
+}
 
 int main(int argc, char **argv)
 {
@@ -139,6 +240,11 @@ int main(int argc, char **argv)
         gapExplained |= label->text().contains("adding a mask does not verify");
     }
     assert(inclusionExplained && gapExplained);
+    // No frame of this request can be rendered, so no gap can be acknowledged.
+    for (int row = 0; row < gaps->count(); ++row)
+    {
+        assert(!userCheckable(gaps->item(row)));
+    }
     gaps->item(1)->setCheckState(Qt::Checked);
     assert(dialog.reviewResult().acknowledgedGapIndices == QVector<int>{1});
     gaps->setCurrentRow(4);
@@ -148,6 +254,16 @@ int main(int argc, char **argv)
     assert(dialog.reviewResult().excludedTrackIds == QVector<int>{7});
     list->item(0)->setCheckState(Qt::Checked);
     assert(dialog.reviewResult().excludedTrackIds.isEmpty());
+    gaps->item(1)->setCheckState(Qt::Checked);
+    buttonWithText(dialog, "Exclude all")->click();
+    assert(dialog.reviewResult().acknowledgedGapIndices.isEmpty());
+    gaps->item(1)->setCheckState(Qt::Checked);
+    buttonWithText(dialog, "Exclude all")->click();
+    assert(dialog.reviewResult().acknowledgedGapIndices == QVector<int>{1});
+    buttonWithText(dialog, "Include all")->click();
+    assert(dialog.reviewResult().acknowledgedGapIndices.isEmpty());
+    assert(dialog.reviewResult().excludedTrackIds.isEmpty());
+    testGapChecksFollowWhatWasShown(application);
     auto jumpRequest = request;
     jumpRequest.initialFrame = 45;
     cloakframe::VideoReviewDialog jumped(jumpRequest);

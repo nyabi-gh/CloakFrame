@@ -2227,8 +2227,12 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="632"/>
-        <source>Check a gap after reviewing the entire interval. This records your review, not verified coverage. Editing masks resets these checks.</source>
-        <translation>공백 구간 전체를 검토한 뒤 체크하세요. 검토 여부를 기록하며 가려짐을 검증하지는 않습니다. 마스크를 편집하면 체크가 초기화됩니다.</translation>
+        <source>Check a gap after reviewing the entire interval; its check becomes available once its first, middle and last frames have been shown. This records your review, not verified coverage. Editing masks resets these checks.</source>
+        <translation>공백 구간 전체를 검토한 뒤 체크하세요. 구간의 첫 프레임, 가운데 프레임, 마지막 프레임을 표시해야 체크할 수 있습니다. 검토 여부를 기록하며 가려짐을 검증하지는 않습니다. 마스크를 편집하면 체크가 초기화됩니다.</translation>
+    </message>
+    <message>
+        <source>Show the first, middle and last frame of this gap to check it.</source>
+        <translation>이 공백의 첫 프레임, 가운데 프레임, 마지막 프레임을 표시하면 체크할 수 있습니다.</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="693"/>

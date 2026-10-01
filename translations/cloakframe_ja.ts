@@ -2227,8 +2227,12 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="632"/>
-        <source>Check a gap after reviewing the entire interval. This records your review, not verified coverage. Editing masks resets these checks.</source>
-        <translation>空白区間全体を確認してからチェックしてください。これは確認の記録であり、マスク範囲の検証ではありません。マスクを編集するとチェックはリセットされます。</translation>
+        <source>Check a gap after reviewing the entire interval; its check becomes available once its first, middle and last frames have been shown. This records your review, not verified coverage. Editing masks resets these checks.</source>
+        <translation>空白区間全体を確認してからチェックしてください。区間の最初・中央・最後のフレームを表示するとチェックできるようになります。これは確認の記録であり、マスク範囲の検証ではありません。マスクを編集するとチェックはリセットされます。</translation>
+    </message>
+    <message>
+        <source>Show the first, middle and last frame of this gap to check it.</source>
+        <translation>この空白の最初・中央・最後のフレームを表示するとチェックできます。</translation>
     </message>
     <message>
         <location filename="../src/VideoReviewDialog.cpp" line="693"/>

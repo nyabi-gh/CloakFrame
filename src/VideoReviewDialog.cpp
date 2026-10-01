@@ -626,14 +626,14 @@ namespace cloakframe
                     .arg(gap.lastFrame + 1);
             auto *item = new QListWidgetItem(text, gapList_);
             item->setData(Qt::UserRole, gap.firstFrame);
-            item->setToolTip(text);
             item->setData(Qt::UserRole + 1, gapIndex);
-            item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+            item->setData(Qt::UserRole + 2, gap.lastFrame);
             item->setCheckState(Qt::Unchecked);
         }
-        auto *reviewHint = new QLabel(tr("Check a gap after reviewing the entire interval. "
-                                         "This records your review, not verified coverage. Editing "
-                                         "masks resets these checks."),
+        auto *reviewHint = new QLabel(
+            tr("Check a gap after reviewing the entire interval; its check becomes available once "
+               "its first, middle and last frames have been shown. This records your review, not "
+               "verified coverage. Editing masks resets these checks."),
             this);
         reviewHint->setWordWrap(true);
         side->addWidget(reviewHint);
@@ -645,6 +645,7 @@ namespace cloakframe
                 updateSummary();
             });
         side->addWidget(gapList_);
+        updateGapCheckability();
         auto *noGaps = new QLabel(tr("No tracking gaps were reported."), this);
         noGaps->setWordWrap(true);
         noGaps->setVisible(gapList_->count() == 0);
@@ -746,6 +747,10 @@ namespace cloakframe
             this,
             [this]
             {
+                if (excludedTrackIds_.isEmpty())
+                {
+                    return;
+                }
                 const QSignalBlocker blocker(trackList_);
                 excludedTrackIds_.clear();
                 for (int i = 0; i < trackList_->count(); ++i)
@@ -758,13 +763,17 @@ namespace cloakframe
                 }
                 canvas_->refresh();
                 timeline_->update();
-                updateSummary();
+                invalidateGapAcknowledgements();
             });
         connect(excludeAll,
             &QPushButton::clicked,
             this,
             [this]
             {
+                if (excludedTrackIds_.size() == request_.tracks.size())
+                {
+                    return;
+                }
                 const QSignalBlocker blocker(trackList_);
                 for (const auto &track : request_.tracks)
                 {
@@ -780,7 +789,7 @@ namespace cloakframe
                 }
                 canvas_->refresh();
                 timeline_->update();
-                updateSummary();
+                invalidateGapAcknowledgements();
             });
         body->addLayout(side);
         root->addLayout(body, 1);
@@ -945,6 +954,7 @@ namespace cloakframe
             frameCacheOrder_.removeAll(currentFrame_);
             frameCacheOrder_.push_back(currentFrame_);
             canvas_->setFrame(currentFrame_, frameCache_.value(currentFrame_));
+            markFrameViewed(currentFrame_);
         }
         else
         {
@@ -1069,7 +1079,12 @@ namespace cloakframe
             frameCache_.insert(frame, image);
             frameCacheOrder_.push_back(frame);
         }
+        const bool shown = !image.isNull();
         canvas_->setFrame(frame, std::move(image));
+        if (shown)
+        {
+            markFrameViewed(frame);
+        }
     }
 
     void VideoReviewDialog::cancelFramePreview()
@@ -1361,10 +1376,49 @@ namespace cloakframe
     {
         if (!gapList_)
             return;
+        {
+            const QSignalBlocker blocker(gapList_);
+            for (int row = 0; row < gapList_->count(); ++row)
+                gapList_->item(row)->setCheckState(Qt::Unchecked);
+        }
+        // What was seen before the edit no longer shows the masks that will be encoded. Only
+        // the frame on screen, redrawn with the new masks, counts again.
+        viewedFrames_.clear();
+        if (frameCache_.contains(currentFrame_))
+        {
+            viewedFrames_.insert(currentFrame_);
+        }
+        updateGapCheckability();
+        updateSummary();
+    }
+
+    void VideoReviewDialog::markFrameViewed(const int frame)
+    {
+        viewedFrames_.insert(frame);
+        setProperty("lastViewedFrame", frame);
+        updateGapCheckability();
+    }
+
+    void VideoReviewDialog::updateGapCheckability()
+    {
+        if (!gapList_)
+            return;
         const QSignalBlocker blocker(gapList_);
         for (int row = 0; row < gapList_->count(); ++row)
-            gapList_->item(row)->setCheckState(Qt::Unchecked);
-        updateSummary();
+        {
+            auto *item = gapList_->item(row);
+            const int first = item->data(Qt::UserRole).toInt();
+            const int last = item->data(Qt::UserRole + 2).toInt();
+            const bool viewed = viewedFrames_.contains(first)
+                                && viewedFrames_.contains(first + (last - first) / 2)
+                                && viewedFrames_.contains(last);
+            item->setFlags(viewed ? item->flags() | Qt::ItemIsUserCheckable
+                                  : item->flags() & ~Qt::ItemIsUserCheckable);
+            item->setToolTip(viewed ? item->text()
+                                    : item->text() + QLatin1Char('\n')
+                                          + tr("Show the first, middle and last frame of this gap "
+                                               "to check it."));
+        }
     }
 
     void VideoReviewDialog::updateSummary()

@@ -54,6 +54,8 @@ namespace cloakframe
         void updateManualTrackItem(int id);
         void updateSummary();
         void invalidateGapAcknowledgements();
+        void markFrameViewed(int frame);
+        void updateGapCheckability();
         void navigateGap(bool next);
         void updateNavigation();
 
@@ -64,6 +66,8 @@ namespace cloakframe
         QSet<int> excludedTrackIds_;
         QVector<VideoReviewManualTrack> manualTracks_;
         QHash<int, QImage> frameCache_;
+        // Frames whose image was on screen since the masks last changed.
+        QSet<int> viewedFrames_;
         QList<int> frameCacheOrder_;
         VideoReviewCanvas *canvas_ = nullptr;
         VideoTimeline *timeline_ = nullptr;

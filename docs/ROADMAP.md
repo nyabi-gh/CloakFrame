@@ -28,9 +28,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Next — small, privacy and security first
 
-- **Gap acknowledgements in video review** [A-9]. Every gap can be checked without being
-  visited, and Include all / Exclude all do not reset the checks. Enable a gap's check
-  only after its frames were shown, and reset checks on bulk changes.
 - **Custom model digest** [B-7, E-8, OW 8]. The digest the user approved and the digest
   the detector loads are computed separately and never compared, both on the GUI
   thread. Hash once off the GUI thread and use the same digest for both.
