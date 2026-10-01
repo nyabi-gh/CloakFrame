@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cloakframe/CustomModelConsent.hpp"
+#include "cloakframe/ModelDigest.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
 #include "cloakframe/ReviewTypes.hpp"
 #include "cloakframe/Theme.hpp"
@@ -12,6 +13,7 @@
 #include <QTranslator>
 #include <QVector>
 
+#include <atomic>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -106,9 +108,6 @@ namespace cloakframe
 
         [[nodiscard]] const BuiltinModel *selectedBuiltinModel() const;
 
-        // True when the file at `path` is the one the user approved, or when they approve it
-        // again after being told it changed. Records the new approval in that case.
-
         void setProcessing(bool processing);
 
         void setDropHighlight(bool active) const;
@@ -187,10 +186,40 @@ namespace cloakframe
             bool detectPlates = false;
         };
 
-        [[nodiscard]] static DetectorCacheKey makeDetectorCacheKey(const QString &modelPath,
+        // A run between the Start click and its worker: the request is fixed, and the model
+        // digests are being computed or checked.
+        struct PendingRun
+        {
+            ProcessingRequest request;
+            const BuiltinModel *selectedBuiltin = nullptr;
+            bool isCustom = false;
+            DetectorCacheKey faceKey;
+            DetectorCacheKey plateKey;
+            bool faceRecovered = false;
+            bool plateRecovered = false;
+        };
+
+        [[nodiscard]] static DetectorCacheKey makeDetectorCacheKey(const ModelFileDigest &digest,
             bool gpuAcceleration,
             FaceModelKind faceModelKind = FaceModelKind::Scrfd);
 
+        // Hashes `paths` on a separate thread and calls `done` on the GUI thread with one digest
+        // per path, or with nothing when Stop cancelled it.
+        void digestModelsOffThread(const QStringList &paths,
+            std::function<void(std::optional<std::vector<ModelFileDigest>>)> done);
+
+        void checkRunModels(const std::shared_ptr<PendingRun> &run);
+
+        void continueRunStart(const std::shared_ptr<PendingRun> &run);
+
+        bool recoverBuiltinModel(const BuiltinModel &model, QString &path, bool plate);
+
+        void launchRun(PendingRun &run);
+
+        void returnToIdle(const QString &status);
+
+        // True when the bytes `key` was hashed from are the ones the user approved, or when they
+        // approve them after being told the file changed. Records the new approval in that case.
         [[nodiscard]] bool ensureCustomModelApproved(const DetectorCacheKey &key);
 
         QComboBox *modelCombo_ = nullptr;
@@ -235,6 +264,8 @@ namespace cloakframe
 
         QThread *workerThread_ = nullptr;
         ProcessorWorker *worker_ = nullptr;
+        QThread *digestThread_ = nullptr;
+        std::shared_ptr<std::atomic_bool> digestCancel_;
         QElapsedTimer runTimer_;
 
         std::shared_ptr<Detector> cachedDetector_;

@@ -31,12 +31,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
   per-architecture Windows repository layout in a release.
 
-## Next — small, privacy and security first
-
-- **Model hashing on the GUI thread** [E-8, OW 8]. Each run hashes the selected model
-  once on the GUI thread before starting; a custom model may be 512 MB. Move it to a
-  worker and keep the single digest it produces for consent and loading.
-
 ## Coverage and honest results
 
 - **Scene-cut boundaries** [A-3]. A gap that spans a detected cut is neither

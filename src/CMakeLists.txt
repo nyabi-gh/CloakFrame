@@ -20,6 +20,7 @@ add_library(cloakframe_core STATIC
     MemoryBudget.cpp
     ModelDownload.cpp
     ModelCatalog.cpp
+    ModelDigest.cpp
     ModelStore.cpp
     Mosaic.cpp
     OnnxGraphPatch.cpp
@@ -49,6 +50,7 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelDownload.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/MemoryBudget.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelCatalog.hpp
+    ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelDigest.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ModelStore.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/Mosaic.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/OnnxGraphPatch.hpp

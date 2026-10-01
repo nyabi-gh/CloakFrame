@@ -25,7 +25,6 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QContextMenuEvent>
-#include <QCryptographicHash>
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
@@ -1201,6 +1200,14 @@ namespace cloakframe
     MainWindow::~MainWindow()
     {
         shuttingDown_ = true;
+        if (digestThread_ != nullptr)
+        {
+            QObject::disconnect(digestThread_, nullptr, this, nullptr);
+            digestCancel_->store(true);
+            digestThread_->wait();
+            delete digestThread_;
+            digestThread_ = nullptr;
+        }
         QPointer<QThread> thread(workerThread_);
         QPointer<ProcessorWorker> worker(worker_);
         workerThread_ = nullptr;
@@ -1328,18 +1335,33 @@ namespace cloakframe
             {
                 return;
             }
-            const auto approval = approvalForCustomModel(path);
-            if (!approval)
-            {
-                appendLog(tr("Could not read the custom model file."));
-                return;
-            }
-            customModelApproval_ = *approval;
-            const QFileInfo info(path);
-            modelCombo_->addItem(tr("Custom — %1").arg(info.fileName()), info.absoluteFilePath());
-            modelCombo_->setItemData(modelCombo_->count() - 1, -1, kModelCatalogIndexRole);
-            modelCombo_->setCurrentIndex(modelCombo_->count() - 1);
-            modelPathEdit_->setText(path);
+            setProcessing(true);
+            statusLabel_->setText(tr("Checking models…"));
+            digestModelsOffThread({path},
+                [this, path](std::optional<std::vector<ModelFileDigest>> digests)
+                {
+                    if (!digests)
+                    {
+                        appendLog(tr("Cancelled."));
+                        returnToIdle(tr("Cancelled"));
+                        return;
+                    }
+                    returnToIdle(tr("Ready"));
+                    const auto &digest = digests->front();
+                    const auto approval = approvalForDigest(digest.sha256, digest.size);
+                    if (!approval.isRecorded())
+                    {
+                        appendLog(tr("Could not read the custom model file."));
+                        return;
+                    }
+                    customModelApproval_ = approval;
+                    const QFileInfo info(path);
+                    modelCombo_->addItem(
+                        tr("Custom — %1").arg(info.fileName()), info.absoluteFilePath());
+                    modelCombo_->setItemData(modelCombo_->count() - 1, -1, kModelCatalogIndexRole);
+                    modelCombo_->setCurrentIndex(modelCombo_->count() - 1);
+                    modelPathEdit_->setText(path);
+                });
         }
     }
 
@@ -1420,55 +1442,48 @@ namespace cloakframe
     }
 
     MainWindow::DetectorCacheKey MainWindow::makeDetectorCacheKey(
-        const QString &modelPath, bool gpuAcceleration, const FaceModelKind faceModelKind)
+        const ModelFileDigest &digest, bool gpuAcceleration, const FaceModelKind faceModelKind)
     {
-        if (modelPath.isEmpty())
-        {
-            return {};
-        }
-
-        const QFileInfo info(modelPath);
-        QString canonicalPath = info.canonicalFilePath();
-        if (canonicalPath.isEmpty())
-        {
-            canonicalPath = QDir::cleanPath(info.absoluteFilePath());
-        }
-
         DetectorCacheKey key;
-        key.canonicalModelPath = canonicalPath;
+        key.canonicalModelPath = digest.canonicalPath;
+        key.modelSize = digest.size;
+        key.modelLastModifiedMs = digest.lastModifiedMs;
+        key.modelSha256 = digest.sha256;
         key.gpuAcceleration = gpuAcceleration;
         key.faceModelKind = faceModelKind;
-        if (info.exists() && info.isFile() && info.size() > 0
-            && info.size() <= kMaxCustomModelBytes)
-        {
-            key.modelSize = info.size();
-            key.modelLastModifiedMs = info.lastModified().toMSecsSinceEpoch();
-            QFile file(canonicalPath);
-            if (file.open(QIODevice::ReadOnly))
-            {
-                QCryptographicHash hash(QCryptographicHash::Sha256);
-                qint64 hashedBytes = 0;
-                while (!file.atEnd())
-                {
-                    const QByteArray chunk = file.read(qint64{1024} * 1024);
-                    if (chunk.isEmpty())
-                    {
-                        break;
-                    }
-                    if (hashedBytes > kMaxCustomModelBytes - chunk.size())
-                    {
-                        return key;
-                    }
-                    hashedBytes += chunk.size();
-                    hash.addData(chunk);
-                }
-                if (file.error() == QFileDevice::NoError && hashedBytes == key.modelSize)
-                {
-                    key.modelSha256 = hash.result();
-                }
-            }
-        }
         return key;
+    }
+
+    void MainWindow::digestModelsOffThread(const QStringList &paths,
+        std::function<void(std::optional<std::vector<ModelFileDigest>>)> done)
+    {
+        auto cancel = std::make_shared<std::atomic_bool>(false);
+        auto digests = std::make_shared<std::vector<ModelFileDigest>>();
+        digestCancel_ = cancel;
+        digestThread_ = QThread::create(
+            [paths, cancel, digests]
+            {
+                for (const auto &path : paths)
+                {
+                    digests->push_back(digestModelFile(path, cancel.get()));
+                }
+            });
+        connect(digestThread_,
+            &QThread::finished,
+            this,
+            [this, cancel, digests, done = std::move(done)]
+            {
+                digestThread_->deleteLater();
+                digestThread_ = nullptr;
+                digestCancel_.reset();
+                if (cancel->load())
+                {
+                    done(std::nullopt);
+                    return;
+                }
+                done(std::move(*digests));
+            });
+        digestThread_->start();
     }
 
     void MainWindow::startProcessing()
@@ -1619,71 +1634,146 @@ namespace cloakframe
         request.videoCrf = crfForQuality(static_cast<VideoQuality>(videoQuality_));
         request.videoCodec = static_cast<VideoCodec>(videoCodec_);
 
-        ActiveRunState runState;
-        runState.faceKey =
-            detectFaces
-                ? makeDetectorCacheKey(modelPath, request.gpuAcceleration, request.faceModelKind)
-                : DetectorCacheKey{};
-        runState.plateKey = detectPlates
-                                ? makeDetectorCacheKey(plateModelPath, request.gpuAcceleration)
-                                : DetectorCacheKey{};
-        const auto verifyOrRecoverBuiltin =
-            [&](const BuiltinModel &model, QString &path, DetectorCacheKey &key, const bool plate)
+        auto run = std::make_shared<PendingRun>();
+        run->request = std::move(request);
+        run->selectedBuiltin = selectedBuiltin;
+        run->isCustom = isCustom;
+        setProcessing(true);
+        checkRunModels(run);
+    }
+
+    void MainWindow::checkRunModels(const std::shared_ptr<PendingRun> &run)
+    {
+        const auto &request = run->request;
+        const bool hashFace = request.detectFaces && !run->faceKey.isValid();
+        const bool hashPlate = request.detectPlates && !run->plateKey.isValid();
+        QStringList paths;
+        if (hashFace)
         {
-            if (key.isValid() && modelDigestMatches(model, key.modelSha256))
-            {
-                return true;
-            }
+            paths.append(request.modelPath);
+        }
+        if (hashPlate)
+        {
+            paths.append(request.plateModelPath);
+        }
 
-            appendLog(tr("Built-in model integrity check failed: %1").arg(model.fileName));
-            const QString recoveryPath = modelCacheDir() + "/" + model.fileName;
-            appendLog(tr("Downloading %1…").arg(model.fileName));
-            const bool recovered = plate ? ensurePlateModelAvailable(this, recoveryPath)
-                                         : ensureBuiltinModelAvailable(this, model, recoveryPath);
-            if (!recovered)
+        statusLabel_->setText(tr("Checking models…"));
+        digestModelsOffThread(paths,
+            [this, run, hashFace, hashPlate](std::optional<std::vector<ModelFileDigest>> digests)
             {
-                appendLog(tr("Model download was cancelled or failed."));
-                return false;
-            }
+                if (!digests)
+                {
+                    appendLog(tr("Cancelled."));
+                    returnToIdle(tr("Cancelled"));
+                    return;
+                }
+                std::size_t next = 0;
+                if (hashFace)
+                {
+                    run->faceKey = makeDetectorCacheKey((*digests)[next++],
+                        run->request.gpuAcceleration,
+                        run->request.faceModelKind);
+                }
+                if (hashPlate)
+                {
+                    run->plateKey =
+                        makeDetectorCacheKey((*digests)[next++], run->request.gpuAcceleration);
+                }
+                continueRunStart(run);
+            });
+    }
 
-            path = recoveryPath;
-            key = makeDetectorCacheKey(path,
-                request.gpuAcceleration,
-                plate ? FaceModelKind::Scrfd : request.faceModelKind);
-            if (!key.isValid() || !modelDigestMatches(model, key.modelSha256))
-            {
-                appendLog(tr("Built-in model integrity check failed: %1").arg(model.fileName));
-                return false;
-            }
-            appendLog(tr("Model ready: %1").arg(model.fileName));
-            return true;
+    void MainWindow::continueRunStart(const std::shared_ptr<PendingRun> &run)
+    {
+        auto &request = run->request;
+        const auto intact = [](const BuiltinModel &model, const DetectorCacheKey &key)
+        {
+            return key.isValid() && modelDigestMatches(model, key.modelSha256);
         };
 
-        if (detectFaces && selectedBuiltin != nullptr
-            && !verifyOrRecoverBuiltin(*selectedBuiltin, modelPath, runState.faceKey, false))
+        // A built-in model that fails its pinned digest is downloaded again once, and the new
+        // file goes through the same check before anything loads it.
+        if (request.detectFaces && run->selectedBuiltin != nullptr
+            && !intact(*run->selectedBuiltin, run->faceKey))
         {
+            appendLog(tr("Built-in model integrity check failed: %1")
+                    .arg(run->selectedBuiltin->fileName));
+            if (run->faceRecovered
+                || !recoverBuiltinModel(*run->selectedBuiltin, request.modelPath, false))
+            {
+                returnToIdle(tr("Ready"));
+                return;
+            }
+            run->faceRecovered = true;
+            run->faceKey = {};
+            checkRunModels(run);
             return;
         }
-        if (detectPlates
-            && !verifyOrRecoverBuiltin(plateModel(), plateModelPath, runState.plateKey, true))
+        if (request.detectPlates && !intact(plateModel(), run->plateKey))
         {
+            appendLog(tr("Built-in model integrity check failed: %1").arg(plateModel().fileName));
+            if (run->plateRecovered
+                || !recoverBuiltinModel(plateModel(), request.plateModelPath, true))
+            {
+                returnToIdle(tr("Ready"));
+                return;
+            }
+            run->plateRecovered = true;
+            run->plateKey = {};
+            checkRunModels(run);
             return;
         }
-        if ((detectFaces && !runState.faceKey.isValid())
-            || (detectPlates && !runState.plateKey.isValid()))
+
+        if ((request.detectFaces && !run->faceKey.isValid())
+            || (request.detectPlates && !run->plateKey.isValid()))
         {
+            setProcessing(false);
             reportValidationIssue(tr("Choose a valid face ONNX model first."), modelCombo_);
             return;
         }
-        if (detectFaces && isCustom && !ensureCustomModelApproved(runState.faceKey))
+        if (request.detectFaces && run->isCustom && !ensureCustomModelApproved(run->faceKey))
         {
+            returnToIdle(tr("Ready"));
             return;
         }
+        launchRun(*run);
+    }
+
+    bool MainWindow::recoverBuiltinModel(const BuiltinModel &model, QString &path, const bool plate)
+    {
+        const QString recoveryPath = modelCacheDir() + "/" + model.fileName;
+        appendLog(tr("Downloading %1…").arg(model.fileName));
+        const bool recovered = plate ? ensurePlateModelAvailable(this, recoveryPath)
+                                     : ensureBuiltinModelAvailable(this, model, recoveryPath);
+        if (!recovered)
+        {
+            appendLog(tr("Model download was cancelled or failed."));
+            return false;
+        }
+        path = recoveryPath;
+        appendLog(tr("Model ready: %1").arg(model.fileName));
+        return true;
+    }
+
+    void MainWindow::returnToIdle(const QString &status)
+    {
+        setProcessing(false);
+        statusLabel_->setText(status);
+    }
+
+    void MainWindow::launchRun(PendingRun &run)
+    {
+        auto &request = run.request;
+        const bool detectFaces = request.detectFaces;
+        const bool detectPlates = request.detectPlates;
+        ActiveRunState runState;
+        runState.faceKey = run.faceKey;
+        runState.plateKey = run.plateKey;
         if (detectFaces)
         {
             request.modelPath = runState.faceKey.canonicalModelPath;
             request.modelSha256 = runState.faceKey.modelSha256;
-            if (selectedBuiltin != nullptr)
+            if (run.selectedBuiltin != nullptr)
             {
                 modelCombo_->setItemData(modelCombo_->currentIndex(), request.modelPath);
                 updateModelPathFromSelection();
@@ -1714,7 +1804,6 @@ namespace cloakframe
                                : nullptr;
 
         activeRunState_ = runState;
-        setProcessing(true);
         openOutputButton_->setVisible(false);
         runTimer_.start();
         progressBar_->setValue(0);
@@ -1778,6 +1867,11 @@ namespace cloakframe
 
     void MainWindow::stopProcessing() const
     {
+        if (digestCancel_ != nullptr)
+        {
+            statusLabel_->setText(tr("Stopping…"));
+            digestCancel_->store(true);
+        }
         if (worker_ != nullptr)
         {
             appendLog(tr("Stopping after the current processing step…"));

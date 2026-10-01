@@ -3,8 +3,6 @@
 #include <QByteArray>
 #include <QString>
 
-#include <optional>
-
 namespace cloakframe
 {
     // A custom ONNX model is parsed and executed by the native runtime inside this process, so
@@ -27,10 +25,8 @@ namespace cloakframe
         bool operator==(const CustomModelApproval &) const = default;
     };
 
-    // What to record once the user approves the file at `path`, or nothing if it cannot be read.
-    [[nodiscard]] std::optional<CustomModelApproval> approvalForCustomModel(const QString &path);
-
-    // The approval for bytes that were already hashed. `sha256` is the raw 32-byte digest.
+    // What to record once the user approves bytes that `digestModelFile` hashed. `sha256` is the
+    // raw 32-byte digest.
     [[nodiscard]] CustomModelApproval approvalForDigest(const QByteArray &sha256, qint64 size);
 
     // Whether `approved` covers bytes with this digest and size. A run compares the digest it

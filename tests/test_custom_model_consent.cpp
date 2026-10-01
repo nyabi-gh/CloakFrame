@@ -1,4 +1,6 @@
 #include "cloakframe/CustomModelConsent.hpp"
+#include "cloakframe/ModelCatalog.hpp"
+#include "cloakframe/ModelDigest.hpp"
 
 #include <QCryptographicHash>
 #include <QDir>
@@ -7,6 +9,7 @@
 #include <QString>
 #include <QTemporaryDir>
 
+#include <atomic>
 #include <cassert>
 #include <cstdio>
 #include <fstream>
@@ -19,6 +22,19 @@ namespace
         out << bytes;
     }
 
+    // What the run start records once the user approves the file at `path`.
+    cloakframe::CustomModelApproval approvalFor(const QString &path)
+    {
+        const auto digest = cloakframe::digestModelFile(path);
+        return cloakframe::approvalForDigest(digest.sha256, digest.size);
+    }
+
+    bool covers(const cloakframe::CustomModelApproval &approval, const QString &path)
+    {
+        const auto digest = cloakframe::digestModelFile(path);
+        return cloakframe::approvalCovers(approval, digest.sha256, digest.size);
+    }
+
     void testAnApprovalRecordsTheContent()
     {
         QTemporaryDir root;
@@ -26,36 +42,14 @@ namespace
         const QString path = root.filePath(QStringLiteral("model.onnx"));
         write(path, "onnx bytes");
 
-        const auto approval = cloakframe::approvalForCustomModel(path);
-        assert(approval);
-        assert(approval->isRecorded());
-        assert(approval->size == 10);
-        assert(approval->digest.size() == 64);
-        assert(approval->digest == approval->digest.toLower());
+        const auto approval = approvalFor(path);
+        assert(approval.isRecorded());
+        assert(approval.size == 10);
+        assert(approval.digest.size() == 64);
+        assert(approval.digest == approval.digest.toLower());
 
-        assert(!cloakframe::approvalForCustomModel(root.filePath(QStringLiteral("absent.onnx"))));
-        assert(!cloakframe::approvalForCustomModel(root.path()));
-    }
-
-    struct Content
-    {
-        QByteArray sha256;
-        qint64 size = 0;
-    };
-
-    // What the run start computes for the detector: the raw digest and the byte count.
-    Content contentOf(const QString &path)
-    {
-        QFile file(path);
-        assert(file.open(QIODevice::ReadOnly));
-        const QByteArray bytes = file.readAll();
-        return {QCryptographicHash::hash(bytes, QCryptographicHash::Sha256), bytes.size()};
-    }
-
-    bool covers(const cloakframe::CustomModelApproval &approval, const QString &path)
-    {
-        const auto content = contentOf(path);
-        return cloakframe::approvalCovers(approval, content.sha256, content.size);
+        assert(!approvalFor(root.filePath(QStringLiteral("absent.onnx"))).isRecorded());
+        assert(!approvalFor(root.path()).isRecorded());
     }
 
     void testTheApprovedBytesAreCovered()
@@ -65,9 +59,7 @@ namespace
         const QString path = root.filePath(QStringLiteral("model.onnx"));
         write(path, "onnx bytes");
 
-        const auto approval = cloakframe::approvalForCustomModel(path);
-        assert(approval);
-        assert(covers(*approval, path));
+        assert(covers(approvalFor(path), path));
     }
 
     void testContentOfTheSameLengthIsStillNoticed()
@@ -77,14 +69,13 @@ namespace
         const QString path = root.filePath(QStringLiteral("model.onnx"));
         write(path, "onnx bytes");
 
-        const auto approval = cloakframe::approvalForCustomModel(path);
-        assert(approval);
+        const auto approval = approvalFor(path);
 
         // Same size, different bytes. This is the case a size check alone would wave through,
         // and the one a replacement would be built to look like.
         write(path, "ONNX BYTES");
-        assert(approval->size == QFileInfo(path).size());
-        assert(!covers(*approval, path));
+        assert(approval.size == QFileInfo(path).size());
+        assert(!covers(approval, path));
     }
 
     void testADifferentLengthIsNoticed()
@@ -94,11 +85,10 @@ namespace
         const QString path = root.filePath(QStringLiteral("model.onnx"));
         write(path, "onnx bytes");
 
-        const auto approval = cloakframe::approvalForCustomModel(path);
-        assert(approval);
+        const auto approval = approvalFor(path);
 
         write(path, "onnx bytes and then some");
-        assert(!covers(*approval, path));
+        assert(!covers(approval, path));
     }
 
     void testAnUnrecordedApprovalApprovesNothing()
@@ -120,19 +110,51 @@ namespace
         assert(!covers(sizeOnly, path));
     }
 
-    void testAnApprovalFromADigestMatchesOneFromTheFile()
+    void testTheDigestIsTheSha256OfTheBytes()
     {
         QTemporaryDir root;
         assert(root.isValid());
         const QString path = root.filePath(QStringLiteral("model.onnx"));
         write(path, "onnx bytes");
 
-        const auto content = contentOf(path);
-        const auto fromDigest = cloakframe::approvalForDigest(content.sha256, content.size);
-        assert(fromDigest.isRecorded());
-        assert(fromDigest == *cloakframe::approvalForCustomModel(path));
-        assert(!cloakframe::approvalForDigest(QByteArray(31, 'x'), content.size).isRecorded());
-        assert(!cloakframe::approvalCovers(fromDigest, content.sha256.left(31), content.size));
+        const auto digest = cloakframe::digestModelFile(path);
+        assert(digest.isValid());
+        assert(digest.canonicalPath == QFileInfo(path).canonicalFilePath());
+        assert(digest.size == 10);
+        assert(digest.sha256 == QCryptographicHash::hash("onnx bytes", QCryptographicHash::Sha256));
+
+        assert(!cloakframe::approvalForDigest(QByteArray(31, 'x'), digest.size).isRecorded());
+        const auto approval = cloakframe::approvalForDigest(digest.sha256, digest.size);
+        assert(!cloakframe::approvalCovers(approval, digest.sha256.left(31), digest.size));
+    }
+
+    void testFilesOutsideTheLimitsGetNoDigest()
+    {
+        QTemporaryDir root;
+        assert(root.isValid());
+        const QString empty = root.filePath(QStringLiteral("empty.onnx"));
+        write(empty, "");
+        assert(!cloakframe::digestModelFile(empty).isValid());
+
+        const QString large = root.filePath(QStringLiteral("large.onnx"));
+        QFile file(large);
+        assert(file.open(QIODevice::WriteOnly));
+        assert(file.resize(cloakframe::kMaxCustomModelBytes + 1));
+        file.close();
+        assert(!cloakframe::digestModelFile(large).isValid());
+
+        assert(!cloakframe::digestModelFile(QString()).isValid());
+    }
+
+    void testACancelledDigestIsEmpty()
+    {
+        QTemporaryDir root;
+        assert(root.isValid());
+        const QString path = root.filePath(QStringLiteral("model.onnx"));
+        write(path, "onnx bytes");
+
+        const std::atomic_bool cancel{true};
+        assert(!cloakframe::digestModelFile(path, &cancel).isValid());
     }
 
 #ifndef _WIN32
@@ -148,15 +170,14 @@ namespace
         const QString link = root.filePath(QStringLiteral("model.onnx"));
         assert(QFile::link(approved, link));
 
-        const auto approval = cloakframe::approvalForCustomModel(link);
-        assert(approval);
-        assert(covers(*approval, link));
+        const auto approval = approvalFor(link);
+        assert(covers(approval, link));
 
         // The path the user approved still resolves, and to a readable ONNX file. What changed
         // is which one.
         assert(QFile::remove(link));
         assert(QFile::link(other, link));
-        assert(!covers(*approval, link));
+        assert(!covers(approval, link));
     }
 #endif
 }
@@ -168,7 +189,9 @@ int main()
     testContentOfTheSameLengthIsStillNoticed();
     testADifferentLengthIsNoticed();
     testAnUnrecordedApprovalApprovesNothing();
-    testAnApprovalFromADigestMatchesOneFromTheFile();
+    testTheDigestIsTheSha256OfTheBytes();
+    testFilesOutsideTheLimitsGetNoDigest();
+    testACancelledDigestIsEmpty();
 #ifndef _WIN32
     testRepointingASymlinkIsNoticed();
 #endif

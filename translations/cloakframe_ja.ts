@@ -4,7 +4,7 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1042"/>
+        <location filename="../src/MainWindow.cpp" line="1041"/>
         <source>File results…</source>
         <translation>ファイル別の結果…</translation>
     </message>
@@ -14,7 +14,7 @@
         <translation>モデルをダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2250"/>
+        <location filename="../src/MainWindow.cpp" line="2344"/>
         <location filename="../src/ModelDownloader.cpp" line="29"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
@@ -189,125 +189,125 @@ Load it anyway?</source>
 それでも読み込みますか？</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="432"/>
+        <location filename="../src/MainWindow.cpp" line="431"/>
         <source>Local, private redaction of faces and license plates in photos and videos</source>
         <translation>写真や動画の顔とナンバープレートをローカルで安全に匿名化</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="331"/>
+        <location filename="../src/MainWindow.cpp" line="330"/>
         <source>Remove Selected</source>
         <translation>選択項目を削除</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="334"/>
+        <location filename="../src/MainWindow.cpp" line="333"/>
         <source>Clear All</source>
         <translation>すべてクリア</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/MainWindow.cpp" line="1312"/>
+        <location filename="../src/MainWindow.cpp" line="1319"/>
         <source>Ignored %n unsupported file(s).</source>
         <translation>
             <numerusform>未対応のファイル %n 件を無視しました。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="967"/>
+        <location filename="../src/MainWindow.cpp" line="966"/>
         <source>Preview</source>
         <translation>プレビュー</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="959"/>
+        <location filename="../src/MainWindow.cpp" line="958"/>
         <source>Anonymization style preview</source>
         <translation>匿名化スタイルのプレビュー</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="961"/>
+        <location filename="../src/MainWindow.cpp" line="960"/>
         <source>Sample of the current anonymization style and block size.</source>
         <translation>現在の匿名化スタイルとブロックサイズのサンプルです。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="566"/>
+        <location filename="../src/MainWindow.cpp" line="565"/>
         <source>Input images and folders</source>
         <translation>入力画像とフォルダー</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="568"/>
+        <location filename="../src/MainWindow.cpp" line="567"/>
         <source>Right-click for options · Delete removes selected items</source>
         <translation>右クリックでオプション · Delete で選択項目を削除</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1122"/>
+        <location filename="../src/MainWindow.cpp" line="1121"/>
         <source>Processing progress</source>
         <translation>処理の進捗</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1129"/>
+        <location filename="../src/MainWindow.cpp" line="1128"/>
         <source>Open Output Folder</source>
         <translation>出力フォルダーを開く</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="450"/>
+        <location filename="../src/MainWindow.cpp" line="449"/>
         <source>Model</source>
         <translation>モデル</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="459"/>
+        <location filename="../src/MainWindow.cpp" line="458"/>
         <source>Choose speed vs. accuracy, or load a custom SCRFD ONNX file.</source>
         <translation>速度と精度のどちらを優先するかを選ぶか、カスタム SCRFD ONNX ファイルを読み込みます。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="513"/>
-        <location filename="../src/MainWindow.cpp" line="803"/>
+        <location filename="../src/MainWindow.cpp" line="512"/>
+        <location filename="../src/MainWindow.cpp" line="802"/>
         <source>Browse…</source>
         <translation>参照…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="505"/>
+        <location filename="../src/MainWindow.cpp" line="504"/>
         <source>Download</source>
         <translation>ダウンロード</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="543"/>
+        <location filename="../src/MainWindow.cpp" line="542"/>
         <source>Inputs</source>
         <translation>入力</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="552"/>
+        <location filename="../src/MainWindow.cpp" line="551"/>
         <source>Drag images, videos, or folders here, or use the buttons below.</source>
         <translation>画像・動画・フォルダーをここにドラッグするか、下のボタンを使ってください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="565"/>
+        <location filename="../src/MainWindow.cpp" line="564"/>
         <source>Drop images, videos, or folders here</source>
         <translation>画像、動画、またはフォルダーをここにドロップ</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="578"/>
+        <location filename="../src/MainWindow.cpp" line="577"/>
         <source>Add Files</source>
         <translation>ファイルを追加</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="584"/>
+        <location filename="../src/MainWindow.cpp" line="583"/>
         <source>Add Folder</source>
         <translation>フォルダーを追加</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="590"/>
+        <location filename="../src/MainWindow.cpp" line="589"/>
         <source>Clear</source>
         <translation>クリア</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="599"/>
+        <location filename="../src/MainWindow.cpp" line="598"/>
         <source>Include subfolders</source>
         <translation>サブフォルダーを含める</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="606"/>
+        <location filename="../src/MainWindow.cpp" line="605"/>
         <source>Review before saving</source>
         <translation>保存前に確認</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="613"/>
+        <location filename="../src/MainWindow.cpp" line="612"/>
         <source>Review detections before output:
   • Images: exclude boxes or add missed regions
   • Videos: scrub the timeline, exclude false tracks, or add missed tracks with keyframes</source>
@@ -316,121 +316,121 @@ Load it anyway?</source>
   • 動画：タイムラインを移動し、誤検出トラックを除外するか、キーフレームで見逃したトラックを追加</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="645"/>
+        <location filename="../src/MainWindow.cpp" line="644"/>
         <source>Output</source>
         <translation>出力</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="654"/>
+        <location filename="../src/MainWindow.cpp" line="653"/>
         <source>Anonymized copies are written here, preserving folder structure.</source>
         <translation>匿名化したコピーが、フォルダー構成を保ったままここに保存されます。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="664"/>
+        <location filename="../src/MainWindow.cpp" line="663"/>
         <source>Choose…</source>
         <translation>選択…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="679"/>
+        <location filename="../src/MainWindow.cpp" line="678"/>
         <source>Preserve selected EXIF metadata</source>
         <translation>選択した EXIF メタデータを保持</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="688"/>
+        <location filename="../src/MainWindow.cpp" line="687"/>
         <source>Off (default): output carries no metadata — GPS, camera, and timestamps are removed.
 On: copies selected EXIF fields such as camera, timestamps, and location. Embedded previews, IPTC, XMP, comments, and color profiles are removed. Format and bit depth are preserved at maximum quality.</source>
         <translation>オフ（既定）：出力にはメタデータが含まれず、GPS、カメラ、撮影日時は削除されます。
 オン：カメラ、撮影日時、位置情報など、選択した EXIF フィールドのみをコピーします。埋め込みプレビュー、IPTC、XMP、コメント、カラープロファイルは削除し、形式とビット深度は最高品質で保持します。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="699"/>
+        <location filename="../src/MainWindow.cpp" line="698"/>
         <source>Metadata preservation is unavailable in this build. Output metadata will be removed.</source>
         <translation>このビルドではメタデータを保持できません。出力のメタデータは削除されます。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="724"/>
+        <location filename="../src/MainWindow.cpp" line="723"/>
         <source>Advanced Options</source>
         <translation>詳細オプション</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="736"/>
+        <location filename="../src/MainWindow.cpp" line="735"/>
         <source>Reset to defaults</source>
         <translation>デフォルトに戻す</translation>
     </message>
     <message>
+        <location filename="../src/MainWindow.cpp" line="397"/>
         <location filename="../src/MainWindow.cpp" line="398"/>
-        <location filename="../src/MainWindow.cpp" line="399"/>
         <source>Settings</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2223"/>
+        <location filename="../src/MainWindow.cpp" line="2317"/>
         <source>Update available: %1</source>
         <translation>更新があります: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2244"/>
+        <location filename="../src/MainWindow.cpp" line="2338"/>
         <source>Update Available</source>
         <translation>更新があります</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2247"/>
+        <location filename="../src/MainWindow.cpp" line="2341"/>
         <source>CloakFrame %1 is available.</source>
         <translation>CloakFrame %1 が利用できます。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2249"/>
+        <location filename="../src/MainWindow.cpp" line="2343"/>
         <source>Update</source>
         <translation>更新</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2348"/>
+        <location filename="../src/MainWindow.cpp" line="2442"/>
         <source>Later</source>
         <translation>後で</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="470"/>
+        <location filename="../src/MainWindow.cpp" line="469"/>
         <source>Faces</source>
         <translation>顔</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="471"/>
+        <location filename="../src/MainWindow.cpp" line="470"/>
         <source>License plates</source>
         <translation>ナンバープレート</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="472"/>
+        <location filename="../src/MainWindow.cpp" line="471"/>
         <source>Faces + license plates</source>
         <translation>顔 + ナンバープレート</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="755"/>
+        <location filename="../src/MainWindow.cpp" line="754"/>
         <source>Tweak detection and anonymization behavior. Defaults work for most photos.</source>
         <translation>検出と匿名化の動作を調整します。ほとんどの写真では既定値で十分です。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="767"/>
+        <location filename="../src/MainWindow.cpp" line="766"/>
         <source>Mosaic (pixelate)</source>
         <translation>モザイク（ピクセル化）</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="768"/>
+        <location filename="../src/MainWindow.cpp" line="767"/>
         <source>Gaussian blur</source>
         <translation>ガウスぼかし</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="769"/>
+        <location filename="../src/MainWindow.cpp" line="768"/>
         <source>Solid fill (blackout)</source>
         <translation>塗りつぶし（黒塗り）</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="770"/>
-        <location filename="../src/MainWindow.cpp" line="908"/>
+        <location filename="../src/MainWindow.cpp" line="769"/>
+        <location filename="../src/MainWindow.cpp" line="907"/>
         <source>Custom image</source>
         <translation>カスタム画像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="776"/>
+        <location filename="../src/MainWindow.cpp" line="775"/>
         <source>How detected faces are obscured.
 Mosaic = pixelation (block size below).
 Gaussian blur = strong smoothing scaled to face size.
@@ -443,7 +443,7 @@ Custom image = place your selected image over every detected region. Default: Mo
 カスタム画像 = 選択した画像を検出されたすべての領域に配置。既定値: モザイク</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="846"/>
+        <location filename="../src/MainWindow.cpp" line="845"/>
         <source>Minimum confidence to accept a face.
 Higher = fewer false positives but may miss small or side-profile faces.
 Lower = catches more faces but may blur non-face regions. Default: 0.50</source>
@@ -452,7 +452,7 @@ Lower = catches more faces but may blur non-face regions. Default: 0.50</source>
 低いほど = より多くの顔を捉えますが、顔以外の部分をぼかすことがあります。既定値: 0.50</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="861"/>
+        <location filename="../src/MainWindow.cpp" line="860"/>
         <source>Non-Maximum Suppression overlap threshold for duplicate boxes.
 Lower = more aggressively removes overlapping detections.
 Higher = allows more overlap. Default: 0.40</source>
@@ -461,7 +461,7 @@ Higher = allows more overlap. Default: 0.40</source>
 高いほど = 重なりを多く許容します。既定値: 0.40</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="873"/>
+        <location filename="../src/MainWindow.cpp" line="872"/>
         <source>Mosaic block size in pixels.
 Larger = coarser blocks, harder to un-blur.
 Smaller = finer mosaic, higher recovery risk. Default: 14</source>
@@ -470,7 +470,7 @@ Smaller = finer mosaic, higher recovery risk. Default: 14</source>
 小さいほど = モザイクが細かくなり、復元される危険が高まります。既定値: 14</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="887"/>
+        <location filename="../src/MainWindow.cpp" line="886"/>
         <source>Extra margin around each detected face, as a fraction of its size.
 Covers ears, hairline, and chin that the detector may miss.
 0.00 = exact box, 0.18 = ~18% larger. Default: 0.18</source>
@@ -479,45 +479,45 @@ Covers ears, hairline, and chin that the detector may miss.
 0.00 = 枠のまま、0.18 = 約 18% 拡大。既定値: 0.18</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="901"/>
+        <location filename="../src/MainWindow.cpp" line="900"/>
         <source>Anonymization</source>
         <translation>匿名化</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="915"/>
+        <location filename="../src/MainWindow.cpp" line="914"/>
         <source>Shape</source>
         <translation>形状</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="830"/>
-        <location filename="../src/MainWindow.cpp" line="922"/>
+        <location filename="../src/MainWindow.cpp" line="829"/>
+        <location filename="../src/MainWindow.cpp" line="921"/>
         <source>Soft edges</source>
         <translation>ソフトエッジ</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="832"/>
+        <location filename="../src/MainWindow.cpp" line="831"/>
         <source>Fades the edge of the obscured region into the photo instead of a hard cutoff.
 The fade only extends outward, so the detected area stays fully covered. Default: off</source>
         <translation>隠した領域の縁を、はっきり切らずに写真になじませます。
 ぼかしは外側にだけ広がるため、検出された領域は完全に覆われたままです。既定値: オフ</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="813"/>
+        <location filename="../src/MainWindow.cpp" line="812"/>
         <source>Rectangle</source>
         <translation>長方形</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="498"/>
+        <location filename="../src/MainWindow.cpp" line="497"/>
         <source>Face model path</source>
         <translation>顔モデルのパス</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="814"/>
+        <location filename="../src/MainWindow.cpp" line="813"/>
         <source>Rounded (ellipse)</source>
         <translation>丸型（楕円）</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="819"/>
+        <location filename="../src/MainWindow.cpp" line="818"/>
         <source>Shape of the obscured region.
 Rectangle = full padded box.
 Rounded = elliptical mask that follows the face and leaves corners untouched. Default: Rectangle</source>
@@ -526,98 +526,108 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
 角丸 = 顔に沿った楕円形のマスクで、四隅はそのまま残ります。既定値: 長方形</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="929"/>
+        <location filename="../src/MainWindow.cpp" line="928"/>
         <source>Score threshold</source>
         <translation>スコアしきい値</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="936"/>
+        <location filename="../src/MainWindow.cpp" line="935"/>
         <source>NMS threshold</source>
         <translation>NMS しきい値</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="943"/>
+        <location filename="../src/MainWindow.cpp" line="942"/>
         <source>Mosaic block size</source>
         <translation>モザイクのブロックサイズ</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="950"/>
+        <location filename="../src/MainWindow.cpp" line="949"/>
         <source>Face padding</source>
         <translation>顔の余白</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1066"/>
+        <location filename="../src/MainWindow.cpp" line="1065"/>
         <source>Choose output folder</source>
         <translation>出力フォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1085"/>
+        <location filename="../src/MainWindow.cpp" line="1084"/>
         <source>Activity</source>
         <translation>アクティビティ</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1111"/>
+        <location filename="../src/MainWindow.cpp" line="1110"/>
+        <location filename="../src/MainWindow.cpp" line="1349"/>
+        <location filename="../src/MainWindow.cpp" line="1704"/>
+        <location filename="../src/MainWindow.cpp" line="1718"/>
+        <location filename="../src/MainWindow.cpp" line="1736"/>
         <source>Ready</source>
         <translation>準備完了</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1150"/>
+        <location filename="../src/MainWindow.cpp" line="1149"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1160"/>
+        <location filename="../src/MainWindow.cpp" line="1159"/>
         <source>Start</source>
         <translation>開始</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1182"/>
+        <location filename="../src/MainWindow.cpp" line="1181"/>
         <source>Ready. Drop images, videos, or folders to begin.</source>
         <translation>準備ができました。画像・動画・フォルダーをドロップして開始してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1324"/>
+        <location filename="../src/MainWindow.cpp" line="1331"/>
         <source>Select SCRFD ONNX Model</source>
         <translation>SCRFD ONNX モデルを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1324"/>
+        <location filename="../src/MainWindow.cpp" line="1331"/>
         <source>ONNX Models (*.onnx)</source>
         <translation>ONNX モデル (*.onnx)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1334"/>
+        <location filename="../src/MainWindow.cpp" line="1339"/>
+        <location filename="../src/MainWindow.cpp" line="1660"/>
+        <source>Checking models…</source>
+        <translation>モデルを確認中…</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="1354"/>
         <source>Could not read the custom model file.</source>
         <translation>カスタムモデルのファイルを読み取れませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1339"/>
-        <location filename="../src/MainWindow.cpp" line="1983"/>
+        <location filename="../src/MainWindow.cpp" line="1360"/>
+        <location filename="../src/MainWindow.cpp" line="2077"/>
         <source>Custom — %1</source>
         <translation>カスタム — %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1383"/>
+        <location filename="../src/MainWindow.cpp" line="1405"/>
         <source>Select Images or Videos</source>
         <translation>画像または動画を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1385"/>
+        <location filename="../src/MainWindow.cpp" line="1407"/>
         <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</source>
         <translation>画像・動画 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1400"/>
+        <location filename="../src/MainWindow.cpp" line="1422"/>
         <source>Select Folder</source>
         <translation>フォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1415"/>
+        <location filename="../src/MainWindow.cpp" line="1437"/>
         <source>Select Output Folder</source>
         <translation>出力フォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1865"/>
+        <location filename="../src/MainWindow.cpp" line="1959"/>
         <source>Processing finished, but some results need attention.
 
 Total: %1
@@ -658,251 +668,256 @@ Check these results before sharing them.</source>
 共有前に該当する結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2261"/>
+        <location filename="../src/MainWindow.cpp" line="2355"/>
         <source>Downloading CloakFrame %1…</source>
         <translation>CloakFrame %1 をダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2280"/>
+        <location filename="../src/MainWindow.cpp" line="2374"/>
         <source>Update Failed</source>
         <translation>更新失敗</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2236"/>
+        <location filename="../src/MainWindow.cpp" line="2330"/>
         <source>⚠ An update was refused because it could not be verified.</source>
         <translation>⚠ 検証できなかったため、アップデートを拒否しました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2310"/>
+        <location filename="../src/MainWindow.cpp" line="2404"/>
         <source>Update Refused</source>
         <translation>アップデートを拒否しました</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2313"/>
+        <location filename="../src/MainWindow.cpp" line="2407"/>
         <source>The update was refused because it could not be verified. Nothing was installed.</source>
         <translation>アップデートを検証できなかったため拒否しました。何もインストールされていません。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2283"/>
+        <location filename="../src/MainWindow.cpp" line="2377"/>
         <source>The update could not be installed: %1</source>
         <translation>更新をインストールできませんでした: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2285"/>
+        <location filename="../src/MainWindow.cpp" line="2379"/>
         <source>Open Download Page</source>
         <translation>ダウンロードページを開く</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2334"/>
-        <location filename="../src/MainWindow.cpp" line="2341"/>
+        <location filename="../src/MainWindow.cpp" line="2428"/>
+        <location filename="../src/MainWindow.cpp" line="2435"/>
         <source>Update Ready</source>
         <translation>更新の準備完了</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2335"/>
+        <location filename="../src/MainWindow.cpp" line="2429"/>
         <source>CloakFrame %1 will finish installing the next time the app starts.</source>
         <translation>次回起動時に CloakFrame %1 のインストールが完了します。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2345"/>
+        <location filename="../src/MainWindow.cpp" line="2439"/>
         <source>CloakFrame %1 has been downloaded. Restart now to finish installing?</source>
         <translation>CloakFrame %1 をダウンロードしました。今すぐ再起動してインストールを完了しますか？</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2347"/>
+        <location filename="../src/MainWindow.cpp" line="2441"/>
         <source>Restart Now</source>
         <translation>今すぐ再起動</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2659"/>
+        <location filename="../src/MainWindow.cpp" line="2753"/>
         <source>Accurate  ·  YOLO5Face-n</source>
         <translation>高精度  ·  YOLO5Face-n</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2660"/>
+        <location filename="../src/MainWindow.cpp" line="2754"/>
         <source>Fast  ·  YuNet</source>
         <translation>高速  ·  YuNet</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2758"/>
+        <location filename="../src/MainWindow.cpp" line="2852"/>
         <source>The custom model was not approved, so nothing was processed.</source>
         <translation>カスタムモデルが承認されなかったため、何も処理していません。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1521"/>
-        <location filename="../src/MainWindow.cpp" line="1544"/>
-        <location filename="../src/MainWindow.cpp" line="1640"/>
-        <location filename="../src/MainWindow.cpp" line="2686"/>
+        <location filename="../src/MainWindow.cpp" line="1536"/>
+        <location filename="../src/MainWindow.cpp" line="1559"/>
+        <location filename="../src/MainWindow.cpp" line="1745"/>
+        <location filename="../src/MainWindow.cpp" line="2780"/>
         <source>Downloading %1…</source>
         <translation>%1 をダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1524"/>
-        <location filename="../src/MainWindow.cpp" line="1547"/>
-        <location filename="../src/MainWindow.cpp" line="1645"/>
-        <location filename="../src/MainWindow.cpp" line="2693"/>
+        <location filename="../src/MainWindow.cpp" line="1539"/>
+        <location filename="../src/MainWindow.cpp" line="1562"/>
+        <location filename="../src/MainWindow.cpp" line="1750"/>
+        <location filename="../src/MainWindow.cpp" line="2787"/>
         <source>Model download was cancelled or failed.</source>
         <translation>モデルのダウンロードが取り消されたか失敗しました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1528"/>
-        <location filename="../src/MainWindow.cpp" line="1550"/>
-        <location filename="../src/MainWindow.cpp" line="1658"/>
-        <location filename="../src/MainWindow.cpp" line="2689"/>
+        <location filename="../src/MainWindow.cpp" line="1543"/>
+        <location filename="../src/MainWindow.cpp" line="1565"/>
+        <location filename="../src/MainWindow.cpp" line="1754"/>
+        <location filename="../src/MainWindow.cpp" line="2783"/>
         <source>Model ready: %1</source>
         <translation>モデルの準備ができました: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1556"/>
+        <location filename="../src/MainWindow.cpp" line="1571"/>
         <source>Add at least one image or folder.</source>
         <translation>画像かフォルダーを 1 つ以上追加してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1562"/>
+        <location filename="../src/MainWindow.cpp" line="1577"/>
         <source>Choose an output folder.</source>
         <translation>出力フォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1587"/>
+        <location filename="../src/MainWindow.cpp" line="1602"/>
         <source>Refusing to run: output folder is inside input &apos;%1&apos;. Pick a different output folder so originals aren&apos;t overwritten.</source>
         <translation>実行を中止します: 出力フォルダーが入力 &apos;%1&apos; の中にあります。元のファイルが上書きされないよう、別の出力フォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1723"/>
-        <location filename="../src/MainWindow.cpp" line="1775"/>
+        <location filename="../src/MainWindow.cpp" line="1812"/>
+        <location filename="../src/MainWindow.cpp" line="1864"/>
         <source>Starting…</source>
         <translation>開始中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1783"/>
+        <location filename="../src/MainWindow.cpp" line="1877"/>
         <source>Stopping after the current processing step…</source>
         <translation>現在の処理段階が終わったら停止します…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1784"/>
+        <location filename="../src/MainWindow.cpp" line="1872"/>
+        <location filename="../src/MainWindow.cpp" line="1878"/>
         <source>Stopping…</source>
         <translation>停止中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1891"/>
+        <location filename="../src/MainWindow.cpp" line="1345"/>
+        <location filename="../src/MainWindow.cpp" line="1666"/>
+        <location filename="../src/MainWindow.cpp" line="1985"/>
         <source>Cancelled.</source>
         <translation>キャンセルしました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1851"/>
+        <location filename="../src/MainWindow.cpp" line="1945"/>
         <source>Finished.</source>
         <translation>完了しました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1892"/>
+        <location filename="../src/MainWindow.cpp" line="1346"/>
+        <location filename="../src/MainWindow.cpp" line="1667"/>
+        <location filename="../src/MainWindow.cpp" line="1986"/>
         <source>Cancelled</source>
         <translation>キャンセル済み</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1852"/>
+        <location filename="../src/MainWindow.cpp" line="1946"/>
         <source>Done</source>
         <translation>完了</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1856"/>
+        <location filename="../src/MainWindow.cpp" line="1950"/>
         <source>Completed with warnings — review the results before sharing.</source>
         <translation>警告付きで完了しました — 共有する前に結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1861"/>
+        <location filename="../src/MainWindow.cpp" line="1955"/>
         <source>Review required</source>
         <translation>確認が必要です</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1864"/>
+        <location filename="../src/MainWindow.cpp" line="1958"/>
         <source>Review Required</source>
         <translation>確認が必要です</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1896"/>
+        <location filename="../src/MainWindow.cpp" line="1990"/>
         <source>Failed — check the log for details.</source>
         <translation>失敗しました — 詳細はログを確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1900"/>
+        <location filename="../src/MainWindow.cpp" line="1994"/>
         <source>Failed — check the log</source>
         <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2706"/>
+        <location filename="../src/MainWindow.cpp" line="2800"/>
         <source>Not downloaded yet — click Download</source>
         <translation>未ダウンロード — 「ダウンロード」をクリック</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="107"/>
-        <location filename="../src/MainWindow.cpp" line="115"/>
+        <location filename="../src/MainWindow.cpp" line="106"/>
+        <location filename="../src/MainWindow.cpp" line="114"/>
         <source>Choose an existing image file.</source>
         <translation>既存の画像ファイルを選択してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="122"/>
+        <location filename="../src/MainWindow.cpp" line="121"/>
         <source>The selected image must be no larger than 64 MB.</source>
         <translation>選択する画像は64 MB以下にしてください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="137"/>
+        <location filename="../src/MainWindow.cpp" line="136"/>
         <source>The selected file is not a supported image.</source>
         <translation>選択したファイルはサポートされている画像ではありません。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="146"/>
+        <location filename="../src/MainWindow.cpp" line="145"/>
         <source>The selected image has invalid dimensions.</source>
         <translation>選択した画像のサイズ情報が無効です。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="163"/>
+        <location filename="../src/MainWindow.cpp" line="162"/>
         <source>The selected image could not be decoded: %1</source>
         <translation>選択した画像をデコードできませんでした: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="798"/>
+        <location filename="../src/MainWindow.cpp" line="797"/>
         <source>Choose an image to cover detected faces</source>
         <translation>検出された顔を覆う画像を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="800"/>
+        <location filename="../src/MainWindow.cpp" line="799"/>
         <source>The image keeps its aspect ratio and follows detected face tilt when available. Transparent pixels reveal a safety mosaic instead of the original image.</source>
         <translation>画像は縦横比を維持し、可能な場合は検出された顔の傾きに追従します。透明ピクセルには元の画像ではなく、安全用モザイクが表示されます。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="804"/>
+        <location filename="../src/MainWindow.cpp" line="803"/>
         <source>Choose custom image</source>
         <translation>カスタム画像を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1357"/>
+        <location filename="../src/MainWindow.cpp" line="1379"/>
         <source>Select Custom Image</source>
         <translation>カスタム画像を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1359"/>
+        <location filename="../src/MainWindow.cpp" line="1381"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</source>
         <translation>画像 (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1368"/>
+        <location filename="../src/MainWindow.cpp" line="1390"/>
         <source>Invalid Custom Image</source>
         <translation>無効なカスタム画像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1509"/>
+        <location filename="../src/MainWindow.cpp" line="1524"/>
         <source>Choose a face ONNX model first.</source>
         <translation>先に顔検出用ONNXモデルを選択してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1518"/>
-        <location filename="../src/MainWindow.cpp" line="1675"/>
+        <location filename="../src/MainWindow.cpp" line="1533"/>
+        <location filename="../src/MainWindow.cpp" line="1731"/>
         <source>Choose a valid face ONNX model first.</source>
         <translation>先に有効な顔検出用ONNXモデルを選択してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1638"/>
-        <location filename="../src/MainWindow.cpp" line="1655"/>
+        <location filename="../src/MainWindow.cpp" line="1699"/>
+        <location filename="../src/MainWindow.cpp" line="1714"/>
         <source>Built-in model integrity check failed: %1</source>
         <translation>内蔵モデルの整合性チェックに失敗しました: %1</translation>
     </message>
