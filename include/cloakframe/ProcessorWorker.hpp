@@ -96,7 +96,6 @@ namespace cloakframe
         int coverageWarningFiles = 0;
         int warningFiles = 0;
         qint64 unreadableInputs = 0;
-        // Video outputs that carry the source audio, which is never anonymized.
         int videosWithAudio = 0;
     };
 

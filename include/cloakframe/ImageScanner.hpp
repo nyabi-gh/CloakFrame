@@ -35,8 +35,7 @@ namespace cloakframe
     // A comparison key for `path`: its text, case-folded when `foldCase` is true.
     [[nodiscard]] std::string pathKey(const std::filesystem::path &path, bool foldCase);
 
-    // Files the scan found but cannot process, counted by lowercase extension ("" for none).
-    // Hidden files and the folder files Windows writes are not counted.
+    // Unsupported files by lowercase extension; hidden and Windows folder files are not counted.
     using SkippedTypes = std::map<std::string, int>;
 
     std::vector<ScanResult> scanImages(

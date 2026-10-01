@@ -145,7 +145,6 @@ int main(int argc, char **argv)
             expectedPending += reviewer.gaps[i].frameCount();
         assert(summary.pendingTrackingGapFrames == expectedPending);
         assert(summary.excludedTracks == (mode == 3 ? 1 : 0));
-        // Kept audio is disclosed, not a warning: it does not change the outcome below.
         assert(summary.videosWithAudio == (request.removeAudio ? 0 : 1));
         assert(outcome
                == (mode == 2 ? cloakframe::RunOutcome::Completed

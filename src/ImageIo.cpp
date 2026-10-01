@@ -2077,9 +2077,6 @@ namespace cloakframe
                     {
                         return static_cast<char>(std::tolower(value));
                     });
-                // Only what describes how the picture was taken. Anything else a camera, phone
-                // or editor writes (serial numbers, owner and author names, comments, IDs) is
-                // dropped, and so is anything added to the format later.
                 constexpr std::array<std::string_view, 31> allowed = {
                     "exif.image.make",
                     "exif.image.model",

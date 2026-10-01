@@ -189,8 +189,6 @@ namespace cloakframe
             bool reviewEnabled = false;
         };
 
-        // A run between the Start click and its worker: the request is fixed, and the model
-        // digests are being computed or checked.
         struct PendingRun
         {
             ProcessingRequest request;
@@ -206,8 +204,7 @@ namespace cloakframe
             bool gpuAcceleration,
             FaceModelKind faceModelKind = FaceModelKind::Scrfd);
 
-        // Hashes `paths` on a separate thread and calls `done` on the GUI thread with one digest
-        // per path, or with nothing when Stop cancelled it.
+        // `done` receives nothing when Stop cancelled the hashing.
         void digestModelsOffThread(const QStringList &paths,
             std::function<void(std::optional<std::vector<ModelFileDigest>>)> done);
 

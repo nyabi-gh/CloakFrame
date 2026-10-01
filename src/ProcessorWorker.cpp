@@ -116,7 +116,6 @@ namespace cloakframe
             return parts.join(QStringLiteral(", "));
         }
 
-        // ".heic 11, .gif 1", most frequent first.
         QString formatSkippedTypes(const SkippedTypes &skipped, const QString &noExtension)
         {
             std::vector<std::pair<std::string, int>> types(skipped.begin(), skipped.end());
@@ -578,8 +577,6 @@ namespace cloakframe
             const auto images = scanMedia(inputs_, recursive_, true, &scanIssues, &skippedTypes);
             const int total = static_cast<int>(images.size());
             emit logMessage(tr("Preflight: found %n supported file(s).", nullptr, total));
-            // A folder that also holds HEIC or MKV files is not fully processed, and the output
-            // folder alone does not show that.
             int skippedTypeCount = 0;
             for (const auto &entry : skippedTypes)
             {

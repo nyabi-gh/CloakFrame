@@ -25,8 +25,7 @@ namespace cloakframe
         bool operator==(const CustomModelApproval &) const = default;
     };
 
-    // What to record once the user approves bytes that `digestModelFile` hashed. `sha256` is the
-    // raw 32-byte digest.
+    // `sha256` is the raw 32-byte digest.
     [[nodiscard]] CustomModelApproval approvalForDigest(const QByteArray &sha256, qint64 size);
 
     // Whether `approved` covers bytes with this digest and size. A run compares the digest it

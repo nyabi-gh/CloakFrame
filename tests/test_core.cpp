@@ -286,7 +286,6 @@ namespace
         assert(media.size() == 1);
         assert((skipped == cloakframe::SkippedTypes{{".heic", 2}, {".mkv", 1}, {"", 1}}));
 
-        // Without videos, a video is one of the files left behind.
         cloakframe::SkippedTypes imagesOnly;
         (void)cloakframe::scanMedia({root.filePath("photos")}, true, false, nullptr, &imagesOnly);
         assert(imagesOnly.at(".mkv") == 1);
@@ -2262,8 +2261,6 @@ namespace
             const auto lens = exif.findKey(Exiv2::ExifKey("Exif.Photo.LensModel"));
             assert(lens != exif.end());
             assert(lens->toString() == "TestLens");
-            // Who took it, who owns the camera, which camera and where: none of it is allowed
-            // unless location is asked for, and the people and serials never are.
             for (const char *key : {"Exif.Image.Artist",
                      "Exif.Photo.CameraOwnerName",
                      "Exif.Photo.BodySerialNumber",

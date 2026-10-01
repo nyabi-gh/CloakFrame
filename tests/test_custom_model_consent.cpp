@@ -22,7 +22,6 @@ namespace
         out << bytes;
     }
 
-    // What the run start records once the user approves the file at `path`.
     cloakframe::CustomModelApproval approvalFor(const QString &path)
     {
         const auto digest = cloakframe::digestModelFile(path);

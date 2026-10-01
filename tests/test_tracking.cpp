@@ -547,8 +547,7 @@ namespace
         }
     }
 
-    // A face in frames 0-9, a cut at 10, nothing detected in 10-13, then a face from 14 on at
-    // `afterX`.
+    // Face in frames 0-9, cut at 10, none in 10-13, face at `afterX` from 14 on.
     std::vector<cloakframe::FaceDetections> missedAfterCut(float afterX, int frames = 20)
     {
         auto sequence = movingObjectSequence(frames, 50.0F, 0.0F);
@@ -579,8 +578,6 @@ namespace
         assert(report.uncoveredSpans[0].firstFrame == 10);
         assert(report.uncoveredSpans[0].lastFrame == 13);
 
-        // Extension may cover the frames after the cut, which are in the later track's shot;
-        // only what stays bare is reported.
         auto extended = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
         const auto extendedReport = cloakframe::postProcessTracks(extended, {}, 20, cuts);
         assert(extendedReport.uncoveredSpans.size() == 1);
@@ -609,7 +606,6 @@ namespace
         auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
         assert(cloakframe::postProcessTracks(tracks, config, 20, cuts).uncoveredSpans.empty());
 
-        // Without a cut between them, two tracks are not a cut-boundary gap.
         auto uncut = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F));
         config.maxCutBoundaryGap = 30;
         config.maxInterpolationGap = 30;

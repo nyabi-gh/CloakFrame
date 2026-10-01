@@ -103,8 +103,6 @@ namespace cloakframe
             this,
             [this]
             {
-                // The remembered output folders are paths too, kept for cleaning up after a
-                // crash; deleting them goes with deleting the logs.
                 const bool rootsCleared = clearRememberedStageRoots();
                 if (!clearLocalLogs() || !rootsCleared)
                     QMessageBox::warning(

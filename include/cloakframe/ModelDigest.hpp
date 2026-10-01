@@ -7,9 +7,6 @@
 
 namespace cloakframe
 {
-    // The identity of a model file as a run sees it: where it resolves to and what its bytes
-    // hash to. The digest is the one that consent is checked against and that the detector
-    // requires of the bytes it loads.
     struct ModelFileDigest
     {
         QString canonicalPath;
@@ -24,9 +21,8 @@ namespace cloakframe
         }
     };
 
-    // Hashes the model at `path`. A custom model may be up to `kMaxCustomModelBytes`, so this
-    // can take seconds and belongs off the GUI thread. Files that are empty, over the limit, or
-    // change size while being read get no digest, and neither does a read that `cancel` stops.
+    // Reads up to `kMaxCustomModelBytes`, so call it off the GUI thread. No digest for files
+    // that are empty, over the limit, or change size while read, or when `cancel` is set.
     [[nodiscard]] ModelFileDigest digestModelFile(
         const QString &path, const std::atomic_bool *cancel = nullptr);
 }

@@ -49,10 +49,7 @@ namespace cloakframe
         std::unique_ptr<QLockFile> lock_;
     };
 
-    // Holds a locked stage directory in an output root for as long as a run writes into it, so
-    // the root is on the list the next start sweeps. When the run ends, normally or not, and no
-    // other stage is left there, the root is taken off the list again: the list names only
-    // folders a run was still writing into when the process died.
+    // Keeps `root` on the list of output roots swept at start while a run writes into it.
     class OutputRootGuard
     {
     public:
@@ -67,21 +64,19 @@ namespace cloakframe
         std::unique_ptr<StageDirectory> marker_;
     };
 
-    // Remove what earlier runs left behind: stage directories in the system temporary
-    // directory, in `privateStageRoot()`, and in every remembered output root, and in those
-    // roots also the directories and partial files of interrupted publications. A remembered
-    // root with nothing of an earlier run left in it is forgotten. Returns how many items were
-    // removed. Safe to call while other instances are running: a directory whose lock is held
-    // is left alone, and an unlocked publication leftover only once it is old.
+    // Remove stage directories left by earlier runs, in the system temporary directory, in
+    // `privateStageRoot()`, and in every remembered output root, where interrupted publications
+    // are removed too. A remembered root with nothing left in it is forgotten. Returns how many
+    // items were removed. Safe to call while other instances are running: a directory whose
+    // lock is held is left alone.
     int removeStaleStages();
 
-    // Deletes the list of remembered output roots. Whatever a crashed run left in them is then
-    // no longer swept at start. False if the list could not be deleted.
-    [[nodiscard]] bool clearRememberedStageRoots();
-
-    // The same sweep over an explicit list of roots, without consulting or updating the
+    // The same stage sweep over an explicit list of roots, without consulting or updating the
     // remembered ones. Neither the system temporary directory nor the private root is added.
     int removeStaleStagesIn(const QStringList &roots);
+
+    // Deletes the list of remembered output roots. False if it could not be deleted.
+    [[nodiscard]] bool clearRememberedStageRoots();
 
     // Test seam: redirect the file that remembers output roots, so a test does not write into
     // the real data directory. An empty path restores the default.
@@ -95,7 +90,7 @@ namespace cloakframe
     // default; zero makes a lockless directory eligible immediately.
     void setNewStageGraceForTesting(qint64 milliseconds);
 
-    // Test seam: how old a publication leftover must be before the sweep removes it. A negative
-    // value restores the default.
+    // Test seam: the minimum age of a publication leftover the sweep removes. Negative restores
+    // the default.
     void setPublicationGraceForTesting(qint64 milliseconds);
 }

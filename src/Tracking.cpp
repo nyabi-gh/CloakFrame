@@ -802,10 +802,8 @@ namespace cloakframe
             totalBoxes = withoutExtended + track.boxes.size();
         }
 
-        // A cut ends every track, so a subject the detector misses for a few frames after one
-        // leaves frames that belong to no track. A false cut (a light switched on, a whip pan)
-        // makes this common. When a track before the cut and one after it meet in space, the
-        // frames between them are reported like a gap inside one track.
+        // A cut ends every track, so frames missed right after one belong to no track. Report
+        // them when the tracks on either side of the cut overlap in space.
         std::vector<const Track *> byStart;
         byStart.reserve(tracks.size());
         for (const auto &track : tracks)

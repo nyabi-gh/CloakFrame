@@ -25,6 +25,24 @@
 #include <memory>
 #include <vector>
 
+#ifdef NDEBUG
+#if defined(Q_OS_WIN)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <cstdlib>
+#include <windows.h>
+#elif defined(Q_OS_UNIX)
+#include <sys/resource.h>
+#ifdef Q_OS_LINUX
+#include <sys/prctl.h>
+#endif
+#endif
+#endif
+
 #ifndef CLOAKFRAME_VERSION
 #define CLOAKFRAME_VERSION "0.0.0"
 #endif
@@ -34,6 +52,33 @@ namespace
     constexpr auto kOrganizationName = "CloakFrame";
     constexpr auto kOrganizationDomain = "cloakframe.app";
     constexpr auto kApplicationName = "CloakFrame";
+
+#if defined(NDEBUG) && defined(Q_OS_WIN)
+    LONG WINAPI endWithoutReport(EXCEPTION_POINTERS *info)
+    {
+        ::TerminateProcess(::GetCurrentProcess(), info->ExceptionRecord->ExceptionCode);
+        return EXCEPTION_CONTINUE_SEARCH;
+    }
+#endif
+
+    // A crash dump would hold source pixels from the heap.
+    void disableCrashDumps()
+    {
+#ifdef NDEBUG
+#if defined(Q_OS_WIN)
+        // Fail-fast exits (/GS, CFG, heap corruption) still reach Windows Error Reporting.
+        _set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+        ::SetUnhandledExceptionFilter(endWithoutReport);
+#elif defined(Q_OS_UNIX)
+        const rlimit none{0, 0};
+        ::setrlimit(RLIMIT_CORE, &none);
+#ifdef Q_OS_LINUX
+        // A core_pattern pipe such as systemd-coredump ignores RLIMIT_CORE but not this.
+        ::prctl(PR_SET_DUMPABLE, 0, 0, 0, 0);
+#endif
+#endif
+#endif
+    }
 
     void configureApplicationAndMigrateSettings()
     {
@@ -69,6 +114,7 @@ namespace
 
 int main(int argc, char *argv[])
 {
+    disableCrashDumps();
     cloakframe::SelfUpdater::runStartupHooks();
 
     QApplication app(argc, argv);

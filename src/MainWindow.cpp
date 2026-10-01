@@ -1727,8 +1727,6 @@ namespace cloakframe
             return key.isValid() && modelDigestMatches(model, key.modelSha256);
         };
 
-        // A built-in model that fails its pinned digest is downloaded again once, and the new
-        // file goes through the same check before anything loads it.
         if (request.detectFaces && run->selectedBuiltin != nullptr
             && !intact(*run->selectedBuiltin, run->faceKey))
         {
@@ -1976,7 +1974,6 @@ namespace cloakframe
                 .arg(lastRunSummary_.total)
                 .arg(lastRunSummary_.failed)
                 .arg(lastRunSummary_.unreadableInputs));
-        // Masking covers the picture only, so a run that saved audio says so with its result.
         const QString audioNotice =
             lastRunSummary_.videosWithAudio > 0
                 ? tr("%n video(s) kept their audio. Voices and anything said in them are not "
@@ -1995,7 +1992,6 @@ namespace cloakframe
         {
         case RunOutcome::Completed:
         {
-            // "Done" means nothing was reported, which is not the same as nothing was missed.
             const bool reviewed = completedRun.has_value() && completedRun->reviewEnabled;
             appendLog(tr("Finished with no reported warnings."));
             if (!reviewed)

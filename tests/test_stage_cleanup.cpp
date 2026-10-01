@@ -198,8 +198,6 @@ namespace
         const QString stage = makeAbandonedStage(root, QStringLiteral("aB3xY9"));
         age(stage);
 
-        // An interrupted image publication: its directory next to the destination, and the
-        // partial file of the copy fallback.
         QDir nested(root.filePath(QStringLiteral("album/2026")));
         assert(nested.mkpath(QStringLiteral(".")));
         const QString published = nested.filePath(QStringLiteral(".cloakframe-123-4.tmp"));
@@ -216,7 +214,6 @@ namespace
         }
         age(partial);
 
-        // Recent, so possibly another instance's, and a name that only looks similar.
         const QString recent = nested.filePath(QStringLiteral(".cloakframe-5-6.tmp"));
         assert(QDir().mkpath(recent));
         const QString lookalike = nested.filePath(QStringLiteral(".cloakframe-12a-3.tmp"));

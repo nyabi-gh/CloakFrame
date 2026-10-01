@@ -92,8 +92,7 @@ namespace cloakframe
         int maxInterpolationGap = 20;
         int smoothingRadius = 2;
         int extensionFrames = 3;
-        // The longest absence across a scene cut that is still reported as a gap. It matches
-        // the tracker's `maxFramesLost`, the longest absence it bridges within one shot.
+        // Matches TrackerConfig::maxFramesLost.
         int maxCutBoundaryGap = 30;
         float strongScoreThreshold = 0.5F;
         int minStrongDetections = 3;

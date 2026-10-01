@@ -33,7 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **Crash dumps** [A-11]. Nothing keeps source pixels out of core dumps or WER reports.
 - **GPU errors mid-run** [C-2]. Only model creation falls back to CPU; a later accelerator
   error fails every following file. Retry the file on CPU and add a CPU/accelerator
   parity test.

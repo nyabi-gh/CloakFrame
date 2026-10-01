@@ -34,8 +34,7 @@ namespace cloakframe
         constexpr auto kStageLockName = ".lock";
         constexpr int kMaxRememberedRoots = 32;
         constexpr qint64 kDefaultNewStageGraceMs = 60'000;
-        // Publication leftovers carry no lock, so only age says the writer is gone. One
-        // publication takes seconds even on a slow share.
+        // Publication leftovers have no lock, so only age shows their writer is gone.
         constexpr qint64 kDefaultPublicationGraceMs = 600'000;
         constexpr auto kPartialSuffix = ".cloakframe-partial";
 
@@ -51,8 +50,7 @@ namespace cloakframe
             return grace;
         }
 
-        // What ImageIo names the directory a file is published through, in the destination's
-        // own folder: ".cloakframe-<digits>-<digits>.tmp".
+        // ".cloakframe-<digits>-<digits>.tmp", as ImageIo names a publication directory.
         bool isPublicationStageName(const QString &name)
         {
             const QString prefix = QStringLiteral(".cloakframe-");
@@ -249,8 +247,7 @@ namespace cloakframe
 #endif
         }
 
-        // Publication leftovers sit next to the file being published, anywhere under the output
-        // root. Links and junctions are not followed: what they point to is not the run's.
+        // Links and junctions are not followed.
         int sweepPublicationLeftovers(const QString &root)
         {
             int removed = 0;
@@ -489,8 +486,6 @@ namespace cloakframe
             roots.push_back(privateRoot);
         }
         int removed = removeStaleStagesIn(roots);
-        // A remembered output root is one a run was writing into when it stopped without
-        // finishing. Once nothing of that run is left there, its path is not kept any longer.
         for (const auto &root : readRememberedRoots())
         {
             removed += sweepRoot(root);
@@ -525,8 +520,7 @@ namespace cloakframe
     OutputRootGuard::~OutputRootGuard()
     {
         marker_.reset();
-        // Another instance writing into the same folder keeps its own marker there, and with
-        // it the folder's place on the list.
+        // Another instance's marker keeps the root listed.
         if (!root_.isEmpty() && !hasStages(root_))
         {
             forgetRoot(root_);

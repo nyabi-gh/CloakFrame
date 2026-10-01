@@ -110,9 +110,8 @@ namespace cloakframe
 
     std::vector<int> encodeParamsForExtension(const std::string &extLower);
 
-    // Copies the EXIF fields that describe how the picture was taken (camera, lens, exposure,
-    // capture time), and the GPS fields only when `keepLocation` is set. Everything else,
-    // including XMP, IPTC, comments and color profiles, is removed from `destination`.
+    // Copies only camera, lens, exposure and capture-time EXIF fields, plus GPS with
+    // `keepLocation`.
     bool copyMetadata(const std::filesystem::path &source,
         const std::filesystem::path &destination,
         bool normalizeOrientation,
