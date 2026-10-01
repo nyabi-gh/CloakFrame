@@ -225,7 +225,7 @@ namespace
         assert(tracks[0].lastFrame() == 34);
     }
 
-    void testWeakTracksKeepTheirConfidentFrames()
+    void testAConfirmedWeakTrackIsMaskedWhole()
     {
         auto weak = movingObjectSequence(20, 50.0F, 5.0F, 100.0F, 0.2F);
         weak[3][0].score = 0.9F;
@@ -234,11 +234,14 @@ namespace
         assert(weakTracks.size() == 1);
         cloakframe::TrackPostProcessConfig noExtension;
         noExtension.extensionFrames = 0;
-        cloakframe::postProcessTracks(weakTracks, noExtension, 20);
+        const auto weakReport = cloakframe::postProcessTracks(weakTracks, noExtension, 20);
         assert(weakTracks.size() == 1);
         assert(weakTracks[0].lowConfidence);
-        assert(weakTracks[0].boxAtFrame(3) != nullptr);
-        assert(weakTracks[0].boxAtFrame(4) != nullptr);
+        for (int frame = 0; frame < 20; ++frame)
+        {
+            assert(weakTracks[0].boxAtFrame(frame) != nullptr);
+        }
+        assert(weakReport.droppedTracks == 0 && weakReport.uncoveredFrames == 0);
 
         auto nothingStrong = cloakframe::buildBidirectionalTracks(weak);
         cloakframe::TrackPostProcessConfig strict;
@@ -266,7 +269,7 @@ namespace
         assert(tracks.size() == 2);
 
         cloakframe::TrackPostProcessConfig retain;
-        retain.retainLowConfidenceTracks = true;
+        retain.retainTracksWithoutStrongDetection = true;
         cloakframe::postProcessTracks(tracks, retain, 20);
         assert(tracks.size() == 2);
         int lowConfidence = 0;
@@ -874,7 +877,7 @@ int main()
     testPoseSmoothingReducesAngleJitter();
     testLowConfidenceDetectionsExtendButNeverStartTracks();
     testLowConfidenceCoastingExpires();
-    testWeakTracksKeepTheirConfidentFrames();
+    testAConfirmedWeakTrackIsMaskedWhole();
     testRetainedLowConfidenceTracksAreMarkedNotDropped();
     testShortStrongBurstIsKept();
     testHighConfidenceSingletonIsKept();

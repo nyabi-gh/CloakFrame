@@ -664,7 +664,7 @@ namespace cloakframe
                 frameDetections, trackerConfig, 0.5F, sceneCuts, trackingContinue);
             TrackPostProcessConfig postProcess = options.postProcess;
             postProcess.strongScoreThreshold = trackerConfig.highScoreThreshold;
-            postProcess.retainLowConfidenceTracks = static_cast<bool>(review);
+            postProcess.retainTracksWithoutStrongDetection = static_cast<bool>(review);
             auto coverage = postProcessTracks(
                 tracks, postProcess, static_cast<int>(frameCount), sceneCuts, trackingContinue);
             result.uncoveredFrames = coverage.uncoveredFrames;

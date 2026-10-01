@@ -96,7 +96,7 @@ namespace cloakframe
         int minStrongDetections = 3;
         int shortTrackMinStrong = 1;
         float shortTrackStrongRatio = 0.5F;
-        bool retainLowConfidenceTracks = false;
+        bool retainTracksWithoutStrongDetection = false;
     };
 
     [[nodiscard]] std::vector<Track> buildTracks(const std::vector<FaceDetections> &frameDetections,

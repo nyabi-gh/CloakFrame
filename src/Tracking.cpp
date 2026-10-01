@@ -751,34 +751,24 @@ namespace cloakframe
                        >= config.shortTrackStrongRatio * static_cast<float>(real);
             return !cleanShortBurst;
         };
-        if (config.retainLowConfidenceTracks)
+        for (auto &track : tracks)
         {
-            for (auto &track : tracks)
-            {
-                track.lowConfidence = isLowConfidence(track);
-            }
+            track.lowConfidence = isLowConfidence(track);
         }
-        else
+        if (!config.retainTracksWithoutStrongDetection)
         {
-            // Dropping a whole track also drops the frames the detector was confident
-            // about. Keep those, and only discard tracks with nothing strong in them.
-            for (auto &track : tracks)
-            {
-                if (!isLowConfidence(track))
-                {
-                    continue;
-                }
-                track.lowConfidence = true;
-                std::erase_if(track.boxes,
-                    [&](const TrackedBox &box)
-                    {
-                        return box.interpolated || box.score < config.strongScoreThreshold;
-                    });
-            }
+            // A track the detector was sure of even once is masked whole: its weaker boxes were
+            // linked to that detection and are most likely the same subject.
             const auto emptied = std::erase_if(tracks,
-                [](const Track &track)
+                [&](const Track &track)
                 {
-                    return track.boxes.empty();
+                    return std::none_of(track.boxes.cbegin(),
+                        track.boxes.cend(),
+                        [&](const TrackedBox &box)
+                        {
+                            periodicallyRequireTrackingContinue(continueGuard, filteringOperations);
+                            return !box.interpolated && box.score >= config.strongScoreThreshold;
+                        });
                 });
             report.droppedTracks = static_cast<int>(emptied);
         }
