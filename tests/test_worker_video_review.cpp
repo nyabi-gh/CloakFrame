@@ -1,5 +1,6 @@
 #include "cloakframe/Detector.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
+#include "cloakframe/StageCleanup.hpp"
 #include "cloakframe/VideoReviewTypes.hpp"
 
 #include <QCoreApplication>
@@ -66,6 +67,7 @@ int main(int argc, char **argv)
         return 77;
     QTemporaryDir temp;
     assert(temp.isValid());
+    cloakframe::setPrivateStageRootForTesting(temp.filePath("private-stages"));
     const QString source = temp.filePath("input.mp4");
     QProcess generate;
     generate.start(tools->ffmpegPath,

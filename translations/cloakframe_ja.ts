@@ -2076,6 +2076,10 @@ Continue?</source>
         <translation>元の動画の非公開スナップショットを作成できませんでした。</translation>
     </message>
     <message>
+        <source>There is not enough free space for a private copy of the source video: it needs %1, and %2 is free in %3.</source>
+        <translation>元の動画の非公開コピーを作成する空き容量が足りません。%1 必要ですが、%3 の空き容量は %2 です。</translation>
+    </message>
+    <message>
         <location filename="../src/VideoProcessor.cpp" line="405"/>
         <source>The source video changed during processing. Start the operation again.</source>
         <translation>処理中に元の動画が変更されました。操作を最初からやり直してください。</translation>

@@ -8,7 +8,8 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
+#include <QLocale>
+#include <QStorageInfo>
 
 #include <opencv2/core.hpp>
 
@@ -403,10 +404,25 @@ namespace cloakframe
             spdlog::warn("Video source changed while processing: {}", sourcePath.toStdString());
         };
 
-        const QString stagingBase = !options.outputRootPath.isEmpty()
-                                        ? options.outputRootPath
-                                        : QFileInfo(destinationPath).absolutePath();
-        StageDirectory sourceStaging(stagingBase);
+        const QString stagingRoot = privateStageRoot();
+        if (!stagingRoot.isEmpty() && QDir().mkpath(stagingRoot))
+        {
+            const QStorageInfo volume(stagingRoot);
+            const auto available = volume.bytesAvailable();
+            if (volume.isValid() && available >= 0
+                && static_cast<std::uint64_t>(available) < sourceSnapshot->size)
+            {
+                result.error =
+                    trVideoProcessor(QT_TRANSLATE_NOOP("cloakframe::VideoProcessor",
+                                         "There is not enough free space for a private copy of "
+                                         "the source video: it needs %1, and %2 is free in %3."))
+                        .arg(QLocale().formattedDataSize(static_cast<qint64>(sourceSnapshot->size)),
+                            QLocale().formattedDataSize(available),
+                            QDir::toNativeSeparators(stagingRoot));
+                return result;
+            }
+        }
+        StageDirectory sourceStaging(stagingRoot);
         if (!sourceStaging.isValid())
         {
             result.error = trVideoProcessor(QT_TRANSLATE_NOOP("cloakframe::VideoProcessor",

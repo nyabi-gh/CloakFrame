@@ -42,6 +42,18 @@ namespace cloakframe
             return override;
         }
 
+        QString &privateStageRootOverride()
+        {
+            static QString override;
+            return override;
+        }
+
+        bool isAlwaysSwept(const QString &canonicalRoot)
+        {
+            return canonicalRoot == QDir(QDir::tempPath()).absolutePath()
+                   || canonicalRoot == QDir(privateStageRoot()).absolutePath();
+        }
+
         QString stageRootsFile()
         {
             if (!stageRootsFileOverride().isEmpty())
@@ -87,10 +99,10 @@ namespace cloakframe
             {
                 return;
             }
-            // The system temporary directory is swept unconditionally, and this runs once per
-            // image in a batch, so leave before touching the filesystem.
+            // These roots are swept unconditionally, and this runs once per image in a batch,
+            // so leave before touching the filesystem.
             const QString canonical = QDir(root).absolutePath();
-            if (canonical == QDir(QDir::tempPath()).absolutePath())
+            if (isAlwaysSwept(canonical))
             {
                 return;
             }
@@ -216,10 +228,30 @@ namespace cloakframe
         }
     }
 
-    StageDirectory::StageDirectory(const QString &root)
-        : dir_(std::make_unique<QTemporaryDir>(
-              QDir(root).filePath(QString::fromLatin1(kStageTemplate))))
+    QString privateStageRoot()
     {
+        if (!privateStageRootOverride().isEmpty())
+        {
+            return privateStageRootOverride();
+        }
+        const QString cache = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+        if (cache.isEmpty())
+        {
+            return {};
+        }
+        return cache + QStringLiteral("/staging");
+    }
+
+    StageDirectory::StageDirectory(const QString &root)
+    {
+        // QTemporaryDir would resolve a template under an empty root against the working
+        // directory.
+        if (root.isEmpty())
+        {
+            return;
+        }
+        dir_ = std::make_unique<QTemporaryDir>(
+            QDir(root).filePath(QString::fromLatin1(kStageTemplate)));
         if (!dir_->isValid())
         {
             return;
@@ -270,6 +302,11 @@ namespace cloakframe
         stageRootsFileOverride() = path;
     }
 
+    void setPrivateStageRootForTesting(const QString &path)
+    {
+        privateStageRootOverride() = path;
+    }
+
     void setNewStageGraceForTesting(const qint64 milliseconds)
     {
         newStageGraceMs() = milliseconds < 0 ? kDefaultNewStageGraceMs : milliseconds;
@@ -295,6 +332,10 @@ namespace cloakframe
     int removeStaleStages()
     {
         QStringList roots{QDir::tempPath()};
+        if (const QString privateRoot = privateStageRoot(); !privateRoot.isEmpty())
+        {
+            roots.push_back(privateRoot);
+        }
         roots += readRememberedRoots();
         const int removed = removeStaleStagesIn(roots);
         if (removed > 0)

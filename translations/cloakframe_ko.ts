@@ -2076,6 +2076,10 @@ Continue?</source>
         <translation>원본 동영상의 비공개 사본을 만들지 못했습니다.</translation>
     </message>
     <message>
+        <source>There is not enough free space for a private copy of the source video: it needs %1, and %2 is free in %3.</source>
+        <translation>원본 동영상의 비공개 사본을 만들 공간이 부족합니다. %1이(가) 필요하지만 %3에 남은 공간은 %2입니다.</translation>
+    </message>
+    <message>
         <location filename="../src/VideoProcessor.cpp" line="405"/>
         <source>The source video changed during processing. Start the operation again.</source>
         <translation>처리 중 원본 동영상이 변경되었습니다. 작업을 다시 시작하세요.</translation>

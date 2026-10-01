@@ -1,3 +1,4 @@
+#include "cloakframe/PathUtil.hpp"
 #include "cloakframe/StageCleanup.hpp"
 
 #include <QDir>
@@ -8,7 +9,9 @@
 #include <QTemporaryDir>
 
 #include <cassert>
+#include <chrono>
 #include <cstdio>
+#include <filesystem>
 #include <fstream>
 
 #ifndef _WIN32
@@ -118,6 +121,39 @@ namespace
         assert(!QDir(path).exists());
     }
 
+    void testAnEmptyRootGivesNoStage()
+    {
+        const cloakframe::StageDirectory stage{QString()};
+        assert(!stage.isValid());
+        assert(stage.path().isEmpty());
+    }
+
+    void testThePrivateRootIsSweptWithoutBeingRemembered(const QString &rootsFile)
+    {
+        QTemporaryDir root;
+        assert(root.isValid());
+        cloakframe::setPrivateStageRootForTesting(root.path());
+        {
+            const cloakframe::StageDirectory live(cloakframe::privateStageRoot());
+            assert(live.isValid());
+        }
+        QFile remembered(rootsFile);
+        const QString roots =
+            remembered.open(QIODevice::ReadOnly) ? QString::fromUtf8(remembered.readAll()) : "";
+        assert(!roots.contains(QDir(root.path()).absolutePath()));
+
+        // The full sweep also visits the real temporary directory, where other tests may be
+        // creating stages, so it runs with the normal grace period and an aged fixture.
+        cloakframe::setNewStageGraceForTesting(-1);
+        const QString stage = makeAbandonedStage(root, QStringLiteral("aB3xY9"));
+        std::filesystem::last_write_time(cloakframe::pathFromQString(stage),
+            std::filesystem::file_time_type::clock::now() - std::chrono::hours(2));
+        cloakframe::removeStaleStages();
+        assert(!QDir(stage).exists());
+        cloakframe::setNewStageGraceForTesting(0);
+        cloakframe::setPrivateStageRootForTesting({});
+    }
+
 #ifndef _WIN32
     void testAStageAnotherAccountCouldWriteIsLeftAlone()
     {
@@ -163,7 +199,8 @@ int main()
 {
     QTemporaryDir dataDir;
     assert(dataDir.isValid());
-    cloakframe::setStageRootsFileForTesting(dataDir.filePath(QStringLiteral("stage-roots.txt")));
+    const QString rootsFile = dataDir.filePath(QStringLiteral("stage-roots.txt"));
+    cloakframe::setStageRootsFileForTesting(rootsFile);
 
     // A directory with no lock file yet is normally spared in case another instance is still
     // setting it up. These fixtures are all older than that in spirit and none of them is
@@ -176,6 +213,8 @@ int main()
     testAnAbsentRootIsNotAnError();
     testEachRootIsSweptOnce();
     testAStageDirectoryTakesItsContentsWithIt();
+    testAnEmptyRootGivesNoStage();
+    testThePrivateRootIsSweptWithoutBeingRemembered(rootsFile);
 #ifndef _WIN32
     testAStageAnotherAccountCouldWriteIsLeftAlone();
     testASymlinkWearingAStageNameIsLeftAlone();

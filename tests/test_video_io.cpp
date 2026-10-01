@@ -1,3 +1,4 @@
+#include "cloakframe/StageCleanup.hpp"
 #include "cloakframe/VideoIo.hpp"
 #include "cloakframe/VideoProcessor.hpp"
 #include "cloakframe/VideoReviewTypes.hpp"
@@ -196,6 +197,15 @@ namespace
             }
         }
         return false;
+    }
+
+    QByteArray fileSha256(const QString &path)
+    {
+        QFile file(path);
+        assert(file.open(QIODevice::ReadOnly));
+        QCryptographicHash hash(QCryptographicHash::Sha256);
+        assert(hash.addData(&file));
+        return hash.result();
     }
 
     QString rawProbeOutput(const cloakframe::FfmpegTools &tools, const QString &path)
@@ -764,6 +774,9 @@ int main(int argc, char **argv)
 
     QTemporaryDir tempDir;
     assert(tempDir.isValid());
+    QTemporaryDir privateStages;
+    assert(privateStages.isValid());
+    cloakframe::setPrivateStageRootForTesting(privateStages.path());
 
     testPreviewAndReaderAgreeOnFrameIndex(*tools, tempDir.path());
     std::puts("preview and reader frame identity: ok");
@@ -1229,6 +1242,7 @@ int main(int argc, char **argv)
         assert(result.status == cloakframe::VideoProcessStatus::Cancelled);
         assert(!QFile::exists(reviewCancelledPath));
         assert(stagingLeftovers(tempDir.path()) == 0);
+        assert(stagingLeftovers(privateStages.path()) == 0);
         std::puts("video review cancellation: ok");
     }
 
@@ -1258,7 +1272,15 @@ int main(int argc, char **argv)
                 const cloakframe::VideoInfo &)
             {
                 reviewCalled = true;
-                assert(stagingLeftovers(tempDir.path()) >= 1);
+                // The output folder may be synced or shared; the unredacted copy must not be in it.
+                assert(stagingLeftovers(tempDir.path()) == 0);
+                const auto stages = QDir(privateStages.path())
+                                        .entryList({QStringLiteral(".cloakframe-stage-*")},
+                                            QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot);
+                assert(stages.size() == 1);
+                assert(fileSha256(QDir(privateStages.filePath(stages.front()))
+                               .filePath(QStringLiteral("source.mp4")))
+                       == fileSha256(replaceableSource));
                 assert(QFile::remove(replaceableSource));
                 assert(QFile::rename(replacement, replaceableSource));
                 return true;
@@ -1268,6 +1290,7 @@ int main(int argc, char **argv)
         assert(result.frameCount >= 55 && result.frameCount <= 65);
         assert(QFile::exists(changedSourceOutput));
         assert(stagingLeftovers(tempDir.path()) == 0);
+        assert(stagingLeftovers(privateStages.path()) == 0);
         std::puts("stable source snapshot between video passes: ok");
     }
 

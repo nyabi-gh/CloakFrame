@@ -2076,6 +2076,10 @@ Continue?</source>
         <translation>无法创建源视频的私有快照。</translation>
     </message>
     <message>
+        <source>There is not enough free space for a private copy of the source video: it needs %1, and %2 is free in %3.</source>
+        <translation>可用空间不足，无法创建源视频的私有副本：需要 %1，而 %3 中仅剩 %2。</translation>
+    </message>
+    <message>
         <location filename="../src/VideoProcessor.cpp" line="405"/>
         <source>The source video changed during processing. Start the operation again.</source>
         <translation>源视频在处理过程中发生了更改。请重新开始操作。</translation>
