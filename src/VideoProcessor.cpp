@@ -787,7 +787,7 @@ namespace cloakframe
             VideoFrameWriter writer;
             if (!writer.open(tools,
                     destinationPath,
-                    processingSource,
+                    options.keepAudio ? processingSource : QString(),
                     activeInfo,
                     options.crf,
                     allowHardwareEncoder,

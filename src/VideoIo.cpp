@@ -1144,7 +1144,7 @@ namespace cloakframe
         tempPath_ = stagingDirectory_->filePath(QStringLiteral("video.mp4"));
 
         static const QStringList mp4CompatibleAudio = {"aac", "mp3", "ac3", "eac3", "alac"};
-        const bool hasAudio = !info.audioStreams.empty();
+        const bool hasAudio = !audioSource.isEmpty() && !info.audioStreams.empty();
 
         QStringList arguments = {
             "-v",
@@ -1173,8 +1173,9 @@ namespace cloakframe
             {
                 arguments << "-t" << QString::number(info.durationSeconds, 'f', 3);
             }
+            arguments << "-i" << audioSource;
         }
-        arguments << "-i" << audioSource << "-map" << "0:v:0";
+        arguments << "-map" << "0:v:0";
         if (hasAudio)
         {
             // Every audio stream, not just the first: commentary, alternate languages and
@@ -1203,7 +1204,7 @@ namespace cloakframe
         {
             arguments << "-vf" << videoFilters.join(QLatin1Char(','));
         }
-        for (std::size_t stream = 0; stream < info.audioStreams.size(); ++stream)
+        for (std::size_t stream = 0; hasAudio && stream < info.audioStreams.size(); ++stream)
         {
             // Output audio stream `stream` is input audio stream `stream`, because every one of
             // them is mapped in order. Only the streams MP4 cannot carry are re-encoded.

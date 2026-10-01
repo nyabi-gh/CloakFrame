@@ -48,7 +48,9 @@ add anything the detector missed.
 - **Metadata is removed.** Saved images carry no location, camera, or other embedded
   data unless you choose to keep selected fields. Videos lose their container
   metadata, subtitles, and GPS tracks.
-- **Audio is kept.** Voices and other sounds in a video are not anonymized.
+- **Audio is kept unless you remove it.** Voices and other sounds in a video are not
+  anonymized. Turn on **Remove audio from videos** to save videos without sound; when a
+  run keeps audio, its result says so.
 - **Three kinds of network requests, nothing else:** downloading a detection model the
   first time you use it, checking for a new version at startup (you can turn this off
   in Settings), and downloading an update after you approve it.

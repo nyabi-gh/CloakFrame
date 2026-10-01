@@ -245,6 +245,7 @@ namespace cloakframe
         QCheckBox *recursiveCheck_ = nullptr;
         QCheckBox *reviewCheck_ = nullptr;
         QCheckBox *preserveMetaCheck_ = nullptr;
+        QCheckBox *removeAudioCheck_ = nullptr;
         QLabel *updateLabel_ = nullptr;
         QDoubleSpinBox *scoreThresholdSpin_ = nullptr;
         QDoubleSpinBox *nmsThresholdSpin_ = nullptr;

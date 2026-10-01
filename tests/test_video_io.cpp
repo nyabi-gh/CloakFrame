@@ -612,6 +612,25 @@ namespace
         assert(written->audioStreams.at(0).codec == "aac");
         assert(written->audioStreams.at(1).codec == "aac");
         assert(written->audioStreams.at(1).language == "jpn");
+
+        const QString silent = directory + "/two-audio-removed.mp4";
+        options.keepAudio = false;
+        const auto removed = cloakframe::processVideo(
+            tools,
+            source,
+            silent,
+            *info,
+            options,
+            [](const cv::Mat &)
+            {
+                return cloakframe::FaceDetections{};
+            },
+            cancelled);
+        assert(removed.status == cloakframe::VideoProcessStatus::Completed);
+        const auto withoutAudio = cloakframe::probeVideo(tools, silent);
+        assert(withoutAudio);
+        assert(withoutAudio->audioStreams.empty());
+        assert(removed.frameCount == result.frameCount);
     }
 
     // Everything but one video stream and the audio has to stay behind: subtitles, cover art,

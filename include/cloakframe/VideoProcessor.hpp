@@ -27,6 +27,7 @@ namespace cloakframe
         VideoCodec codec = VideoCodec::H264;
         int analysisLongEdge = 960;
         bool hardwareEncoder = true;
+        bool keepAudio = true;
         QString outputRootPath;
         QString outputRelativePath;
         TrackerConfig tracker;

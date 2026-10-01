@@ -77,8 +77,14 @@ int main(int argc, char **argv)
             "lavfi",
             "-i",
             "color=c=white:size=320x240:rate=30:duration=4",
+            "-f",
+            "lavfi",
+            "-i",
+            "sine=frequency=440:duration=4",
             "-c:v",
             "libx264",
+            "-c:a",
+            "aac",
             source});
     assert(generate.waitForFinished(30000) && generate.exitCode() == 0);
     for (int mode = 0; mode < 4; ++mode)
@@ -92,6 +98,7 @@ int main(int argc, char **argv)
         request.reviewEnabled = true;
         request.reviewReceiver = &reviewer;
         request.initialVideoReviewFrame = 20;
+        request.removeAudio = mode % 2 == 1;
         const QString output = request.outputDirectory + "/input.mp4";
         cloakframe::DetectorCache cache;
         cache.face = std::make_shared<GappedDetector>();
@@ -138,6 +145,8 @@ int main(int argc, char **argv)
             expectedPending += reviewer.gaps[i].frameCount();
         assert(summary.pendingTrackingGapFrames == expectedPending);
         assert(summary.excludedTracks == (mode == 3 ? 1 : 0));
+        // Kept audio is disclosed, not a warning: it does not change the outcome below.
+        assert(summary.videosWithAudio == (request.removeAudio ? 0 : 1));
         assert(outcome
                == (mode == 2 ? cloakframe::RunOutcome::Completed
                              : cloakframe::RunOutcome::CompletedWithWarnings));

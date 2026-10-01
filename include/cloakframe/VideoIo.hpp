@@ -82,8 +82,8 @@ namespace cloakframe
         qint64 estimatedFrameCount = 0;
         bool isVfr = false;
         QString videoCodec;
-        // Every audio stream, in stream order. The output keeps all of them, so this has to
-        // describe the whole source rather than just the first track.
+        // Every audio stream, in stream order. An output with audio keeps all of them, so this
+        // has to describe the whole source rather than just the first track.
         std::vector<AudioStreamInfo> audioStreams;
         QString pixelFormat;
         QString colorTransfer;
@@ -198,6 +198,7 @@ namespace cloakframe
         VideoFrameWriter(const VideoFrameWriter &) = delete;
         VideoFrameWriter &operator=(const VideoFrameWriter &) = delete;
 
+        // An empty `audioSource` writes the video without audio.
         bool open(const FfmpegTools &tools,
             const QString &destination,
             const QString &audioSource,

@@ -61,6 +61,7 @@ namespace cloakframe
         bool gpuAcceleration = false;
         int videoCrf = 18;
         VideoCodec videoCodec = VideoCodec::H264;
+        bool removeAudio = false;
     };
 
     struct DetectorCache
@@ -94,6 +95,8 @@ namespace cloakframe
         int coverageWarningFiles = 0;
         int warningFiles = 0;
         qint64 unreadableInputs = 0;
+        // Video outputs that carry the source audio, which is never anonymized.
+        int videosWithAudio = 0;
     };
 
     class ProcessorWorker final : public QObject
@@ -169,6 +172,7 @@ namespace cloakframe
         bool gpuAcceleration_;
         int videoCrf_;
         VideoCodec videoCodec_;
+        bool removeAudio_;
         std::atomic<bool> cancelled_{false};
         std::mutex imageMemoryMutex_;
         std::condition_variable imageMemoryCv_;

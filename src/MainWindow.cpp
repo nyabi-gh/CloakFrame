@@ -702,6 +702,18 @@ namespace cloakframe
             preserveMetaCheck_->setEnabled(metadataSupportAvailable());
             cardLayout->addWidget(preserveMetaCheck_);
 
+            removeAudioCheck_ = new QCheckBox(card);
+            addRetranslation(
+                [this]
+                {
+                    removeAudioCheck_->setText(tr("Remove audio from videos"));
+                    removeAudioCheck_->setToolTip(
+                        tr("Off (default): videos keep their audio. Voices and anything said, "
+                           "such as names or phone numbers, are not anonymized.\n"
+                           "On: videos are saved without audio."));
+                });
+            cardLayout->addWidget(removeAudioCheck_);
+
             root->addWidget(card);
         }
 
@@ -1627,6 +1639,7 @@ namespace cloakframe
         request.shape = static_cast<MaskShape>(shapeCombo_->currentData().toInt());
         request.softEdges = softEdgeCheck_->isChecked();
         request.preserveMetadata = metadataSupportAvailable() && preserveMetaCheck_->isChecked();
+        request.removeAudio = removeAudioCheck_->isChecked();
         request.reviewEnabled = reviewCheck_->isChecked();
         request.detectFaces = detectFaces;
         request.detectPlates = detectPlates;
@@ -1939,15 +1952,32 @@ namespace cloakframe
                 .arg(lastRunSummary_.total)
                 .arg(lastRunSummary_.failed)
                 .arg(lastRunSummary_.unreadableInputs));
+        // Masking covers the picture only, so a run that saved audio says so with its result.
+        const QString audioNotice =
+            lastRunSummary_.videosWithAudio > 0
+                ? tr("%n video(s) kept their audio. Voices and anything said in them are not "
+                     "anonymized.",
+                      nullptr,
+                      lastRunSummary_.videosWithAudio)
+                : QString();
+        const auto logAudioNotice = [this, &audioNotice]
+        {
+            if (!audioNotice.isEmpty())
+            {
+                appendLog(audioNotice);
+            }
+        };
         switch (outcome)
         {
         case RunOutcome::Completed:
             appendLog(tr("Finished."));
+            logAudioNotice();
             statusLabel_->setText(tr("Done") + QStringLiteral("  ·  ") + elapsed);
             openOutputButton_->setVisible(true);
             break;
         case RunOutcome::CompletedWithWarnings:
             appendLog(tr("Completed with warnings — review the results before sharing."));
+            logAudioNotice();
             statusLabel_->setProperty("state", "warning");
             statusLabel_->style()->unpolish(statusLabel_);
             statusLabel_->style()->polish(statusLabel_);
@@ -1966,23 +1996,25 @@ namespace cloakframe
                    "Tracking gap frames pending user review: %13\n"
                    "Tracks excluded during review: %14\n\n"
                    "Check these results before sharing them.")
-                    .arg(lastRunSummary_.total)
-                    .arg(lastRunSummary_.redacted)
-                    .arg(lastRunSummary_.unredacted)
-                    .arg(lastRunSummary_.copied)
-                    .arg(lastRunSummary_.skipped)
-                    .arg(lastRunSummary_.failed)
-                    .arg(lastRunSummary_.coverageWarningFiles)
-                    .arg(lastRunSummary_.omittedRegions)
-                    .arg(lastRunSummary_.trackingGapFrames)
-                    .arg(lastRunSummary_.droppedTracks)
-                    .arg(lastRunSummary_.warningFiles)
-                    .arg(lastRunSummary_.unreadableInputs)
-                    .arg(lastRunSummary_.pendingTrackingGapFrames)
-                    .arg(lastRunSummary_.excludedTracks));
+                        .arg(lastRunSummary_.total)
+                        .arg(lastRunSummary_.redacted)
+                        .arg(lastRunSummary_.unredacted)
+                        .arg(lastRunSummary_.copied)
+                        .arg(lastRunSummary_.skipped)
+                        .arg(lastRunSummary_.failed)
+                        .arg(lastRunSummary_.coverageWarningFiles)
+                        .arg(lastRunSummary_.omittedRegions)
+                        .arg(lastRunSummary_.trackingGapFrames)
+                        .arg(lastRunSummary_.droppedTracks)
+                        .arg(lastRunSummary_.warningFiles)
+                        .arg(lastRunSummary_.unreadableInputs)
+                        .arg(lastRunSummary_.pendingTrackingGapFrames)
+                        .arg(lastRunSummary_.excludedTracks)
+                    + (audioNotice.isEmpty() ? QString() : QStringLiteral("\n\n") + audioNotice));
             break;
         case RunOutcome::Cancelled:
             appendLog(tr("Cancelled."));
+            logAudioNotice();
             statusLabel_->setText(tr("Cancelled") + QStringLiteral("  ·  ") + elapsed);
             openOutputButton_->setVisible(true);
             break;
@@ -2089,6 +2121,7 @@ namespace cloakframe
         reviewCheck_->setChecked(settings.value("review", true).toBool());
         preserveMetaCheck_->setChecked(
             metadataSupportAvailable() && settings.value("preserveMetadata", false).toBool());
+        removeAudioCheck_->setChecked(settings.value("removeAudio", false).toBool());
 
         scoreThresholdSpin_->setValue(
             settings.value("scoreThreshold", kDefaultScoreThreshold).toDouble());
@@ -2213,6 +2246,7 @@ namespace cloakframe
         settings.setValue("recursive", recursiveCheck_->isChecked());
         settings.setValue("review", reviewCheck_->isChecked());
         settings.setValue("preserveMetadata", preserveMetaCheck_->isChecked());
+        settings.setValue("removeAudio", removeAudioCheck_->isChecked());
         settings.setValue("scoreThreshold", scoreThresholdSpin_->value());
         settings.setValue("nmsThreshold", nmsThresholdSpin_->value());
         settings.setValue("blockSize", blockSizeSpin_->value());
@@ -2697,6 +2731,7 @@ namespace cloakframe
         recursiveCheck_->setEnabled(!processing);
         reviewCheck_->setEnabled(!processing);
         preserveMetaCheck_->setEnabled(!processing && metadataSupportAvailable());
+        removeAudioCheck_->setEnabled(!processing);
         scoreThresholdSpin_->setEnabled(!processing);
         nmsThresholdSpin_->setEnabled(!processing);
         blockSizeSpin_->setEnabled(!processing);

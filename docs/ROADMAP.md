@@ -33,8 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **Audio** [A-8, E-5]. Voices are kept and the result screen does not say so. Add a
-  remove-audio option and state it in the completion message.
 - **"Done" wording** [E-5]. Say "no reported warnings", and note when review was off.
 - **Metadata preservation** [A-6]. The opt-in keeps GPS, serial numbers and owner names
   through a blocklist. Switch to an allowlist and make GPS a separate choice.

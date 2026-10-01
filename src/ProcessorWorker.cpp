@@ -397,6 +397,7 @@ namespace cloakframe
         qint64 excludedTracks = 0;
         QVector<FileIssue> issues;
         qint64 droppedTracks = 0;
+        int videosWithAudio = 0;
         bool cancelled = false;
     };
 
@@ -426,6 +427,7 @@ namespace cloakframe
         , gpuAcceleration_(request.gpuAcceleration)
         , videoCrf_(request.videoCrf)
         , videoCodec_(request.videoCodec)
+        , removeAudio_(request.removeAudio)
         , imageMemoryBudget_(imageMemoryBudget())
         , imageMemoryAvailable_(imageMemoryBudget_)
         , detector_(std::move(cache.face))
@@ -661,6 +663,7 @@ namespace cloakframe
             qint64 excludedTrackCount = 0;
             qint64 droppedTrackCount = 0;
             int uncoveredFileCount = 0;
+            int videosWithAudioCount = 0;
 
             const auto applyOutcome = [&](const ScanResult &item, ItemOutcome &&outcome)
             {
@@ -721,6 +724,7 @@ namespace cloakframe
                 pendingGapFrameCount += outcome.pendingTrackingGapFrames;
                 excludedTrackCount += outcome.excludedTracks;
                 droppedTrackCount += outcome.droppedTracks;
+                videosWithAudioCount += outcome.videosWithAudio;
                 if (outcome.omittedRegions > 0 || outcome.pendingTrackingGapFrames > 0
                     || outcome.excludedTracks > 0 || outcome.droppedTracks > 0)
                 {
@@ -819,6 +823,7 @@ namespace cloakframe
             summary.coverageWarningFiles = uncoveredFileCount;
             summary.warningFiles = warningCount;
             summary.unreadableInputs = static_cast<qint64>(scanIssues.size());
+            summary.videosWithAudio = videosWithAudioCount;
             emit summaryAvailable(summary);
 
             if (unredactedCount > 0)
@@ -1388,6 +1393,7 @@ namespace cloakframe
         options.softEdges = softEdges_;
         options.crf = videoCrf_;
         options.codec = videoCodec_;
+        options.keepAudio = !removeAudio_;
         options.hardwareEncoder = gpuAcceleration_;
         options.outputRootPath = pathToQString(safeRoot);
         options.outputRelativePath = pathToQString(outputRelativePath(item));
@@ -1666,6 +1672,19 @@ namespace cloakframe
             if (!result.encoderName.isEmpty())
             {
                 outcome.logs.push_back(tr("Video encoder: %1").arg(result.encoderName));
+            }
+            if (!info->audioStreams.empty())
+            {
+                if (removeAudio_)
+                {
+                    outcome.logs.push_back(tr("Audio removed: %1").arg(fileName));
+                }
+                else
+                {
+                    outcome.logs.push_back(
+                        tr("Audio kept; voices are not anonymized: %1").arg(fileName));
+                    outcome.videosWithAudio = 1;
+                }
             }
             // Three different failures used to be added together and reported as one count
             // of detected regions. They are frames, objects and tracks, and each one sends
