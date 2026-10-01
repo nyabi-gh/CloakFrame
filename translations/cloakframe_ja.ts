@@ -1148,7 +1148,7 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1302"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1874"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1875"/>
         <source>Skipped without saving: %1</source>
         <translation>保存せずにスキップしました: %1</translation>
     </message>
@@ -1180,7 +1180,7 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1412"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1778"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1779"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>%n 箇所を匿名化しました：%1</numerusform>
@@ -1193,7 +1193,7 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1407"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1772"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1773"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>隠した領域がないまま保存しました: %1</translation>
     </message>
@@ -1245,7 +1245,7 @@ Check these results before sharing them.</source>
         <translation>%1 の処理中にエラー</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1624"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1625"/>
         <source>Reviewing video tracks</source>
         <translation>動画トラックを確認中</translation>
     </message>
@@ -1317,7 +1317,7 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1420"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1814"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1815"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告: 検出された領域 %n 件が安全上限を超えたため、%1 で隠されずに残りました。共有する前に確認してください。</numerusform>
@@ -1356,73 +1356,73 @@ Check these results before sharing them.</source>
         <translation>注意: 可変フレームレートは固定フレームレートに変換されます: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1599"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
         <source>Analyzing %1%</source>
         <translation>解析中 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1599"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
         <source>Encoding %1%</source>
         <translation>エンコード中 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1668"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1669"/>
         <source>Review could not be shown, nothing was saved.</source>
         <translation>確認を表示できなかったため保存していません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1681"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1682"/>
         <source>The reviewed tracks could not be applied safely, nothing was saved.</source>
         <translation>確認したトラックを安全に適用できなかったため保存していません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1799"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1800"/>
         <source>Audio removed: %1</source>
         <translation>音声を削除しました：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1804"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1805"/>
         <source>Audio kept; voices are not anonymized: %1</source>
         <translation>音声を保持しました。声は匿名化されていません：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1823"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1824"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>警告: %1 で確度の高い検出がひとつもないトラック %n 件を破棄しました。共有する前に確認してください。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1832"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1833"/>
         <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
             <numerusform>確認前に %1 の %n フレームで対象を追跡できませんでした。ファイル別結果で各空白の確認状態を確認してください。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1837"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1838"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1で確認前に見つかった追跡の空白区間：%2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1841"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1842"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>ほか%n件の追跡の空白区間は表示していません。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1865"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1866"/>
         <source>Tracking gap frames: %1 before review, %2 pending user review. Review acknowledgement does not verify coverage.</source>
         <translation>追跡の空白フレーム：確認前 %1、ユーザー未確認 %2。確認済みの記録はマスク範囲の検証ではありません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1870"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1871"/>
         <source>Tracks excluded during review: %1</source>
         <translation>確認中に除外したトラック：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1882"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1883"/>
         <source>Failed to process video %1: %2</source>
         <translation>動画 %1 の処理に失敗しました: %2</translation>
     </message>
@@ -1442,22 +1442,22 @@ Check these results before sharing them.</source>
         <translation>動画の顔検出: %1 px · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1606"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1607"/>
         <source>%1m %2s left</source>
         <translation>残り %1 分 %2 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1607"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1608"/>
         <source>%1s left</source>
         <translation>残り %1 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1785"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1786"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>%1 フレームを %2 秒で処理しました（実時間の %3 倍）: %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1793"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1794"/>
         <source>Video encoder: %1</source>
         <translation>動画エンコーダー: %1</translation>
     </message>

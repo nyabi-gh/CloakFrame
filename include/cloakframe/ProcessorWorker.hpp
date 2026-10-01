@@ -121,7 +121,8 @@ namespace cloakframe
         void cancel();
 
     signals:
-        void progressChanged(int completed, int total);
+        // The share of the run done so far, from 0 to 1, counting the video in progress in part.
+        void progressChanged(double fraction);
 
         void stageChanged(int index, int total, const QString &stage, const QString &fileName);
 
@@ -186,6 +187,7 @@ namespace cloakframe
         bool removeAudio_;
         // Looked up once, before any item runs, when the run has a video.
         std::optional<FfmpegTools> ffmpegTools_;
+        int completedItems_ = 0;
         std::atomic<bool> cancelled_{false};
         std::mutex imageMemoryMutex_;
         std::condition_variable imageMemoryCv_;

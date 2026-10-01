@@ -11,6 +11,7 @@
 #include <QTemporaryDir>
 #include <QThread>
 
+#include <algorithm>
 #include <cassert>
 
 namespace
@@ -82,6 +83,7 @@ namespace
         cloakframe::RunSummary summary;
         QVector<cloakframe::FileResult> files;
         QStringList logs;
+        QVector<double> progress;
     };
 
     WorkerRun runWorker(QCoreApplication &app, const cloakframe::ProcessingRequest &request)
@@ -95,6 +97,13 @@ namespace
         WorkerRun run;
         QEventLoop loop;
         QObject::connect(&thread, &QThread::started, worker, &cloakframe::ProcessorWorker::process);
+        QObject::connect(worker,
+            &cloakframe::ProcessorWorker::progressChanged,
+            &app,
+            [&](double fraction)
+            {
+                run.progress.push_back(fraction);
+            });
         QObject::connect(worker,
             &cloakframe::ProcessorWorker::logMessage,
             &app,
@@ -204,6 +213,14 @@ int main(int argc, char **argv)
         const auto run = runWorker(app, request);
         const auto &summary = run.summary;
         assert(run.files.size() == 1);
+        assert(std::is_sorted(run.progress.cbegin(), run.progress.cend()));
+        assert(std::any_of(run.progress.cbegin(),
+            run.progress.cend(),
+            [](double fraction)
+            {
+                return fraction > 0.0 && fraction < 1.0;
+            }));
+        assert(!run.progress.isEmpty() && run.progress.back() == 1.0);
         const auto &file = run.files.front();
         assert(reviewer.gaps.size() == 2);
         assert(summary.trackingGapFrames > 0);

@@ -670,7 +670,7 @@ namespace cloakframe
                         static_cast<int>(std::min<std::size_t>(
                             scanIssues.size(), std::numeric_limits<int>::max()))));
             }
-            emit progressChanged(0, total);
+            emit progressChanged(0.0);
 
             if (cancelled_.load(std::memory_order_acquire))
             {
@@ -753,7 +753,6 @@ namespace cloakframe
             }
             const OutputRootGuard outputRootGuard(pathToQString(safeRoot));
 
-            int completed = 0;
             int redactedCount = 0;
             int copiedCount = 0;
             int skippedCount = 0;
@@ -835,7 +834,8 @@ namespace cloakframe
                 }
                 if (!outcome.cancelled)
                 {
-                    emit progressChanged(++completed, total);
+                    ++completedItems_;
+                    emit progressChanged(static_cast<double>(completedItems_) / total);
                 }
             };
 
@@ -1595,6 +1595,7 @@ namespace cloakframe
                 return;
             }
             lastPercent = percent;
+            emit progressChanged((completedItems_ + (pass - 1 + percent / 100.0) / 2.0) / total);
             QString stage =
                 pass == 1 ? tr("Analyzing %1%").arg(percent) : tr("Encoding %1%").arg(percent);
             const qint64 elapsedMs = passTimer.elapsed();

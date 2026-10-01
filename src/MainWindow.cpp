@@ -1139,7 +1139,7 @@ namespace cloakframe
             });
 
         progressBar_ = new QProgressBar(bottomBar);
-        progressBar_->setRange(0, 100);
+        progressBar_->setRange(0, 1000);
         progressBar_->setValue(0);
         progressBar_->setTextVisible(false);
         progressBar_->setFixedHeight(6);
@@ -1881,10 +1881,10 @@ namespace cloakframe
         connect(worker_,
             &ProcessorWorker::progressChanged,
             this,
-            [this](int completed, int total)
+            [this](double fraction)
             {
-                progressBar_->setRange(0, std::max(total, 1));
-                progressBar_->setValue(completed);
+                progressBar_->setValue(
+                    static_cast<int>(std::clamp(fraction, 0.0, 1.0) * progressBar_->maximum()));
             });
         connect(worker_,
             &ProcessorWorker::stageChanged,

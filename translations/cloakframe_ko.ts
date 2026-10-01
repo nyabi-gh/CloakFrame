@@ -1148,7 +1148,7 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1302"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1874"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1875"/>
         <source>Skipped without saving: %1</source>
         <translation>저장하지 않고 건너뜀: %1</translation>
     </message>
@@ -1180,7 +1180,7 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1412"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1778"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1779"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>영역 %n개 가림: %1</numerusform>
@@ -1193,7 +1193,7 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1407"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1772"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1773"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>가려진 영역 없이 저장됨: %1</translation>
     </message>
@@ -1245,7 +1245,7 @@ Check these results before sharing them.</source>
         <translation>%1 처리 중 오류</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1624"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1625"/>
         <source>Reviewing video tracks</source>
         <translation>동영상 트랙 검토 중</translation>
     </message>
@@ -1317,7 +1317,7 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1420"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1814"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1815"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>경고: 검출된 영역 %n곳이 안전 한도를 넘어 %1에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
@@ -1356,73 +1356,73 @@ Check these results before sharing them.</source>
         <translation>참고: 가변 프레임레이트는 고정 프레임레이트로 변환됩니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1599"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
         <source>Analyzing %1%</source>
         <translation>분석 중 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1599"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
         <source>Encoding %1%</source>
         <translation>인코딩 중 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1668"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1669"/>
         <source>Review could not be shown, nothing was saved.</source>
         <translation>검토를 표시할 수 없어 저장하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1681"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1682"/>
         <source>The reviewed tracks could not be applied safely, nothing was saved.</source>
         <translation>검토한 트랙을 안전하게 적용할 수 없어 저장하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1799"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1800"/>
         <source>Audio removed: %1</source>
         <translation>오디오 제거됨: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1804"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1805"/>
         <source>Audio kept; voices are not anonymized: %1</source>
         <translation>오디오 유지됨, 목소리는 익명화되지 않음: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1823"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1824"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>경고: %1에서 확실한 검출이 하나도 없는 트랙 %n개를 버렸습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1832"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1833"/>
         <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
             <numerusform>검토 전 %1의 %n개 프레임에서 대상을 추적하지 못했습니다. 파일별 결과에서 각 공백의 확인 상태를 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1837"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1838"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1에서 검토 전 발견한 추적 공백: %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1841"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1842"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>추가 추적 공백 %n개는 표시하지 않습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1865"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1866"/>
         <source>Tracking gap frames: %1 before review, %2 pending user review. Review acknowledgement does not verify coverage.</source>
         <translation>추적 공백 프레임: 검토 전 %1개, 사용자 미확인 %2개. 확인 완료 표시는 가려짐을 검증하지 않습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1870"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1871"/>
         <source>Tracks excluded during review: %1</source>
         <translation>검토 중 제외한 트랙: %1개</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1882"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1883"/>
         <source>Failed to process video %1: %2</source>
         <translation>동영상 처리 실패 %1: %2</translation>
     </message>
@@ -1442,22 +1442,22 @@ Check these results before sharing them.</source>
         <translation>동영상 얼굴 탐지: %1 px · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1606"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1607"/>
         <source>%1m %2s left</source>
         <translation>%1분 %2초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1607"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1608"/>
         <source>%1s left</source>
         <translation>%1초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1785"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1786"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>프레임 %1개를 %2초에 처리 (실시간의 %3배): %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1793"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1794"/>
         <source>Video encoder: %1</source>
         <translation>비디오 인코더: %1</translation>
     </message>
