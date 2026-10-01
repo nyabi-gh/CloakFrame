@@ -53,6 +53,10 @@ ctest --test-dir build --output-on-failure
 The video I/O tests run a real FFmpeg round trip and report themselves as
 skipped when FFmpeg is unavailable.
 
+Standard output follows the same policy as the log file: it carries only
+filename-free diagnostics unless detailed logging is turned on in Settings.
+Turn it on to see the activity log in a terminal.
+
 ## macOS
 
 Install the development dependencies with Homebrew:

@@ -6,22 +6,28 @@
 #include <QStandardPaths>
 
 #include <spdlog/sinks/base_sink.h>
+#include <spdlog/sinks/ostream_sink.h>
 #include <spdlog/sinks/rotating_file_sink.h>
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include <mutex>
+#include <ostream>
 
 namespace cloakframe
 {
     namespace
     {
+        // The one place that decides what leaves the process. Standard output is a record too:
+        // desktop sessions route it into the system journal. So the console gets exactly what
+        // the file gets.
         class PrivateLogSink final : public spdlog::sinks::base_sink<std::mutex>
         {
         public:
-            PrivateLogSink(QString directory, bool detailed)
+            PrivateLogSink(QString directory, bool detailed, spdlog::sink_ptr console)
                 : directory_(std::move(directory))
                 , detailed_(detailed)
+                , console_(std::move(console))
             {
                 open();
             }
@@ -41,6 +47,11 @@ namespace cloakframe
                 {
                     file_->log(entry);
                     file_->flush();
+                }
+                if (console_)
+                {
+                    console_->log(entry);
+                    console_->flush();
                 }
             }
             bool clear()
@@ -62,16 +73,22 @@ namespace cloakframe
         protected:
             void sink_it_(const spdlog::details::log_msg &message) override
             {
-                if (detailed_ && file_)
+                if (!detailed_)
+                    return;
+                if (file_)
                 {
                     file_->log(message);
                     file_->flush();
                 }
+                if (console_)
+                    console_->log(message);
             }
             void flush_() override
             {
                 if (file_)
                     file_->flush();
+                if (console_)
+                    console_->flush();
             }
 
         private:
@@ -98,9 +115,11 @@ namespace cloakframe
             }
             QString directory_;
             bool detailed_;
+            spdlog::sink_ptr console_;
             std::shared_ptr<spdlog::sinks::rotating_file_sink_mt> file_;
         };
         std::shared_ptr<PrivateLogSink> localSink;
+        std::ostream *consoleOverride = nullptr;
     }
     QString localLogDirectory()
     {
@@ -109,14 +128,21 @@ namespace cloakframe
     }
     void configureLogging(const QString &directory, bool detailed)
     {
-        localSink = std::make_shared<PrivateLogSink>(directory, detailed);
-        auto console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-        auto logger = std::make_shared<spdlog::logger>(
-            "cloakframe", spdlog::sinks_init_list{console, localSink});
+        spdlog::sink_ptr console;
+        if (consoleOverride != nullptr)
+            console = std::make_shared<spdlog::sinks::ostream_sink_mt>(*consoleOverride);
+        else
+            console = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+        localSink = std::make_shared<PrivateLogSink>(directory, detailed, std::move(console));
+        auto logger = std::make_shared<spdlog::logger>("cloakframe", localSink);
         logger->flush_on(spdlog::level::info);
         spdlog::set_default_logger(logger);
         spdlog::set_level(spdlog::level::info);
         logDiagnostic(QStringLiteral("Application started"));
+    }
+    void setConsoleLogStreamForTesting(std::ostream *stream)
+    {
+        consoleOverride = stream;
     }
     void setDetailedLogging(bool enabled)
     {
