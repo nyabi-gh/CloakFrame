@@ -378,6 +378,69 @@ namespace
 
     // Whether two names that differ only in case collide is a property of the volume, so the
     // expectation comes from writing a file and looking it up in the other case.
+    // Soft-edge masks are cached and computed once per shape, now by several threads at once.
+    // Whatever the interleaving, every result has to equal the one computed alone.
+    void testSoftEdgeMasksAgreeAcrossThreads()
+    {
+        cv::Mat base(240, 320, CV_8UC3);
+        cv::RNG random(7);
+        random.fill(base, cv::RNG::UNIFORM, 0, 256);
+        std::vector<cloakframe::FaceDetections> layouts;
+        for (int index = 0; index < 12; ++index)
+        {
+            const float side = 20.0F + static_cast<float>(index * 9);
+            layouts.push_back(
+                {{cv::Rect2f(10.0F + static_cast<float>(index * 7), 15.0F, side, side * 0.8F),
+                     0.9F},
+                    {cv::Rect2f(150.0F, 100.0F, 60.0F, 70.0F), 0.8F}});
+        }
+        const auto render = [&](const cloakframe::FaceDetections &layout)
+        {
+            cv::Mat image = base.clone();
+            cloakframe::applyAnonymization(image,
+                layout,
+                cloakframe::AnonymizationMethod::Blur,
+                14,
+                0.18F,
+                cloakframe::MaskShape::Ellipse,
+                true);
+            return image;
+        };
+        std::vector<cv::Mat> expected;
+        for (const auto &layout : layouts)
+        {
+            expected.push_back(render(layout));
+        }
+
+        std::atomic<int> mismatches{0};
+        std::vector<std::thread> threads;
+        for (int thread = 0; thread < 8; ++thread)
+        {
+            threads.emplace_back(
+                [&, thread]
+                {
+                    for (int round = 0; round < 6; ++round)
+                    {
+                        for (std::size_t step = 0; step < layouts.size(); ++step)
+                        {
+                            const auto index =
+                                (step + static_cast<std::size_t>(thread)) % layouts.size();
+                            if (cv::norm(render(layouts[index]), expected[index], cv::NORM_INF)
+                                != 0.0)
+                            {
+                                ++mismatches;
+                            }
+                        }
+                    }
+                });
+        }
+        for (auto &thread : threads)
+        {
+            thread.join();
+        }
+        assert(mismatches.load() == 0);
+    }
+
     void testCaseFoldingFollowsTheFilesystem()
     {
         QTemporaryDir temp;
@@ -2801,6 +2864,7 @@ int main(int argc, char **argv)
     testScanReportsDeniedDirectoriesAndContinues();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
     testCaseFoldingFollowsTheFilesystem();
+    testSoftEdgeMasksAgreeAcrossThreads();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
     testWorkerEmitsFileResultsWithPublishedPaths();
     testWorkerReportsCopiedOriginalAsWarning();

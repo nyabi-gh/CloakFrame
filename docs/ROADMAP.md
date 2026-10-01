@@ -31,8 +31,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Model hashing on the GUI thread** [E-8, OW 8]. Each run hashes the selected model
   once on the GUI thread before starting; a custom model may be 512 MB. Move it to a
   worker and keep the single digest it produces for consent and loading.
-- **Soft-edge mask mutex** [OW 4]. `Mosaic.cpp` serializes mask computation across all
-  threads, undoing the parallel image pipeline whenever soft edges are on.
 
 ## Coverage and honest results
 
