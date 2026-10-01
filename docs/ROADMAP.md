@@ -33,9 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **Scene-cut boundaries** [A-3]. A gap that spans a detected cut is neither
-  interpolated nor reported. Report a cut-boundary gap when tracks before and after the
-  cut overlap in space.
 - **Audio** [A-8, E-5]. Voices are kept and the result screen does not say so. Add a
   remove-audio option and state it in the completion message.
 - **"Done" wording** [E-5]. Say "no reported warnings", and note when review was off.

@@ -801,6 +801,43 @@ namespace cloakframe
             }
             totalBoxes = withoutExtended + track.boxes.size();
         }
+
+        // A cut ends every track, so a subject the detector misses for a few frames after one
+        // leaves frames that belong to no track. A false cut (a light switched on, a whip pan)
+        // makes this common. When a track before the cut and one after it meet in space, the
+        // frames between them are reported like a gap inside one track.
+        std::vector<const Track *> byStart;
+        byStart.reserve(tracks.size());
+        for (const auto &track : tracks)
+        {
+            if (!track.boxes.empty())
+            {
+                byStart.push_back(&track);
+            }
+        }
+        std::ranges::sort(byStart, {}, &Track::firstFrame);
+        for (const auto *before : byStart)
+        {
+            requireTrackingContinue(continueGuard);
+            const int last = before->lastFrame();
+            auto candidate = std::ranges::upper_bound(byStart, last + 1, {}, &Track::firstFrame);
+            for (; candidate != byStart.end(); ++candidate)
+            {
+                const Track &after = **candidate;
+                if (after.firstFrame() - last - 1 > config.maxCutBoundaryGap)
+                {
+                    break;
+                }
+                if (cuts.spansCut(last, after.firstFrame())
+                    && (before->boxes.back().box & after.boxes.front().box).area() > 0.0F)
+                {
+                    const UncoveredSpan span{before->id, last + 1, after.firstFrame() - 1};
+                    report.uncoveredFrames += span.frameCount();
+                    report.uncoveredSpans.push_back(span);
+                    break;
+                }
+            }
+        }
         return report;
     }
 

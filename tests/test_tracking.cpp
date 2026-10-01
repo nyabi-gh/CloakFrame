@@ -547,6 +547,75 @@ namespace
         }
     }
 
+    // A face in frames 0-9, a cut at 10, nothing detected in 10-13, then a face from 14 on at
+    // `afterX`.
+    std::vector<cloakframe::FaceDetections> missedAfterCut(float afterX, int frames = 20)
+    {
+        auto sequence = movingObjectSequence(frames, 50.0F, 0.0F);
+        for (int frame = 10; frame < frames; ++frame)
+        {
+            sequence[frame].clear();
+            if (frame >= 14)
+            {
+                sequence[frame].push_back(det(afterX, 100.0F));
+            }
+        }
+        return sequence;
+    }
+
+    void testGapAcrossSceneCutIsReportedWhenTracksMeet()
+    {
+        const cloakframe::SceneCuts cuts({10});
+        auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
+        assert(tracks.size() == 2);
+        const int beforeId = tracks[0].firstFrame() == 0 ? tracks[0].id : tracks[1].id;
+
+        cloakframe::TrackPostProcessConfig config;
+        config.extensionFrames = 0;
+        const auto report = cloakframe::postProcessTracks(tracks, config, 20, cuts);
+        assert(report.uncoveredFrames == 4);
+        assert(report.uncoveredSpans.size() == 1);
+        assert(report.uncoveredSpans[0].trackId == beforeId);
+        assert(report.uncoveredSpans[0].firstFrame == 10);
+        assert(report.uncoveredSpans[0].lastFrame == 13);
+
+        // Extension may cover the frames after the cut, which are in the later track's shot;
+        // only what stays bare is reported.
+        auto extended = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
+        const auto extendedReport = cloakframe::postProcessTracks(extended, {}, 20, cuts);
+        assert(extendedReport.uncoveredSpans.size() == 1);
+        assert(extendedReport.uncoveredSpans[0].firstFrame == 10);
+        assert(extendedReport.uncoveredSpans[0].lastFrame == 10);
+        assert(cloakframe::trackRegionsForFrame(extended, 10).empty());
+    }
+
+    void testGapAcrossSceneCutIsNotReportedForAnotherPlace()
+    {
+        const cloakframe::SceneCuts cuts({10});
+        auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(300.0F), {}, 0.5F, cuts);
+        cloakframe::TrackPostProcessConfig config;
+        config.extensionFrames = 0;
+        const auto report = cloakframe::postProcessTracks(tracks, config, 20, cuts);
+        assert(report.uncoveredFrames == 0);
+        assert(report.uncoveredSpans.empty());
+    }
+
+    void testGapAcrossSceneCutIsBoundedInTime()
+    {
+        const cloakframe::SceneCuts cuts({10});
+        cloakframe::TrackPostProcessConfig config;
+        config.extensionFrames = 0;
+        config.maxCutBoundaryGap = 3;
+        auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
+        assert(cloakframe::postProcessTracks(tracks, config, 20, cuts).uncoveredSpans.empty());
+
+        // Without a cut between them, two tracks are not a cut-boundary gap.
+        auto uncut = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F));
+        config.maxCutBoundaryGap = 30;
+        config.maxInterpolationGap = 30;
+        assert(cloakframe::postProcessTracks(uncut, config, 20).uncoveredSpans.empty());
+    }
+
     cv::Mat gradientFrame(bool horizontal, int width = 480, int height = 270)
     {
         cv::Mat frame(height, width, CV_8UC1);
@@ -894,6 +963,9 @@ int main()
     testNoInterpolationAcrossSceneCut();
     testExtendTrackEndsStopsAtSceneCut();
     testBidirectionalTracksRespectSceneCuts();
+    testGapAcrossSceneCutIsReportedWhenTracksMeet();
+    testGapAcrossSceneCutIsNotReportedForAnotherPlace();
+    testGapAcrossSceneCutIsBoundedInTime();
     testSceneCutDetectorFindsHardCut();
     testSceneCutDetectorIgnoresFlash();
     testSceneCutDetectorIgnoresStaticScene();

@@ -92,6 +92,9 @@ namespace cloakframe
         int maxInterpolationGap = 20;
         int smoothingRadius = 2;
         int extensionFrames = 3;
+        // The longest absence across a scene cut that is still reported as a gap. It matches
+        // the tracker's `maxFramesLost`, the longest absence it bridges within one shot.
+        int maxCutBoundaryGap = 30;
         float strongScoreThreshold = 0.5F;
         int minStrongDetections = 3;
         int shortTrackMinStrong = 1;
@@ -142,8 +145,9 @@ namespace cloakframe
     // Coverage that post-processing could not deliver, in three kinds that have different
     // remedies and must not be added together: `uncoveredFrames` and the matching
     // `uncoveredSpans` are frames inside a retained track's own span that end up with no
-    // mask, and `droppedTracks` counts tracks discarded for holding no confident detection
-    // at all. A caller must not report a clean result while any of them is nonzero.
+    // mask, or between a track that ends before a scene cut and one that starts after it in
+    // the same place, and `droppedTracks` counts tracks discarded for holding no confident
+    // detection at all. A caller must not report a clean result while any of them is nonzero.
     struct TrackCoverageReport
     {
         int uncoveredFrames = 0;
