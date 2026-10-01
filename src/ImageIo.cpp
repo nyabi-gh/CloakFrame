@@ -558,10 +558,8 @@ namespace cloakframe
                 return std::nullopt;
             }
             BY_HANDLE_FILE_INFORMATION info{};
-            FILE_BASIC_INFO basic{};
             const HANDLE handle = reinterpret_cast<HANDLE>(rawHandle);
             if (!::GetFileInformationByHandle(handle, &info)
-                || !::GetFileInformationByHandleEx(handle, FileBasicInfo, &basic, sizeof(basic))
                 || (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
             {
                 return std::nullopt;
@@ -575,7 +573,6 @@ namespace cloakframe
             identity.modifiedSeconds = static_cast<std::int64_t>(
                 (static_cast<std::uint64_t>(info.ftLastWriteTime.dwHighDateTime) << 32U)
                 | info.ftLastWriteTime.dwLowDateTime);
-            identity.changedSeconds = basic.ChangeTime.QuadPart;
             return identity;
 #else
             struct stat info{};
@@ -1388,9 +1385,7 @@ namespace cloakframe
         }
 
         BY_HANDLE_FILE_INFORMATION info{};
-        FILE_BASIC_INFO basic{};
         if (!::GetFileInformationByHandle(handle.get(), &info)
-            || !::GetFileInformationByHandleEx(handle.get(), FileBasicInfo, &basic, sizeof(basic))
             || (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0)
         {
             return std::nullopt;
@@ -1404,7 +1399,6 @@ namespace cloakframe
         identity.modifiedSeconds = static_cast<std::int64_t>(
             (static_cast<std::uint64_t>(info.ftLastWriteTime.dwHighDateTime) << 32U)
             | info.ftLastWriteTime.dwLowDateTime);
-        identity.changedSeconds = basic.ChangeTime.QuadPart;
         return identity;
 #else
         struct stat info{};

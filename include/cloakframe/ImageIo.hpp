@@ -26,6 +26,9 @@ namespace cloakframe
         Failed,
     };
 
+    // On Windows the change time stays zero. Security software moves it when it stamps a file
+    // it has scanned, and any writer can set it just like the write time, so comparing it only
+    // adds failures.
     struct FileIdentity
     {
         std::uint64_t device = 0;

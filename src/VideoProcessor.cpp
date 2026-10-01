@@ -97,11 +97,8 @@ namespace cloakframe
             }
 
             BY_HANDLE_FILE_INFORMATION info{};
-            FILE_BASIC_INFO basic{};
-            const bool valid =
-                GetFileInformationByHandle(handle, &info) != 0
-                && GetFileInformationByHandleEx(handle, FileBasicInfo, &basic, sizeof(basic)) != 0
-                && (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
+            const bool valid = GetFileInformationByHandle(handle, &info) != 0
+                               && (info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
             CloseHandle(handle);
             if (!valid)
             {
@@ -117,7 +114,6 @@ namespace cloakframe
             snapshot.modifiedSeconds = static_cast<std::int64_t>(
                 (static_cast<std::uint64_t>(info.ftLastWriteTime.dwHighDateTime) << 32U)
                 | info.ftLastWriteTime.dwLowDateTime);
-            snapshot.changedSeconds = basic.ChangeTime.QuadPart;
             return snapshot;
 #else
             const QByteArray nativePath = QFile::encodeName(path);
