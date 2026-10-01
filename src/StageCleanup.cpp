@@ -50,8 +50,12 @@ namespace cloakframe
 
         bool isAlwaysSwept(const QString &canonicalRoot)
         {
-            return canonicalRoot == QDir(QDir::tempPath()).absolutePath()
-                   || canonicalRoot == QDir(privateStageRoot()).absolutePath();
+            if (canonicalRoot == QDir(QDir::tempPath()).absolutePath())
+            {
+                return true;
+            }
+            const QString privateRoot = privateStageRoot();
+            return !privateRoot.isEmpty() && canonicalRoot == QDir(privateRoot).absolutePath();
         }
 
         QString stageRootsFile()

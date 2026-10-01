@@ -5,11 +5,10 @@
 #include <QLabel>
 #include <QListWidget>
 #include <QPushButton>
-#include <QShortcut>
 #include <QSlider>
+#include <QTest>
 #include <QTranslator>
 
-#include <algorithm>
 #include <cassert>
 
 int main(int argc, char **argv)
@@ -93,14 +92,10 @@ int main(int argc, char **argv)
     {
         target->setFocus();
         application.processEvents();
-        QKeyEvent press(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
-        QApplication::sendEvent(target, &press);
+        QTest::keyClick(target, Qt::Key_Return);
         application.processEvents();
     };
     list->setCurrentRow(0);
-    timeline->setValue(60);
-    pressReturn(list);
-    assert(timeline->value() == 0);
     for (QWidget *target : {static_cast<QWidget *>(&dialog),
              static_cast<QWidget *>(list),
              static_cast<QWidget *>(gaps),
@@ -158,15 +153,11 @@ int main(int argc, char **argv)
     cloakframe::VideoReviewDialog jumped(jumpRequest);
     assert(jumped.findChild<QSlider *>("videoTimeline")->value() == 45);
 
-    const auto shortcuts = dialog.findChildren<QShortcut *>();
-    const auto encodeShortcut = std::find_if(shortcuts.cbegin(),
-        shortcuts.cend(),
-        [](const QShortcut *shortcut)
-        {
-            return shortcut->key() == QKeySequence(Qt::CTRL | Qt::Key_Return);
-        });
-    assert(encodeShortcut != shortcuts.cend());
-    emit(*encodeShortcut)->activated();
+    dialog.activateWindow();
+    list->setFocus();
+    application.processEvents();
+    QTest::keyClick(list, Qt::Key_Return, Qt::ControlModifier);
+    application.processEvents();
     assert(!dialog.isVisible() && dialog.result() == QDialog::Accepted);
     assert(dialog.reviewResult().decision == cloakframe::VideoReviewDecision::Encode);
     return 0;

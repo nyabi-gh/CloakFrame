@@ -1,3 +1,5 @@
+find_package(Qt6 REQUIRED COMPONENTS Test)
+
 function(add_cloakframe_test name)
     add_executable(${name} ${ARGN})
     if(MSVC)
@@ -24,12 +26,12 @@ add_cloakframe_test(cloakframe_video_review_tests
     test_video_review.cpp
     ${PROJECT_SOURCE_DIR}/src/VideoReviewDialog.cpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/VideoReviewDialog.hpp)
-target_link_libraries(cloakframe_video_review_tests PRIVATE Qt6::Widgets)
+target_link_libraries(cloakframe_video_review_tests PRIVATE Qt6::Widgets Qt6::Test)
 add_cloakframe_test(cloakframe_review_dialog_tests
     test_review_dialog.cpp
     ${PROJECT_SOURCE_DIR}/src/ReviewDialog.cpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ReviewDialog.hpp)
-target_link_libraries(cloakframe_review_dialog_tests PRIVATE Qt6::Widgets)
+target_link_libraries(cloakframe_review_dialog_tests PRIVATE Qt6::Widgets Qt6::Test)
 add_cloakframe_test(cloakframe_results_tests
     test_results.cpp
     ${PROJECT_SOURCE_DIR}/src/ResultsDialog.cpp

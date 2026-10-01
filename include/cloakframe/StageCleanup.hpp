@@ -51,9 +51,8 @@ namespace cloakframe
 
     // Remove stage directories left by earlier runs, in the system temporary directory, in
     // `privateStageRoot()`, and in every output root a `StageDirectory` has been created in
-    // before. Returns how many were
-    // removed. Safe to call while other instances are running: a directory whose lock is held
-    // is left alone.
+    // before. Returns how many were removed. Safe to call while other instances are running: a
+    // directory whose lock is held is left alone.
     int removeStaleStages();
 
     // The same sweep over an explicit list of roots, without consulting or updating the

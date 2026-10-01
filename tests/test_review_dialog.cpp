@@ -1,8 +1,7 @@
 #include "cloakframe/ReviewDialog.hpp"
 
 #include <QApplication>
-#include <QKeyEvent>
-#include <QShortcut>
+#include <QTest>
 
 #include <algorithm>
 #include <cassert>
@@ -33,23 +32,17 @@ int main(int argc, char **argv)
         {
             target->setFocus();
             application.processEvents();
-            QKeyEvent press(QEvent::KeyPress, key, Qt::NoModifier);
-            QApplication::sendEvent(target, &press);
+            QTest::keyClick(target, key);
             application.processEvents();
             assert(dialog.isVisible() && dialog.result() == QDialog::Rejected);
         }
     }
     assert(dialog.reviewResult().finalBoxes.size() == 1);
 
-    const auto shortcuts = dialog.findChildren<QShortcut *>();
-    const auto saveShortcut = std::find_if(shortcuts.cbegin(),
-        shortcuts.cend(),
-        [](const QShortcut *shortcut)
-        {
-            return shortcut->key() == QKeySequence(Qt::CTRL | Qt::Key_Return);
-        });
-    assert(saveShortcut != shortcuts.cend());
-    emit(*saveShortcut)->activated();
+    (*canvas)->setFocus();
+    application.processEvents();
+    QTest::keyClick(*canvas, Qt::Key_Return, Qt::ControlModifier);
+    application.processEvents();
     assert(!dialog.isVisible() && dialog.result() == QDialog::Accepted);
     assert(dialog.reviewResult().decision == cloakframe::ReviewDecision::Save);
     assert(dialog.reviewResult().finalBoxes.size() == 1);
