@@ -26,6 +26,8 @@ close it. Check the caller and the full scope before recording a change of state
   Formats and check that the TIFF and WebP plugins are packaged, the bundled FFmpeg
   license is checked on all three platforms, and the release notes are generated from
   commit subjects. Watch that run, and open a TIFF and a WebP file in each package.
+  Release builds also turn crash dumps off at startup, which no test exercises: on Linux,
+  the running app's `/proc/<pid>` entries are owned by root when it is not dumpable.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
   warns on first run.
 - **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
