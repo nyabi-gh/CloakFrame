@@ -35,8 +35,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Review screens and everyday use
 
-- **Reprocess from file results** [E-6]. Clears the input list and replaces the output
-  folder without asking, and the new folder persists to the next start.
 - **Model download failures** [E-7]. No reason is shown and there is no manual install
   path; Yes is the default button.
 - **Minor** [E-9]. The progress bar counts files only; a missing FFmpeg is reported per

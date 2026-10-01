@@ -26,7 +26,8 @@ namespace cloakframe
         setWindowTitle(tr("File results"));
         resize(900, 640);
         auto *layout = new QVBoxLayout(this);
-        auto *hint = new QLabel(tr("Results from the last run. Only reported files and input "
+        auto *hint = new QLabel(tr("Results from the last run; an input processed again from "
+                                   "here shows its newest result. Only reported files and input "
                                    "errors are listed; files that never started are not shown."),
             this);
         hint->setWordWrap(true);

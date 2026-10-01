@@ -189,6 +189,17 @@ namespace cloakframe
             bool reviewEnabled = false;
         };
 
+        struct RunTarget
+        {
+            QStringList inputs;
+            QString outputDirectory;
+            bool reviewEnabled = false;
+            int initialVideoReviewFrame = -1;
+            bool keepOtherResults = false;
+        };
+
+        void startRun(const RunTarget &target);
+
         struct PendingRun
         {
             ProcessingRequest request;
@@ -198,6 +209,7 @@ namespace cloakframe
             DetectorCacheKey plateKey;
             bool faceRecovered = false;
             bool plateRecovered = false;
+            bool keepOtherResults = false;
         };
 
         [[nodiscard]] static DetectorCacheKey makeDetectorCacheKey(const ModelFileDigest &digest,
@@ -289,8 +301,7 @@ namespace cloakframe
         bool gpuAcceleration_ = true;
         int videoQuality_ = 0;
         int videoCodec_ = 0;
-        QString pendingVideoReviewSource_;
-        int pendingVideoReviewFrame_ = -1;
+        QString lastRunOutputDirectory_;
         bool processing_ = false;
         bool shuttingDown_ = false;
         RunSummary lastRunSummary_;

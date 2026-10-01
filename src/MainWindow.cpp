@@ -1103,13 +1103,7 @@ namespace cloakframe
                                 .arg(QDateTime::currentDateTime().toString(
                                          QStringLiteral("yyyyMMdd-HHmmss")),
                                     QUuid::createUuid().toString(QUuid::WithoutBraces)));
-                        inputList_->clear();
-                        addInputPath(retryPath);
-                        outputDirEdit_->setText(folder);
-                        reviewCheck_->setChecked(true);
-                        pendingVideoReviewSource_ = retryPath;
-                        pendingVideoReviewFrame_ = retryFrame;
-                        startProcessing();
+                        startRun({{retryPath}, folder, true, retryFrame, true});
                     }
                 });
             addRetranslation(
@@ -1168,7 +1162,7 @@ namespace cloakframe
             this,
             [this]
             {
-                const QString dir = outputDirEdit_->text();
+                const QString &dir = lastRunOutputDirectory_;
                 if (!dir.isEmpty() && QFileInfo::exists(dir))
                 {
                     QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
@@ -1522,6 +1516,11 @@ namespace cloakframe
 
     void MainWindow::startProcessing()
     {
+        startRun({inputPaths(), outputDirEdit_->text(), reviewCheck_->isChecked()});
+    }
+
+    void MainWindow::startRun(const RunTarget &target)
+    {
         if (processing_ || worker_ != nullptr || workerThread_ != nullptr)
         {
             return;
@@ -1600,23 +1599,23 @@ namespace cloakframe
             }
         }
 
-        if (inputList_->count() == 0)
+        if (target.inputs.isEmpty())
         {
             reportValidationIssue(tr("Add at least one image or folder."), inputList_);
             return;
         }
 
-        if (outputDirEdit_->text().isEmpty())
+        if (target.outputDirectory.isEmpty())
         {
             reportValidationIssue(tr("Choose an output folder."), outputDirEdit_);
             return;
         }
 
-        const QString rawOutput = outputDirEdit_->text();
+        const QString &rawOutput = target.outputDirectory;
         const QFileInfo outputInfo(rawOutput);
         const QString canonicalOutput =
             outputInfo.exists() ? outputInfo.canonicalFilePath() : QDir::cleanPath(rawOutput);
-        for (const auto &input : inputPaths())
+        for (const auto &input : target.inputs)
         {
             const QFileInfo inputInfo(input);
             const QString canonicalInput =
@@ -1645,10 +1644,9 @@ namespace cloakframe
         request.modelPath = modelPath;
         request.faceModelKind =
             selectedBuiltin != nullptr ? selectedBuiltin->faceKind : FaceModelKind::Scrfd;
-        request.inputs = inputPaths();
-        if (request.inputs.size() == 1 && request.inputs.front() == pendingVideoReviewSource_)
-            request.initialVideoReviewFrame = pendingVideoReviewFrame_;
-        request.outputDirectory = outputDirEdit_->text();
+        request.inputs = target.inputs;
+        request.initialVideoReviewFrame = target.initialVideoReviewFrame;
+        request.outputDirectory = target.outputDirectory;
         request.plateModelPath = plateModelPath;
         request.reviewReceiver = this;
         request.recursive = recursiveCheck_->isChecked();
@@ -1663,7 +1661,7 @@ namespace cloakframe
         request.preserveMetadata = metadataSupportAvailable() && preserveMetaCheck_->isChecked();
         request.preserveLocation = request.preserveMetadata && preserveLocationCheck_->isChecked();
         request.removeAudio = removeAudioCheck_->isChecked();
-        request.reviewEnabled = reviewCheck_->isChecked();
+        request.reviewEnabled = target.reviewEnabled;
         request.detectFaces = detectFaces;
         request.detectPlates = detectPlates;
         request.gpuAcceleration = gpuAcceleration_;
@@ -1674,6 +1672,7 @@ namespace cloakframe
         run->request = std::move(request);
         run->selectedBuiltin = selectedBuiltin;
         run->isCustom = isCustom;
+        run->keepOtherResults = target.keepOtherResults;
         setProcessing(true);
         checkRunModels(run);
     }
@@ -1843,7 +1842,14 @@ namespace cloakframe
         runTimer_.start();
         progressBar_->setValue(0);
         lastRunSummary_ = {};
-        fileResults_.clear();
+        if (run.keepOtherResults)
+            fileResults_.removeIf(
+                [&request](const FileResult &result)
+                {
+                    return request.inputs.contains(result.sourcePath);
+                });
+        else
+            fileResults_.clear();
         statusLabel_->setText(tr("Starting…"));
 
         workerThread_ = new QThread(this);
@@ -1852,9 +1858,8 @@ namespace cloakframe
         cache.face = std::move(detectorForRun);
         cache.plate = std::move(plateForRun);
         cache.videoFace = std::move(videoDetectorForRun);
+        lastRunOutputDirectory_ = request.outputDirectory;
         worker_ = new ProcessorWorker(std::move(request), std::move(cache));
-        pendingVideoReviewFrame_ = -1;
-        pendingVideoReviewSource_.clear();
 
         worker_->moveToThread(workerThread_);
         connect(workerThread_, &QThread::started, worker_, &ProcessorWorker::process);

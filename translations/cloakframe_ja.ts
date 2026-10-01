@@ -14,7 +14,7 @@
         <translation>モデルをダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2414"/>
+        <location filename="../src/MainWindow.cpp" line="2419"/>
         <location filename="../src/ModelDownloader.cpp" line="29"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
@@ -204,7 +204,7 @@ Load it anyway?</source>
         <translation>すべてクリア</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/MainWindow.cpp" line="1353"/>
+        <location filename="../src/MainWindow.cpp" line="1347"/>
         <source>Ignored %n unsupported file(s).</source>
         <translation>
             <numerusform>未対応のファイル %n 件を無視しました。</numerusform>
@@ -236,12 +236,12 @@ Load it anyway?</source>
         <translation>右クリックでオプション · Delete で選択項目を削除</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1155"/>
+        <location filename="../src/MainWindow.cpp" line="1149"/>
         <source>Processing progress</source>
         <translation>処理の進捗</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1162"/>
+        <location filename="../src/MainWindow.cpp" line="1156"/>
         <source>Open Output Folder</source>
         <translation>出力フォルダーを開く</translation>
     </message>
@@ -357,27 +357,27 @@ Load it anyway?</source>
         <translation>設定</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2387"/>
+        <location filename="../src/MainWindow.cpp" line="2392"/>
         <source>Update available: %1</source>
         <translation>更新があります: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2408"/>
+        <location filename="../src/MainWindow.cpp" line="2413"/>
         <source>Update Available</source>
         <translation>更新があります</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2411"/>
+        <location filename="../src/MainWindow.cpp" line="2416"/>
         <source>CloakFrame %1 is available.</source>
         <translation>CloakFrame %1 が利用できます。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2413"/>
+        <location filename="../src/MainWindow.cpp" line="2418"/>
         <source>Update</source>
         <translation>更新</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2512"/>
+        <location filename="../src/MainWindow.cpp" line="2517"/>
         <source>Later</source>
         <translation>後で</translation>
     </message>
@@ -573,110 +573,110 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
         <translation>出力フォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1118"/>
+        <location filename="../src/MainWindow.cpp" line="1112"/>
         <source>Activity</source>
         <translation>アクティビティ</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1144"/>
-        <location filename="../src/MainWindow.cpp" line="1383"/>
-        <location filename="../src/MainWindow.cpp" line="1738"/>
-        <location filename="../src/MainWindow.cpp" line="1752"/>
-        <location filename="../src/MainWindow.cpp" line="1770"/>
+        <location filename="../src/MainWindow.cpp" line="1138"/>
+        <location filename="../src/MainWindow.cpp" line="1377"/>
+        <location filename="../src/MainWindow.cpp" line="1737"/>
+        <location filename="../src/MainWindow.cpp" line="1751"/>
+        <location filename="../src/MainWindow.cpp" line="1769"/>
         <source>Ready</source>
         <translation>準備完了</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1183"/>
+        <location filename="../src/MainWindow.cpp" line="1177"/>
         <source>Stop</source>
         <translation>停止</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1193"/>
+        <location filename="../src/MainWindow.cpp" line="1187"/>
         <source>Start</source>
         <translation>開始</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1215"/>
+        <location filename="../src/MainWindow.cpp" line="1209"/>
         <source>Ready. Drop images, videos, or folders to begin.</source>
         <translation>準備ができました。画像・動画・フォルダーをドロップして開始してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1365"/>
+        <location filename="../src/MainWindow.cpp" line="1359"/>
         <source>Select SCRFD ONNX Model</source>
         <translation>SCRFD ONNX モデルを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1365"/>
+        <location filename="../src/MainWindow.cpp" line="1359"/>
         <source>ONNX Models (*.onnx)</source>
         <translation>ONNX モデル (*.onnx)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1373"/>
-        <location filename="../src/MainWindow.cpp" line="1696"/>
+        <location filename="../src/MainWindow.cpp" line="1367"/>
+        <location filename="../src/MainWindow.cpp" line="1695"/>
         <source>Checking models…</source>
         <translation>モデルを確認中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1388"/>
+        <location filename="../src/MainWindow.cpp" line="1382"/>
         <source>Could not read the custom model file.</source>
         <translation>カスタムモデルのファイルを読み取れませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1394"/>
-        <location filename="../src/MainWindow.cpp" line="2142"/>
+        <location filename="../src/MainWindow.cpp" line="1388"/>
+        <location filename="../src/MainWindow.cpp" line="2147"/>
         <source>Custom — %1</source>
         <translation>カスタム — %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1439"/>
+        <location filename="../src/MainWindow.cpp" line="1433"/>
         <source>Select Images or Videos</source>
         <translation>画像または動画を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1441"/>
+        <location filename="../src/MainWindow.cpp" line="1435"/>
         <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</source>
         <translation>画像・動画 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1456"/>
+        <location filename="../src/MainWindow.cpp" line="1450"/>
         <source>Select Folder</source>
         <translation>フォルダーを選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1471"/>
+        <location filename="../src/MainWindow.cpp" line="1465"/>
         <source>Select Output Folder</source>
         <translation>出力フォルダーを選択</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/MainWindow.cpp" line="1979"/>
+        <location filename="../src/MainWindow.cpp" line="1984"/>
         <source>%n video(s) kept their audio. Voices and anything said in them are not anonymized.</source>
         <translation>
             <numerusform>%n 本の動画に音声が残っています。声や話された内容は匿名化されていません。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1996"/>
+        <location filename="../src/MainWindow.cpp" line="2001"/>
         <source>Finished with no reported warnings.</source>
         <translation>報告された警告はなく完了しました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1999"/>
+        <location filename="../src/MainWindow.cpp" line="2004"/>
         <source>Review was off, so no result was checked before it was saved.</source>
         <translation>確認がオフだったため、保存前に確認された結果はありません。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2002"/>
+        <location filename="../src/MainWindow.cpp" line="2007"/>
         <source>Done — no reported warnings</source>
         <translation>完了 — 報告された警告なし</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2005"/>
+        <location filename="../src/MainWindow.cpp" line="2010"/>
         <source>Not reviewed</source>
         <translation>未確認</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2022"/>
+        <location filename="../src/MainWindow.cpp" line="2027"/>
         <source>Processing finished, but some results need attention.
 
 Total: %1
@@ -717,173 +717,173 @@ Check these results before sharing them.</source>
 共有前に該当する結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2425"/>
+        <location filename="../src/MainWindow.cpp" line="2430"/>
         <source>Downloading CloakFrame %1…</source>
         <translation>CloakFrame %1 をダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2444"/>
+        <location filename="../src/MainWindow.cpp" line="2449"/>
         <source>Update Failed</source>
         <translation>更新失敗</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2400"/>
+        <location filename="../src/MainWindow.cpp" line="2405"/>
         <source>⚠ An update was refused because it could not be verified.</source>
         <translation>⚠ 検証できなかったため、アップデートを拒否しました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2474"/>
+        <location filename="../src/MainWindow.cpp" line="2479"/>
         <source>Update Refused</source>
         <translation>アップデートを拒否しました</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2477"/>
+        <location filename="../src/MainWindow.cpp" line="2482"/>
         <source>The update was refused because it could not be verified. Nothing was installed.</source>
         <translation>アップデートを検証できなかったため拒否しました。何もインストールされていません。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2447"/>
+        <location filename="../src/MainWindow.cpp" line="2452"/>
         <source>The update could not be installed: %1</source>
         <translation>更新をインストールできませんでした: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2449"/>
+        <location filename="../src/MainWindow.cpp" line="2454"/>
         <source>Open Download Page</source>
         <translation>ダウンロードページを開く</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2498"/>
-        <location filename="../src/MainWindow.cpp" line="2505"/>
+        <location filename="../src/MainWindow.cpp" line="2503"/>
+        <location filename="../src/MainWindow.cpp" line="2510"/>
         <source>Update Ready</source>
         <translation>更新の準備完了</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2499"/>
+        <location filename="../src/MainWindow.cpp" line="2504"/>
         <source>CloakFrame %1 will finish installing the next time the app starts.</source>
         <translation>次回起動時に CloakFrame %1 のインストールが完了します。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2509"/>
+        <location filename="../src/MainWindow.cpp" line="2514"/>
         <source>CloakFrame %1 has been downloaded. Restart now to finish installing?</source>
         <translation>CloakFrame %1 をダウンロードしました。今すぐ再起動してインストールを完了しますか？</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2511"/>
+        <location filename="../src/MainWindow.cpp" line="2516"/>
         <source>Restart Now</source>
         <translation>今すぐ再起動</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2831"/>
+        <location filename="../src/MainWindow.cpp" line="2836"/>
         <source>Accurate  ·  YOLO5Face-n</source>
         <translation>高精度  ·  YOLO5Face-n</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2832"/>
+        <location filename="../src/MainWindow.cpp" line="2837"/>
         <source>Fast  ·  YuNet</source>
         <translation>高速  ·  YuNet</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2930"/>
+        <location filename="../src/MainWindow.cpp" line="2935"/>
         <source>The custom model was not approved, so nothing was processed.</source>
         <translation>カスタムモデルが承認されなかったため、何も処理していません。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1570"/>
-        <location filename="../src/MainWindow.cpp" line="1593"/>
-        <location filename="../src/MainWindow.cpp" line="1779"/>
-        <location filename="../src/MainWindow.cpp" line="2858"/>
+        <location filename="../src/MainWindow.cpp" line="1569"/>
+        <location filename="../src/MainWindow.cpp" line="1592"/>
+        <location filename="../src/MainWindow.cpp" line="1778"/>
+        <location filename="../src/MainWindow.cpp" line="2863"/>
         <source>Downloading %1…</source>
         <translation>%1 をダウンロード中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1573"/>
-        <location filename="../src/MainWindow.cpp" line="1596"/>
-        <location filename="../src/MainWindow.cpp" line="1784"/>
-        <location filename="../src/MainWindow.cpp" line="2865"/>
+        <location filename="../src/MainWindow.cpp" line="1572"/>
+        <location filename="../src/MainWindow.cpp" line="1595"/>
+        <location filename="../src/MainWindow.cpp" line="1783"/>
+        <location filename="../src/MainWindow.cpp" line="2870"/>
         <source>Model download was cancelled or failed.</source>
         <translation>モデルのダウンロードが取り消されたか失敗しました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1577"/>
-        <location filename="../src/MainWindow.cpp" line="1599"/>
-        <location filename="../src/MainWindow.cpp" line="1788"/>
-        <location filename="../src/MainWindow.cpp" line="2861"/>
+        <location filename="../src/MainWindow.cpp" line="1576"/>
+        <location filename="../src/MainWindow.cpp" line="1598"/>
+        <location filename="../src/MainWindow.cpp" line="1787"/>
+        <location filename="../src/MainWindow.cpp" line="2866"/>
         <source>Model ready: %1</source>
         <translation>モデルの準備ができました: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1605"/>
+        <location filename="../src/MainWindow.cpp" line="1604"/>
         <source>Add at least one image or folder.</source>
         <translation>画像かフォルダーを 1 つ以上追加してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1611"/>
+        <location filename="../src/MainWindow.cpp" line="1610"/>
         <source>Choose an output folder.</source>
         <translation>出力フォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1636"/>
+        <location filename="../src/MainWindow.cpp" line="1635"/>
         <source>Refusing to run: output folder is inside input &apos;%1&apos;. Pick a different output folder so originals aren&apos;t overwritten.</source>
         <translation>実行を中止します: 出力フォルダーが入力 &apos;%1&apos; の中にあります。元のファイルが上書きされないよう、別の出力フォルダーを選んでください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1847"/>
-        <location filename="../src/MainWindow.cpp" line="1899"/>
+        <location filename="../src/MainWindow.cpp" line="1853"/>
+        <location filename="../src/MainWindow.cpp" line="1904"/>
         <source>Starting…</source>
         <translation>開始中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1912"/>
+        <location filename="../src/MainWindow.cpp" line="1917"/>
         <source>Stopping after the current processing step…</source>
         <translation>現在の処理段階が終わったら停止します…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1907"/>
-        <location filename="../src/MainWindow.cpp" line="1913"/>
+        <location filename="../src/MainWindow.cpp" line="1912"/>
+        <location filename="../src/MainWindow.cpp" line="1918"/>
         <source>Stopping…</source>
         <translation>停止中…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1379"/>
-        <location filename="../src/MainWindow.cpp" line="1702"/>
-        <location filename="../src/MainWindow.cpp" line="2049"/>
+        <location filename="../src/MainWindow.cpp" line="1373"/>
+        <location filename="../src/MainWindow.cpp" line="1701"/>
+        <location filename="../src/MainWindow.cpp" line="2054"/>
         <source>Cancelled.</source>
         <translation>キャンセルしました。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1380"/>
-        <location filename="../src/MainWindow.cpp" line="1703"/>
-        <location filename="../src/MainWindow.cpp" line="2051"/>
+        <location filename="../src/MainWindow.cpp" line="1374"/>
+        <location filename="../src/MainWindow.cpp" line="1702"/>
+        <location filename="../src/MainWindow.cpp" line="2056"/>
         <source>Cancelled</source>
         <translation>キャンセル済み</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2012"/>
+        <location filename="../src/MainWindow.cpp" line="2017"/>
         <source>Completed with warnings — review the results before sharing.</source>
         <translation>警告付きで完了しました — 共有する前に結果を確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2018"/>
+        <location filename="../src/MainWindow.cpp" line="2023"/>
         <source>Review required</source>
         <translation>確認が必要です</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2021"/>
+        <location filename="../src/MainWindow.cpp" line="2026"/>
         <source>Review Required</source>
         <translation>確認が必要です</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2055"/>
+        <location filename="../src/MainWindow.cpp" line="2060"/>
         <source>Failed — check the log for details.</source>
         <translation>失敗しました — 詳細はログを確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2059"/>
+        <location filename="../src/MainWindow.cpp" line="2064"/>
         <source>Failed — check the log</source>
         <translation>失敗しました — ログを確認してください</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2878"/>
+        <location filename="../src/MainWindow.cpp" line="2883"/>
         <source>Not downloaded yet — click Download</source>
         <translation>未ダウンロード — 「ダウンロード」をクリック</translation>
     </message>
@@ -929,34 +929,34 @@ Check these results before sharing them.</source>
         <translation>カスタム画像を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1413"/>
+        <location filename="../src/MainWindow.cpp" line="1407"/>
         <source>Select Custom Image</source>
         <translation>カスタム画像を選択</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1415"/>
+        <location filename="../src/MainWindow.cpp" line="1409"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</source>
         <translation>画像 (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1424"/>
+        <location filename="../src/MainWindow.cpp" line="1418"/>
         <source>Invalid Custom Image</source>
         <translation>無効なカスタム画像</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1558"/>
+        <location filename="../src/MainWindow.cpp" line="1557"/>
         <source>Choose a face ONNX model first.</source>
         <translation>先に顔検出用ONNXモデルを選択してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1567"/>
-        <location filename="../src/MainWindow.cpp" line="1765"/>
+        <location filename="../src/MainWindow.cpp" line="1566"/>
+        <location filename="../src/MainWindow.cpp" line="1764"/>
         <source>Choose a valid face ONNX model first.</source>
         <translation>先に有効な顔検出用ONNXモデルを選択してください。</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1733"/>
-        <location filename="../src/MainWindow.cpp" line="1748"/>
+        <location filename="../src/MainWindow.cpp" line="1732"/>
+        <location filename="../src/MainWindow.cpp" line="1747"/>
         <source>Built-in model integrity check failed: %1</source>
         <translation>内蔵モデルの整合性チェックに失敗しました: %1</translation>
     </message>
@@ -1440,204 +1440,204 @@ Check these results before sharing them.</source>
     <name>cloakframe::ResultsDialog</name>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="26"/>
-        <location filename="../src/ResultsDialog.cpp" line="57"/>
+        <location filename="../src/ResultsDialog.cpp" line="58"/>
         <source>File results</source>
         <translation>ファイル別の結果</translation>
     </message>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="29"/>
-        <source>Results from the last run. Only reported files and input errors are listed; files that never started are not shown.</source>
-        <translation>前回の処理結果です。報告されたファイルと入力エラーのみを表示し、処理を開始しなかったファイルは表示しません。</translation>
+        <source>Results from the last run; an input processed again from here shows its newest result. Only reported files and input errors are listed; files that never started are not shown.</source>
+        <translation>前回の処理結果です。ここから再処理した入力は最新の結果を表示します。報告されたファイルと入力エラーのみを表示し、処理を開始しなかったファイルは表示しません。</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="35"/>
+        <location filename="../src/ResultsDialog.cpp" line="36"/>
         <source>Filter results</source>
         <translation>結果の絞り込み</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="36"/>
+        <location filename="../src/ResultsDialog.cpp" line="37"/>
         <source>All results</source>
         <translation>すべての結果</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="36"/>
+        <location filename="../src/ResultsDialog.cpp" line="37"/>
         <source>Needs attention</source>
         <translation>要確認</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="36"/>
+        <location filename="../src/ResultsDialog.cpp" line="37"/>
         <source>Failures</source>
         <translation>失敗</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="41"/>
         <location filename="../src/ResultsDialog.cpp" line="42"/>
+        <location filename="../src/ResultsDialog.cpp" line="43"/>
         <source>All issue types</source>
         <translation>すべての問題の種類</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="44"/>
+        <location filename="../src/ResultsDialog.cpp" line="45"/>
         <source>Omitted regions</source>
         <translation>未処理の領域</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="45"/>
+        <location filename="../src/ResultsDialog.cpp" line="46"/>
         <source>Tracking gaps</source>
         <translation>追跡の空白</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="46"/>
+        <location filename="../src/ResultsDialog.cpp" line="47"/>
         <source>Dropped tracks</source>
         <translation>自動除外されたトラック</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="47"/>
+        <location filename="../src/ResultsDialog.cpp" line="48"/>
         <source>Excluded tracks</source>
         <translation>ユーザーが除外したトラック</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="48"/>
+        <location filename="../src/ResultsDialog.cpp" line="49"/>
         <source>Scan failures</source>
         <translation>スキャン失敗</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="49"/>
+        <location filename="../src/ResultsDialog.cpp" line="50"/>
         <source>Metadata warnings</source>
         <translation>メタデータの警告</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="50"/>
+        <location filename="../src/ResultsDialog.cpp" line="51"/>
         <source>Output conflicts</source>
         <translation>出力の競合</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="51"/>
+        <location filename="../src/ResultsDialog.cpp" line="52"/>
         <source>Processing failures</source>
         <translation>処理失敗</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="52"/>
+        <location filename="../src/ResultsDialog.cpp" line="53"/>
         <source>Unredacted outputs</source>
         <translation>マスクなしの出力</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="58"/>
+        <location filename="../src/ResultsDialog.cpp" line="59"/>
         <source>Input</source>
         <translation>入力</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="58"/>
+        <location filename="../src/ResultsDialog.cpp" line="59"/>
         <source>Status</source>
         <translation>状態</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="58"/>
+        <location filename="../src/ResultsDialog.cpp" line="59"/>
         <source>Output</source>
         <translation>出力</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="75"/>
+        <location filename="../src/ResultsDialog.cpp" line="76"/>
         <source>Not saved</source>
         <translation>未保存</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="84"/>
+        <location filename="../src/ResultsDialog.cpp" line="85"/>
         <source>Result details</source>
         <translation>結果の詳細</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="85"/>
+        <location filename="../src/ResultsDialog.cpp" line="86"/>
         <source>Select a result to see its details.</source>
         <translation>結果を選択すると詳細を表示します。</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="90"/>
+        <location filename="../src/ResultsDialog.cpp" line="91"/>
         <source>Issues in selected file</source>
         <translation>選択したファイルの問題</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="93"/>
+        <location filename="../src/ResultsDialog.cpp" line="94"/>
         <source>Open input file</source>
         <translation>入力ファイルを開く</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="94"/>
+        <location filename="../src/ResultsDialog.cpp" line="95"/>
         <source>Review / retry selected input</source>
         <translation>選択した入力を再確認／再処理</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="96"/>
+        <location filename="../src/ResultsDialog.cpp" line="97"/>
         <source>Reprocess this input with current settings in a new output folder. Select a tracking gap to start video review at that frame. Previous edits are not retained.</source>
         <translation>現在の設定でこの入力を再処理し、新しい出力フォルダーに保存します。追跡の空白を選択すると、そのフレームから動画の確認を開始します。以前の編集は保持されません。</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="123"/>
+        <location filename="../src/ResultsDialog.cpp" line="124"/>
         <source>Cannot open file</source>
         <translation>ファイルを開けません</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="128"/>
+        <location filename="../src/ResultsDialog.cpp" line="129"/>
         <source>Open input folder</source>
         <translation>入力フォルダーを開く</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="129"/>
+        <location filename="../src/ResultsDialog.cpp" line="130"/>
         <source>Open output folder</source>
         <translation>出力フォルダーを開く</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="161"/>
+        <location filename="../src/ResultsDialog.cpp" line="162"/>
         <source>Saved</source>
         <translation>保存済み</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="163"/>
+        <location filename="../src/ResultsDialog.cpp" line="164"/>
         <source>Review required</source>
         <translation>確認が必要</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="165"/>
+        <location filename="../src/ResultsDialog.cpp" line="166"/>
         <source>Skipped without saving</source>
         <translation>保存せずにスキップ</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="167"/>
+        <location filename="../src/ResultsDialog.cpp" line="168"/>
         <source>Failed</source>
         <translation>失敗</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="169"/>
+        <location filename="../src/ResultsDialog.cpp" line="170"/>
         <source>Cancelled</source>
         <translation>キャンセル済み</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="171"/>
+        <location filename="../src/ResultsDialog.cpp" line="172"/>
         <source>Unreadable input</source>
         <translation>読み取れない入力</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="238"/>
+        <location filename="../src/ResultsDialog.cpp" line="239"/>
         <source>Track %1 · Frames %2–%3 · %4</source>
         <translation>トラック %1 · フレーム %2–%3 · %4</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="242"/>
+        <location filename="../src/ResultsDialog.cpp" line="243"/>
         <source>Reviewed by user (coverage not verified)</source>
         <translation>ユーザー確認済み（マスク範囲は未検証）</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="243"/>
+        <location filename="../src/ResultsDialog.cpp" line="244"/>
         <source>Pending review</source>
         <translation>未確認</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="270"/>
+        <location filename="../src/ResultsDialog.cpp" line="271"/>
         <source>Cannot open folder</source>
         <translation>フォルダーを開けません</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="124"/>
-        <location filename="../src/ResultsDialog.cpp" line="270"/>
+        <location filename="../src/ResultsDialog.cpp" line="125"/>
+        <location filename="../src/ResultsDialog.cpp" line="271"/>
         <source>Could not open: %1</source>
         <translation>開けませんでした：%1</translation>
     </message>
