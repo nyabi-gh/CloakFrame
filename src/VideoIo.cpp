@@ -442,6 +442,11 @@ namespace cloakframe
                || extension == ".webm";
     }
 
+    QStringList ffmpegFileInput(const QString &path)
+    {
+        return {"-protocol_whitelist", "file", "-i", "file:" + path};
+    }
+
     int crfForQuality(const VideoQuality quality)
     {
         switch (quality)
@@ -476,7 +481,8 @@ namespace cloakframe
     {
         QProcess process;
         process.start(tools.ffprobePath,
-            {"-v", "error", "-print_format", "json", "-show_streams", "-show_format", path});
+            QStringList{"-v", "error", "-print_format", "json", "-show_streams", "-show_format"}
+                + ffmpegFileInput(path));
         if (!process.waitForStarted(kProcessStartTimeoutMs)
             || !process.waitForFinished(kProcessIoTimeoutMs))
         {
@@ -730,25 +736,17 @@ namespace cloakframe
 
         process_ = std::make_unique<QProcess>();
         process_->start(tools.ffmpegPath,
-            {"-v",
+            QStringList{"-v",
                 "error",
                 "-nostdin",
                 "-y",
                 // A damaged stream must not decode into a silently shorter video. `-xerror`
                 // turns a recovered decode error into a nonzero exit, which the read loop
                 // reports instead of publishing whatever frames survived.
-                "-xerror",
-                "-i",
-                path,
-                "-map",
-                "0:v:0",
-                "-vf",
-                filter,
-                "-f",
-                "rawvideo",
-                "-pix_fmt",
-                "bgr24",
-                sink});
+                "-xerror"}
+                + ffmpegFileInput(path)
+                + QStringList{
+                    "-map", "0:v:0", "-vf", filter, "-f", "rawvideo", "-pix_fmt", "bgr24", sink});
         if (!process_->waitForStarted(kProcessStartTimeoutMs))
         {
             error_ = trVideo(
@@ -1167,7 +1165,7 @@ namespace cloakframe
             {
                 arguments << "-t" << QString::number(info.durationSeconds, 'f', 3);
             }
-            arguments << "-i" << audioSource;
+            arguments << ffmpegFileInput(audioSource);
         }
         arguments << "-map" << "0:v:0";
         if (hasAudio)

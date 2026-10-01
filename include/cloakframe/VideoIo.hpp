@@ -42,6 +42,10 @@ namespace cloakframe
 
     bool isSupportedVideo(const std::filesystem::path &path);
 
+    // Input arguments that open `path` as a local file and nothing else: no name read as a
+    // protocol, and no network or other URL opened by the container on its behalf.
+    [[nodiscard]] QStringList ffmpegFileInput(const QString &path);
+
     enum class VideoQuality
     {
         HighQuality,

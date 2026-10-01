@@ -1939,28 +1939,28 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoIo</name>
     <message>
-        <location filename="../src/VideoIo.cpp" line="406"/>
+        <location filename="../src/VideoIo.cpp" line="400"/>
         <source>FFmpeg was not found. Video processing is unavailable.</source>
         <translation>FFmpeg が見つかりません。動画処理は利用できません。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="423"/>
+        <location filename="../src/VideoIo.cpp" line="417"/>
         <source>FFmpeg was found but could not be executed.</source>
         <translation>FFmpeg は見つかりましたが、実行できませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="73"/>
+        <location filename="../src/VideoIo.cpp" line="67"/>
         <source>Could not read the FFmpeg checksum manifest.</source>
         <translation>FFmpeg のチェックサムマニフェストを読み取れませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="86"/>
-        <location filename="../src/VideoIo.cpp" line="96"/>
+        <location filename="../src/VideoIo.cpp" line="80"/>
+        <location filename="../src/VideoIo.cpp" line="90"/>
         <source>Could not read the bundled FFmpeg binary.</source>
         <translation>同梱の FFmpeg バイナリを読み取れませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="106"/>
+        <location filename="../src/VideoIo.cpp" line="100"/>
         <source>The bundled FFmpeg binary failed its integrity check.</source>
         <translation>同梱の FFmpeg バイナリが整合性チェックに失敗しました。</translation>
     </message>
@@ -2001,69 +2001,69 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="702"/>
-        <location filename="../src/VideoIo.cpp" line="1112"/>
+        <location filename="../src/VideoIo.cpp" line="1104"/>
         <source>Invalid video dimensions.</source>
         <translation>動画の解像度が正しくありません。</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="730"/>
-        <location filename="../src/VideoIo.cpp" line="761"/>
+        <location filename="../src/VideoIo.cpp" line="753"/>
         <source>Could not start FFmpeg for decoding.</source>
         <translation>デコード用の FFmpeg を起動できませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="787"/>
-        <location filename="../src/VideoIo.cpp" line="860"/>
-        <location filename="../src/VideoIo.cpp" line="1077"/>
+        <location filename="../src/VideoIo.cpp" line="779"/>
+        <location filename="../src/VideoIo.cpp" line="852"/>
+        <location filename="../src/VideoIo.cpp" line="1069"/>
         <source>Decoding failed: %1</source>
         <translation>デコードに失敗しました: %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="853"/>
+        <location filename="../src/VideoIo.cpp" line="845"/>
         <source>Decoding ended mid-frame: %1</source>
         <translation>デコードがフレームの途中で終了しました: %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="879"/>
+        <location filename="../src/VideoIo.cpp" line="871"/>
         <source>Decoding timed out.</source>
         <translation>デコードがタイムアウトしました。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1238"/>
+        <location filename="../src/VideoIo.cpp" line="1230"/>
         <source>Could not start FFmpeg for encoding.</source>
         <translation>エンコード用の FFmpeg を起動できませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1140"/>
+        <location filename="../src/VideoIo.cpp" line="1132"/>
         <source>Could not create a temporary directory for encoding.</source>
         <translation>エンコード用の一時ディレクトリを作成できませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1256"/>
-        <location filename="../src/VideoIo.cpp" line="1286"/>
+        <location filename="../src/VideoIo.cpp" line="1248"/>
+        <location filename="../src/VideoIo.cpp" line="1278"/>
+        <location filename="../src/VideoIo.cpp" line="1297"/>
         <location filename="../src/VideoIo.cpp" line="1305"/>
-        <location filename="../src/VideoIo.cpp" line="1313"/>
-        <location filename="../src/VideoIo.cpp" line="1358"/>
+        <location filename="../src/VideoIo.cpp" line="1350"/>
         <source>Encoding failed: %1</source>
         <translation>エンコードに失敗しました: %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1262"/>
+        <location filename="../src/VideoIo.cpp" line="1254"/>
         <source>Internal error: frame does not match the video format.</source>
         <translation>内部エラー: フレームが動画の形式と一致しません。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1347"/>
+        <location filename="../src/VideoIo.cpp" line="1339"/>
         <source>Encoding timed out while finalizing.</source>
         <translation>最終処理中にエンコードがタイムアウトしました。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1426"/>
+        <location filename="../src/VideoIo.cpp" line="1418"/>
         <source>Could not move the finished video into place.</source>
         <translation>完成した動画を所定の場所に移動できませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1424"/>
+        <location filename="../src/VideoIo.cpp" line="1416"/>
         <source>The output file already exists.</source>
         <translation>出力ファイルはすでに存在します。</translation>
     </message>
@@ -2088,9 +2088,9 @@ Continue?</source>
         <translation>動画のフレーム数が安全上限を超えています</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1339"/>
-        <location filename="../src/VideoIo.cpp" line="1368"/>
-        <location filename="../src/VideoIo.cpp" line="1418"/>
+        <location filename="../src/VideoIo.cpp" line="1331"/>
+        <location filename="../src/VideoIo.cpp" line="1360"/>
+        <location filename="../src/VideoIo.cpp" line="1410"/>
         <source>The source video changed during processing.</source>
         <translation>処理中に元の動画が変更されました。</translation>
     </message>

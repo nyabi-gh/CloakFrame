@@ -11,6 +11,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QProcess>
+#include <QTcpServer>
 #include <QTemporaryDir>
 
 #include <opencv2/core.hpp>
@@ -972,6 +973,22 @@ int main(int argc, char **argv)
     std::puts("sample generated: ok");
 
     QString probeError;
+    {
+        QTcpServer server;
+        assert(server.listen(QHostAddress::LocalHost));
+        const QString url = QStringLiteral("http://127.0.0.1:%1/clip.mp4").arg(server.serverPort());
+        assert(!cloakframe::probeVideo(*tools, url, &probeError));
+        cloakframe::VideoFrameReader reader;
+        cloakframe::VideoInfo urlInfo;
+        urlInfo.width = 320;
+        urlInfo.height = 240;
+        urlInfo.fpsNum = 30;
+        reader.open(*tools, url, urlInfo);
+        cv::Mat frame;
+        assert(!reader.readFrame(frame));
+        assert(!server.waitForNewConnection(200));
+        std::puts("an input path is never opened as a URL: ok");
+    }
     const auto info = cloakframe::probeVideo(*tools, samplePath, &probeError);
     assert(info.has_value());
     assert(info->width == 320);

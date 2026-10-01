@@ -1939,28 +1939,28 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoIo</name>
     <message>
-        <location filename="../src/VideoIo.cpp" line="406"/>
+        <location filename="../src/VideoIo.cpp" line="400"/>
         <source>FFmpeg was not found. Video processing is unavailable.</source>
         <translation>FFmpeg를 찾을 수 없습니다. 동영상 처리를 사용할 수 없습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="423"/>
+        <location filename="../src/VideoIo.cpp" line="417"/>
         <source>FFmpeg was found but could not be executed.</source>
         <translation>FFmpeg를 찾았지만 실행할 수 없습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="73"/>
+        <location filename="../src/VideoIo.cpp" line="67"/>
         <source>Could not read the FFmpeg checksum manifest.</source>
         <translation>FFmpeg 체크섬 목록을 읽지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="86"/>
-        <location filename="../src/VideoIo.cpp" line="96"/>
+        <location filename="../src/VideoIo.cpp" line="80"/>
+        <location filename="../src/VideoIo.cpp" line="90"/>
         <source>Could not read the bundled FFmpeg binary.</source>
         <translation>번들 FFmpeg 바이너리를 읽지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="106"/>
+        <location filename="../src/VideoIo.cpp" line="100"/>
         <source>The bundled FFmpeg binary failed its integrity check.</source>
         <translation>번들 FFmpeg 바이너리가 무결성 검사를 통과하지 못했습니다.</translation>
     </message>
@@ -2001,69 +2001,69 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="702"/>
-        <location filename="../src/VideoIo.cpp" line="1112"/>
+        <location filename="../src/VideoIo.cpp" line="1104"/>
         <source>Invalid video dimensions.</source>
         <translation>동영상 해상도가 올바르지 않습니다.</translation>
     </message>
     <message>
         <location filename="../src/VideoIo.cpp" line="730"/>
-        <location filename="../src/VideoIo.cpp" line="761"/>
+        <location filename="../src/VideoIo.cpp" line="753"/>
         <source>Could not start FFmpeg for decoding.</source>
         <translation>디코딩을 위한 FFmpeg를 시작하지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="787"/>
-        <location filename="../src/VideoIo.cpp" line="860"/>
-        <location filename="../src/VideoIo.cpp" line="1077"/>
+        <location filename="../src/VideoIo.cpp" line="779"/>
+        <location filename="../src/VideoIo.cpp" line="852"/>
+        <location filename="../src/VideoIo.cpp" line="1069"/>
         <source>Decoding failed: %1</source>
         <translation>디코딩 실패: %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="853"/>
+        <location filename="../src/VideoIo.cpp" line="845"/>
         <source>Decoding ended mid-frame: %1</source>
         <translation>디코딩이 프레임 중간에 끊겼습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="879"/>
+        <location filename="../src/VideoIo.cpp" line="871"/>
         <source>Decoding timed out.</source>
         <translation>디코딩 시간이 초과되었습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1238"/>
+        <location filename="../src/VideoIo.cpp" line="1230"/>
         <source>Could not start FFmpeg for encoding.</source>
         <translation>인코딩을 위한 FFmpeg를 시작하지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1140"/>
+        <location filename="../src/VideoIo.cpp" line="1132"/>
         <source>Could not create a temporary directory for encoding.</source>
         <translation>인코딩용 임시 디렉터리를 만들지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1256"/>
-        <location filename="../src/VideoIo.cpp" line="1286"/>
+        <location filename="../src/VideoIo.cpp" line="1248"/>
+        <location filename="../src/VideoIo.cpp" line="1278"/>
+        <location filename="../src/VideoIo.cpp" line="1297"/>
         <location filename="../src/VideoIo.cpp" line="1305"/>
-        <location filename="../src/VideoIo.cpp" line="1313"/>
-        <location filename="../src/VideoIo.cpp" line="1358"/>
+        <location filename="../src/VideoIo.cpp" line="1350"/>
         <source>Encoding failed: %1</source>
         <translation>인코딩 실패: %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1262"/>
+        <location filename="../src/VideoIo.cpp" line="1254"/>
         <source>Internal error: frame does not match the video format.</source>
         <translation>내부 오류: 프레임이 동영상 형식과 일치하지 않습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1347"/>
+        <location filename="../src/VideoIo.cpp" line="1339"/>
         <source>Encoding timed out while finalizing.</source>
         <translation>마무리 중 인코딩 시간이 초과되었습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1426"/>
+        <location filename="../src/VideoIo.cpp" line="1418"/>
         <source>Could not move the finished video into place.</source>
         <translation>완성된 동영상을 제자리로 옮기지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1424"/>
+        <location filename="../src/VideoIo.cpp" line="1416"/>
         <source>The output file already exists.</source>
         <translation>출력 파일이 이미 존재합니다.</translation>
     </message>
@@ -2088,9 +2088,9 @@ Continue?</source>
         <translation>동영상 프레임 수가 안전 한도를 초과합니다</translation>
     </message>
     <message>
-        <location filename="../src/VideoIo.cpp" line="1339"/>
-        <location filename="../src/VideoIo.cpp" line="1368"/>
-        <location filename="../src/VideoIo.cpp" line="1418"/>
+        <location filename="../src/VideoIo.cpp" line="1331"/>
+        <location filename="../src/VideoIo.cpp" line="1360"/>
+        <location filename="../src/VideoIo.cpp" line="1410"/>
         <source>The source video changed during processing.</source>
         <translation>처리 중 원본 동영상이 변경되었습니다.</translation>
     </message>

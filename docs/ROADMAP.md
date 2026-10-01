@@ -57,8 +57,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Release publication** [B-11]. Publish as a draft, then release; staple the app
   bundle as well as the DMG; repin `actions/github-script` to a commit; enable Dependabot
   for actions; `persist-credentials: false`; tag protection.
-- **FFmpeg inputs** [B-9, B-11]. Pass `-protocol_whitelist file,pipe` and a `file:`
-  prefix.
 - **Hardening** [B-11]. `/CETCOMPAT`, `_FORTIFY_SOURCE=3`, stack-clash protection,
   `SetDefaultDllDirectories`; leave image plugins CloakFrame never selects out of the
   bundles; validate the feed's file name; cap the update-check response size.

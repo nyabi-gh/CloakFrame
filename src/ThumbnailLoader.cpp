@@ -26,23 +26,18 @@ namespace cloakframe
                 QProcess process;
                 process.setStandardErrorFile(QProcess::nullDevice());
                 process.start(tools->ffmpegPath,
-                    {"-v",
-                        "error",
-                        "-threads",
-                        "1",
-                        "-i",
-                        path,
-                        "-frames:v",
-                        "1",
-                        "-vf",
-                        "scale=80:80:force_original_aspect_ratio=decrease",
-                        "-threads",
-                        "1",
-                        "-f",
-                        "image2pipe",
-                        "-c:v",
-                        "png",
-                        "-"});
+                    QStringList{"-v", "error", "-threads", "1"} + ffmpegFileInput(path)
+                        + QStringList{"-frames:v",
+                            "1",
+                            "-vf",
+                            "scale=80:80:force_original_aspect_ratio=decrease",
+                            "-threads",
+                            "1",
+                            "-f",
+                            "image2pipe",
+                            "-c:v",
+                            "png",
+                            "-"});
                 if (!process.waitForStarted(3000) || !process.waitForFinished(3000))
                 {
                     process.kill();

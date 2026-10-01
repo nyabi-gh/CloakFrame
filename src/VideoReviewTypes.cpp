@@ -1,5 +1,7 @@
 #include "cloakframe/VideoReviewTypes.hpp"
 
+#include "cloakframe/VideoIo.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
@@ -179,7 +181,7 @@ namespace cloakframe
                 request.startTimeSeconds + static_cast<double>(seekFrame) * secondsPerFrame;
             arguments << "-ss" << QString::number(seekSeconds, 'f', 6);
         }
-        arguments << "-i" << request.sourcePath << "-map" << "0:v:0"
+        arguments << ffmpegFileInput(request.sourcePath) << "-map" << "0:v:0"
                   << "-vf" << filter << "-frames:v" << "1"
                   << "-f" << "image2pipe" << "-c:v" << "png" << "-";
         return arguments;
