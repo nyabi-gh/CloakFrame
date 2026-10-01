@@ -1645,11 +1645,23 @@ namespace cloakframe
                                          Qt::BlockingQueuedConnection,
                                          Q_RETURN_ARG(cloakframe::VideoReviewResult, reviewResult),
                                          Q_ARG(cloakframe::VideoReviewRequest, request));
-                if (!invoked || reviewResult.decision == VideoReviewDecision::CancelAll)
+                if (!invoked)
                 {
-                    cancelled_.store(true, std::memory_order_release);
-                    return false;
+                    return VideoTrackReviewOutcome{VideoTrackReviewAction::Fail,
+                        tr("Review could not be shown, nothing was saved.")};
                 }
+                switch (reviewResult.decision)
+                {
+                case VideoReviewDecision::Encode:
+                    break;
+                case VideoReviewDecision::Skip:
+                    return VideoTrackReviewOutcome{VideoTrackReviewAction::Skip, {}};
+                case VideoReviewDecision::CancelAll:
+                    cancelled_.store(true, std::memory_order_release);
+                    return VideoTrackReviewOutcome{VideoTrackReviewAction::Cancel, {}};
+                }
+                VideoTrackReviewOutcome invalid{VideoTrackReviewAction::Fail,
+                    tr("The reviewed tracks could not be applied safely, nothing was saved.")};
                 for (const int gap : reviewResult.acknowledgedGapIndices)
                     if (gap >= 0 && gap < request.uncoveredSpans.size()
                         && !acknowledgedGaps.contains(gap))
@@ -1671,8 +1683,7 @@ namespace cloakframe
                 constexpr std::uint64_t kMaxReviewedTrackBoxes = 8'000'000;
                 if (reviewResult.addedTracks.size() > kMaxManualTracks)
                 {
-                    cancelled_.store(true, std::memory_order_release);
-                    return false;
+                    return invalid;
                 }
                 int nextTrackId = 1;
                 std::uint64_t reviewedTrackBoxes = 0;
@@ -1684,8 +1695,7 @@ namespace cloakframe
                     }
                     if (track.boxes.size() > kMaxReviewedTrackBoxes - reviewedTrackBoxes)
                     {
-                        cancelled_.store(true, std::memory_order_release);
-                        return false;
+                        return invalid;
                     }
                     reviewedTrackBoxes += track.boxes.size();
                 }
@@ -1702,20 +1712,18 @@ namespace cloakframe
                         || manualBoxCount > kMaxReviewedTrackBoxes - reviewedTrackBoxes
                         || nextTrackId == std::numeric_limits<int>::max())
                     {
-                        cancelled_.store(true, std::memory_order_release);
-                        return false;
+                        return invalid;
                     }
                     auto track = materializeManualVideoTrack(
                         manual, request.frameCount, request.frameSize, nextTrackId++);
                     if (!track)
                     {
-                        cancelled_.store(true, std::memory_order_release);
-                        return false;
+                        return invalid;
                     }
                     tracks.push_back(std::move(*track));
                     reviewedTrackBoxes += manualBoxCount;
                 }
-                return true;
+                return VideoTrackReviewOutcome{};
             };
         }
 
@@ -1844,6 +1852,10 @@ namespace cloakframe
             if (excludedTracks > 0)
                 outcome.logs.push_back(tr("Tracks excluded during review: %1").arg(excludedTracks));
             outcome.droppedTracks = result.droppedTracks;
+            break;
+        case VideoProcessStatus::Skipped:
+            outcome.logs.push_back(tr("Skipped without saving: %1").arg(fileName));
+            outcome.skipped = 1;
             break;
         case VideoProcessStatus::Cancelled:
             outcome.cancelled = true;

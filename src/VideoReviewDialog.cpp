@@ -132,6 +132,11 @@ namespace cloakframe
             update();
         }
 
+        [[nodiscard]] bool drawingMode() const
+        {
+            return drawingMode_;
+        }
+
         void setDrawingMode(bool enabled)
         {
             drawingMode_ = enabled;
@@ -497,6 +502,7 @@ namespace cloakframe
 
         auto *body = new QHBoxLayout();
         canvas_ = new VideoReviewCanvas(this);
+        canvas_->setObjectName("videoCanvas");
         canvas_->setData(&request_, &excludedTrackIds_, &manualTracks_);
         canvas_->setToggleCallback(
             [this](int id)
@@ -698,6 +704,8 @@ namespace cloakframe
         setStartButton_ = new QPushButton(tr("Set start here"), this);
         setEndButton_ = new QPushButton(tr("Set end here"), this);
         removeManualTrackButton_ = new QPushButton(tr("Remove manual track"), this);
+        addManualTrackButton_->setObjectName("addManualTrack");
+        removeManualTrackButton_->setObjectName("removeManualTrack");
         side->addWidget(addManualTrackButton_);
         side->addWidget(addKeyframeButton_);
         auto *manualRangeButtons = new QHBoxLayout();
@@ -848,7 +856,11 @@ namespace cloakframe
         connect(timeline_, &QSlider::valueChanged, this, &VideoReviewDialog::setFrame);
 
         auto *buttons = new QDialogButtonBox(this);
-        auto *cancel = buttons->addButton(tr("Cancel all"), QDialogButtonBox::RejectRole);
+        auto *cancel = buttons->addButton(tr("Cancel all"), QDialogButtonBox::ResetRole);
+        auto *skip = buttons->addButton(tr("Skip video"), QDialogButtonBox::RejectRole);
+        cancel->setObjectName("cancelAll");
+        skip->setObjectName("skipVideo");
+        skip->setToolTip(tr("Moves on to the next file without saving this video."));
         auto *encode = buttons->addButton(tr("Encode video"), QDialogButtonBox::AcceptRole);
         encode->setObjectName("encodeVideo");
         encode->setToolTip(
@@ -860,7 +872,32 @@ namespace cloakframe
                 encode,
                 &QPushButton::click);
         }
-        connect(cancel, &QPushButton::clicked, this, &VideoReviewDialog::reject);
+        connect(cancel,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                const auto answer = QMessageBox::question(this,
+                    tr("Cancel All?"),
+                    tr("Stop reviewing, discard this video and cancel the remaining files?\n\n"
+                       "Files already saved are kept."),
+                    QMessageBox::Yes | QMessageBox::No,
+                    QMessageBox::No);
+                if (answer != QMessageBox::Yes)
+                {
+                    return;
+                }
+                decision_ = VideoReviewDecision::CancelAll;
+                QDialog::reject();
+            });
+        connect(skip,
+            &QPushButton::clicked,
+            this,
+            [this]
+            {
+                decision_ = VideoReviewDecision::Skip;
+                QDialog::reject();
+            });
         connect(encode,
             &QPushButton::clicked,
             this,
@@ -922,12 +959,28 @@ namespace cloakframe
 
     void VideoReviewDialog::reject()
     {
-        decision_ = VideoReviewDecision::CancelAll;
+        const auto answer = QMessageBox::question(this,
+            tr("Skip this video?"),
+            tr("This video will not be saved, and the changes made in this review are lost. "
+               "The remaining files continue."),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes)
+        {
+            return;
+        }
+        decision_ = VideoReviewDecision::Skip;
         QDialog::reject();
     }
 
     void VideoReviewDialog::keyPressEvent(QKeyEvent *event)
     {
+        if (event->key() == Qt::Key_Escape && canvas_->drawingMode())
+        {
+            setDrawingMode(false);
+            event->accept();
+            return;
+        }
         // QDialog would turn a Return no child handled into a click on the default button,
         // which here ends the review.
         if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
@@ -1179,10 +1232,11 @@ namespace cloakframe
         drawStatusLabel_->setVisible(enabled);
         if (enabled)
         {
-            drawStatusLabel_->setText(
+            const QString instruction =
                 trackId == 0
                     ? tr("Drag a box around the missed region on the current frame.")
-                    : tr("Drag the new box for manual track %1 on this frame.").arg(trackId));
+                    : tr("Drag the new box for manual track %1 on this frame.").arg(trackId);
+            drawStatusLabel_->setText(instruction + QStringLiteral(" ") + tr("Esc stops drawing."));
         }
         addManualTrackButton_->setEnabled(!enabled);
         addKeyframeButton_->setEnabled(!enabled && selectedManualTrackId_ != 0);
@@ -1297,7 +1351,20 @@ namespace cloakframe
     void VideoReviewDialog::removeSelectedManualTrack()
     {
         const int id = selectedManualTrackId_;
-        if (id == 0)
+        const auto *track = manualTrack(id);
+        if (track == nullptr)
+        {
+            return;
+        }
+        const auto answer = QMessageBox::question(this,
+            tr("Remove manual track?"),
+            tr("Remove manual track %1 and its %n keyframe(s)? This cannot be undone.",
+                nullptr,
+                static_cast<int>(track->keyframes.size()))
+                .arg(id),
+            QMessageBox::Yes | QMessageBox::No,
+            QMessageBox::No);
+        if (answer != QMessageBox::Yes)
         {
             return;
         }

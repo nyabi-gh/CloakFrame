@@ -5,15 +5,18 @@
 #include <QKeyEvent>
 #include <QLabel>
 #include <QListWidget>
+#include <QMessageBox>
 #include <QProcess>
 #include <QPushButton>
 #include <QSlider>
 #include <QTemporaryDir>
 #include <QTest>
+#include <QTimer>
 #include <QTranslator>
 
 #include <cassert>
 #include <cstdio>
+#include <optional>
 
 namespace
 {
@@ -34,17 +37,25 @@ namespace
         return nullptr;
     }
 
-    // A gap can be acknowledged only after its first, middle and last frames were on screen,
-    // and editing the masks takes that away again. Needs FFmpeg to render real frames.
-    void testGapChecksFollowWhatWasShown(QApplication &application)
+    void answerNextMessageBox(QMessageBox::StandardButton button, int &shown)
+    {
+        QTimer::singleShot(0,
+            [button, &shown]
+            {
+                auto *box = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+                assert(box != nullptr);
+                ++shown;
+                box->button(button)->click();
+            });
+    }
+
+    std::optional<cloakframe::VideoReviewRequest> renderableRequest(const QTemporaryDir &temp)
     {
         const auto tools = cloakframe::locateFfmpegTools();
         if (!tools)
         {
-            std::puts("SKIP gap checks follow what was shown: FFmpeg not found");
-            return;
+            return std::nullopt;
         }
-        QTemporaryDir temp;
         assert(temp.isValid());
         const QString source = temp.filePath("clip.mp4");
         QProcess generate;
@@ -75,7 +86,21 @@ namespace
         request.tracks.push_back({7, true, {{0, QRectF(20, 20, 40, 40), false}}});
         request.uncoveredSpans = {{7, 10, 20}};
         request.initialFrame = 0;
-        cloakframe::VideoReviewDialog dialog(request);
+        return request;
+    }
+
+    // A gap can be acknowledged only after its first, middle and last frames were on screen,
+    // and editing the masks takes that away again. Needs FFmpeg to render real frames.
+    void testGapChecksFollowWhatWasShown(QApplication &application)
+    {
+        QTemporaryDir temp;
+        const auto request = renderableRequest(temp);
+        if (!request)
+        {
+            std::puts("SKIP gap checks follow what was shown: FFmpeg not found");
+            return;
+        }
+        cloakframe::VideoReviewDialog dialog(*request);
         dialog.show();
         auto *gaps = dialog.findChild<QListWidget *>("trackingGaps");
         auto *timeline = dialog.findChild<QSlider *>("videoTimeline");
@@ -109,6 +134,91 @@ namespace
         show(20);
         assert(userCheckable(gaps->item(0)));
         std::puts("gap checks follow what was shown: ok");
+    }
+
+    void testManualTrackRemovalAsks()
+    {
+        QTemporaryDir temp;
+        auto request = renderableRequest(temp);
+        if (!request)
+        {
+            std::puts("SKIP manual track removal asks: FFmpeg not found");
+            return;
+        }
+        request->initialFrame = 5;
+        cloakframe::VideoReviewDialog dialog(*request);
+        dialog.show();
+        assert(QTest::qWaitFor(
+            [&]
+            {
+                return dialog.property("lastViewedFrame").toInt() == 5;
+            },
+            30000));
+        auto *canvas = dialog.findChild<QWidget *>("videoCanvas");
+        auto *remove = dialog.findChild<QPushButton *>("removeManualTrack");
+        dialog.findChild<QPushButton *>("addManualTrack")->click();
+        const QPoint centre = canvas->rect().center();
+        QTest::mousePress(canvas, Qt::LeftButton, {}, centre - QPoint(30, 30));
+        QTest::mouseRelease(canvas, Qt::LeftButton, {}, centre + QPoint(30, 30));
+        assert(dialog.reviewResult().addedTracks.size() == 1);
+        assert(remove->isEnabled());
+
+        int shown = 0;
+        answerNextMessageBox(QMessageBox::No, shown);
+        remove->click();
+        assert(shown == 1 && dialog.reviewResult().addedTracks.size() == 1);
+        answerNextMessageBox(QMessageBox::Yes, shown);
+        remove->click();
+        assert(shown == 2 && dialog.reviewResult().addedTracks.isEmpty());
+        std::puts("manual track removal asks: ok");
+    }
+
+    void testExitsKeepTheBatch(
+        QApplication &application, const cloakframe::VideoReviewRequest &request)
+    {
+        using cloakframe::VideoReviewDecision;
+        int shown = 0;
+        {
+            cloakframe::VideoReviewDialog dialog(request);
+            dialog.show();
+            application.processEvents();
+            auto *add = dialog.findChild<QPushButton *>("addManualTrack");
+            add->click();
+            assert(!add->isEnabled());
+            QTest::keyClick(&dialog, Qt::Key_Escape);
+            assert(add->isEnabled() && dialog.isVisible() && shown == 0);
+
+            answerNextMessageBox(QMessageBox::No, shown);
+            QTest::keyClick(&dialog, Qt::Key_Escape);
+            assert(shown == 1 && dialog.isVisible());
+            answerNextMessageBox(QMessageBox::Yes, shown);
+            dialog.close();
+            assert(shown == 2 && !dialog.isVisible());
+            assert(dialog.reviewResult().decision == VideoReviewDecision::Skip);
+        }
+        {
+            cloakframe::VideoReviewDialog dialog(request);
+            dialog.show();
+            application.processEvents();
+            dialog.findChild<QPushButton *>("skipVideo")->click();
+            assert(shown == 2 && !dialog.isVisible());
+            assert(dialog.reviewResult().decision == VideoReviewDecision::Skip);
+        }
+        {
+            cloakframe::VideoReviewDialog dialog(request);
+            dialog.show();
+            application.processEvents();
+            auto *cancelAll = dialog.findChild<QPushButton *>("cancelAll");
+            answerNextMessageBox(QMessageBox::No, shown);
+            cancelAll->click();
+            assert(shown == 3 && dialog.isVisible());
+            assert(dialog.reviewResult().decision == VideoReviewDecision::Encode);
+            answerNextMessageBox(QMessageBox::Yes, shown);
+            cancelAll->click();
+            assert(shown == 4 && !dialog.isVisible());
+            assert(dialog.reviewResult().decision == VideoReviewDecision::CancelAll);
+        }
+        std::puts("video review exits keep the batch: ok");
     }
 }
 
@@ -264,6 +374,8 @@ int main(int argc, char **argv)
     assert(dialog.reviewResult().acknowledgedGapIndices.isEmpty());
     assert(dialog.reviewResult().excludedTrackIds.isEmpty());
     testGapChecksFollowWhatWasShown(application);
+    testManualTrackRemovalAsks();
+    testExitsKeepTheBatch(application, request);
     auto jumpRequest = request;
     jumpRequest.initialFrame = 45;
     cloakframe::VideoReviewDialog jumped(jumpRequest);

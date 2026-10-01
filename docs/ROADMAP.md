@@ -35,9 +35,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Review screens and everyday use
 
-- **Video review exits** [E-4, OW 9]. Esc, Cancel all and closing the window discard the
-  whole batch without asking; Esc while drawing does the same. Removing a manual track
-  has no confirmation or undo.
 - **Reprocess from file results** [E-6]. Clears the input list and replaces the output
   folder without asking, and the new folder persists to the next start.
 - **Model download failures** [E-7]. No reason is shown and there is no manual install
@@ -90,8 +87,7 @@ close it. Check the caller and the full scope before recording a change of state
 - **Structure** [D-3]. Move run-start validation (model digests, consent, input/output
   overlap) out of `MainWindow` where it can be tested. Keep the detection kind (face or
   plate) in `FaceDetection`; express tracking windows in seconds; let the scanner be
-  cancelled; return internal validation failures from video review as such, not as a
-  user cancel.
+  cancelled.
 - **Measurement.** Detection samples per condition, miss rates, per-stage time and
   memory, and launch checks on the minimum supported OS versions.
 

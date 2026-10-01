@@ -1133,6 +1133,7 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1284"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1857"/>
         <source>Skipped without saving: %1</source>
         <translation>保存せずにスキップしました: %1</translation>
     </message>
@@ -1164,7 +1165,7 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1394"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1753"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1761"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>%n 箇所を匿名化しました：%1</numerusform>
@@ -1177,7 +1178,7 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ProcessorWorker.cpp" line="1389"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1747"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1755"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>隠した領域がないまま保存しました: %1</translation>
     </message>
@@ -1301,7 +1302,7 @@ Check these results before sharing them.</source>
     </message>
     <message numerus="yes">
         <location filename="../src/ProcessorWorker.cpp" line="1402"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1789"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1797"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告: 検出された領域 %n 件が安全上限を超えたため、%1 で隠されずに残りました。共有する前に確認してください。</numerusform>
@@ -1339,53 +1340,63 @@ Check these results before sharing them.</source>
         <translation>エンコード中 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1774"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1651"/>
+        <source>Review could not be shown, nothing was saved.</source>
+        <translation>確認を表示できなかったため保存していません。</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1664"/>
+        <source>The reviewed tracks could not be applied safely, nothing was saved.</source>
+        <translation>確認したトラックを安全に適用できなかったため保存していません。</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1782"/>
         <source>Audio removed: %1</source>
         <translation>音声を削除しました：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1779"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1787"/>
         <source>Audio kept; voices are not anonymized: %1</source>
         <translation>音声を保持しました。声は匿名化されていません：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1798"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1806"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>警告: %1 で確度の高い検出がひとつもないトラック %n 件を破棄しました。共有する前に確認してください。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1807"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1815"/>
         <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
             <numerusform>確認前に %1 の %n フレームで対象を追跡できませんでした。ファイル別結果で各空白の確認状態を確認してください。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1812"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1820"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1で確認前に見つかった追跡の空白区間：%2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1816"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1824"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>ほか%n件の追跡の空白区間は表示していません。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1840"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1848"/>
         <source>Tracking gap frames: %1 before review, %2 pending user review. Review acknowledgement does not verify coverage.</source>
         <translation>追跡の空白フレーム：確認前 %1、ユーザー未確認 %2。確認済みの記録はマスク範囲の検証ではありません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1845"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1853"/>
         <source>Tracks excluded during review: %1</source>
         <translation>確認中に除外したトラック：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1853"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1865"/>
         <source>Failed to process video %1: %2</source>
         <translation>動画 %1 の処理に失敗しました: %2</translation>
     </message>
@@ -1415,12 +1426,12 @@ Check these results before sharing them.</source>
         <translation>残り %1 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1760"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1768"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>%1 フレームを %2 秒で処理しました（実時間の %3 倍）: %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1768"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1776"/>
         <source>Video encoder: %1</source>
         <translation>動画エンコーダー: %1</translation>
     </message>
@@ -1575,58 +1586,58 @@ Check these results before sharing them.</source>
         <translation>出力フォルダーを開く</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="158"/>
+        <location filename="../src/ResultsDialog.cpp" line="161"/>
         <source>Saved</source>
         <translation>保存済み</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="160"/>
+        <location filename="../src/ResultsDialog.cpp" line="163"/>
         <source>Review required</source>
         <translation>確認が必要</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="162"/>
+        <location filename="../src/ResultsDialog.cpp" line="165"/>
         <source>Skipped without saving</source>
         <translation>保存せずにスキップ</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="164"/>
+        <location filename="../src/ResultsDialog.cpp" line="167"/>
         <source>Failed</source>
         <translation>失敗</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="166"/>
+        <location filename="../src/ResultsDialog.cpp" line="169"/>
         <source>Cancelled</source>
         <translation>キャンセル済み</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="168"/>
+        <location filename="../src/ResultsDialog.cpp" line="171"/>
         <source>Unreadable input</source>
         <translation>読み取れない入力</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="235"/>
+        <location filename="../src/ResultsDialog.cpp" line="238"/>
         <source>Track %1 · Frames %2–%3 · %4</source>
         <translation>トラック %1 · フレーム %2–%3 · %4</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="239"/>
+        <location filename="../src/ResultsDialog.cpp" line="242"/>
         <source>Reviewed by user (coverage not verified)</source>
         <translation>ユーザー確認済み（マスク範囲は未検証）</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="240"/>
+        <location filename="../src/ResultsDialog.cpp" line="243"/>
         <source>Pending review</source>
         <translation>未確認</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="267"/>
+        <location filename="../src/ResultsDialog.cpp" line="270"/>
         <source>Cannot open folder</source>
         <translation>フォルダーを開けません</translation>
     </message>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="124"/>
-        <location filename="../src/ResultsDialog.cpp" line="267"/>
+        <location filename="../src/ResultsDialog.cpp" line="270"/>
         <source>Could not open: %1</source>
         <translation>開けませんでした：%1</translation>
     </message>
@@ -2062,7 +2073,7 @@ Continue?</source>
     <name>cloakframe::VideoProcessor</name>
     <message>
         <location filename="../src/VideoProcessor.cpp" line="647"/>
-        <location filename="../src/VideoProcessor.cpp" line="978"/>
+        <location filename="../src/VideoProcessor.cpp" line="991"/>
         <source>No frames could be decoded.</source>
         <translation>デコードできるフレームがありません。</translation>
     </message>
@@ -2102,18 +2113,18 @@ Continue?</source>
     </message>
     <message>
         <location filename="../src/VideoProcessor.cpp" line="681"/>
-        <location filename="../src/VideoProcessor.cpp" line="739"/>
+        <location filename="../src/VideoProcessor.cpp" line="752"/>
         <source>Video tracking data exceeds the safety limit.</source>
         <translation>動画の追跡データが安全上限を超えています。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="858"/>
-        <location filename="../src/VideoProcessor.cpp" line="984"/>
+        <location filename="../src/VideoProcessor.cpp" line="871"/>
+        <location filename="../src/VideoProcessor.cpp" line="997"/>
         <source>The source video changed during processing (frame count differs between passes).</source>
         <translation>処理中に元の動画が変更されました（処理パス間でフレーム数が異なります）。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="908"/>
+        <location filename="../src/VideoProcessor.cpp" line="921"/>
         <source>Video redaction failed.</source>
         <translation>動画の匿名化に失敗しました。</translation>
     </message>
@@ -2121,22 +2132,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewCanvas</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="159"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="164"/>
         <source>Loading frame preview…</source>
         <translation>フレームプレビューを読み込み中…</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="161"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="166"/>
         <source>Could not load this frame preview.</source>
         <translation>このフレームのプレビューを読み込めませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="197"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="202"/>
         <source>Track %1</source>
         <translation>トラック %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="224"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="229"/>
         <source>Manual %1</source>
         <translation>手動 %1</translation>
     </message>
@@ -2144,142 +2155,166 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="596"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="602"/>
         <source>Tracking gaps (before review)</source>
         <translation>追跡の空白（確認前）</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="622"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="628"/>
         <source>Track %1 · %2–%3 · Frames %4–%5</source>
         <translation>トラック %1 · %2–%3 · フレーム %4–%5</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="649"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="655"/>
         <source>No tracking gaps were reported.</source>
         <translation>報告された追跡の空白はありません。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="655"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="661"/>
         <source>Previous gap</source>
         <translation>前の空白</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="656"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="662"/>
         <source>Next gap</source>
         <translation>次の空白</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="810"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="818"/>
         <source>Previous frame (Left arrow)</source>
         <translation>前のフレーム（左矢印キー）</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="811"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="819"/>
         <source>Next frame (Right arrow)</source>
         <translation>次のフレーム（右矢印キー）</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="944"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="997"/>
         <source>%1 / %2 · Frame %3 / %4</source>
         <translation>%1 / %2 · フレーム %3 / %4</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="464"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="469"/>
         <source>Review video tracks — %1</source>
         <translation>動画トラックを確認 — %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="470"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="475"/>
         <source>Scrub the timeline and uncheck false detections. To cover a missed region, draw a manual track and add keyframes as it moves; the boxes between keyframes are interpolated before encoding.</source>
         <translation>タイムラインを移動して誤検出のチェックを外してください。見逃した領域を覆うには、手動トラックを描画し、動きに合わせてキーフレームを追加します。キーフレーム間のボックスはエンコード前に補間されます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="482"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="487"/>
         <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are included by default — uncheck only false detections.</source>
         <translation>「低信頼度」のトラックは確実な検出が少ないものの、初期状態では含まれます。誤検出だけチェックを外してください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="489"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="494"/>
         <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject&apos;s position.</source>
         <translation>赤い印は、確認前の追跡で対象の位置を特定できなかった区間です。必要な場所に手動マスクを追加してください。マスクの追加だけでは対象の位置を検証できないため、編集後も印は残ります。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="531"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="537"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>トラック %1  ·  %2–%3</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="536"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="542"/>
         <source>%1  ·  low confidence</source>
         <translation>%1  ·  低信頼度</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="542"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="548"/>
         <source>Few confident detections — included by default. Uncheck it to leave this track unredacted.</source>
         <translation>確度の高い検出が少ないトラックです — 既定で含まれます。隠さない場合はチェックを外してください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="634"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="640"/>
         <source>Check a gap after reviewing the entire interval; its check becomes available once its first, middle and last frames have been shown. This records your review, not verified coverage. Editing masks resets these checks.</source>
         <translation>空白区間全体を確認してからチェックしてください。区間の最初・中央・最後のフレームを表示するとチェックできるようになります。これは確認の記録であり、マスク範囲の検証ではありません。マスクを編集するとチェックはリセットされます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1419"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1486"/>
         <source>Show the first, middle and last frame of this gap to check it.</source>
         <translation>この空白の最初・中央・最後のフレームを表示するとチェックできます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="696"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="702"/>
         <source>Add missed track</source>
         <translation>見逃したトラックを追加</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="697"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="703"/>
         <source>Add / update keyframe</source>
         <translation>キーフレームを追加 / 更新</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="698"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="704"/>
         <source>Set start here</source>
         <translation>ここを開始位置に設定</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="699"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="705"/>
         <source>Set end here</source>
         <translation>ここを終了位置に設定</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="700"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="706"/>
         <source>Remove manual track</source>
         <translation>手動トラックを削除</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="740"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="748"/>
         <source>Include all</source>
         <translation>すべて含める</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="741"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="749"/>
         <source>Exclude all</source>
         <translation>すべて除外</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="851"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="859"/>
         <source>Cancel all</source>
         <translation>すべてキャンセル</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="852"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="860"/>
+        <source>Skip video</source>
+        <translation>動画をスキップ</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="863"/>
+        <source>Moves on to the next file without saving this video.</source>
+        <translation>この動画を保存せずに次のファイルへ進みます。</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="864"/>
         <source>Encode video</source>
         <translation>動画をエンコード</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="874"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="881"/>
+        <source>Cancel All?</source>
+        <translation>すべてキャンセルしますか？</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="882"/>
+        <source>Stop reviewing, discard this video and cancel the remaining files?
+
+Files already saved are kept.</source>
+        <translation>確認を中止し、この動画を破棄して残りのファイルをキャンセルしますか？
+
+保存済みのファイルはそのまま残ります。</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="911"/>
         <source>Encode with nothing covered?</source>
         <translation>何も覆わずにエンコードしますか？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="875"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="912"/>
         <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
 
 Continue?</source>
@@ -2288,34 +2323,61 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1443"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="963"/>
+        <source>Skip this video?</source>
+        <translation>この動画をスキップしますか？</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="964"/>
+        <source>This video will not be saved, and the changes made in this review are lost. The remaining files continue.</source>
+        <translation>この動画は保存されず、この確認で行った変更は失われます。残りのファイルは引き続き処理されます。</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="1239"/>
+        <source>Esc stops drawing.</source>
+        <translation>Esc で描画を終了します。</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="1360"/>
+        <source>Remove manual track?</source>
+        <translation>手動トラックを削除しますか？</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/VideoReviewDialog.cpp" line="1361"/>
+        <source>Remove manual track %1 and its %n keyframe(s)? This cannot be undone.</source>
+        <translation>
+            <numerusform>手動トラック %1 と %n 個のキーフレームを削除しますか？元に戻せません。</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="1510"/>
         <source>%1 reviewed · %2 pending</source>
         <translation>確認済み %1 · 未確認 %2</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1184"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1237"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>現在のフレームで、見逃した領域を囲むボックスをドラッグしてください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1185"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1238"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>このフレームで手動トラック %1 の新しいボックスをドラッグしてください。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1364"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1431"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>手動 %1  ·  %2–%3  ·  キーフレーム %n 件</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1427"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1494"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>自動トラック %2 件中 %1 件を含む · 手動 %3 件</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1434"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1501"/>
         <source>%n tracking gap(s) found before review</source>
         <translation>
             <numerusform>確認前の追跡の空白区間：%n件</numerusform>

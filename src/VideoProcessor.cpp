@@ -688,11 +688,24 @@ namespace cloakframe
             detections.clear();
         }
 
-        if (review
-            && !review(tracks, result.uncoveredSpans, frameCount, processingSource, activeInfo))
+        if (review)
         {
-            result.status = VideoProcessStatus::Cancelled;
-            return result;
+            const auto outcome =
+                review(tracks, result.uncoveredSpans, frameCount, processingSource, activeInfo);
+            switch (outcome.action)
+            {
+            case VideoTrackReviewAction::Encode:
+                break;
+            case VideoTrackReviewAction::Skip:
+                result.status = VideoProcessStatus::Skipped;
+                return result;
+            case VideoTrackReviewAction::Cancel:
+                result.status = VideoProcessStatus::Cancelled;
+                return result;
+            case VideoTrackReviewAction::Fail:
+                result.error = outcome.error;
+                return result;
+            }
         }
         if (cancelled.load(std::memory_order_acquire))
         {

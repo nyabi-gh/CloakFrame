@@ -1294,7 +1294,7 @@ int main(int argc, char **argv)
                 assert(frameCount >= 55 && frameCount <= 65);
                 assert(tracks.size() == 1);
                 assert(uncoveredSpans.empty());
-                return true;
+                return cloakframe::VideoTrackReviewOutcome{};
             });
         assert(result.status == cloakframe::VideoProcessStatus::Completed);
         assert(result.trackCount == 1);
@@ -1364,7 +1364,7 @@ int main(int argc, char **argv)
                     }
                     tracks.push_back(std::move(manual));
                 }
-                return true;
+                return cloakframe::VideoTrackReviewOutcome{};
             });
         assert(result.status == cloakframe::VideoProcessStatus::Completed);
         assert(reviewSawSpan);
@@ -1377,14 +1377,20 @@ int main(int argc, char **argv)
         std::puts("uncovered frame ranges reach the caller: ok");
     }
 
+    for (const auto &[action, status] : {std::pair{cloakframe::VideoTrackReviewAction::Skip,
+                                             cloakframe::VideoProcessStatus::Skipped},
+             std::pair{cloakframe::VideoTrackReviewAction::Cancel,
+                 cloakframe::VideoProcessStatus::Cancelled},
+             std::pair{
+                 cloakframe::VideoTrackReviewAction::Fail, cloakframe::VideoProcessStatus::Failed}})
     {
-        const QString reviewCancelledPath = tempDir.filePath("review-cancelled.mp4");
+        const QString reviewEndedPath = tempDir.filePath("review-ended.mp4");
         std::atomic<bool> cancelled{false};
         bool reviewCalled = false;
         const auto result = cloakframe::processVideo(
             *tools,
             samplePath,
-            reviewCancelledPath,
+            reviewEndedPath,
             *info,
             {},
             [](const cv::Mat &)
@@ -1400,15 +1406,18 @@ int main(int argc, char **argv)
                 const cloakframe::VideoInfo &)
             {
                 reviewCalled = true;
-                return false;
+                return cloakframe::VideoTrackReviewOutcome{action, QStringLiteral("rejected")};
             });
         assert(reviewCalled);
-        assert(result.status == cloakframe::VideoProcessStatus::Cancelled);
-        assert(!QFile::exists(reviewCancelledPath));
+        assert(result.status == status);
+        assert(result.error
+               == (status == cloakframe::VideoProcessStatus::Failed ? QStringLiteral("rejected")
+                                                                    : QString()));
+        assert(!QFile::exists(reviewEndedPath));
         assert(stagingLeftovers(tempDir.path()) == 0);
         assert(stagingLeftovers(privateStages.path()) == 0);
-        std::puts("video review cancellation: ok");
     }
+    std::puts("video review skip, cancellation and failure: ok");
 
     {
         const QString replaceableSource = tempDir.filePath("replaceable-source.mp4");
@@ -1447,7 +1456,7 @@ int main(int argc, char **argv)
                        == fileSha256(replaceableSource));
                 assert(QFile::remove(replaceableSource));
                 assert(QFile::rename(replacement, replaceableSource));
-                return true;
+                return cloakframe::VideoTrackReviewOutcome{};
             });
         assert(reviewCalled);
         assert(result.status == cloakframe::VideoProcessStatus::Completed);

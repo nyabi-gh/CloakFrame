@@ -37,8 +37,23 @@ namespace cloakframe
     enum class VideoProcessStatus
     {
         Completed,
+        Skipped,
         Cancelled,
         Failed,
+    };
+
+    enum class VideoTrackReviewAction
+    {
+        Encode,
+        Skip,
+        Cancel,
+        Fail,
+    };
+
+    struct VideoTrackReviewOutcome
+    {
+        VideoTrackReviewAction action = VideoTrackReviewAction::Encode;
+        QString error;
     };
 
     struct VideoProcessResult
@@ -59,7 +74,7 @@ namespace cloakframe
 
     using VideoProgressFn = std::function<void(int pass, qint64 frame, qint64 totalEstimate)>;
     using VideoDetectFn = std::function<FaceDetections(const cv::Mat &frame)>;
-    using VideoTrackReviewFn = std::function<bool(std::vector<Track> &tracks,
+    using VideoTrackReviewFn = std::function<VideoTrackReviewOutcome(std::vector<Track> &tracks,
         const std::vector<UncoveredSpan> &uncoveredSpans,
         qint64 frameCount,
         const QString &sourcePath,

@@ -5,6 +5,7 @@
 
 #include <QCoreApplication>
 #include <QEventLoop>
+#include <QFile>
 #include <QFileInfo>
 #include <QProcess>
 #include <QTemporaryDir>
@@ -56,6 +57,72 @@ namespace
             return result;
         }
     };
+
+    // Answers the first review with `first` and every later one with Encode.
+    class FirstVideoReviewer final : public QObject
+    {
+        Q_OBJECT
+    public:
+        cloakframe::VideoReviewResult first;
+        QString firstSource;
+    public slots:
+        cloakframe::VideoReviewResult requestVideoReview(
+            const cloakframe::VideoReviewRequest &request)
+        {
+            if (!firstSource.isEmpty())
+                return {};
+            firstSource = request.sourceName;
+            return first;
+        }
+    };
+
+    struct WorkerRun
+    {
+        cloakframe::RunOutcome outcome = cloakframe::RunOutcome::Failed;
+        cloakframe::RunSummary summary;
+        QVector<cloakframe::FileResult> files;
+    };
+
+    WorkerRun runWorker(QCoreApplication &app, const cloakframe::ProcessingRequest &request)
+    {
+        cloakframe::DetectorCache cache;
+        cache.face = std::make_shared<GappedDetector>();
+        cache.videoFace = std::make_shared<GappedDetector>();
+        QThread thread;
+        auto *worker = new cloakframe::ProcessorWorker(request, std::move(cache));
+        worker->moveToThread(&thread);
+        WorkerRun run;
+        QEventLoop loop;
+        QObject::connect(&thread, &QThread::started, worker, &cloakframe::ProcessorWorker::process);
+        QObject::connect(worker,
+            &cloakframe::ProcessorWorker::summaryAvailable,
+            &app,
+            [&](cloakframe::RunSummary value)
+            {
+                run.summary = value;
+            });
+        QObject::connect(worker,
+            &cloakframe::ProcessorWorker::fileResultAvailable,
+            &app,
+            [&](cloakframe::FileResult value)
+            {
+                run.files.push_back(std::move(value));
+            });
+        QObject::connect(worker,
+            &cloakframe::ProcessorWorker::finished,
+            &loop,
+            [&](cloakframe::RunOutcome value)
+            {
+                run.outcome = value;
+                loop.quit();
+            });
+        QObject::connect(&thread, &QThread::finished, worker, &QObject::deleteLater);
+        thread.start();
+        loop.exec();
+        thread.quit();
+        assert(thread.wait());
+        return run;
+    }
 }
 int main(int argc, char **argv)
 {
@@ -100,44 +167,10 @@ int main(int argc, char **argv)
         request.initialVideoReviewFrame = 20;
         request.removeAudio = mode % 2 == 1;
         const QString output = request.outputDirectory + "/input.mp4";
-        cloakframe::DetectorCache cache;
-        cache.face = std::make_shared<GappedDetector>();
-        cache.videoFace = std::make_shared<GappedDetector>();
-        QThread thread;
-        auto *worker = new cloakframe::ProcessorWorker(request, std::move(cache));
-        worker->moveToThread(&thread);
-        cloakframe::RunSummary summary;
-        cloakframe::FileResult file;
-        cloakframe::RunOutcome outcome = cloakframe::RunOutcome::Failed;
-        QEventLoop loop;
-        QObject::connect(&thread, &QThread::started, worker, &cloakframe::ProcessorWorker::process);
-        QObject::connect(worker,
-            &cloakframe::ProcessorWorker::summaryAvailable,
-            &app,
-            [&](cloakframe::RunSummary value)
-            {
-                summary = value;
-            });
-        QObject::connect(worker,
-            &cloakframe::ProcessorWorker::fileResultAvailable,
-            &app,
-            [&](cloakframe::FileResult value)
-            {
-                file = std::move(value);
-            });
-        QObject::connect(worker,
-            &cloakframe::ProcessorWorker::finished,
-            &loop,
-            [&](cloakframe::RunOutcome value)
-            {
-                outcome = value;
-                loop.quit();
-            });
-        QObject::connect(&thread, &QThread::finished, worker, &QObject::deleteLater);
-        thread.start();
-        loop.exec();
-        thread.quit();
-        assert(thread.wait());
+        const auto run = runWorker(app, request);
+        const auto &summary = run.summary;
+        assert(run.files.size() == 1);
+        const auto &file = run.files.front();
         assert(reviewer.gaps.size() == 2);
         assert(summary.trackingGapFrames > 0);
         qint64 expectedPending = 0;
@@ -146,7 +179,7 @@ int main(int argc, char **argv)
         assert(summary.pendingTrackingGapFrames == expectedPending);
         assert(summary.excludedTracks == (mode == 3 ? 1 : 0));
         assert(summary.videosWithAudio == (request.removeAudio ? 0 : 1));
-        assert(outcome
+        assert(run.outcome
                == (mode == 2 ? cloakframe::RunOutcome::Completed
                              : cloakframe::RunOutcome::CompletedWithWarnings));
         assert(file.status
@@ -160,6 +193,46 @@ int main(int argc, char **argv)
             if (issue.kind == cloakframe::FileIssueKind::TrackingGap)
                 acknowledged += issue.acknowledged;
         assert(acknowledged == std::min(mode, 2));
+    }
+
+    // Skipping one video, or a review result the worker refuses, ends that file only.
+    const QString secondSource = temp.filePath("second.mp4");
+    assert(QFile::copy(source, secondSource));
+    cloakframe::VideoReviewResult skip;
+    skip.decision = cloakframe::VideoReviewDecision::Skip;
+    cloakframe::VideoReviewResult tooManyTracks;
+    for (int id = 1; id <= 65; ++id)
+        tooManyTracks.addedTracks.push_back({id, 0, 10, {{0, QRectF(0, 0, 10, 10), false}}});
+    for (const auto &[first, firstStatus] : {std::pair{skip, cloakframe::FileResultStatus::Skipped},
+             std::pair{tooManyTracks, cloakframe::FileResultStatus::Failed}})
+    {
+        FirstVideoReviewer reviewer;
+        reviewer.first = first;
+        cloakframe::ProcessingRequest request;
+        request.inputs = {source, secondSource};
+        request.outputDirectory =
+            temp.filePath(QStringLiteral("ended-%1").arg(static_cast<int>(firstStatus)));
+        request.reviewEnabled = true;
+        request.reviewReceiver = &reviewer;
+        const auto run = runWorker(app, request);
+        assert(run.files.size() == 2);
+        for (const auto &file : run.files)
+        {
+            const bool isFirst = QFileInfo(file.sourcePath).fileName() == reviewer.firstSource;
+            if (isFirst)
+            {
+                assert(file.status == firstStatus);
+                assert(file.outputPath.isEmpty());
+                assert(!QFileInfo::exists(
+                    request.outputDirectory + "/" + QFileInfo(file.sourcePath).fileName()));
+            }
+            else
+            {
+                assert(file.status != cloakframe::FileResultStatus::Cancelled
+                       && file.status != firstStatus);
+                assert(QFileInfo::exists(file.outputPath));
+            }
+        }
     }
     return 0;
 }

@@ -58,6 +58,7 @@ namespace cloakframe
     enum class VideoReviewDecision
     {
         Encode,
+        Skip,
         CancelAll,
     };
 
