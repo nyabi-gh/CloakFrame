@@ -147,6 +147,9 @@ namespace cloakframe
             {
                 openFolder(true);
             });
+        // Return in the table would otherwise press the implicit default, Open input file.
+        for (auto *button : findChildren<QPushButton *>())
+            button->setAutoDefault(false);
         filterRows();
     }
 

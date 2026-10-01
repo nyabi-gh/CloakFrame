@@ -2,13 +2,31 @@
 
 #include <QApplication>
 #include <QComboBox>
+#include <QDesktopServices>
 #include <QListWidget>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QTest>
 #include <QTranslator>
+#include <QUrl>
 
 #include <cassert>
+
+namespace
+{
+    class OpenedUrls final : public QObject
+    {
+        Q_OBJECT
+    public:
+        QList<QUrl> urls;
+    public slots:
+        void open(const QUrl &url)
+        {
+            urls.push_back(url);
+        }
+    };
+}
 
 int main(int argc, char **argv)
 {
@@ -132,5 +150,21 @@ int main(int argc, char **argv)
         });
     typed.findChild<QPushButton *>("retryInput")->click();
     assert(retryPath == "/video.mp4" && retryFrame == 10);
+
+    OpenedUrls opened;
+    QDesktopServices::setUrlHandler(QStringLiteral("file"), &opened, "open");
+    cloakframe::ResultsDialog keyboard(results);
+    keyboard.show();
+    auto *keyboardTable = keyboard.findChild<QTableWidget *>();
+    keyboardTable->setFocus();
+    keyboardTable->selectRow(0);
+    application.processEvents();
+    for (const auto key : {Qt::Key_Return, Qt::Key_Enter})
+        QTest::keyClick(keyboardTable, key);
+    application.processEvents();
+    assert(opened.urls.isEmpty() && keyboard.isVisible());
+    QDesktopServices::unsetUrlHandler(QStringLiteral("file"));
     return 0;
 }
+
+#include "test_results.moc"

@@ -40,8 +40,7 @@ close it. Check the caller and the full scope before recording a change of state
 - **Model download failures** [E-7]. No reason is shown and there is no manual install
   path; Yes is the default button.
 - **Minor** [E-9]. The progress bar counts files only; a missing FFmpeg is reported per
-  video; Space repeats Undo after clicking it; Return in the results table opens the
-  unredacted original.
+  video; Space repeats Undo after clicking it.
 - **Accessibility** [E-10]. No keyboard way to add regions; canvas and timeline lack
   accessible names; placeholder text and timeline marks fail contrast; included and
   excluded tracks differ by color only; Tab order runs right to left in the options row.

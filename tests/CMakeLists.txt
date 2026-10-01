@@ -38,7 +38,7 @@ add_cloakframe_test(cloakframe_results_tests
     test_results.cpp
     ${PROJECT_SOURCE_DIR}/src/ResultsDialog.cpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ResultsDialog.hpp)
-target_link_libraries(cloakframe_results_tests PRIVATE Qt6::Widgets)
+target_link_libraries(cloakframe_results_tests PRIVATE Qt6::Widgets Qt6::Test)
 add_cloakframe_test(cloakframe_model_download_tests test_model_download.cpp)
 add_cloakframe_test(cloakframe_logging_tests test_logging.cpp)
 add_cloakframe_test(cloakframe_thumbnail_tests test_thumbnails.cpp
