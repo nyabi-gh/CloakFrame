@@ -184,6 +184,7 @@ namespace cloakframe
             bool preserveMetadata = false;
             bool detectFaces = false;
             bool detectPlates = false;
+            bool reviewEnabled = false;
         };
 
         // A run between the Start click and its worker: the request is fixed, and the model

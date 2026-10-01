@@ -14,7 +14,7 @@
         <translation>모델 다운로드 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2378"/>
+        <location filename="../src/MainWindow.cpp" line="2392"/>
         <location filename="../src/ModelDownloader.cpp" line="29"/>
         <source>Cancel</source>
         <translation>취소</translation>
@@ -364,27 +364,27 @@ On: copies selected EXIF fields such as camera, timestamps, and location. Embedd
         <translation>설정</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2351"/>
+        <location filename="../src/MainWindow.cpp" line="2365"/>
         <source>Update available: %1</source>
         <translation>새 버전 있음: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2372"/>
+        <location filename="../src/MainWindow.cpp" line="2386"/>
         <source>Update Available</source>
         <translation>업데이트 가능</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2375"/>
+        <location filename="../src/MainWindow.cpp" line="2389"/>
         <source>CloakFrame %1 is available.</source>
         <translation>CloakFrame %1 버전을 사용할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2377"/>
+        <location filename="../src/MainWindow.cpp" line="2391"/>
         <source>Update</source>
         <translation>업데이트</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2476"/>
+        <location filename="../src/MainWindow.cpp" line="2490"/>
         <source>Later</source>
         <translation>나중에</translation>
     </message>
@@ -614,7 +614,7 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1372"/>
-        <location filename="../src/MainWindow.cpp" line="2109"/>
+        <location filename="../src/MainWindow.cpp" line="2123"/>
         <source>Custom — %1</source>
         <translation>커스텀 — %1</translation>
     </message>
@@ -639,14 +639,34 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
         <translation>출력 폴더 선택</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/MainWindow.cpp" line="1958"/>
+        <location filename="../src/MainWindow.cpp" line="1959"/>
         <source>%n video(s) kept their audio. Voices and anything said in them are not anonymized.</source>
         <translation>
             <numerusform>영상 %n개에 오디오가 남아 있습니다. 목소리와 말한 내용은 익명화되지 않았습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1989"/>
+        <location filename="../src/MainWindow.cpp" line="1977"/>
+        <source>Finished with no reported warnings.</source>
+        <translation>보고된 경고 없이 완료되었습니다.</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="1980"/>
+        <source>Review was off, so no result was checked before it was saved.</source>
+        <translation>검토가 꺼져 있어 저장 전에 확인한 결과가 없습니다.</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="1983"/>
+        <source>Done — no reported warnings</source>
+        <translation>완료 — 보고된 경고 없음</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="1986"/>
+        <source>Not reviewed</source>
+        <translation>검토하지 않음</translation>
+    </message>
+    <message>
+        <location filename="../src/MainWindow.cpp" line="2003"/>
         <source>Processing finished, but some results need attention.
 
 Total: %1
@@ -687,73 +707,73 @@ Check these results before sharing them.</source>
 공유하기 전에 해당 결과를 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2389"/>
+        <location filename="../src/MainWindow.cpp" line="2403"/>
         <source>Downloading CloakFrame %1…</source>
         <translation>CloakFrame %1 다운로드 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2408"/>
+        <location filename="../src/MainWindow.cpp" line="2422"/>
         <source>Update Failed</source>
         <translation>업데이트 실패</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2364"/>
+        <location filename="../src/MainWindow.cpp" line="2378"/>
         <source>⚠ An update was refused because it could not be verified.</source>
         <translation>⚠ 확인할 수 없는 업데이트를 거부했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2438"/>
+        <location filename="../src/MainWindow.cpp" line="2452"/>
         <source>Update Refused</source>
         <translation>업데이트 거부됨</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2441"/>
+        <location filename="../src/MainWindow.cpp" line="2455"/>
         <source>The update was refused because it could not be verified. Nothing was installed.</source>
         <translation>업데이트를 확인할 수 없어 거부했습니다. 아무것도 설치하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2411"/>
+        <location filename="../src/MainWindow.cpp" line="2425"/>
         <source>The update could not be installed: %1</source>
         <translation>업데이트를 설치하지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2413"/>
+        <location filename="../src/MainWindow.cpp" line="2427"/>
         <source>Open Download Page</source>
         <translation>다운로드 페이지 열기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2462"/>
-        <location filename="../src/MainWindow.cpp" line="2469"/>
+        <location filename="../src/MainWindow.cpp" line="2476"/>
+        <location filename="../src/MainWindow.cpp" line="2483"/>
         <source>Update Ready</source>
         <translation>업데이트 준비 완료</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2463"/>
+        <location filename="../src/MainWindow.cpp" line="2477"/>
         <source>CloakFrame %1 will finish installing the next time the app starts.</source>
         <translation>다음에 앱을 시작할 때 CloakFrame %1 설치가 완료됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2473"/>
+        <location filename="../src/MainWindow.cpp" line="2487"/>
         <source>CloakFrame %1 has been downloaded. Restart now to finish installing?</source>
         <translation>CloakFrame %1 다운로드가 완료되었습니다. 지금 다시 시작하여 설치를 마칠까요?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2475"/>
+        <location filename="../src/MainWindow.cpp" line="2489"/>
         <source>Restart Now</source>
         <translation>지금 다시 시작</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2788"/>
+        <location filename="../src/MainWindow.cpp" line="2802"/>
         <source>Accurate  ·  YOLO5Face-n</source>
         <translation>정확  ·  YOLO5Face-n</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2789"/>
+        <location filename="../src/MainWindow.cpp" line="2803"/>
         <source>Fast  ·  YuNet</source>
         <translation>빠름  ·  YuNet</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2887"/>
+        <location filename="../src/MainWindow.cpp" line="2901"/>
         <source>The custom model was not approved, so nothing was processed.</source>
         <translation>커스텀 모델을 승인하지 않아 아무것도 처리하지 않았습니다.</translation>
     </message>
@@ -761,7 +781,7 @@ Check these results before sharing them.</source>
         <location filename="../src/MainWindow.cpp" line="1548"/>
         <location filename="../src/MainWindow.cpp" line="1571"/>
         <location filename="../src/MainWindow.cpp" line="1758"/>
-        <location filename="../src/MainWindow.cpp" line="2815"/>
+        <location filename="../src/MainWindow.cpp" line="2829"/>
         <source>Downloading %1…</source>
         <translation>%1 다운로드 중…</translation>
     </message>
@@ -769,7 +789,7 @@ Check these results before sharing them.</source>
         <location filename="../src/MainWindow.cpp" line="1551"/>
         <location filename="../src/MainWindow.cpp" line="1574"/>
         <location filename="../src/MainWindow.cpp" line="1763"/>
-        <location filename="../src/MainWindow.cpp" line="2822"/>
+        <location filename="../src/MainWindow.cpp" line="2836"/>
         <source>Model download was cancelled or failed.</source>
         <translation>모델 다운로드가 취소되었거나 실패했습니다.</translation>
     </message>
@@ -777,7 +797,7 @@ Check these results before sharing them.</source>
         <location filename="../src/MainWindow.cpp" line="1555"/>
         <location filename="../src/MainWindow.cpp" line="1577"/>
         <location filename="../src/MainWindow.cpp" line="1767"/>
-        <location filename="../src/MainWindow.cpp" line="2818"/>
+        <location filename="../src/MainWindow.cpp" line="2832"/>
         <source>Model ready: %1</source>
         <translation>모델 준비됨: %1</translation>
     </message>
@@ -797,73 +817,63 @@ Check these results before sharing them.</source>
         <translation>실행을 거부합니다: 출력 폴더가 입력 &apos;%1&apos; 안에 있습니다. 원본이 덮어써지지 않도록 다른 출력 폴더를 선택하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1825"/>
-        <location filename="../src/MainWindow.cpp" line="1877"/>
+        <location filename="../src/MainWindow.cpp" line="1826"/>
+        <location filename="../src/MainWindow.cpp" line="1878"/>
         <source>Starting…</source>
         <translation>시작하는 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1890"/>
+        <location filename="../src/MainWindow.cpp" line="1891"/>
         <source>Stopping after the current processing step…</source>
         <translation>현재 처리 단계 후 중지합니다…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1885"/>
-        <location filename="../src/MainWindow.cpp" line="1891"/>
+        <location filename="../src/MainWindow.cpp" line="1886"/>
+        <location filename="../src/MainWindow.cpp" line="1892"/>
         <source>Stopping…</source>
         <translation>중지하는 중…</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="1357"/>
         <location filename="../src/MainWindow.cpp" line="1679"/>
-        <location filename="../src/MainWindow.cpp" line="2016"/>
+        <location filename="../src/MainWindow.cpp" line="2030"/>
         <source>Cancelled.</source>
         <translation>취소됨.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1973"/>
-        <source>Finished.</source>
-        <translation>완료됨.</translation>
-    </message>
-    <message>
         <location filename="../src/MainWindow.cpp" line="1358"/>
         <location filename="../src/MainWindow.cpp" line="1680"/>
-        <location filename="../src/MainWindow.cpp" line="2018"/>
+        <location filename="../src/MainWindow.cpp" line="2032"/>
         <source>Cancelled</source>
         <translation>취소됨</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1975"/>
-        <source>Done</source>
-        <translation>완료</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="1979"/>
+        <location filename="../src/MainWindow.cpp" line="1993"/>
         <source>Completed with warnings — review the results before sharing.</source>
         <translation>주의 사항과 함께 완료됨 — 공유하기 전에 결과를 검토하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1985"/>
+        <location filename="../src/MainWindow.cpp" line="1999"/>
         <source>Review required</source>
         <translation>검토 필요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1988"/>
+        <location filename="../src/MainWindow.cpp" line="2002"/>
         <source>Review Required</source>
         <translation>검토 필요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2022"/>
+        <location filename="../src/MainWindow.cpp" line="2036"/>
         <source>Failed — check the log for details.</source>
         <translation>실패 — 자세한 내용은 로그를 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2026"/>
+        <location filename="../src/MainWindow.cpp" line="2040"/>
         <source>Failed — check the log</source>
         <translation>실패 — 로그를 확인하세요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2835"/>
+        <location filename="../src/MainWindow.cpp" line="2849"/>
         <source>Not downloaded yet — click Download</source>
         <translation>아직 다운로드하지 않음 — 다운로드를 누르세요</translation>
     </message>

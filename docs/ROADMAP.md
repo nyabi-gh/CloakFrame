@@ -33,7 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **"Done" wording** [E-5]. Say "no reported warnings", and note when review was off.
 - **Metadata preservation** [A-6]. The opt-in keeps GPS, serial numbers and owner names
   through a blocklist. Switch to an allowlist and make GPS a separate choice.
 - **Skipped file types** [A-10]. Unsupported files in a folder (HEIC, AVIF, GIF, MKV)

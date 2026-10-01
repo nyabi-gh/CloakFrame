@@ -1806,6 +1806,7 @@ namespace cloakframe
         runState.preserveMetadata = request.preserveMetadata;
         runState.detectFaces = request.detectFaces;
         runState.detectPlates = request.detectPlates;
+        runState.reviewEnabled = request.reviewEnabled;
 
         auto detectorForRun =
             detectFaces && cachedDetectorKey_ == runState.faceKey ? cachedDetector_ : nullptr;
@@ -1970,11 +1971,24 @@ namespace cloakframe
         switch (outcome)
         {
         case RunOutcome::Completed:
-            appendLog(tr("Finished."));
+        {
+            // "Done" means nothing was reported, which is not the same as nothing was missed.
+            const bool reviewed = completedRun.has_value() && completedRun->reviewEnabled;
+            appendLog(tr("Finished with no reported warnings."));
+            if (!reviewed)
+            {
+                appendLog(tr("Review was off, so no result was checked before it was saved."));
+            }
             logAudioNotice();
-            statusLabel_->setText(tr("Done") + QStringLiteral("  ·  ") + elapsed);
+            QString status = tr("Done — no reported warnings") + QStringLiteral("  ·  ");
+            if (!reviewed)
+            {
+                status += tr("Not reviewed") + QStringLiteral("  ·  ");
+            }
+            statusLabel_->setText(status + elapsed);
             openOutputButton_->setVisible(true);
             break;
+        }
         case RunOutcome::CompletedWithWarnings:
             appendLog(tr("Completed with warnings — review the results before sharing."));
             logAudioNotice();
