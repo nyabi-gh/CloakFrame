@@ -1341,7 +1341,7 @@ Check these results before sharing them.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1465"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1464"/>
         <source>Failed (FFmpeg is not available): %1</source>
         <translation>실패 (FFmpeg를 사용할 수 없음): %1</translation>
     </message>

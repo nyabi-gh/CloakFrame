@@ -1459,17 +1459,17 @@ namespace cloakframe
             outcome.warnings = 1;
         }
 
-        const auto &tools = ffmpegTools_;
-        if (!tools)
+        if (!ffmpegTools_)
         {
             outcome.logs.push_back(tr("Failed (FFmpeg is not available): %1").arg(fileName));
             outcome.failed = 1;
             return outcome;
         }
+        const FfmpegTools &tools = *ffmpegTools_;
 
         emit stageChanged(index, total, tr("Inspecting"), fileName);
         QString probeError;
-        const auto info = probeVideo(*tools, pathToQString(item.sourcePath), &probeError);
+        const auto info = probeVideo(tools, pathToQString(item.sourcePath), &probeError);
         if (!info)
         {
             outcome.logs.push_back(tr("Failed (%1): %2").arg(probeError, fileName));
@@ -1626,7 +1626,7 @@ namespace cloakframe
                 VideoReviewRequest request;
                 request.sourcePath = reviewSourcePath;
                 request.initialFrame = initialVideoReviewFrame_;
-                request.ffmpegPath = tools->ffmpegPath;
+                request.ffmpegPath = tools.ffmpegPath;
                 request.sourceName = fileName;
                 request.frameSize = QSize(reviewInfo.displayWidth(), reviewInfo.displayHeight());
                 request.fps = reviewInfo.fps();
@@ -1752,7 +1752,7 @@ namespace cloakframe
         const DetectorStageTimings plateStagesBefore =
             plateDetector_ ? plateDetector_->stageTimings() : DetectorStageTimings{};
 
-        const auto result = processVideo(*tools,
+        const auto result = processVideo(tools,
             pathToQString(item.sourcePath),
             pathToQString(destination),
             *info,
