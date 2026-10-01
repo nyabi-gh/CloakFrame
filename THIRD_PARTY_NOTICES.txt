@@ -16,17 +16,20 @@ models remain supported and retain the terms imposed by their own sources. See
 the README for source links and details.
 
 ================================================================================
-FFmpeg  (GPL-2.0-or-later builds; the FFmpeg core is LGPL-2.1-or-later)
+FFmpeg  (GPL-3.0-or-later builds; the FFmpeg core is LGPL-2.1-or-later)
 --
 CloakFrame invokes the FFmpeg and FFprobe command-line tools as separate
 processes for video decoding and encoding. Packaged distributions of CloakFrame
 bundle unmodified FFmpeg binaries: builds from
-https://ffmpeg.martin-riedl.de/ on macOS and Linux, and from
+https://ffmpeg.martin-riedl.de/ on macOS, from
+https://github.com/BtbN/FFmpeg-Builds on Linux, and from
 https://www.gyan.dev/ffmpeg/ on Windows. When no bundled copy is present, a
-system-installed FFmpeg found on PATH is used instead. The bundled builds
-enable libx264 and libx265 and are therefore covered by the GNU General Public License
-version 2 or later (reproduced in the Exiv2 section below), which is
-compatible with CloakFrame's GPL-3.0-or-later license. Complete corresponding
+system-installed FFmpeg found on PATH is used instead. The bundled builds are
+configured with --enable-gpl and --enable-version3 and enable libx264 and
+libx265, so they are covered by the GNU General Public License version 3 or
+later, the license of CloakFrame itself, whose text is in the LICENSE file
+distributed with it. None of them is configured with --enable-nonfree, and the
+release workflow refuses any build that is. Complete corresponding
 FFmpeg source code is available from https://ffmpeg.org/download.html, and
 the build configurations are published by the respective build providers at
 the pages above.

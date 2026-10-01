@@ -47,8 +47,8 @@ before v1.1.0 remain under their original PolyForm Noncommercial 1.0.0 terms.
 Runtime dependencies retain their own licenses, including Qt (LGPL-3.0,
 GPL-3.0, or commercial), OpenCV (Apache-2.0), ONNX Runtime (MIT), DirectML
 (Microsoft redistribution terms), Exiv2 (GPL-2.0-or-later), spdlog and fmt
-(MIT), Velopack and Sparkle (MIT), and FFmpeg (LGPL-2.1-or-later with optional
-GPL components). Complete notices and bundled license texts are in
+(MIT), Velopack and Sparkle (MIT), and FFmpeg (the bundled builds are
+GPL-3.0-or-later; the FFmpeg core is LGPL-2.1-or-later). Complete notices and bundled license texts are in
 [THIRD_PARTY_NOTICES.txt](../THIRD_PARTY_NOTICES.txt).
 
 ## Citations
