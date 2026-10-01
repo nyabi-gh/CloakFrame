@@ -15,8 +15,13 @@
 
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <filesystem>
 #include <system_error>
+
+#ifdef Q_OS_UNIX
+#include <unistd.h>
+#endif
 
 namespace cloakframe
 {
@@ -29,12 +34,57 @@ namespace cloakframe
         constexpr auto kStageLockName = ".lock";
         constexpr int kMaxRememberedRoots = 32;
         constexpr qint64 kDefaultNewStageGraceMs = 60'000;
+        // Publication leftovers carry no lock, so only age says the writer is gone. One
+        // publication takes seconds even on a slow share.
+        constexpr qint64 kDefaultPublicationGraceMs = 600'000;
+        constexpr auto kPartialSuffix = ".cloakframe-partial";
 
         qint64 &newStageGraceMs()
         {
             static qint64 grace = kDefaultNewStageGraceMs;
             return grace;
         }
+
+        qint64 &publicationGraceMs()
+        {
+            static qint64 grace = kDefaultPublicationGraceMs;
+            return grace;
+        }
+
+        // What ImageIo names the directory a file is published through, in the destination's
+        // own folder: ".cloakframe-<digits>-<digits>.tmp".
+        bool isPublicationStageName(const QString &name)
+        {
+            const QString prefix = QStringLiteral(".cloakframe-");
+            const QString suffix = QStringLiteral(".tmp");
+            if (!name.startsWith(prefix) || !name.endsWith(suffix))
+            {
+                return false;
+            }
+            const auto parts = QStringView(name)
+                                   .mid(prefix.size(), name.size() - prefix.size() - suffix.size())
+                                   .split(QLatin1Char('-'));
+            return parts.size() == 2
+                   && std::ranges::all_of(parts,
+                       [](const QStringView part)
+                       {
+                           return !part.isEmpty()
+                                  && std::ranges::all_of(part,
+                                      [](const QChar ch)
+                                      {
+                                          return ch >= QLatin1Char('0') && ch <= QLatin1Char('9');
+                                      });
+                       });
+        }
+
+        bool olderThan(const QFileInfo &info, const qint64 milliseconds)
+        {
+            const QDateTime modified = info.lastModified();
+            return modified.isValid()
+                   && modified.msecsTo(QDateTime::currentDateTime()) >= milliseconds;
+        }
+
+        bool stageIsOurs(const QString &path);
 
         QString &stageRootsFileOverride()
         {
@@ -97,6 +147,26 @@ namespace cloakframe
             return roots;
         }
 
+        void writeRememberedRoots(const QString &file, const QStringList &roots)
+        {
+            if (roots.isEmpty())
+            {
+                QFile::remove(file);
+                return;
+            }
+            QSaveFile out(file);
+            if (!out.open(QIODevice::WriteOnly | QIODevice::Text))
+            {
+                return;
+            }
+            for (const auto &entry : roots)
+            {
+                out.write(entry.toUtf8());
+                out.write("\n");
+            }
+            out.commit();
+        }
+
         void rememberRoot(const QString &root)
         {
             if (root.isEmpty())
@@ -139,18 +209,96 @@ namespace cloakframe
             {
                 roots.pop_back();
             }
+            writeRememberedRoots(file, roots);
+        }
 
-            QSaveFile out(file);
-            if (!out.open(QIODevice::WriteOnly | QIODevice::Text))
+        void forgetRoot(const QString &root)
+        {
+            const auto file = stageRootsFile();
+            if (file.isEmpty() || !QFileInfo::exists(file))
             {
                 return;
             }
-            for (const auto &entry : roots)
+            QLockFile guard(file + QStringLiteral(".lock"));
+            if (!guard.tryLock(500))
             {
-                out.write(entry.toUtf8());
-                out.write("\n");
+                return;
             }
-            out.commit();
+            auto roots = readRememberedRoots();
+            if (roots.removeAll(QDir(root).absolutePath()) > 0)
+            {
+                writeRememberedRoots(file, roots);
+            }
+        }
+
+        bool hasStages(const QString &root)
+        {
+            return !QDir(root)
+                        .entryList({QString::fromLatin1(kStageNameGlob)},
+                            QDir::Dirs | QDir::Hidden | QDir::NoDotAndDotDot)
+                        .isEmpty();
+        }
+
+        bool fileIsOurs(const QFileInfo &info)
+        {
+#ifdef Q_OS_UNIX
+            return info.ownerId() == ::getuid();
+#else
+            (void)info;
+            return true;
+#endif
+        }
+
+        // Publication leftovers sit next to the file being published, anywhere under the output
+        // root. Links and junctions are not followed: what they point to is not the run's.
+        int sweepPublicationLeftovers(const QString &root)
+        {
+            int removed = 0;
+            QStringList pending{root};
+            while (!pending.isEmpty())
+            {
+                const QDir directory(pending.takeLast());
+                const auto entries = directory.entryInfoList(
+                    QDir::AllEntries | QDir::Hidden | QDir::System | QDir::NoDotAndDotDot);
+                for (const auto &entry : entries)
+                {
+                    if (entry.isSymLink() || entry.isJunction())
+                    {
+                        continue;
+                    }
+                    const QString name = entry.fileName();
+                    if (entry.isDir())
+                    {
+                        if (!isPublicationStageName(name))
+                        {
+                            if (!name.startsWith(QString::fromLatin1(kStagePrefix)))
+                            {
+                                pending.push_back(entry.absoluteFilePath());
+                            }
+                            continue;
+                        }
+                        if (!stageIsOurs(entry.absoluteFilePath())
+                            || !olderThan(entry, publicationGraceMs()))
+                        {
+                            continue;
+                        }
+                        std::error_code error;
+                        std::filesystem::remove_all(
+                            pathFromQString(entry.absoluteFilePath()), error);
+                        if (!error)
+                        {
+                            ++removed;
+                        }
+                    }
+                    else if (entry.isFile() && name.endsWith(QString::fromLatin1(kPartialSuffix))
+                             && fileIsOurs(entry) && olderThan(entry, publicationGraceMs())
+                             && QFile::remove(entry.absoluteFilePath()))
+                    {
+                        ++removed;
+                    }
+                }
+            }
+            return removed;
         }
 
         bool stageIsOurs(const QString &path)
@@ -340,12 +488,53 @@ namespace cloakframe
         {
             roots.push_back(privateRoot);
         }
-        roots += readRememberedRoots();
-        const int removed = removeStaleStagesIn(roots);
+        int removed = removeStaleStagesIn(roots);
+        // A remembered output root is one a run was writing into when it stopped without
+        // finishing. Once nothing of that run is left there, its path is not kept any longer.
+        for (const auto &root : readRememberedRoots())
+        {
+            removed += sweepRoot(root);
+            if (QDir(root).exists())
+            {
+                removed += sweepPublicationLeftovers(root);
+            }
+            if (!hasStages(root))
+            {
+                forgetRoot(root);
+            }
+        }
         if (removed > 0)
         {
-            spdlog::info("Removed {} stage directories left by an earlier run", removed);
+            spdlog::info("Removed {} temporary items left by an earlier run", removed);
         }
         return removed;
+    }
+
+    bool clearRememberedStageRoots()
+    {
+        const auto file = stageRootsFile();
+        return file.isEmpty() || !QFileInfo::exists(file) || QFile::remove(file);
+    }
+
+    OutputRootGuard::OutputRootGuard(const QString &root)
+        : root_(root)
+        , marker_(std::make_unique<StageDirectory>(root))
+    {
+    }
+
+    OutputRootGuard::~OutputRootGuard()
+    {
+        marker_.reset();
+        // Another instance writing into the same folder keeps its own marker there, and with
+        // it the folder's place on the list.
+        if (!root_.isEmpty() && !hasStages(root_))
+        {
+            forgetRoot(root_);
+        }
+    }
+
+    void setPublicationGraceForTesting(const qint64 milliseconds)
+    {
+        publicationGraceMs() = milliseconds < 0 ? kDefaultPublicationGraceMs : milliseconds;
     }
 }

@@ -689,6 +689,7 @@ namespace cloakframe
                 return;
             }
             emit logMessage(tr("Preflight: output paths are available."));
+            const OutputRootGuard outputRootGuard(pathToQString(safeRoot));
 
             int completed = 0;
             int redactedCount = 0;

@@ -49,11 +49,35 @@ namespace cloakframe
         std::unique_ptr<QLockFile> lock_;
     };
 
-    // Remove stage directories left by earlier runs, in the system temporary directory, in
-    // `privateStageRoot()`, and in every output root a `StageDirectory` has been created in
-    // before. Returns how many were removed. Safe to call while other instances are running: a
-    // directory whose lock is held is left alone.
+    // Holds a locked stage directory in an output root for as long as a run writes into it, so
+    // the root is on the list the next start sweeps. When the run ends, normally or not, and no
+    // other stage is left there, the root is taken off the list again: the list names only
+    // folders a run was still writing into when the process died.
+    class OutputRootGuard
+    {
+    public:
+        explicit OutputRootGuard(const QString &root);
+        ~OutputRootGuard();
+
+        OutputRootGuard(const OutputRootGuard &) = delete;
+        OutputRootGuard &operator=(const OutputRootGuard &) = delete;
+
+    private:
+        QString root_;
+        std::unique_ptr<StageDirectory> marker_;
+    };
+
+    // Remove what earlier runs left behind: stage directories in the system temporary
+    // directory, in `privateStageRoot()`, and in every remembered output root, and in those
+    // roots also the directories and partial files of interrupted publications. A remembered
+    // root with nothing of an earlier run left in it is forgotten. Returns how many items were
+    // removed. Safe to call while other instances are running: a directory whose lock is held
+    // is left alone, and an unlocked publication leftover only once it is old.
     int removeStaleStages();
+
+    // Deletes the list of remembered output roots. Whatever a crashed run left in them is then
+    // no longer swept at start. False if the list could not be deleted.
+    [[nodiscard]] bool clearRememberedStageRoots();
 
     // The same sweep over an explicit list of roots, without consulting or updating the
     // remembered ones. Neither the system temporary directory nor the private root is added.
@@ -70,4 +94,8 @@ namespace cloakframe
     // treated as one another instance is still setting up. A negative value restores the
     // default; zero makes a lockless directory eligible immediately.
     void setNewStageGraceForTesting(qint64 milliseconds);
+
+    // Test seam: how old a publication leftover must be before the sweep removes it. A negative
+    // value restores the default.
+    void setPublicationGraceForTesting(qint64 milliseconds);
 }

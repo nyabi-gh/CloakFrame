@@ -1,6 +1,7 @@
 #include "cloakframe/SettingsDialog.hpp"
 
 #include "cloakframe/Logging.hpp"
+#include "cloakframe/StageCleanup.hpp"
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -102,7 +103,10 @@ namespace cloakframe
             this,
             [this]
             {
-                if (!clearLocalLogs())
+                // The remembered output folders are paths too, kept for cleaning up after a
+                // crash; deleting them goes with deleting the logs.
+                const bool rootsCleared = clearRememberedStageRoots();
+                if (!clearLocalLogs() || !rootsCleared)
                     QMessageBox::warning(
                         this, tr("Local logs"), tr("Could not delete all local logs."));
             });

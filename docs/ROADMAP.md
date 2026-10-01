@@ -33,9 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **Leftovers** [A-12, A-5]. Publication temp directories in the output folder survive a
-  crash, and `stage-roots.txt` keeps up to 32 output folder paths. Sweep the former and
-  forget roots that have no stage left; include the file in "Delete logs".
 - **Crash dumps** [A-11]. Nothing keeps source pixels out of core dumps or WER reports.
 - **GPU errors mid-run** [C-2]. Only model creation falls back to CPU; a later accelerator
   error fails every following file. Retry the file on CPU and add a CPU/accelerator

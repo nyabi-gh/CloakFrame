@@ -154,6 +154,109 @@ namespace
         cloakframe::setPrivateStageRootForTesting({});
     }
 
+    QString readRoots(const QString &rootsFile)
+    {
+        QFile file(rootsFile);
+        return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+    }
+
+    void age(const QString &path)
+    {
+        std::filesystem::last_write_time(cloakframe::pathFromQString(path),
+            std::filesystem::file_time_type::clock::now() - std::chrono::hours(2));
+    }
+
+    void testAFinishedRunForgetsItsOutputRoot(const QString &rootsFile)
+    {
+        QTemporaryDir root;
+        assert(root.isValid());
+        const QString canonical = QDir(root.path()).absolutePath();
+        {
+            const cloakframe::OutputRootGuard guard(root.path());
+            assert(readRoots(rootsFile).contains(canonical));
+            assert(!QDir(root.path())
+                    .entryList({QString::fromLatin1(cloakframe::kStagePrefix) + "*"},
+                        QDir::Dirs | QDir::Hidden)
+                    .isEmpty());
+        }
+        assert(!readRoots(rootsFile).contains(canonical));
+        assert(QDir(root.path())
+                .entryList(QDir::AllEntries | QDir::Hidden | QDir::NoDotAndDotDot)
+                .isEmpty());
+    }
+
+    void testACrashedRunsOutputRootIsSweptAndForgotten(const QString &rootsFile)
+    {
+        QTemporaryDir root;
+        assert(root.isValid());
+        const QString canonical = QDir(root.path()).absolutePath();
+        {
+            QFile file(rootsFile);
+            assert(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            file.write(canonical.toUtf8() + "\n");
+        }
+        const QString stage = makeAbandonedStage(root, QStringLiteral("aB3xY9"));
+        age(stage);
+
+        // An interrupted image publication: its directory next to the destination, and the
+        // partial file of the copy fallback.
+        QDir nested(root.filePath(QStringLiteral("album/2026")));
+        assert(nested.mkpath(QStringLiteral(".")));
+        const QString published = nested.filePath(QStringLiteral(".cloakframe-123-4.tmp"));
+        assert(QDir().mkpath(published));
+        {
+            std::ofstream out(QDir(published).filePath(QStringLiteral("payload")).toStdString());
+            out << "masked result";
+        }
+        age(published);
+        const QString partial = nested.filePath(QStringLiteral("photo.jpg.cloakframe-partial"));
+        {
+            std::ofstream out(partial.toStdString());
+            out << "half a result";
+        }
+        age(partial);
+
+        // Recent, so possibly another instance's, and a name that only looks similar.
+        const QString recent = nested.filePath(QStringLiteral(".cloakframe-5-6.tmp"));
+        assert(QDir().mkpath(recent));
+        const QString lookalike = nested.filePath(QStringLiteral(".cloakframe-12a-3.tmp"));
+        assert(QDir().mkpath(lookalike));
+        age(lookalike);
+        const QString kept = nested.filePath(QStringLiteral("photo.jpg"));
+        {
+            std::ofstream out(kept.toStdString());
+            out << "a finished result";
+        }
+
+        // The full sweep also visits the real temporary directory, where other tests may be
+        // creating stages, so it runs with the normal grace period.
+        cloakframe::setNewStageGraceForTesting(-1);
+        cloakframe::removeStaleStages();
+        cloakframe::setNewStageGraceForTesting(0);
+
+        assert(!QDir(stage).exists());
+        assert(!QDir(published).exists());
+        assert(!QFileInfo::exists(partial));
+        assert(QDir(recent).exists());
+        assert(QDir(lookalike).exists());
+        assert(QFileInfo::exists(kept));
+        assert(!readRoots(rootsFile).contains(canonical));
+    }
+
+    void testDeletingLogsForgetsTheOutputRoots(const QString &rootsFile)
+    {
+        QTemporaryDir root;
+        assert(root.isValid());
+        {
+            QFile file(rootsFile);
+            assert(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+            file.write(QDir(root.path()).absolutePath().toUtf8() + "\n");
+        }
+        assert(cloakframe::clearRememberedStageRoots());
+        assert(!QFileInfo::exists(rootsFile));
+        assert(cloakframe::clearRememberedStageRoots());
+    }
+
 #ifndef _WIN32
     void testAStageAnotherAccountCouldWriteIsLeftAlone()
     {
@@ -215,6 +318,9 @@ int main()
     testAStageDirectoryTakesItsContentsWithIt();
     testAnEmptyRootGivesNoStage();
     testThePrivateRootIsSweptWithoutBeingRemembered(rootsFile);
+    testAFinishedRunForgetsItsOutputRoot(rootsFile);
+    testACrashedRunsOutputRootIsSweptAndForgotten(rootsFile);
+    testDeletingLogsForgetsTheOutputRoots(rootsFile);
 #ifndef _WIN32
     testAStageAnotherAccountCouldWriteIsLeftAlone();
     testASymlinkWearingAStageNameIsLeftAlone();
