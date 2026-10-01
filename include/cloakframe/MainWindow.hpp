@@ -108,7 +108,6 @@ namespace cloakframe
 
         // True when the file at `path` is the one the user approved, or when they approve it
         // again after being told it changed. Records the new approval in that case.
-        [[nodiscard]] bool ensureCustomModelStillApproved(const QString &path);
 
         void setProcessing(bool processing);
 
@@ -191,6 +190,8 @@ namespace cloakframe
         [[nodiscard]] static DetectorCacheKey makeDetectorCacheKey(const QString &modelPath,
             bool gpuAcceleration,
             FaceModelKind faceModelKind = FaceModelKind::Scrfd);
+
+        [[nodiscard]] bool ensureCustomModelApproved(const DetectorCacheKey &key);
 
         QComboBox *modelCombo_ = nullptr;
         QComboBox *detectCombo_ = nullptr;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QByteArray>
 #include <QString>
 
 #include <optional>
@@ -26,20 +27,15 @@ namespace cloakframe
         bool operator==(const CustomModelApproval &) const = default;
     };
 
-    enum class CustomModelState
-    {
-        // The file at the path is the one that was approved.
-        Approved,
-        // Something readable is there, but it is not what was approved - or nothing was ever
-        // approved. Both mean the user has to be asked before it is loaded.
-        Unapproved,
-        // Nothing readable is at the path, so there is nothing to ask about yet.
-        Unavailable,
-    };
-
     // What to record once the user approves the file at `path`, or nothing if it cannot be read.
     [[nodiscard]] std::optional<CustomModelApproval> approvalForCustomModel(const QString &path);
 
-    [[nodiscard]] CustomModelState checkCustomModel(
-        const QString &path, const CustomModelApproval &approved);
+    // The approval for bytes that were already hashed. `sha256` is the raw 32-byte digest.
+    [[nodiscard]] CustomModelApproval approvalForDigest(const QByteArray &sha256, qint64 size);
+
+    // Whether `approved` covers bytes with this digest and size. A run compares the digest it
+    // hands the detector, which loads only bytes that hash to it, so what was approved and
+    // what is loaded cannot differ.
+    [[nodiscard]] bool approvalCovers(
+        const CustomModelApproval &approved, const QByteArray &sha256, qint64 size);
 }

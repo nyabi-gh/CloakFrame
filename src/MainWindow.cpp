@@ -1523,9 +1523,7 @@ namespace cloakframe
                 appendLog(tr("Model ready: %1").arg(builtin->fileName));
             }
 
-            if (isCustom
-                && (!customModelFileIsAllowed(this, modelPath)
-                    || !ensureCustomModelStillApproved(modelPath)))
+            if (isCustom && !customModelFileIsAllowed(this, modelPath))
             {
                 return;
             }
@@ -1670,6 +1668,10 @@ namespace cloakframe
             || (detectPlates && !runState.plateKey.isValid()))
         {
             reportValidationIssue(tr("Choose a valid face ONNX model first."), modelCombo_);
+            return;
+        }
+        if (detectFaces && isCustom && !ensureCustomModelApproved(runState.faceKey))
+        {
             return;
         }
         if (detectFaces)
@@ -2734,36 +2736,24 @@ namespace cloakframe
         return &builtinModels()[static_cast<std::size_t>(index)];
     }
 
-    bool MainWindow::ensureCustomModelStillApproved(const QString &path)
+    bool MainWindow::ensureCustomModelApproved(const DetectorCacheKey &key)
     {
-        switch (checkCustomModel(path, customModelApproval_))
+        if (approvalCovers(customModelApproval_, key.modelSha256, key.modelSize))
         {
-        case CustomModelState::Approved:
             return true;
-        case CustomModelState::Unavailable:
-            appendLog(tr("Could not read the custom model file."));
-            return false;
-        case CustomModelState::Unapproved:
-            break;
         }
 
         // Never approved as content - a model chosen by an older version - versus approved and
         // then replaced. The second is the one worth alarming about.
         const bool approved = customModelApproval_.isRecorded()
-                                  ? confirmChangedCustomModel(this, path)
-                                  : confirmTrustedCustomModel(this, path);
+                                  ? confirmChangedCustomModel(this, key.canonicalModelPath)
+                                  : confirmTrustedCustomModel(this, key.canonicalModelPath);
         if (!approved)
         {
             appendLog(tr("The custom model was not approved, so nothing was processed."));
             return false;
         }
-        const auto approval = approvalForCustomModel(path);
-        if (!approval)
-        {
-            appendLog(tr("Could not read the custom model file."));
-            return false;
-        }
-        customModelApproval_ = *approval;
+        customModelApproval_ = approvalForDigest(key.modelSha256, key.modelSize);
         return true;
     }
 

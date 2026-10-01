@@ -33,30 +33,21 @@ namespace cloakframe
         return approval;
     }
 
-    CustomModelState checkCustomModel(const QString &path, const CustomModelApproval &approved)
+    CustomModelApproval approvalForDigest(const QByteArray &sha256, const qint64 size)
     {
-        const QFileInfo info(path);
-        if (!info.exists() || !info.isFile())
+        CustomModelApproval approval;
+        if (sha256.size() == 32)
         {
-            return CustomModelState::Unavailable;
+            approval.digest = QString::fromLatin1(sha256.toHex());
+            approval.size = size;
         }
-        if (!approved.isRecorded())
-        {
-            return CustomModelState::Unapproved;
-        }
-        // Size first: it settles most replacements without reading up to 512 MB, and a file
-        // whose size matches still has to be hashed anyway.
-        if (info.size() != approved.size)
-        {
-            return CustomModelState::Unapproved;
-        }
-        const auto digest = sha256HexOfFile(path);
-        if (!digest)
-        {
-            return CustomModelState::Unavailable;
-        }
-        return QString::fromLatin1(*digest).toLower() == approved.digest.toLower()
-                   ? CustomModelState::Approved
-                   : CustomModelState::Unapproved;
+        return approval;
+    }
+
+    bool approvalCovers(
+        const CustomModelApproval &approved, const QByteArray &sha256, const qint64 size)
+    {
+        return approved.isRecorded() && sha256.size() == 32 && size == approved.size
+               && QString::fromLatin1(sha256.toHex()) == approved.digest.toLower();
     }
 }

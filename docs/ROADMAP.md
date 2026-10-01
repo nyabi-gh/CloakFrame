@@ -28,9 +28,9 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Next — small, privacy and security first
 
-- **Custom model digest** [B-7, E-8, OW 8]. The digest the user approved and the digest
-  the detector loads are computed separately and never compared, both on the GUI
-  thread. Hash once off the GUI thread and use the same digest for both.
+- **Model hashing on the GUI thread** [E-8, OW 8]. Each run hashes the selected model
+  once on the GUI thread before starting; a custom model may be 512 MB. Move it to a
+  worker and keep the single digest it produces for consent and loading.
 - **libsodium notice** [F-1]. Missing from `THIRD_PARTY_NOTICES.txt` although it is
   linked, statically on Windows.
 - **Untranslated updater messages** [E-11]. The strings in `SelfUpdaterVelopack.cpp`
