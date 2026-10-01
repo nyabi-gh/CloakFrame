@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <system_error>
+#include <unordered_map>
 #include <unordered_set>
 
 namespace cloakframe
@@ -66,6 +67,50 @@ namespace cloakframe
                || extension == ".webp";
     }
 
+    bool namesFoldCase(const std::filesystem::path &directory)
+    {
+        std::error_code ec;
+        auto probe = std::filesystem::absolute(directory, ec).lexically_normal();
+        if (!ec && !probe.has_filename())
+        {
+            probe = probe.parent_path();
+        }
+        while (!ec && probe.has_filename())
+        {
+            std::error_code existsError;
+            if (std::filesystem::exists(probe, existsError))
+            {
+                QString variant = pathToQString(probe.filename());
+                const auto letter = std::ranges::find_if(variant,
+                    [](const QChar ch)
+                    {
+                        return ch.isLower() || ch.isUpper();
+                    });
+                if (letter != variant.end())
+                {
+                    *letter = letter->isLower() ? letter->toUpper() : letter->toLower();
+                    std::error_code equivalentError;
+                    return std::filesystem::equivalent(probe,
+                               probe.parent_path() / pathFromQString(variant),
+                               equivalentError)
+                           && !equivalentError;
+                }
+            }
+            probe = probe.parent_path();
+        }
+#if defined(_WIN32) || defined(__APPLE__)
+        return true;
+#else
+        return false;
+#endif
+    }
+
+    std::string pathKey(const std::filesystem::path &path, const bool foldCase)
+    {
+        const auto normal = path.lexically_normal();
+        return foldCase ? pathToQString(normal).toCaseFolded().toStdString() : pathToUtf8(normal);
+    }
+
     std::vector<ScanResult> scanImages(
         const QStringList &inputs, bool recursive, std::vector<ScanIssue> *issues)
     {
@@ -89,12 +134,21 @@ namespace cloakframe
         };
 
         std::unordered_set<std::string> visitedCanonical;
-        const auto markVisited = [&visitedCanonical](const std::filesystem::path &file) -> bool
+        std::unordered_map<std::string, bool> directoryFoldsCase;
+        const auto markVisited = [&visitedCanonical, &directoryFoldsCase](
+                                     const std::filesystem::path &file) -> bool
         {
             std::error_code ec;
-            auto canonical = std::filesystem::canonical(file, ec);
-            const auto key = ec ? pathToUtf8(file.lexically_normal()) : pathToUtf8(canonical);
-            return visitedCanonical.insert(key).second;
+            const auto canonical = std::filesystem::canonical(file, ec);
+            const auto resolved = ec ? file.lexically_normal() : canonical;
+            const auto directory = resolved.parent_path();
+            const auto [folds, probed] =
+                directoryFoldsCase.try_emplace(pathToUtf8(directory), false);
+            if (probed)
+            {
+                folds->second = namesFoldCase(directory);
+            }
+            return visitedCanonical.insert(pathKey(resolved, folds->second)).second;
         };
 
         for (const auto &input : inputs)

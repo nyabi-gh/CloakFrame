@@ -376,6 +376,47 @@ namespace
 #endif
     }
 
+    // Whether two names that differ only in case collide is a property of the volume, so the
+    // expectation comes from writing a file and looking it up in the other case.
+    void testCaseFoldingFollowsTheFilesystem()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const std::filesystem::path root(temp.path().toStdString());
+        const auto output = root / "out";
+        assert(std::filesystem::create_directories(output));
+        writeBytes(QString::fromStdString((output / "probe.txt").string()));
+        const bool folds = std::filesystem::exists(output / "PROBE.TXT");
+
+        assert(cloakframe::namesFoldCase(output) == folds);
+        assert(cloakframe::namesFoldCase(output / "not" / "created") == folds);
+
+        const std::vector<cloakframe::ScanResult> differByCase = {
+            {root / "a" / "Same.jpg", "Same.jpg"},
+            {root / "b" / "same.jpg", "same.jpg"},
+        };
+        const auto conflicts = cloakframe::findOutputConflicts(differByCase, output);
+        assert(conflicts.size() == (folds ? 1U : 0U));
+
+        // The same file through a differently cased path is one input; a hard link to it is
+        // another name the user chose and stays a separate input.
+        const auto photo = root / "photo.jpg";
+        assert(cv::imwrite(photo.string(), cv::Mat(8, 8, CV_8UC3, cv::Scalar(1, 2, 3))));
+        std::error_code linkError;
+        std::filesystem::create_hard_link(photo, root / "linked.jpg", linkError);
+        QStringList inputs = {QString::fromStdString(photo.string())};
+        if (folds)
+        {
+            inputs.push_back(QString::fromStdString((root / "PHOTO.JPG").string()));
+        }
+        if (!linkError)
+        {
+            inputs.push_back(QString::fromStdString((root / "linked.jpg").string()));
+        }
+        const auto scanned = cloakframe::scanImages(inputs, false);
+        assert(scanned.size() == (linkError ? 1U : 2U));
+    }
+
     void testOutputPlanRejectsExistingAndDuplicateDestinations()
     {
         QTemporaryDir temp;
@@ -2759,6 +2800,7 @@ int main(int argc, char **argv)
     testScanReportsInputsItCannotRead();
     testScanReportsDeniedDirectoriesAndContinues();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
+    testCaseFoldingFollowsTheFilesystem();
     testWorkerReportsUnredactedOutputAsWarningAndPreservesIt();
     testWorkerEmitsFileResultsWithPublishedPaths();
     testWorkerReportsCopiedOriginalAsWarning();
