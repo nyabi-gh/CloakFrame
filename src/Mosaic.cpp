@@ -75,6 +75,8 @@ namespace cloakframe
             const int minEdge = std::min(roi.cols, roi.rows);
             if (minEdge < 2)
             {
+                // Too thin to blur; a flat fill still hides it.
+                roi.setTo(cv::mean(roi));
                 return;
             }
 
@@ -128,6 +130,16 @@ namespace cloakframe
         }
 
         void blendWithMask(cv::Mat roi, const cv::Mat &anonymized, const cv::Mat &alpha);
+
+        // An ellipse inscribed in the padded box misses the detected box's corners.
+        void coverDetectedBox(cv::Mat &mask, const cv::Rect &detected)
+        {
+            const cv::Rect inside = detected & cv::Rect(0, 0, mask.cols, mask.rows);
+            if (!inside.empty())
+            {
+                mask(inside).setTo(cv::Scalar(255));
+            }
+        }
 
         cv::Mat transformedCustomImage(const cv::Mat &customImage,
             const cv::Size &targetSize,
@@ -740,7 +752,16 @@ namespace cloakframe
                 const cv::Mat canonical = cachedSoftTransitionMask(
                     canonicalSize, core, shape, innerTransition, outerTransition);
                 const cv::Rect slice(outerX - canonX, outerY - canonY, outer.width, outer.height);
-                blendWithMask(roi, anonymized, canonical(slice));
+                if (shape == MaskShape::Ellipse)
+                {
+                    cv::Mat alpha = canonical(slice).clone();
+                    coverDetectedBox(alpha, detectedRect - outer.tl());
+                    blendWithMask(roi, anonymized, alpha);
+                }
+                else
+                {
+                    blendWithMask(roi, anonymized, canonical(slice));
+                }
                 continue;
             }
 
@@ -761,6 +782,8 @@ namespace cloakframe
                     cv::Scalar(255),
                     cv::FILLED,
                     cv::LINE_AA);
+                coverDetectedBox(
+                    mask, paddedRegion(detection.box, width, height, 0.0F) - roiRect.tl());
                 masked.copyTo(roi, mask);
             }
             else

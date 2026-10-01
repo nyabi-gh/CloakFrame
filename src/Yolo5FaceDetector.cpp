@@ -265,6 +265,7 @@ namespace cloakframe
         for (int index = 0; index < kExpectedRows; ++index)
         {
             const float *row = data + static_cast<std::ptrdiff_t>(index) * kOutputColumns;
+            // Objectness alone: the single class score (row[15]) is a near-constant 0.98.
             const float score = row[4];
             if (!std::isfinite(score) || score < scoreThreshold)
             {

@@ -31,14 +31,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
   per-architecture Windows repository layout in a release.
 
-## Coverage and honest results
-
-- **YOLO5Face score** [OW 10]. Uses objectness only; fixing it moves every threshold
-  built on that scale.
-- **Small details.** Regions under 2 px are returned unblurred and unreported; ellipse
-  masks leave box corners uncovered; the thumbnail loader can destroy a persistent model
-  index off the GUI thread [C-3]; the folder scan follows NTFS junctions [B-10].
-
 ## Review screens and everyday use
 
 - **Video review exits** [E-4, OW 9]. Esc, Cancel all and closing the window discard the

@@ -211,8 +211,10 @@ namespace cloakframe
                     {
                         appendFile(results, it->path(), path, includeVideos, skipped);
                     }
-                    if (!entryError && recursive && it->is_directory(entryError)
-                        && !it->is_symlink(entryError))
+                    // Plain directories only, which also leaves out NTFS junctions.
+                    if (!entryError && recursive
+                        && it->symlink_status(entryError).type()
+                               == std::filesystem::file_type::directory)
                     {
                         pending.push_back(it->path());
                     }

@@ -7,7 +7,6 @@
 
 #include <QImageReader>
 #include <QListWidget>
-#include <QPersistentModelIndex>
 #include <QProcess>
 #include <QTimer>
 
@@ -16,6 +15,7 @@ namespace cloakframe
     namespace
     {
         constexpr int kRequestedRole = Qt::UserRole + 10;
+        constexpr int kKeyRole = Qt::UserRole + 11;
         QImage readThumbnail(const QString &path)
         {
             if (isSupportedVideo(pathFromQString(path)))
@@ -97,20 +97,29 @@ namespace cloakframe
             if (item->data(kRequestedRole).toBool())
                 continue;
             item->setData(kRequestedRole, true);
-            const QPersistentModelIndex index(list_->model()->index(row, 0));
+            // A model index must not be destroyed off the GUI thread, so the job carries a key.
+            const quint64 key = ++nextKey_;
+            item->setData(kKeyRole, key);
             const QString path = item->text();
             ++active_;
             pool_.start(
-                [this, index, path, reader = reader_]
+                [this, key, path, reader = reader_]
                 {
                     const QImage image = reader(path);
                     QMetaObject::invokeMethod(
                         this,
-                        [this, index, image]
+                        [this, key, image]
                         {
                             --active_;
-                            if (index.isValid() && !image.isNull())
-                                list_->item(index.row())->setIcon(QIcon(QPixmap::fromImage(image)));
+                            for (int index = 0; !image.isNull() && index < list_->count(); ++index)
+                            {
+                                auto *target = list_->item(index);
+                                if (target->data(kKeyRole).toULongLong() == key)
+                                {
+                                    target->setIcon(QIcon(QPixmap::fromImage(image)));
+                                    break;
+                                }
+                            }
                             schedule();
                         },
                         Qt::QueuedConnection);

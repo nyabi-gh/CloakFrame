@@ -21,6 +21,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImage>
+#include <QProcess>
 #include <QTemporaryDir>
 #include <QThread>
 
@@ -261,6 +262,31 @@ namespace
         assert(relativePaths.contains("one.JPG"));
         assert(relativePaths.contains("nested/two.png"));
     }
+
+#ifdef _WIN32
+    void testScanDoesNotFollowJunctions()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        QDir root(temp.path());
+        assert(root.mkpath("chosen"));
+        assert(root.mkpath("elsewhere"));
+        writeBytes(root.filePath("chosen/inside.jpg"));
+        writeBytes(root.filePath("elsewhere/outside.jpg"));
+        QProcess mklink;
+        mklink.start("cmd.exe",
+            {"/c",
+                "mklink",
+                "/J",
+                QDir::toNativeSeparators(root.filePath("chosen/link")),
+                QDir::toNativeSeparators(root.filePath("elsewhere"))});
+        assert(mklink.waitForFinished(15000) && mklink.exitCode() == 0);
+
+        const auto scanned = cloakframe::scanImages({root.filePath("chosen")}, true);
+        assert(scanned.size() == 1);
+        assert(scanned.front().relativePath == "inside.jpg");
+    }
+#endif
 
     void testScanCountsUnsupportedFilesByType()
     {
@@ -1615,6 +1641,50 @@ namespace
         }
 
         assert(image.at<cv::Vec3b>(0, 0) == cv::Vec3b(100, 100, 100));
+    }
+
+    void testEllipseMasksCoverTheDetectedBoxCorners()
+    {
+        const cv::Rect box(20, 20, 24, 24);
+        for (const bool softEdges : {false, true})
+        {
+            cv::Mat image(64, 64, CV_8UC3, cv::Scalar(100, 100, 100));
+            cloakframe::FaceDetections detections;
+            detections.push_back({cv::Rect2f(box), 1.0F});
+            cloakframe::applyAnonymization(image,
+                detections,
+                cloakframe::AnonymizationMethod::Fill,
+                4,
+                0.18F,
+                cloakframe::MaskShape::Ellipse,
+                softEdges);
+            for (const cv::Point corner : {box.tl(),
+                     cv::Point(box.x + box.width - 1, box.y),
+                     cv::Point(box.x, box.y + box.height - 1),
+                     cv::Point(box.x + box.width - 1, box.y + box.height - 1)})
+            {
+                assert(image.at<cv::Vec3b>(corner) == cv::Vec3b(0, 0, 0));
+            }
+            assert(image.at<cv::Vec3b>(0, 0) == cv::Vec3b(100, 100, 100));
+        }
+    }
+
+    void testBlurHidesARegionOnePixelThin()
+    {
+        cv::Mat image(16, 16, CV_8UC3, cv::Scalar(0, 0, 0));
+        for (int y = 0; y < 16; ++y)
+        {
+            image.at<cv::Vec3b>(y, 8) = cv::Vec3b(static_cast<uchar>(y * 16), 0, 0);
+        }
+        cloakframe::FaceDetections detections;
+        detections.push_back({cv::Rect2f(8.0F, 0.0F, 1.0F, 16.0F), 1.0F});
+        cloakframe::applyAnonymization(
+            image, detections, cloakframe::AnonymizationMethod::Blur, 4, 0.0F);
+        for (int y = 1; y < 16; ++y)
+        {
+            assert(image.at<cv::Vec3b>(y, 8) == image.at<cv::Vec3b>(0, 8));
+        }
+        assert(image.at<cv::Vec3b>(0, 8) != cv::Vec3b(0, 0, 0));
     }
 
     void testSoftEdgesAtImageBorderStayInBounds()
@@ -3046,6 +3116,9 @@ int main(int argc, char **argv)
     testSupportedImageExtensions();
     testScanImagesRecursesAndDeduplicates();
     testScanCountsUnsupportedFilesByType();
+#ifdef _WIN32
+    testScanDoesNotFollowJunctions();
+#endif
     testScanReportsInputsItCannotRead();
     testScanReportsDeniedDirectoriesAndContinues();
     testOutputPlanRejectsExistingAndDuplicateDestinations();
@@ -3072,6 +3145,8 @@ int main(int argc, char **argv)
     testSoftEdgesKeepDetectedRegionFullyCovered();
     testFillIsOpaqueOnAlphaImages();
     testSoftEdgesEllipseKeepsCoreCovered();
+    testEllipseMasksCoverTheDetectedBoxCorners();
+    testBlurHidesARegionOnePixelThin();
     testSoftEdgesAtImageBorderStayInBounds();
     testSoftEdgesUsePaddingForAGradualTransition();
     testLargeSoftEdgeMaskUsesBoundedWorkingMemoryPath();

@@ -24,5 +24,6 @@ namespace cloakframe
         QThreadPool pool_;
         Reader reader_;
         int active_ = 0;
+        quint64 nextKey_ = 0;
     };
 }
