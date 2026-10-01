@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstdio>
 #include <fstream>
+#include <initializer_list>
 
 namespace
 {
@@ -32,7 +33,7 @@ namespace
         return QByteArray::fromHex("72");
     }
 
-    // The shape the release workflow actually produces: an Ed25519 signature over the lowercase
+    // The digest-only shape clients up to 1.11.3 check: an Ed25519 signature over the lowercase
     // hex SHA-256 of a file, made with `openssl pkeyutl -sign -rawin`. The digest is of "abc".
     QString realPublicKey()
     {
@@ -133,48 +134,110 @@ namespace
         assert(cloakframe::verifyUpdateSignature(*digest, realSignature(), realPublicKey()));
     }
 
-    void testTrustFollowsTheSignatureOverTheDeclaredDigest()
+    // Made by sign_update_packages.sh with a throwaway key for channel "win", version 1.12.0
+    // and a package named CloakFrame-1.12.0-full.nupkg whose content is "abc".
+    QString releasePublicKey()
+    {
+        return QStringLiteral("pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=");
+    }
+
+    QString releaseSignature()
+    {
+        return QStringLiteral(
+            "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+"
+            "DA==");
+    }
+
+    QString releaseLegacySignature()
+    {
+        return QStringLiteral(
+            "LVwktqqR85Zaned4zCaMRCq1OuT5yOyELtqqFLdnqKpqV9Bd7v+yhsNsiKnL/zb16G94LGdeAmt/mnFYZHzy"
+            "DA==");
+    }
+
+    cloakframe::UpdateRelease signedRelease()
+    {
+        return {QStringLiteral("win"),
+            QStringLiteral("1.12.0"),
+            QStringLiteral("CloakFrame-1.12.0-full.nupkg"),
+            QString::fromUtf8(abcDigest())};
+    }
+
+    void testTrustFollowsTheSignatureOverTheDeclaredRelease()
     {
         QString error = QStringLiteral("untouched");
         assert(cloakframe::evaluateUpdateTrust(
-                   QString::fromUtf8(abcDigest()), realSignature(), realPublicKey(), &error)
+                   signedRelease(), releaseSignature(), releasePublicKey(), &error)
                == cloakframe::UpdateTrust::Trusted);
         assert(error == QStringLiteral("untouched"));
 
         // The signature is made over the lowercase form, so a feed that shouts must still work.
-        assert(cloakframe::evaluateUpdateTrust(
-                   QString::fromUtf8(abcDigest()).toUpper(), realSignature(), realPublicKey())
+        auto shouting = signedRelease();
+        shouting.sha256Hex = QStringLiteral("  %1  ").arg(shouting.sha256Hex.toUpper());
+        assert(cloakframe::evaluateUpdateTrust(shouting, releaseSignature(), releasePublicKey())
                == cloakframe::UpdateTrust::Trusted);
-        assert(cloakframe::evaluateUpdateTrust(
-                   QStringLiteral("  %1  ").arg(QString::fromUtf8(abcDigest())),
-                   realSignature(),
-                   realPublicKey())
-               == cloakframe::UpdateTrust::Trusted);
+
+        // The same run also writes the digest-only signature that clients up to 1.11.3 check.
+        assert(cloakframe::verifyUpdateSignature(
+            abcDigest(), releaseLegacySignature(), releasePublicKey()));
     }
 
     void testTrustIsRefusedForAnythingUnproven()
     {
-        // A different digest than the one signed: the package the feed points at is not the
-        // package the key holder approved.
-        QString other = QString::fromUtf8(abcDigest());
-        other[0] = QLatin1Char('c');
-        assert(cloakframe::evaluateUpdateTrust(other, realSignature(), realPublicKey())
+        // An older signed package republished as a newer version, under another channel or file
+        // name, or with another digest: none of it is what the key holder approved.
+        for (const auto &change :
+            std::initializer_list<void (*)(cloakframe::UpdateRelease &)>{
+                [](cloakframe::UpdateRelease &r)
+                {
+                    r.version = QStringLiteral("1.13.0");
+                },
+                [](cloakframe::UpdateRelease &r)
+                {
+                    r.channel = QStringLiteral("linux");
+                },
+                [](cloakframe::UpdateRelease &r)
+                {
+                    r.fileName = QStringLiteral("CloakFrame-1.13.0-full.nupkg");
+                },
+                [](cloakframe::UpdateRelease &r)
+                {
+                    r.sha256Hex[0] = QLatin1Char('c');
+                }})
+        {
+            auto release = signedRelease();
+            change(release);
+            assert(cloakframe::evaluateUpdateTrust(release, releaseSignature(), releasePublicKey())
+                   == cloakframe::UpdateTrust::Rejected);
+        }
+
+        // A digest-only signature is not accepted in place of one over the release.
+        assert(cloakframe::evaluateUpdateTrust(
+                   signedRelease(), releaseLegacySignature(), releasePublicKey())
                == cloakframe::UpdateTrust::Rejected);
 
         QString error;
+        auto malformed = signedRelease();
+        malformed.sha256Hex = QStringLiteral("not-a-digest");
         assert(cloakframe::evaluateUpdateTrust(
-                   QStringLiteral("not-a-digest"), realSignature(), realPublicKey(), &error)
+                   malformed, releaseSignature(), releasePublicKey(), &error)
                == cloakframe::UpdateTrust::Rejected);
         assert(!error.isEmpty());
-        // Right length, wrong alphabet.
-        assert(cloakframe::evaluateUpdateTrust(
-                   QString(64, QLatin1Char('z')), realSignature(), realPublicKey())
+        malformed.sha256Hex = QString(64, QLatin1Char('z'));
+        assert(cloakframe::evaluateUpdateTrust(malformed, releaseSignature(), releasePublicKey())
                == cloakframe::UpdateTrust::Rejected);
-        assert(cloakframe::evaluateUpdateTrust(
-                   QString::fromUtf8(abcDigest()), QString(), realPublicKey())
+
+        // A line break would let one field pass for another in the signed text.
+        auto injected = signedRelease();
+        injected.version = QStringLiteral("1.12.0\nchannel: win");
+        assert(!cloakframe::updateSignaturePayload(injected));
+        injected = signedRelease();
+        injected.fileName.clear();
+        assert(!cloakframe::updateSignaturePayload(injected));
+
+        assert(cloakframe::evaluateUpdateTrust(signedRelease(), QString(), releasePublicKey())
                == cloakframe::UpdateTrust::Rejected);
-        assert(cloakframe::evaluateUpdateTrust(
-                   QString::fromUtf8(abcDigest()), realSignature(), rfcPublicKey())
+        assert(cloakframe::evaluateUpdateTrust(signedRelease(), releaseSignature(), rfcPublicKey())
                == cloakframe::UpdateTrust::Rejected);
     }
 
@@ -182,10 +245,9 @@ namespace
     {
         // Distinct from Trusted on purpose: the caller has to decide what an unpinned build
         // does, and cannot mistake "nothing to check" for "checked and good".
-        assert(cloakframe::evaluateUpdateTrust(
-                   QString::fromUtf8(abcDigest()), realSignature(), QString())
+        assert(cloakframe::evaluateUpdateTrust(signedRelease(), releaseSignature(), QString())
                == cloakframe::UpdateTrust::Unpinned);
-        assert(cloakframe::evaluateUpdateTrust(QStringLiteral("nonsense"), QString(), QString())
+        assert(cloakframe::evaluateUpdateTrust({}, QString(), QString())
                == cloakframe::UpdateTrust::Unpinned);
     }
 
@@ -210,7 +272,7 @@ int main()
     testTamperedSignatureFails();
     testMalformedInputIsRejected();
     testFileDigestMatchesTheSignedValue();
-    testTrustFollowsTheSignatureOverTheDeclaredDigest();
+    testTrustFollowsTheSignatureOverTheDeclaredRelease();
     testTrustIsRefusedForAnythingUnproven();
     testAnUnpinnedBuildSaysSoInsteadOfPassing();
     testMissingFileReportsInsteadOfDigesting();

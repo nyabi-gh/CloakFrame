@@ -13,6 +13,9 @@ const {
 test('includes user downloads and full updater packages', () =>
 {
   for (const name of [
+    'CloakFrame-1.12.0-macOS-arm64.dmg',
+    'CloakFrame-1.12.0-Windows-x64-Setup.exe',
+    'CloakFrame-1.12.0-Linux-x86_64.AppImage',
     'CloakFrame-macOS-arm64.dmg',
     'CloakFrame-Windows-x64-Setup.exe',
     'CloakFrame-1.10.2-windows-x64.zip',

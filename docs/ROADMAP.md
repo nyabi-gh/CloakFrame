@@ -17,6 +17,17 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Waiting on the maintainer
 
+- **Set up the updates repository before the next release.** Create
+  `nyabi-gh/CloakFrame-updates` as a public repository with a README (a release tag needs
+  a commit), and store a fine-grained token for it as `CLOAKFRAME_UPDATES_TOKEN`; see
+  [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). A tagged release refuses to start
+  without the token.
+- **Turn off the legacy update feed after the next release.** That release also puts the
+  old feed, packages, digest-only signatures and `appcast.xml` in this repository, so
+  clients up to 1.11.3 can update to it and then read the updates repository. Set
+  `PUBLISH_LEGACY_UPDATE_FEED` in `release.yml` to `false` once it is out and drop the
+  `.legacy.sig` from `sign_update_packages.sh`; from then on a
+  release here has only the three downloads.
 - **Move the signing secrets to the `release` environment** [B-1]. All eight are still
   repository-scoped; see [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). Both
   update keys have been readable from any branch, so consider rotating them. Clients
@@ -44,8 +55,10 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Updates and release engineering
 
-- **Rollback** [B-3]. Signatures cover only the package digest, so an old signed package
-  republished under a new version is accepted. Sign version, channel and file name too.
+- **macOS rollback** [B-3]. Windows and Linux signatures now cover version, channel and
+  file name. Sparkle signs only the DMG and the appcast is not signed; check whether
+  Sparkle refuses an older signed DMG listed under a newer version, and sign the feed if
+  it does not.
 - **Signing job** [B-4, CF-025]. Signing keys are used in jobs that first run unpinned
   Homebrew, vcpkg and dotnet tools. Sign in a separate job, pin vcpkg with a baseline,
   pin Homebrew, and publish an SBOM.

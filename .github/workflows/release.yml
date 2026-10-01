@@ -33,9 +33,6 @@ env:
   # BtbN keeps the last build of each month for two years, so pin one of those.
   LINUX_FFMPEG_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz
   LINUX_FFMPEG_SHA256: 97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79
-  MACOS_ASSET_NAME: CloakFrame-macOS-arm64.dmg
-  WINDOWS_ASSET_NAME: CloakFrame-Windows-x64-Setup.exe
-  LINUX_ASSET_NAME: CloakFrame-Linux-x86_64.AppImage
 
 jobs:
   verify-version:
@@ -101,6 +98,17 @@ jobs:
             exit 1
           fi
 
+      - name: Check the updates repository token
+        env:
+          CLOAKFRAME_UPDATES_TOKEN: ${{ secrets.CLOAKFRAME_UPDATES_TOKEN }}
+        run: |
+          # Without it the downloads would be published and the updaters never told about them.
+          if [[ "$GITHUB_REF_TYPE" == "tag" && -z "$CLOAKFRAME_UPDATES_TOKEN" ]]; then
+            echo "A tagged release needs the CLOAKFRAME_UPDATES_TOKEN secret on the release" \
+              "environment to publish the update files to nyabi-gh/CloakFrame-updates." >&2
+            exit 1
+          fi
+
   macos:
     name: Build macOS DMG
     needs: verify-version
@@ -112,6 +120,9 @@ jobs:
     timeout-minutes: 90
     env:
       CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
       CMAKE_PREFIX_PATH: /opt/homebrew
       PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig
       HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
@@ -380,6 +391,9 @@ jobs:
     timeout-minutes: 60
     env:
       CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
@@ -578,7 +592,7 @@ jobs:
         env:
           CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
           CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
-        run: .github/scripts/sign_update_packages.sh artifacts
+        run: .github/scripts/sign_update_packages.sh artifacts win "$CLOAKFRAME_VERSION"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -595,6 +609,9 @@ jobs:
     timeout-minutes: 60
     env:
       CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
       APPIMAGE_EXTRACT_AND_RUN: 1
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -731,7 +748,7 @@ jobs:
         env:
           CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
           CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
-        run: .github/scripts/sign_update_packages.sh artifacts
+        run: .github/scripts/sign_update_packages.sh artifacts linux "$CLOAKFRAME_VERSION"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -743,11 +760,20 @@ jobs:
     name: Publish release
     needs: [verify-version, macos, windows, linux]
     if: startsWith(github.ref, 'refs/tags/')
+    # Publishes to the updates repository with CLOAKFRAME_UPDATES_TOKEN.
+    environment: release
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
+      UPDATES_REPOSITORY: nyabi-gh/CloakFrame-updates
+      # Clients up to 1.11.3 look for updates in this repository's releases. One release that
+      # also carries their feed here moves them to the updates repository; turn this off after it.
+      PUBLISH_LEGACY_UPDATE_FEED: "true"
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
@@ -759,32 +785,65 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Verify fixed distribution asset names
+      - name: Sort downloads from update files
         run: |
-          for asset in \
-            "$MACOS_ASSET_NAME" \
-            "$WINDOWS_ASSET_NAME" \
-            "$LINUX_ASSET_NAME"
-          do
+          shopt -s nullglob
+          mkdir -p downloads updates
+          for asset in "$MACOS_ASSET_NAME" "$WINDOWS_ASSET_NAME" "$LINUX_ASSET_NAME"; do
             if [[ ! -s "artifacts/$asset" ]]; then
-              echo "Missing fixed-name distribution asset: $asset" >&2
+              echo "Missing distribution asset: $asset" >&2
+              exit 1
+            fi
+            mv "artifacts/$asset" downloads/
+          done
+          for required in appcast.xml releases.win.json releases.linux.json; do
+            if [[ ! -s "artifacts/$required" ]]; then
+              echo "Missing update file: $required" >&2
               exit 1
             fi
           done
-
-      - name: Generate SHA256SUMS
-        run: |
-          cd artifacts
-          sha256sum * > SHA256SUMS
+          if [[ "$PUBLISH_LEGACY_UPDATE_FEED" == true ]]; then
+            cp artifacts/appcast.xml artifacts/releases.*.json artifacts/*.nupkg downloads/
+            for legacy in artifacts/*.nupkg.legacy.sig; do
+              cp "$legacy" "downloads/$(basename "${legacy%.legacy.sig}").sig"
+            done
+          fi
+          rm -f artifacts/*.legacy.sig
+          mv artifacts/* updates/
+          ls -l downloads updates
 
       - name: Generate the release notes
         id: notes
         run: |
-          .github/scripts/generate_release_notes.sh \
-            "$CLOAKFRAME_VERSION" "$RUNNER_TEMP/release-body.md"
-          echo "path=$RUNNER_TEMP/release-body.md" >> "$GITHUB_OUTPUT"
+          body="$RUNNER_TEMP/release-body.md"
+          .github/scripts/generate_release_notes.sh "$CLOAKFRAME_VERSION" "$body"
+          {
+            echo
+            echo "## SHA-256"
+            echo
+            echo "| File | SHA-256 |"
+            echo "| --- | --- |"
+            for asset in "$WINDOWS_ASSET_NAME" "$MACOS_ASSET_NAME" "$LINUX_ASSET_NAME"; do
+              echo "| $asset | \`$(sha256sum "downloads/$asset" | cut -d' ' -f1)\` |"
+            done
+          } >> "$body"
+          echo "path=$body" >> "$GITHUB_OUTPUT"
 
       - uses: softprops/action-gh-release@718ea10b132b3b2eba29c1007bb80653f286566b # v3
         with:
           body_path: ${{ steps.notes.outputs.path }}
-          files: artifacts/*
+          files: downloads/*
+
+      # After the downloads: the macOS feed points at the DMG in this repository's release.
+      - name: Publish the update files
+        env:
+          GH_TOKEN: ${{ secrets.CLOAKFRAME_UPDATES_TOKEN }}
+        run: |
+          tag="v$CLOAKFRAME_VERSION"
+          if gh release view "$tag" --repo "$UPDATES_REPOSITORY" > /dev/null 2>&1; then
+            gh release upload "$tag" updates/* --repo "$UPDATES_REPOSITORY" --clobber
+          else
+            gh release create "$tag" updates/* --repo "$UPDATES_REPOSITORY" \
+              --title "CloakFrame $CLOAKFRAME_VERSION update files" \
+              --notes "Files for CloakFrame's built-in updater. Download CloakFrame from https://github.com/nyabi-gh/CloakFrame/releases/tag/$tag"
+          fi

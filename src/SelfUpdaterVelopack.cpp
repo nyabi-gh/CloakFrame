@@ -28,9 +28,15 @@ namespace cloakframe
 {
     namespace
     {
-        constexpr auto kRepoUrl = "https://github.com/nyabi-gh/CloakFrame";
+        // Update packages, feeds and signatures live apart from the downloads people see.
+        constexpr auto kRepoUrl = "https://github.com/nyabi-gh/CloakFrame-updates";
         constexpr auto kReleaseDownloadPrefix =
-            "https://github.com/nyabi-gh/CloakFrame/releases/download/v";
+            "https://github.com/nyabi-gh/CloakFrame-updates/releases/download/v";
+#ifdef _WIN32
+        constexpr auto kUpdateChannel = "win";
+#else
+        constexpr auto kUpdateChannel = "linux";
+#endif
 
 #ifdef __linux__
         // Velopack 1.2.0 caches Linux packages here (locator.rs). It offers no way to ask for
@@ -202,7 +208,10 @@ namespace cloakframe
                 }
 
                 QString error;
-                switch (evaluateUpdateTrust(QString::fromStdString(asset.SHA256),
+                switch (evaluateUpdateTrust({QString::fromLatin1(kUpdateChannel),
+                                                QString::fromStdString(asset.Version),
+                                                QString::fromStdString(asset.FileName),
+                                                QString::fromStdString(asset.SHA256)},
                     signature.value_or(QString()),
                     pinnedKey,
                     &error))

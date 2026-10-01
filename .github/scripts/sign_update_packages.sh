@@ -4,14 +4,19 @@ set -euo pipefail
 # Signs every Velopack package in a directory with the offline update key, writing the detached
 # signature beside each package as <package>.sig.
 #
-# The signature is made over the lowercase hex SHA-256 of the package, not over its bytes: that
-# is the value the release feed carries for each asset and the value the client checks, and it
-# keeps a hundred-megabyte package out of memory on both sides.
+# The signature is made over a short text naming the channel, version, file name and lowercase
+# hex SHA-256 of the package (UpdateSignature.cpp builds the same text), not over its bytes: it
+# keeps a hundred-megabyte package out of memory on both sides, and it stops an older signed
+# package from being republished as a newer version.
 #
-# Usage: sign_update_packages.sh <directory>
+# <package>.legacy.sig is the signature over the digest alone that clients up to 1.11.3 check.
+#
+# Usage: sign_update_packages.sh <directory> <channel> <version>
 # Reads CLOAKFRAME_UPDATE_PRIVATE_KEY (PEM) and CLOAKFRAME_UPDATE_PUBLIC_KEY (base64, optional).
 
-directory="${1:?usage: sign_update_packages.sh <directory>}"
+directory="${1:?usage: sign_update_packages.sh <directory> <channel> <version>}"
+channel="${2:?usage: sign_update_packages.sh <directory> <channel> <version>}"
+version="${3:?usage: sign_update_packages.sh <directory> <channel> <version>}"
 
 if [[ -z "${CLOAKFRAME_UPDATE_PRIVATE_KEY:-}" ]]; then
     # Matches the client: with no key configured there is nothing to check a signature against,
@@ -43,13 +48,22 @@ if [[ ${#packages[@]} -eq 0 ]]; then
     exit 1
 fi
 
-for package in "${packages[@]}"; do
-    openssl dgst -sha256 -hex "$package" | awk '{print $NF}' | tr -d '\n' > "$work/digest"
-    openssl pkeyutl -sign -inkey "$key" -rawin -in "$work/digest" -out "$work/signature"
+# Signs the file $1 and writes the base64 signature to $2.
+sign() {
+    openssl pkeyutl -sign -inkey "$key" -rawin -in "$1" -out "$work/signature"
     # Signing silently producing something unverifiable is the one failure this step cannot
     # notice later, so the signature is read back through the public half before it is kept.
     openssl pkeyutl -verify -pubin -inkey "$work/update-key.pub" -rawin \
-        -in "$work/digest" -sigfile "$work/signature" > /dev/null
-    base64 < "$work/signature" | tr -d '\n' > "$package.sig"
-    echo "signed $(basename "$package") $(cat "$work/digest")"
+        -in "$1" -sigfile "$work/signature" > /dev/null
+    base64 < "$work/signature" | tr -d '\n' > "$2"
+}
+
+for package in "${packages[@]}"; do
+    digest="$(openssl dgst -sha256 -hex "$package" | awk '{print $NF}')"
+    printf 'CloakFrame update v2\nchannel: %s\nversion: %s\nfile: %s\nsha256: %s\n' \
+        "$channel" "$version" "$(basename "$package")" "$digest" > "$work/release"
+    sign "$work/release" "$package.sig"
+    printf '%s' "$digest" > "$work/digest"
+    sign "$work/digest" "$package.legacy.sig"
+    echo "signed $(basename "$package") $channel $version $digest"
 done

@@ -15,8 +15,10 @@ namespace cloakframe
     // the public key is compiled into the binary and an update that does not verify against it
     // is not applied. The signature itself may travel with the release; a forged one fails.
     //
-    // Signatures are made over the lowercase hex SHA-256 of the package rather than over its
-    // bytes, so neither the signer nor the client has to hold a whole package in memory.
+    // Signatures are made over a short text naming the channel, version, file name and
+    // lowercase hex SHA-256 of the package rather than over its bytes, so neither the signer
+    // nor the client has to hold a whole package in memory, and a signed package cannot be
+    // republished under another version.
 
     // Returns true only on a positive match. Malformed input is a failure, never a pass.
     [[nodiscard]] bool verifyUpdateSignature(const QByteArray &payload,
@@ -35,14 +37,28 @@ namespace cloakframe
         Rejected,
     };
 
-    // Decides whether an update may be applied, given the SHA-256 the release feed declares for
-    // its package and a detached signature over that digest.
+    // What the release feed declares about one package, all of which the signature covers.
+    struct UpdateRelease
+    {
+        QString channel;
+        QString version;
+        QString fileName;
+        QString sha256Hex;
+    };
+
+    // The exact bytes sign_update_packages.sh signs for `release`. Nothing when a field is
+    // empty, contains a line break, or the digest is not SHA-256 hex.
+    [[nodiscard]] std::optional<QByteArray> updateSignaturePayload(
+        const UpdateRelease &release, QString *error = nullptr);
+
+    // Decides whether an update may be applied, given what the release feed declares for its
+    // package and a detached signature over that declaration.
     //
-    // Only the digest is checked, because the updater exposes no path to the package it
+    // Only the declaration is checked, because the updater exposes no path to the package it
     // downloaded. That is sound as long as the updater enforces the digest it was given: the
-    // signature fixes which digest is legitimate, and the digest fixes which package is. The
-    // digest is compared in lowercase, since that is the form the signature is made over.
-    [[nodiscard]] UpdateTrust evaluateUpdateTrust(const QString &declaredSha256Hex,
+    // signature fixes which digest is legitimate for that version, and the digest fixes which
+    // package is.
+    [[nodiscard]] UpdateTrust evaluateUpdateTrust(const UpdateRelease &release,
         const QString &signatureBase64,
         const QString &pinnedPublicKeyBase64,
         QString *error = nullptr);

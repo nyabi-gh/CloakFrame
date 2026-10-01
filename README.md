@@ -16,13 +16,16 @@
 
 ## Download
 
-| Platform | Requires | Download |
-| --- | --- | --- |
-| **Windows** | Windows 10 or later, 64-bit | [CloakFrame-Windows-x64-Setup.exe](https://github.com/nyabi-gh/CloakFrame/releases/latest/download/CloakFrame-Windows-x64-Setup.exe) |
-| **macOS** | macOS 15 or later, Apple silicon | [CloakFrame-macOS-arm64.dmg](https://github.com/nyabi-gh/CloakFrame/releases/latest/download/CloakFrame-macOS-arm64.dmg) |
-| **Linux** | x86_64 | [CloakFrame-Linux-x86_64.AppImage](https://github.com/nyabi-gh/CloakFrame/releases/latest/download/CloakFrame-Linux-x86_64.AppImage) |
+Get the file for your platform from the
+[latest release](https://github.com/nyabi-gh/CloakFrame/releases/latest):
 
-On Linux, make the AppImage executable first: `chmod +x CloakFrame-Linux-x86_64.AppImage`.
+| Platform | Requires | File |
+| --- | --- | --- |
+| **Windows** | Windows 10 or later, 64-bit | `CloakFrame-<version>-Windows-x64-Setup.exe` |
+| **macOS** | macOS 15 or later, Apple silicon | `CloakFrame-<version>-macOS-arm64.dmg` |
+| **Linux** | x86_64 | `CloakFrame-<version>-Linux-x86_64.AppImage` |
+
+On Linux, make the AppImage executable first: `chmod +x CloakFrame-*-Linux-x86_64.AppImage`.
 
 CloakFrame updates itself. It tells you when a new version is out and installs it
 only when you agree.

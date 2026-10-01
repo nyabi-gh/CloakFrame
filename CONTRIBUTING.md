@@ -266,9 +266,20 @@ For a Linux AppImage staging tree, configure with
 `DESTDIR` pointing to a directory whose name ends in `.AppDir`.
 
 The release workflow passes the staged Windows and Linux applications to
-Velopack, signs and notarizes the macOS application, and publishes the fixed
-asset names. It is the canonical description of the signed, pinned
-distribution builds.
+Velopack, signs and notarizes the macOS application, and publishes two releases
+under the same tag:
+
+- This repository gets the three downloads, named
+  `CloakFrame-<version>-Windows-x64-Setup.exe`, `CloakFrame-<version>-macOS-arm64.dmg`
+  and `CloakFrame-<version>-Linux-x86_64.AppImage`, with their SHA-256 in the notes.
+- [nyabi-gh/CloakFrame-updates](https://github.com/nyabi-gh/CloakFrame-updates)
+  gets what the built-in updaters read: the Velopack feeds, packages and
+  signatures, and the Sparkle `appcast.xml`, which points at the DMG here. The
+  repository has to stay public, because the app downloads from it without a
+  token.
+
+The workflow is the canonical description of the signed, pinned distribution
+builds.
 
 Pushing a `v<major>.<minor>.<patch>` tag that matches the project version in
 `CMakeLists.txt` starts the release. The workflow writes the release notes from
@@ -305,7 +316,9 @@ Velopack checks a package against a hash the release feed supplies, and the same
 release supplies the package, so that check says nothing about who published it.
 `CLOAKFRAME_UPDATE_PUBLIC_KEY` pins an Ed25519 key the client verifies each
 update against, which is the only part of a release an attacker holding the
-publishing credentials cannot forge. Configuring without it prints a warning.
+publishing credentials cannot forge. The signature covers the channel, version
+and file name as well as the package digest, so an older signed package cannot
+be offered again as a newer version. Configuring without it prints a warning.
 
 This is a separate key from the Sparkle one. Create it off the CI runner:
 
@@ -336,6 +349,10 @@ can be read by a workflow pushed to any branch. The release jobs already declare
 - `CLOAKFRAME_UPDATE_PRIVATE_KEY`, `SPARKLE_ED_PRIVATE_KEY`
 - `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_DEVELOPER_ID`
 - `MACOS_NOTARY_KEY`, `MACOS_NOTARY_KEY_ID`, `MACOS_NOTARY_ISSUER_ID`
+- `CLOAKFRAME_UPDATES_TOKEN`: a fine-grained personal access token limited to
+  the `nyabi-gh/CloakFrame-updates` repository with Contents set to Read and
+  write. The publish job uses it to create the release there, and the workflow
+  refuses to start a tagged release without it.
 
 ```bash
 gh secret set CLOAKFRAME_UPDATE_PRIVATE_KEY --env release < cloakframe-update-key.pem

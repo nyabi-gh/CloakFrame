@@ -80,12 +80,32 @@ async function currentBadge(github, context)
   }
 }
 
+// Update packages are published in this repository, apart from the downloads; older ones stay
+// in the main repository's releases.
+const updatesRepository = 'CloakFrame-updates'
+
+async function listReleases(github, owner, repo)
+{
+  try
+  {
+    return await github.paginate(github.rest.repos.listReleases, { owner, repo, per_page: 100 })
+  }
+  catch (error)
+  {
+    if (error.status !== 404 || repo !== updatesRepository)
+    {
+      throw error
+    }
+    return []
+  }
+}
+
 async function updateDownloadBadge({ github, context, core })
 {
-  const releases = await github.paginate(github.rest.repos.listReleases, {
-    ...context.repo,
-    per_page: 100,
-  })
+  const releases = [
+    ...await listReleases(github, context.repo.owner, context.repo.repo),
+    ...await listReleases(github, context.repo.owner, updatesRepository),
+  ]
   const total = distributionDownloadTotal(releases)
   const nextContent = badgePayload(total)
 

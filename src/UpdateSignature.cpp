@@ -100,17 +100,9 @@ namespace cloakframe
         return true;
     }
 
-    UpdateTrust evaluateUpdateTrust(const QString &declaredSha256Hex,
-        const QString &signatureBase64,
-        const QString &pinnedPublicKeyBase64,
-        QString *error)
+    std::optional<QByteArray> updateSignaturePayload(const UpdateRelease &release, QString *error)
     {
-        if (pinnedPublicKeyBase64.isEmpty())
-        {
-            return UpdateTrust::Unpinned;
-        }
-
-        const QString digest = declaredSha256Hex.trimmed().toLower();
+        const QString digest = release.sha256Hex.trimmed().toLower();
         static constexpr qsizetype kSha256HexLength = 64;
         if (digest.size() != kSha256HexLength
             || std::any_of(digest.cbegin(),
@@ -122,12 +114,37 @@ namespace cloakframe
         {
             setError(error,
                 QStringLiteral("the update feed declared '%1', which is not a SHA-256 digest")
-                    .arg(declaredSha256Hex));
-            return UpdateTrust::Rejected;
+                    .arg(release.sha256Hex));
+            return std::nullopt;
         }
+        for (const QString *field : {&release.channel, &release.version, &release.fileName})
+        {
+            if (field->isEmpty() || field->contains(u'\n') || field->contains(u'\r'))
+            {
+                setError(error,
+                    QStringLiteral("the update feed declared '%1', which cannot be signed")
+                        .arg(*field));
+                return std::nullopt;
+            }
+        }
+        return QStringLiteral("CloakFrame update v2\nchannel: %1\nversion: %2\nfile: %3\n"
+                              "sha256: %4\n")
+            .arg(release.channel, release.version, release.fileName, digest)
+            .toUtf8();
+    }
 
-        if (!verifyUpdateSignature(
-                digest.toLatin1(), signatureBase64, pinnedPublicKeyBase64, error))
+    UpdateTrust evaluateUpdateTrust(const UpdateRelease &release,
+        const QString &signatureBase64,
+        const QString &pinnedPublicKeyBase64,
+        QString *error)
+    {
+        if (pinnedPublicKeyBase64.isEmpty())
+        {
+            return UpdateTrust::Unpinned;
+        }
+        const auto payload = updateSignaturePayload(release, error);
+        if (!payload
+            || !verifyUpdateSignature(*payload, signatureBase64, pinnedPublicKeyBase64, error))
         {
             return UpdateTrust::Rejected;
         }
