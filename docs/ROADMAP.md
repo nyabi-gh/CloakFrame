@@ -25,7 +25,9 @@ close it. Check the caller and the full scope before recording a change of state
   tagged run: the Linux FFmpeg now comes from BtbN, Windows and Linux install Qt Image
   Formats and check that the TIFF and WebP plugins are packaged, the bundled FFmpeg
   license is checked on all three platforms, and the release notes are generated from
-  commit subjects. Watch that run, and open a TIFF and a WebP file in each package.
+  commit subjects. Watch that run, and open a TIFF and a WebP file in each package, and
+  process a video in the macOS package: signing changed its bundled FFmpeg after the
+  checksum manifests were written (since 85fb6b6, confirmed in the v1.11.3 DMG).
   Release builds also turn crash dumps off at startup, which no test exercises: on Linux,
   the running app's `/proc/<pid>` entries are owned by root when it is not dumpable.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
@@ -56,7 +58,7 @@ close it. Check the caller and the full scope before recording a change of state
   bundle as well as the DMG; repin `actions/github-script` to a commit; enable Dependabot
   for actions; `persist-credentials: false`; tag protection.
 - **FFmpeg inputs** [B-9, B-11]. Pass `-protocol_whitelist file,pipe` and a `file:`
-  prefix; require the checksum manifest in bundled builds.
+  prefix.
 - **Hardening** [B-11]. `/CETCOMPAT`, `_FORTIFY_SOURCE=3`, stack-clash protection,
   `SetDefaultDllDirectories`; leave image plugins CloakFrame never selects out of the
   bundles; validate the feed's file name; cap the update-check response size.

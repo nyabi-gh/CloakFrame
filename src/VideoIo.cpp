@@ -59,13 +59,7 @@ namespace cloakframe
 
         bool verifyBundledChecksum(const QString &toolPath, QString *error)
         {
-            const QString manifestPath = toolPath + ".sha256";
-            if (!QFileInfo::exists(manifestPath))
-            {
-                return true;
-            }
-
-            QFile manifest(manifestPath);
+            QFile manifest(toolPath + ".sha256");
             if (!manifest.open(QIODevice::ReadOnly))
             {
                 if (error)

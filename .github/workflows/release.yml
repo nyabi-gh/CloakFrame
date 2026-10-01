@@ -272,12 +272,16 @@ jobs:
             [[ -e "$framework" ]] || continue
             sign "$framework"
           done
+          # Signing rewrites the binaries, so the manifests written at install time no longer
+          # match; CloakFrame would refuse the bundled FFmpeg.
           for tool in \
             "$application/Contents/Resources/ffmpeg/ffmpeg" \
             "$application/Contents/Resources/ffmpeg/ffprobe"
           do
             sign "$tool"
+            shasum -a 256 "$tool" | cut -d' ' -f1 > "$tool.sha256"
           done
+          bash .github/scripts/check_ffmpeg_manifests.sh "$application/Contents/Resources/ffmpeg"
           codesign --force --timestamp --options runtime \
             --entitlements assets/entitlements.plist \
             --sign "$DEVELOPER_ID" "$application"
@@ -504,6 +508,10 @@ jobs:
           $env:PATH = "$package;$package\ffmpeg;$env:PATH"
           ctest --test-dir build-windows -C Release --output-on-failure
 
+      - name: Check the bundled FFmpeg manifests
+        shell: bash
+        run: bash .github/scripts/check_ffmpeg_manifests.sh dist/windows/CloakFrame/ffmpeg
+
       - name: Package installer with Velopack
         shell: pwsh
         run: |
@@ -687,6 +695,7 @@ jobs:
           test -x "$appdir/usr/bin/CloakFrame"
           test -x "$appdir/usr/bin/ffmpeg/ffmpeg"
           test -x "$appdir/usr/bin/ffmpeg/ffprobe"
+          bash .github/scripts/check_ffmpeg_manifests.sh "$appdir/usr/bin/ffmpeg"
           for plugin in libqtiff.so libqwebp.so; do
             if ! find "$appdir" -name "$plugin" -print -quit | grep -q .; then
               echo "Missing image format plugin: $plugin" >&2
