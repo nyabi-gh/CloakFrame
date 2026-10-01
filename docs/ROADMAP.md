@@ -31,8 +31,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Model hashing on the GUI thread** [E-8, OW 8]. Each run hashes the selected model
   once on the GUI thread before starting; a custom model may be 512 MB. Move it to a
   worker and keep the single digest it produces for consent and loading.
-- **libsodium notice** [F-1]. Missing from `THIRD_PARTY_NOTICES.txt` although it is
-  linked, statically on Windows.
 - **Untranslated updater messages** [E-11]. The strings in `SelfUpdaterVelopack.cpp`
   are marked vanished in the catalogs because translation sources are scanned per
   target and the Velopack source is conditional. Add it to the translation sources and
