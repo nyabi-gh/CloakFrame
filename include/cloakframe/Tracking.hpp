@@ -101,6 +101,23 @@ namespace cloakframe
         bool retainTracksWithoutStrongDetection = false;
     };
 
+    // Tracking's time limits in seconds, so a clip is treated the same at any frame rate. The
+    // defaults are the frame limits above at 30 frames per second.
+    struct TrackingWindows
+    {
+        double maxLostSeconds = 1.0;
+        double maxSinceHighScoreSeconds = 1.0;
+        double maxSinceHighScoreMovingSeconds = 1.5;
+        double maxInterpolationSeconds = 2.0 / 3.0;
+        double extensionSeconds = 0.1;
+        double maxCutBoundarySeconds = 1.0;
+    };
+
+    void applyTrackingWindows(const TrackingWindows &windows,
+        double fps,
+        TrackerConfig &tracker,
+        TrackPostProcessConfig &postProcess);
+
     [[nodiscard]] std::vector<Track> buildTracks(const std::vector<FaceDetections> &frameDetections,
         const TrackerConfig &config = {},
         const SceneCuts &cuts = {},
@@ -113,12 +130,10 @@ namespace cloakframe
         const SceneCuts &cuts = {},
         const TrackingContinueGuard &continueGuard = {});
 
-    // A run of frames inside one track's own span that stayed unmasked, closed at both
-    // ends. A total on its own gives a reviewer nowhere to look, so the range travels
-    // with it.
+    // A run of video frames where a tracked subject stayed unmasked, closed at both ends.
+    // A total on its own gives a reviewer nowhere to look, so the range travels with it.
     struct UncoveredSpan
     {
-        int trackId = 0;
         int firstFrame = 0;
         int lastFrame = 0;
 
@@ -143,9 +158,9 @@ namespace cloakframe
 
     // Coverage that post-processing could not deliver, in three kinds that have different
     // remedies and must not be added together: `uncoveredFrames` and the matching
-    // `uncoveredSpans` are frames inside a retained track's own span that end up with no
-    // mask, or between a track that ends before a scene cut and one that starts after it in
-    // the same place, and `droppedTracks` counts tracks discarded for holding no confident
+    // `uncoveredSpans` are the video frames, each counted once, where a retained track has a
+    // hole longer than an interpolated gap inside its own span or across a scene cut to a
+    // track in the same place, and `droppedTracks` counts tracks discarded for holding no confident
     // detection at all. A caller must not report a clean result while any of them is nonzero.
     struct TrackCoverageReport
     {

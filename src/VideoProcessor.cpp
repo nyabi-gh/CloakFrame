@@ -651,7 +651,9 @@ namespace cloakframe
         const SceneCuts sceneCuts = cutDetector.finish();
         spdlog::info("Video scene cuts detected: {}", sceneCuts.frames().size());
 
-        TrackerConfig trackerConfig = options.tracker;
+        TrackerConfig trackerConfig;
+        TrackPostProcessConfig postProcess;
+        applyTrackingWindows(options.trackingWindows, activeInfo.fps(), trackerConfig, postProcess);
         trackerConfig.highScoreThreshold = videoStrongScoreThreshold(options.scoreThreshold);
         std::vector<Track> tracks;
         const TrackingContinueGuard trackingContinue = [&]
@@ -662,7 +664,6 @@ namespace cloakframe
         {
             tracks = buildBidirectionalTracks(
                 frameDetections, trackerConfig, 0.5F, sceneCuts, trackingContinue);
-            TrackPostProcessConfig postProcess = options.postProcess;
             postProcess.strongScoreThreshold = trackerConfig.highScoreThreshold;
             postProcess.retainTracksWithoutStrongDetection = static_cast<bool>(review);
             auto coverage = postProcessTracks(

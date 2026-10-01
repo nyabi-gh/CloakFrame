@@ -691,8 +691,7 @@ namespace cloakframe
                 continue;
             }
             const QString text =
-                tr("Track %1 · %2–%3 · Frames %4–%5")
-                    .arg(gap.trackId)
+                tr("%1–%2 · Frames %3–%4")
                     .arg(frameTime(request_, gap.firstFrame), frameTime(request_, gap.lastFrame))
                     .arg(gap.firstFrame + 1)
                     .arg(gap.lastFrame + 1);

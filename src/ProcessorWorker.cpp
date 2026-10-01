@@ -110,9 +110,10 @@ namespace cloakframe
             for (std::size_t i = 0; i < listed; ++i)
             {
                 const auto &span = spans[i];
-                parts << (span.firstFrame == span.lastFrame
-                              ? QString::number(span.firstFrame)
-                              : QStringLiteral("%1-%2").arg(span.firstFrame).arg(span.lastFrame));
+                parts << (span.firstFrame == span.lastFrame ? QString::number(span.firstFrame + 1)
+                                                            : QStringLiteral("%1-%2")
+                                                                  .arg(span.firstFrame + 1)
+                                                                  .arg(span.lastFrame + 1));
             }
             return parts.join(QStringLiteral(", "));
         }
@@ -1549,7 +1550,7 @@ namespace cloakframe
         }
 
         const float detectionThreshold =
-            std::min(options.tracker.lowScoreThreshold, scoreThreshold_);
+            std::min(TrackerConfig{}.lowScoreThreshold, scoreThreshold_);
         // Only pass 1's single detection loop calls this, so the accumulator needs no lock.
         int omittedDetections = 0;
         const auto detect = [&, this, detectionThreshold](const cv::Mat &frame)
@@ -1856,7 +1857,6 @@ namespace cloakframe
                     gap.frameCount(),
                     gap.firstFrame,
                     gap.lastFrame,
-                    gap.trackId,
                     acknowledged});
                 if (!acknowledged)
                     outcome.pendingTrackingGapFrames += gap.frameCount();

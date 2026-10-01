@@ -30,8 +30,7 @@ namespace cloakframe
         bool keepAudio = true;
         QString outputRootPath;
         QString outputRelativePath;
-        TrackerConfig tracker;
-        TrackPostProcessConfig postProcess;
+        TrackingWindows trackingWindows;
     };
 
     enum class VideoProcessStatus
@@ -63,8 +62,7 @@ namespace cloakframe
         qint64 frameCount = 0;
         int trackCount = 0;
         // Tracking gaps found before review. A manual mask cannot establish the missing
-        // subject's position, so these warnings survive review. Counts are per track and
-        // frame, not unique video frames or detection regions.
+        // subject's position, so these warnings survive review. Counts video frames, each once.
         int uncoveredFrames = 0;
         std::vector<UncoveredSpan> uncoveredSpans;
         // Tracks discarded for holding no confident detection at all.

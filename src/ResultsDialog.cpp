@@ -236,8 +236,7 @@ namespace cloakframe
                     issueFilter_->itemText(index) + QStringLiteral(": %1").arg(issue.count);
                 if (issue.kind == FileIssueKind::TrackingGap)
                     text =
-                        tr("Track %1 · Frames %2–%3 · %4")
-                            .arg(issue.trackId)
+                        tr("Frames %1–%2 · %3")
                             .arg(issue.firstFrame + 1)
                             .arg(issue.lastFrame + 1)
                             .arg(issue.acknowledged ? tr("Reviewed by user (coverage not verified)")

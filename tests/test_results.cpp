@@ -119,8 +119,8 @@ int main(int argc, char **argv)
             "/results/0-video.mp4",
             FileResultStatus::NeedsReview,
             {QStringLiteral("Video")},
-            {{cloakframe::FileIssueKind::TrackingGap, 6, 10, 15, 7, false},
-                {cloakframe::FileIssueKind::TrackingGap, 6, 40, 45, 8, true}}});
+            {{cloakframe::FileIssueKind::TrackingGap, 6, 10, 15, false},
+                {cloakframe::FileIssueKind::TrackingGap, 6, 40, 45, true}}});
         cloakframe::ResultsDialog preview(previewResults);
         preview.show();
         application.processEvents();
@@ -130,7 +130,7 @@ int main(int argc, char **argv)
         "/output.mp4",
         FileResultStatus::NeedsReview,
         {"Tracking gap"},
-        {{cloakframe::FileIssueKind::TrackingGap, 6, 10, 15, 7, false},
+        {{cloakframe::FileIssueKind::TrackingGap, 6, 10, 15, false},
             {cloakframe::FileIssueKind::MetadataWarning, 1}}};
     cloakframe::ResultsDialog typed({results.front(), video});
     auto *issueFilter = typed.findChild<QComboBox *>("issueFilter");

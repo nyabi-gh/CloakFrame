@@ -1336,8 +1336,8 @@ int main(int argc, char **argv)
     {
         cloakframe::VideoProcessOptions options;
         options.analysisLongEdge = 160;
-        options.postProcess.maxInterpolationGap = 2;
-        options.postProcess.extensionFrames = 0;
+        options.trackingWindows.maxInterpolationSeconds = 2.0 / 30.0;
+        options.trackingWindows.extensionSeconds = 0.0;
         const QString gappedPath =
             tempDir.filePath(addUnrelatedMask ? "gapped-with-manual-mask.mp4" : "gapped.mp4");
         std::atomic<bool> cancelled{false};

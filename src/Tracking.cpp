@@ -558,7 +558,7 @@ namespace cloakframe
             }
             if (gap > maxGap)
             {
-                uncovered.push_back({track.id, current.frame + 1, next.frame - 1});
+                uncovered.push_back({current.frame + 1, next.frame - 1});
                 continue;
             }
 
@@ -716,6 +716,26 @@ namespace cloakframe
         track.boxes.insert(track.boxes.end(), suffix.begin(), suffix.end());
     }
 
+    void applyTrackingWindows(const TrackingWindows &windows,
+        const double fps,
+        TrackerConfig &tracker,
+        TrackPostProcessConfig &postProcess)
+    {
+        const double rate = fps > 0.0 && std::isfinite(fps) ? fps : 30.0;
+        const auto frames = [rate](const double seconds, const int minimum)
+        {
+            const double scaled =
+                std::isfinite(seconds) ? std::clamp(seconds * rate, 0.0, 1'000'000.0) : 0.0;
+            return std::max(minimum, static_cast<int>(std::lround(scaled)));
+        };
+        tracker.maxFramesLost = frames(windows.maxLostSeconds, 1);
+        tracker.maxFramesSinceHighScore = frames(windows.maxSinceHighScoreSeconds, 1);
+        tracker.maxFramesSinceHighScoreMoving = frames(windows.maxSinceHighScoreMovingSeconds, 1);
+        postProcess.maxInterpolationGap = frames(windows.maxInterpolationSeconds, 1);
+        postProcess.extensionFrames = frames(windows.extensionSeconds, 0);
+        postProcess.maxCutBoundaryGap = frames(windows.maxCutBoundarySeconds, 1);
+    }
+
     TrackCoverageReport postProcessTracks(std::vector<Track> &tracks,
         const TrackPostProcessConfig &config,
         int frameCount,
@@ -780,7 +800,6 @@ namespace cloakframe
             for (const auto &span :
                 interpolateGaps(track, config.maxInterpolationGap, cuts, continueGuard))
             {
-                report.uncoveredFrames += span.frameCount();
                 report.uncoveredSpans.push_back(span);
             }
             const auto withoutCurrent = totalBoxes - previous;
@@ -802,11 +821,12 @@ namespace cloakframe
             totalBoxes = withoutExtended + track.boxes.size();
         }
 
-        // A cut ends every track, so frames missed right after one belong to no track. Report
-        // them when the tracks on either side of the cut overlap in space.
-        std::vector<const Track *> byStart;
+        // A cut ends every track, so frames missed right after one belong to no track. When the
+        // tracks on either side of the cut overlap in space, a gap no longer than an interior
+        // one is covered with both boxes, as inside a track; a longer one is reported.
+        std::vector<Track *> byStart;
         byStart.reserve(tracks.size());
-        for (const auto &track : tracks)
+        for (auto &track : tracks)
         {
             if (!track.boxes.empty())
             {
@@ -814,7 +834,7 @@ namespace cloakframe
             }
         }
         std::ranges::sort(byStart, {}, &Track::firstFrame);
-        for (const auto *before : byStart)
+        for (auto *before : byStart)
         {
             requireTrackingContinue(continueGuard);
             const int last = before->lastFrame();
@@ -822,19 +842,59 @@ namespace cloakframe
             for (; candidate != byStart.end(); ++candidate)
             {
                 const Track &after = **candidate;
-                if (after.firstFrame() - last - 1 > config.maxCutBoundaryGap)
+                const int gap = after.firstFrame() - last - 1;
+                if (gap > config.maxCutBoundaryGap)
                 {
                     break;
                 }
-                if (cuts.spansCut(last, after.firstFrame())
-                    && (before->boxes.back().box & after.boxes.front().box).area() > 0.0F)
+                const TrackedBox &end = before->boxes.back();
+                const TrackedBox &start = after.boxes.front();
+                if (!cuts.spansCut(last, after.firstFrame())
+                    || (end.box & start.box).area() <= 0.0F)
                 {
-                    const UncoveredSpan span{before->id, last + 1, after.firstFrame() - 1};
-                    report.uncoveredFrames += span.frameCount();
-                    report.uncoveredSpans.push_back(span);
-                    break;
+                    continue;
                 }
+                if (gap <= config.maxInterpolationGap)
+                {
+                    if (totalBoxes > kMaxFinalTrackedBoxes - static_cast<std::size_t>(gap))
+                    {
+                        throw std::length_error("Tracking data exceeds the safety limit.");
+                    }
+                    const TrackedBox bridge{
+                        0, end.box | start.box, std::min(end.score, start.score), true};
+                    for (int frame = last + 1; frame < after.firstFrame(); ++frame)
+                    {
+                        before->boxes.push_back(bridge);
+                        before->boxes.back().frame = frame;
+                    }
+                    totalBoxes += static_cast<std::size_t>(gap);
+                }
+                else
+                {
+                    report.uncoveredSpans.push_back({last + 1, after.firstFrame() - 1});
+                }
+                break;
             }
+        }
+
+        // Several tracks can miss the same frames; a reviewer needs each frame range once.
+        std::ranges::sort(report.uncoveredSpans, {}, &UncoveredSpan::firstFrame);
+        std::vector<UncoveredSpan> merged;
+        for (const auto &span : report.uncoveredSpans)
+        {
+            if (!merged.empty() && span.firstFrame <= merged.back().lastFrame + 1)
+            {
+                merged.back().lastFrame = std::max(merged.back().lastFrame, span.lastFrame);
+            }
+            else
+            {
+                merged.push_back(span);
+            }
+        }
+        report.uncoveredSpans = std::move(merged);
+        for (const auto &span : report.uncoveredSpans)
+        {
+            report.uncoveredFrames += span.frameCount();
         }
         return report;
     }

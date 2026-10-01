@@ -84,7 +84,7 @@ namespace
         request.fpsDen = 1;
         request.frameCount = 30;
         request.tracks.push_back({7, true, {{0, QRectF(20, 20, 40, 40), false}}});
-        request.uncoveredSpans = {{7, 10, 20}};
+        request.uncoveredSpans = {{10, 20}};
         request.initialFrame = 0;
         return request;
     }
@@ -276,7 +276,7 @@ int main(int argc, char **argv)
     request.startTimeSeconds = 3.25;
     request.frameCount = 120;
     request.tracks.push_back({7, true, {{0, QRectF(20, 20, 40, 40), false}}});
-    request.uncoveredSpans = {{7, 90, 95}, {8, 10, 15}, {7, 10, 20}, {7, 45, 50}, {7, 0, 2}};
+    request.uncoveredSpans = {{90, 95}, {10, 15}, {10, 20}, {45, 50}, {0, 2}};
     cloakframe::VideoReviewDialog dialog(request);
     auto *list = dialog.findChild<QListWidget *>("videoTracks");
     assert(list != nullptr && list->count() == 1);

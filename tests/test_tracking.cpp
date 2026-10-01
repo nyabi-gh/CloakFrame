@@ -137,7 +137,6 @@ namespace
         assert(report.uncoveredSpans.size() == 1);
         assert(report.uncoveredSpans[0].firstFrame == 5);
         assert(report.uncoveredSpans[0].lastFrame == 12);
-        assert(report.uncoveredSpans[0].trackId == reported[0].id);
     }
 
     void testGuardRejectedGapIsCoveredConservatively()
@@ -562,28 +561,87 @@ namespace
         return sequence;
     }
 
-    void testGapAcrossSceneCutIsReportedWhenTracksMeet()
+    void testTrackingWindowsFollowTheFrameRate()
+    {
+        cloakframe::TrackerConfig tracker;
+        cloakframe::TrackPostProcessConfig postProcess;
+        cloakframe::applyTrackingWindows({}, 30.0, tracker, postProcess);
+        const cloakframe::TrackerConfig defaultTracker;
+        const cloakframe::TrackPostProcessConfig defaultPostProcess;
+        assert(tracker.maxFramesLost == defaultTracker.maxFramesLost);
+        assert(tracker.maxFramesSinceHighScore == defaultTracker.maxFramesSinceHighScore);
+        assert(
+            tracker.maxFramesSinceHighScoreMoving == defaultTracker.maxFramesSinceHighScoreMoving);
+        assert(postProcess.maxInterpolationGap == defaultPostProcess.maxInterpolationGap);
+        assert(postProcess.extensionFrames == defaultPostProcess.extensionFrames);
+        assert(postProcess.maxCutBoundaryGap == defaultPostProcess.maxCutBoundaryGap);
+
+        cloakframe::applyTrackingWindows({}, 60.0, tracker, postProcess);
+        assert(postProcess.maxInterpolationGap == 40 && tracker.maxFramesLost == 60);
+        cloakframe::applyTrackingWindows({}, 24.0, tracker, postProcess);
+        assert(postProcess.maxInterpolationGap == 16 && tracker.maxFramesLost == 24);
+        cloakframe::applyTrackingWindows({}, 0.0, tracker, postProcess);
+        assert(postProcess.maxInterpolationGap == 20);
+    }
+
+    void testShortGapAcrossSceneCutIsCoveredWhenTracksMeet()
     {
         const cloakframe::SceneCuts cuts({10});
         auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
         assert(tracks.size() == 2);
-        const int beforeId = tracks[0].firstFrame() == 0 ? tracks[0].id : tracks[1].id;
 
         cloakframe::TrackPostProcessConfig config;
         config.extensionFrames = 0;
         const auto report = cloakframe::postProcessTracks(tracks, config, 20, cuts);
+        assert(report.uncoveredFrames == 0 && report.uncoveredSpans.empty());
+        for (int frame = 10; frame <= 13; ++frame)
+        {
+            const auto regions = cloakframe::trackRegionsForFrame(tracks, frame);
+            assert(regions.size() == 1);
+            assert(regions.front().contains(cv::Point2f(60.0F, 110.0F)));
+        }
+    }
+
+    void testLongGapAcrossSceneCutIsReportedWhenTracksMeet()
+    {
+        const cloakframe::SceneCuts cuts({10});
+        auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
+
+        cloakframe::TrackPostProcessConfig config;
+        config.extensionFrames = 0;
+        config.maxInterpolationGap = 3;
+        const auto report = cloakframe::postProcessTracks(tracks, config, 20, cuts);
         assert(report.uncoveredFrames == 4);
         assert(report.uncoveredSpans.size() == 1);
-        assert(report.uncoveredSpans[0].trackId == beforeId);
         assert(report.uncoveredSpans[0].firstFrame == 10);
         assert(report.uncoveredSpans[0].lastFrame == 13);
+        assert(cloakframe::trackRegionsForFrame(tracks, 11).empty());
+    }
 
-        auto extended = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
-        const auto extendedReport = cloakframe::postProcessTracks(extended, {}, 20, cuts);
-        assert(extendedReport.uncoveredSpans.size() == 1);
-        assert(extendedReport.uncoveredSpans[0].firstFrame == 10);
-        assert(extendedReport.uncoveredSpans[0].lastFrame == 10);
-        assert(cloakframe::trackRegionsForFrame(extended, 10).empty());
+    void testGapsSharedByTracksAreReportedOnce()
+    {
+        auto sequence = movingObjectSequence(20, 50.0F, 0.0F);
+        for (int frame = 0; frame < 20; ++frame)
+        {
+            if (frame >= 5 && frame <= 12)
+            {
+                sequence[frame].clear();
+            }
+            else
+            {
+                sequence[frame].push_back(det(400.0F, 100.0F));
+            }
+        }
+        auto tracks = cloakframe::buildTracks(sequence);
+        assert(tracks.size() == 2);
+        cloakframe::TrackPostProcessConfig config;
+        config.maxInterpolationGap = 3;
+        config.extensionFrames = 0;
+        const auto report = cloakframe::postProcessTracks(tracks, config, 20);
+        assert(report.uncoveredSpans.size() == 1);
+        assert(report.uncoveredSpans[0].firstFrame == 5);
+        assert(report.uncoveredSpans[0].lastFrame == 12);
+        assert(report.uncoveredFrames == 8);
     }
 
     void testGapAcrossSceneCutIsNotReportedForAnotherPlace()
@@ -959,7 +1017,10 @@ int main()
     testNoInterpolationAcrossSceneCut();
     testExtendTrackEndsStopsAtSceneCut();
     testBidirectionalTracksRespectSceneCuts();
-    testGapAcrossSceneCutIsReportedWhenTracksMeet();
+    testTrackingWindowsFollowTheFrameRate();
+    testShortGapAcrossSceneCutIsCoveredWhenTracksMeet();
+    testLongGapAcrossSceneCutIsReportedWhenTracksMeet();
+    testGapsSharedByTracksAreReportedOnce();
     testGapAcrossSceneCutIsNotReportedForAnotherPlace();
     testGapAcrossSceneCutIsBoundedInTime();
     testSceneCutDetectorFindsHardCut();

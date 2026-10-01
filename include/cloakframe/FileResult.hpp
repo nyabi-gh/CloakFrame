@@ -35,7 +35,6 @@ namespace cloakframe
         qint64 count = 0;
         int firstFrame = -1;
         int lastFrame = -1;
-        int trackId = 0;
         bool acknowledged = false;
     };
 

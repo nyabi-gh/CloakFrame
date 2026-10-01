@@ -979,433 +979,433 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ProcessorWorker</name>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="248"/>
+        <location filename="../src/ProcessorWorker.cpp" line="249"/>
         <source>cannot inspect image dimensions</source>
         <translation>画像のサイズを確認できません</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="258"/>
+        <location filename="../src/ProcessorWorker.cpp" line="259"/>
         <source>image too large, %1 x %2</source>
         <translation>画像が大きすぎます（%1 x %2）</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1152"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1153"/>
         <source>needs about %1 MB of memory, over the %2 MB limit</source>
         <translation>約 %1 MB のメモリーが必要で、%2 MB の上限を超えます</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="713"/>
+        <location filename="../src/ProcessorWorker.cpp" line="714"/>
         <source>Output name collision: &apos;%1&apos; and &apos;%2&apos; would both write to &apos;%3&apos;</source>
         <translation>出力名の衝突: &apos;%1&apos; と &apos;%2&apos; がどちらも &apos;%3&apos; に書き込まれます</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="542"/>
+        <location filename="../src/ProcessorWorker.cpp" line="543"/>
         <source>Loading face detection model...</source>
         <translation>顔検出モデルを読み込み中...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="575"/>
+        <location filename="../src/ProcessorWorker.cpp" line="576"/>
         <source>Reusing loaded face detection model.</source>
         <translation>読み込み済みの顔検出モデルを再利用します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="577"/>
+        <location filename="../src/ProcessorWorker.cpp" line="578"/>
         <source>Face detection backend: %1</source>
         <translation>顔検出のバックエンド: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="561"/>
+        <location filename="../src/ProcessorWorker.cpp" line="562"/>
         <source>GPU acceleration can&apos;t run the face model; using the CPU instead.</source>
         <translation>GPU アクセラレーションでは顔モデルを実行できないため、CPU を使用します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="616"/>
+        <location filename="../src/ProcessorWorker.cpp" line="617"/>
         <source>License plate detection backend: %1</source>
         <translation>ナンバープレート検出のバックエンド: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="585"/>
+        <location filename="../src/ProcessorWorker.cpp" line="586"/>
         <source>Loading license plate detection model...</source>
         <translation>ナンバープレート検出モデルを読み込み中...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="614"/>
+        <location filename="../src/ProcessorWorker.cpp" line="615"/>
         <source>Reusing loaded license plate detection model.</source>
         <translation>読み込み済みのナンバープレート検出モデルを再利用します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="601"/>
+        <location filename="../src/ProcessorWorker.cpp" line="602"/>
         <source>GPU acceleration can&apos;t run the license plate model; using the CPU instead.</source>
         <translation>GPU アクセラレーションではナンバープレートモデルを実行できないため、CPU を使用します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="621"/>
+        <location filename="../src/ProcessorWorker.cpp" line="622"/>
         <source>Scanning inputs...</source>
         <translation>入力をスキャン中...</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="626"/>
+        <location filename="../src/ProcessorWorker.cpp" line="627"/>
         <source>Preflight: found %n supported file(s).</source>
         <translation>
             <numerusform>事前確認：対応ファイルが %n 件見つかりました。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="683"/>
+        <location filename="../src/ProcessorWorker.cpp" line="684"/>
         <source>No supported files were found.</source>
         <translation>対応するファイルが見つかりませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="693"/>
+        <location filename="../src/ProcessorWorker.cpp" line="694"/>
         <source>Cannot create output directory: %1</source>
         <translation>出力フォルダーを作成できません: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="706"/>
+        <location filename="../src/ProcessorWorker.cpp" line="707"/>
         <source>Refusing to run because an output path is already in use.</source>
         <translation>すでに使われている出力パスがあるため、実行を中止します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="720"/>
+        <location filename="../src/ProcessorWorker.cpp" line="721"/>
         <source>Existing output would be overwritten: &apos;%1&apos;</source>
         <translation>既存の出力が上書きされます: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="731"/>
+        <location filename="../src/ProcessorWorker.cpp" line="732"/>
         <source>Additional output conflicts omitted.</source>
         <translation>これ以降の出力の衝突は省略しました。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="735"/>
+        <location filename="../src/ProcessorWorker.cpp" line="736"/>
         <source>Preflight: output paths are available.</source>
         <translation>事前チェック: 出力パスはすべて使用できます。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1001"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1002"/>
         <source>Skipped unsafe output path for: %1</source>
         <translation>安全でない出力パスのためスキップしました: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1044"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1045"/>
         <source>Skipped (file too large, %1 MB): %2</source>
         <translation>スキップ (ファイルが大きすぎます: %1 MB): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1106"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1107"/>
         <source>Loading</source>
         <translation>読み込み中</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1136"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1151"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1137"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1152"/>
         <source>Skipped (%1): %2</source>
         <translation>スキップ (%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1122"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1123"/>
         <source>Skipped (animated or multi-page images are not supported): %1</source>
         <translation>スキップ（アニメーション画像またはマルチページ画像はサポートされていません）: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="948"/>
+        <location filename="../src/ProcessorWorker.cpp" line="949"/>
         <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
             <numerusform>警告：%n個のファイルに検出または追跡の警告があります。共有前に確認してください。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1025"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1179"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1026"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1180"/>
         <source>Skipped unreadable image: %1</source>
         <translation>読み取れない画像をスキップしました: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1036"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1037"/>
         <source>Source file changed during processing: %1</source>
         <translation>処理中に元のファイルが変更されました：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1056"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1083"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1093"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1057"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1084"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1094"/>
         <source>Failed to create a private source snapshot: %1</source>
         <translation>元ファイルの非公開スナップショットを作成できませんでした：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1207"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1208"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
         <translation>スキップ (画像が大きすぎます: %1 × %2): %3</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1217"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1218"/>
         <source>Detecting</source>
         <translation>検出中</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1247"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1248"/>
         <source>Reviewing</source>
         <translation>確認中</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1302"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1303"/>
         <location filename="../src/ProcessorWorker.cpp" line="1875"/>
         <source>Skipped without saving: %1</source>
         <translation>保存せずにスキップしました: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1316"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1372"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1317"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1373"/>
         <source>Saving</source>
         <translation>保存中</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1344"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1345"/>
         <source>Failed to copy: %1</source>
         <translation>コピーに失敗しました: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1350"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1351"/>
         <source>Skipped (original copied): %1</source>
         <translation>スキップ (元のファイルをコピーしました): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1356"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1357"/>
         <source>Applying anonymization</source>
         <translation>匿名化を適用中</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1393"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1394"/>
         <source>Failed to save: %1</source>
         <translation>保存に失敗しました: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1412"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1779"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1413"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1780"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>%n 箇所を匿名化しました：%1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1402"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1403"/>
         <source>Saved, but could not copy metadata: %1</source>
         <translation>保存しましたが、メタデータをコピーできませんでした: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1407"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1773"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1408"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1774"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>隠した領域がないまま保存しました: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1010"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1011"/>
         <source>Skipped (source and destination are the same file): %1</source>
         <translation>スキップ (元のファイルと保存先が同じです): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1431"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1432"/>
         <source>Error processing %1: %2</source>
         <translation>%1 の処理中にエラー: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="980"/>
+        <location filename="../src/ProcessorWorker.cpp" line="981"/>
         <source>Unexpected error — processing stopped.</source>
         <translation>予期しないエラーが発生したため、処理を中止しました。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="905"/>
+        <location filename="../src/ProcessorWorker.cpp" line="906"/>
         <source>Summary: %1 redacted, %2 saved without redaction, %3 copied, %4 skipped, %5 failed (of %6).</source>
         <translation>概要: 匿名化 %1、匿名化せずに保存 %2、コピー %3、スキップ %4、失敗 %5（全 %6 件）。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="938"/>
+        <location filename="../src/ProcessorWorker.cpp" line="939"/>
         <source>Warning: %n image(s) were saved with no regions redacted. Check them before sharing.</source>
         <translation>
             <numerusform>警告：%n 枚の画像が匿名化されずに保存されました。共有前に確認してください。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="968"/>
+        <location filename="../src/ProcessorWorker.cpp" line="969"/>
         <source>Done.</source>
         <translation>完了しました。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="963"/>
+        <location filename="../src/ProcessorWorker.cpp" line="964"/>
         <source>Completed with warnings. Review the summary before sharing.</source>
         <translation>警告付きで完了しました。共有する前に概要を確認してください。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="974"/>
+        <location filename="../src/ProcessorWorker.cpp" line="975"/>
         <source>Error: %1</source>
         <translation>エラー: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1439"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1440"/>
         <source>Error processing %1</source>
         <translation>%1 の処理中にエラー</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1625"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1626"/>
         <source>Reviewing video tracks</source>
         <translation>動画トラックを確認中</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1457"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1458"/>
         <source>Metadata preservation is not available for videos; metadata was removed: %1</source>
         <translation>動画ではメタデータの保持に対応していないため、メタデータを削除しました: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="514"/>
+        <location filename="../src/ProcessorWorker.cpp" line="515"/>
         <source>GPU acceleration failed while processing %1; it and the rest of this run use the CPU.</source>
         <translation>%1 の処理中に GPU アクセラレーションが失敗しました。このファイルと今回の残りは CPU で処理します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="532"/>
+        <location filename="../src/ProcessorWorker.cpp" line="533"/>
         <source>Error: review is on but no review window is available. Nothing was processed.</source>
         <translation>エラー: 確認が有効ですが確認ウィンドウを利用できません。何も処理していません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="543"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1515"/>
+        <location filename="../src/ProcessorWorker.cpp" line="544"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1516"/>
         <source>The face detection model could not be loaded</source>
         <translation>顔検出モデルを読み込めませんでした</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="586"/>
+        <location filename="../src/ProcessorWorker.cpp" line="587"/>
         <source>The license plate detection model could not be loaded</source>
         <translation>ナンバープレート検出モデルを読み込めませんでした</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="634"/>
+        <location filename="../src/ProcessorWorker.cpp" line="635"/>
         <source>Not processed: %n file(s) of a type CloakFrame does not support (%1).</source>
         <translation>
             <numerusform>未処理：CloakFrame が対応していない形式のファイル %n 件（%1）。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="637"/>
+        <location filename="../src/ProcessorWorker.cpp" line="638"/>
         <source>no extension</source>
         <translation>拡張子なし</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="651"/>
-        <location filename="../src/ProcessorWorker.cpp" line="657"/>
+        <location filename="../src/ProcessorWorker.cpp" line="652"/>
+        <location filename="../src/ProcessorWorker.cpp" line="658"/>
         <source>Could not read input &apos;%1&apos;: %2</source>
         <translation>入力 &apos;%1&apos; を読み取れません: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="663"/>
+        <location filename="../src/ProcessorWorker.cpp" line="664"/>
         <source>Additional unreadable inputs omitted.</source>
         <translation>これ以降の読み取れない入力は省略しました。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="668"/>
+        <location filename="../src/ProcessorWorker.cpp" line="669"/>
         <source>Warning: %n input(s) could not be read, so nothing below covers them.</source>
         <translation>
             <numerusform>警告: 入力 %n 件を読み取れなかったため、以下の結果には含まれていません。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1113"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1114"/>
         <source>Skipped (not a supported image format): %1</source>
         <translation>スキップ(対応していない画像形式): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1268"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1269"/>
         <source>Failed (review could not be shown, nothing was saved): %1</source>
         <translation>失敗 (確認を表示できなかったため保存していません): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1420"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1815"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1421"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1816"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>警告: 検出された領域 %n 件が安全上限を超えたため、%1 で隠されずに残りました。共有する前に確認してください。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1475"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1476"/>
         <source>Failed (%1): %2</source>
         <translation>失敗 (%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1470"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1471"/>
         <source>Inspecting</source>
         <translation>検査中</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="748"/>
+        <location filename="../src/ProcessorWorker.cpp" line="749"/>
         <source>%n video(s) in this run cannot be processed: %1</source>
         <translation>
             <numerusform>今回の処理に含まれる %n 本の動画は処理できません: %1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1464"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1465"/>
         <source>Failed (FFmpeg is not available): %1</source>
         <translation>失敗 (FFmpeg を利用できません): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1483"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1484"/>
         <source>Failed (unsupported video: %1): %2</source>
         <translation>失敗 (非対応の動画: %1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1490"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1491"/>
         <source>Note: variable frame rate is converted to a constant frame rate: %1</source>
         <translation>注意: 可変フレームレートは固定フレームレートに変換されます: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1601"/>
         <source>Analyzing %1%</source>
         <translation>解析中 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1601"/>
         <source>Encoding %1%</source>
         <translation>エンコード中 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1669"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1670"/>
         <source>Review could not be shown, nothing was saved.</source>
         <translation>確認を表示できなかったため保存していません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1682"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1683"/>
         <source>The reviewed tracks could not be applied safely, nothing was saved.</source>
         <translation>確認したトラックを安全に適用できなかったため保存していません。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1800"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1801"/>
         <source>Audio removed: %1</source>
         <translation>音声を削除しました：%1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1805"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1806"/>
         <source>Audio kept; voices are not anonymized: %1</source>
         <translation>音声を保持しました。声は匿名化されていません：%1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1824"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1825"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>警告: %1 で確度の高い検出がひとつもないトラック %n 件を破棄しました。共有する前に確認してください。</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1833"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1834"/>
         <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
             <numerusform>確認前に %1 の %n フレームで対象を追跡できませんでした。ファイル別結果で各空白の確認状態を確認してください。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1838"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1839"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1で確認前に見つかった追跡の空白区間：%2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1842"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1843"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>ほか%n件の追跡の空白区間は表示していません。</numerusform>
@@ -1427,37 +1427,37 @@ Check these results before sharing them.</source>
         <translation>動画 %1 の処理に失敗しました: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1512"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1513"/>
         <source>Loading face detection model for video...</source>
         <translation>動画用の顔検出モデルを読み込み中...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1534"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1535"/>
         <source>GPU acceleration can&apos;t run the video face model at %1 px; using the CPU instead.</source>
         <translation>GPU アクセラレーションでは動画の顔モデルを %1 px で実行できないため、CPU を使用します。</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1546"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1547"/>
         <source>Video face detection: %1 px · %2</source>
         <translation>動画の顔検出: %1 px · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1607"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1608"/>
         <source>%1m %2s left</source>
         <translation>残り %1 分 %2 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1608"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1609"/>
         <source>%1s left</source>
         <translation>残り %1 秒</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1786"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1787"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>%1 フレームを %2 秒で処理しました（実時間の %3 倍）: %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1794"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1795"/>
         <source>Video encoder: %1</source>
         <translation>動画エンコーダー: %1</translation>
     </message>
@@ -1643,27 +1643,27 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="239"/>
-        <source>Track %1 · Frames %2–%3 · %4</source>
-        <translation>トラック %1 · フレーム %2–%3 · %4</translation>
+        <source>Frames %1–%2 · %3</source>
+        <translation>フレーム %1–%2 · %3</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="243"/>
+        <location filename="../src/ResultsDialog.cpp" line="242"/>
         <source>Reviewed by user (coverage not verified)</source>
         <translation>ユーザー確認済み（マスク範囲は未検証）</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="244"/>
+        <location filename="../src/ResultsDialog.cpp" line="243"/>
         <source>Pending review</source>
         <translation>未確認</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="271"/>
+        <location filename="../src/ResultsDialog.cpp" line="270"/>
         <source>Cannot open folder</source>
         <translation>フォルダーを開けません</translation>
     </message>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="125"/>
-        <location filename="../src/ResultsDialog.cpp" line="271"/>
+        <location filename="../src/ResultsDialog.cpp" line="270"/>
         <source>Could not open: %1</source>
         <translation>開けませんでした：%1</translation>
     </message>
@@ -1916,22 +1916,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VelopackWorker</name>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="198"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="204"/>
         <source>Could not download the signature for %1. The update was not applied.</source>
         <translation>%1 の署名をダウンロードできませんでした。更新は適用されませんでした。</translation>
     </message>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="217"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="226"/>
         <source>The update %1 failed its signature check and was not applied (%2).</source>
         <translation>更新 %1 は署名の検証に失敗したため適用されませんでした(%2)。</translation>
     </message>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="238"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="247"/>
         <source>The update cache at %1 is owned or writable by another account on this computer, so an update taken from it cannot be trusted. Remove that directory and try again.</source>
         <translation>%1 の更新キャッシュはこのコンピューターの別のアカウントが所有しているか書き込み可能なため、そこから取得した更新は信頼できません。そのディレクトリを削除してからやり直してください。</translation>
     </message>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="286"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="295"/>
         <source>The cached update %1 is not the package this release describes and was not applied.</source>
         <translation>キャッシュされた更新 %1 はこのリリースが示すパッケージと異なるため適用されませんでした。</translation>
     </message>
@@ -2099,7 +2099,7 @@ Continue?</source>
     <name>cloakframe::VideoProcessor</name>
     <message>
         <location filename="../src/VideoProcessor.cpp" line="647"/>
-        <location filename="../src/VideoProcessor.cpp" line="991"/>
+        <location filename="../src/VideoProcessor.cpp" line="992"/>
         <source>No frames could be decoded.</source>
         <translation>デコードできるフレームがありません。</translation>
     </message>
@@ -2138,19 +2138,19 @@ Continue?</source>
         <translation>動画の検出データが安全上限を超えています。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="681"/>
-        <location filename="../src/VideoProcessor.cpp" line="752"/>
+        <location filename="../src/VideoProcessor.cpp" line="682"/>
+        <location filename="../src/VideoProcessor.cpp" line="753"/>
         <source>Video tracking data exceeds the safety limit.</source>
         <translation>動画の追跡データが安全上限を超えています。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="871"/>
-        <location filename="../src/VideoProcessor.cpp" line="997"/>
+        <location filename="../src/VideoProcessor.cpp" line="872"/>
+        <location filename="../src/VideoProcessor.cpp" line="998"/>
         <source>The source video changed during processing (frame count differs between passes).</source>
         <translation>処理中に元の動画が変更されました（処理パス間でフレーム数が異なります）。</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="921"/>
+        <location filename="../src/VideoProcessor.cpp" line="922"/>
         <source>Video redaction failed.</source>
         <translation>動画の匿名化に失敗しました。</translation>
     </message>
@@ -2186,37 +2186,32 @@ Continue?</source>
         <translation>追跡の空白（確認前）</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="694"/>
-        <source>Track %1 · %2–%3 · Frames %4–%5</source>
-        <translation>トラック %1 · %2–%3 · フレーム %4–%5</translation>
-    </message>
-    <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="721"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="720"/>
         <source>No tracking gaps were reported.</source>
         <translation>報告された追跡の空白はありません。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="727"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="726"/>
         <source>Previous gap</source>
         <translation>前の空白</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="728"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="727"/>
         <source>Next gap</source>
         <translation>次の空白</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="886"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="885"/>
         <source>Previous frame (Left arrow)</source>
         <translation>前のフレーム（左矢印キー）</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="887"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="886"/>
         <source>Next frame (Right arrow)</source>
         <translation>次のフレーム（右矢印キー）</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1065"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1064"/>
         <source>%1 / %2 · Frame %3 / %4</source>
         <translation>%1 / %2 · フレーム %3 / %4</translation>
     </message>
@@ -2256,22 +2251,22 @@ Continue?</source>
         <translation>確度の高い検出が少ないトラックです — 既定で含まれます。隠さない場合はチェックを外してください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="706"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="705"/>
         <source>Check a gap after reviewing the entire interval; its check becomes available once its first, middle and last frames have been shown. This records your review, not verified coverage. Editing masks resets these checks.</source>
         <translation>空白区間全体を確認してからチェックしてください。区間の最初・中央・最後のフレームを表示するとチェックできるようになります。これは確認の記録であり、マスク範囲の検証ではありません。マスクを編集するとチェックはリセットされます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1311"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1310"/>
         <source>Or move the dashed box with the arrow keys, resize it with Alt and the arrow keys, and press Return to place it. Esc stops drawing.</source>
         <translation>または矢印キーで点線の枠を動かし、Alt と矢印キーでサイズを変えてから Return で配置します。Esc で描画を終了します。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1561"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1560"/>
         <source>Show the first, middle and last frame of this gap to check it.</source>
         <translation>この空白の最初・中央・最後のフレームを表示するとチェックできます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="768"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="767"/>
         <source>Add missed track</source>
         <translation>見逃したトラックを追加</translation>
     </message>
@@ -2281,67 +2276,72 @@ Continue?</source>
         <translation>確認する動画フレーム</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="769"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="694"/>
+        <source>%1–%2 · Frames %3–%4</source>
+        <translation>%1–%2 · フレーム %3–%4</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="768"/>
         <source>Add / update keyframe</source>
         <translation>キーフレームを追加 / 更新</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="770"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="769"/>
         <source>Set start here</source>
         <translation>ここを開始位置に設定</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="771"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="770"/>
         <source>Set end here</source>
         <translation>ここを終了位置に設定</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="772"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="771"/>
         <source>Remove manual track</source>
         <translation>手動トラックを削除</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="815"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="814"/>
         <source>Include all</source>
         <translation>すべて含める</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="816"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="815"/>
         <source>Exclude all</source>
         <translation>すべて除外</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="875"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="874"/>
         <source>Video timeline</source>
         <translation>動画のタイムライン</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="927"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="926"/>
         <source>Cancel all</source>
         <translation>すべてキャンセル</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="928"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="927"/>
         <source>Skip video</source>
         <translation>動画をスキップ</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="931"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="930"/>
         <source>Moves on to the next file without saving this video.</source>
         <translation>この動画を保存せずに次のファイルへ進みます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="932"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="931"/>
         <source>Encode video</source>
         <translation>動画をエンコード</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="949"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
         <source>Cancel All?</source>
         <translation>すべてキャンセルしますか？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="950"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="949"/>
         <source>Stop reviewing, discard this video and cancel the remaining files?
 
 Files already saved are kept.</source>
@@ -2350,12 +2350,12 @@ Files already saved are kept.</source>
 保存済みのファイルはそのまま残ります。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="979"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="978"/>
         <source>Encode with nothing covered?</source>
         <translation>何も覆わずにエンコードしますか？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="980"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="979"/>
         <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
 
 Continue?</source>
@@ -2364,56 +2364,56 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1031"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1030"/>
         <source>Skip this video?</source>
         <translation>この動画をスキップしますか？</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1032"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1031"/>
         <source>This video will not be saved, and the changes made in this review are lost. The remaining files continue.</source>
         <translation>この動画は保存されず、この確認で行った変更は失われます。残りのファイルは引き続き処理されます。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1435"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1434"/>
         <source>Remove manual track?</source>
         <translation>手動トラックを削除しますか？</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1436"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1435"/>
         <source>Remove manual track %1 and its %n keyframe(s)? This cannot be undone.</source>
         <translation>
             <numerusform>手動トラック %1 と %n 個のキーフレームを削除しますか？元に戻せません。</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1585"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1584"/>
         <source>%1 reviewed · %2 pending</source>
         <translation>確認済み %1 · 未確認 %2</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1308"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1307"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>現在のフレームで、見逃した領域を囲むボックスをドラッグしてください。</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1309"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1308"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>このフレームで手動トラック %1 の新しいボックスをドラッグしてください。</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1506"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1505"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>手動 %1  ·  %2–%3  ·  キーフレーム %n 件</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1569"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1568"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>自動トラック %2 件中 %1 件を含む · 手動 %3 件</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1576"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1575"/>
         <source>%n tracking gap(s) found before review</source>
         <translation>
             <numerusform>確認前の追跡の空白区間：%n件</numerusform>

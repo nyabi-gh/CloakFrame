@@ -89,8 +89,7 @@ close it. Check the caller and the full scope before recording a change of state
   Introduce `-Wconversion` gradually.
 - **Structure** [D-3]. Move run-start validation (model digests, consent, input/output
   overlap) out of `MainWindow` where it can be tested. Keep the detection kind (face or
-  plate) in `FaceDetection`; express tracking windows in seconds; let the scanner be
-  cancelled.
+  plate) in `FaceDetection`; let the scanner be cancelled.
 - **Measurement.** Detection samples per condition, miss rates, per-stage time and
   memory, and launch checks on the minimum supported OS versions.
 

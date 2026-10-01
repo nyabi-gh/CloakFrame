@@ -979,433 +979,433 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ProcessorWorker</name>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="248"/>
+        <location filename="../src/ProcessorWorker.cpp" line="249"/>
         <source>cannot inspect image dimensions</source>
         <translation>이미지 크기를 확인할 수 없음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="258"/>
+        <location filename="../src/ProcessorWorker.cpp" line="259"/>
         <source>image too large, %1 x %2</source>
         <translation>이미지가 너무 큼, %1 x %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1152"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1153"/>
         <source>needs about %1 MB of memory, over the %2 MB limit</source>
         <translation>약 %1 MB의 메모리가 필요하여 %2 MB 한도를 넘음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="713"/>
+        <location filename="../src/ProcessorWorker.cpp" line="714"/>
         <source>Output name collision: &apos;%1&apos; and &apos;%2&apos; would both write to &apos;%3&apos;</source>
         <translation>출력 이름 충돌: &apos;%1&apos;와(과) &apos;%2&apos;가 모두 &apos;%3&apos;에 기록됩니다</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="542"/>
+        <location filename="../src/ProcessorWorker.cpp" line="543"/>
         <source>Loading face detection model...</source>
         <translation>얼굴 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="575"/>
+        <location filename="../src/ProcessorWorker.cpp" line="576"/>
         <source>Reusing loaded face detection model.</source>
         <translation>이미 불러온 얼굴 탐지 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="577"/>
+        <location filename="../src/ProcessorWorker.cpp" line="578"/>
         <source>Face detection backend: %1</source>
         <translation>얼굴 탐지 백엔드: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="561"/>
+        <location filename="../src/ProcessorWorker.cpp" line="562"/>
         <source>GPU acceleration can&apos;t run the face model; using the CPU instead.</source>
         <translation>GPU 가속으로 얼굴 모델을 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="616"/>
+        <location filename="../src/ProcessorWorker.cpp" line="617"/>
         <source>License plate detection backend: %1</source>
         <translation>번호판 탐지 백엔드: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="585"/>
+        <location filename="../src/ProcessorWorker.cpp" line="586"/>
         <source>Loading license plate detection model...</source>
         <translation>번호판 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="614"/>
+        <location filename="../src/ProcessorWorker.cpp" line="615"/>
         <source>Reusing loaded license plate detection model.</source>
         <translation>이미 불러온 번호판 탐지 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="601"/>
+        <location filename="../src/ProcessorWorker.cpp" line="602"/>
         <source>GPU acceleration can&apos;t run the license plate model; using the CPU instead.</source>
         <translation>GPU 가속으로 번호판 모델을 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="621"/>
+        <location filename="../src/ProcessorWorker.cpp" line="622"/>
         <source>Scanning inputs...</source>
         <translation>입력 스캔 중...</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="626"/>
+        <location filename="../src/ProcessorWorker.cpp" line="627"/>
         <source>Preflight: found %n supported file(s).</source>
         <translation>
             <numerusform>사전 점검: 지원되는 파일 %n개를 찾았습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="683"/>
+        <location filename="../src/ProcessorWorker.cpp" line="684"/>
         <source>No supported files were found.</source>
         <translation>지원되는 파일을 찾지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="693"/>
+        <location filename="../src/ProcessorWorker.cpp" line="694"/>
         <source>Cannot create output directory: %1</source>
         <translation>출력 폴더를 만들 수 없습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="706"/>
+        <location filename="../src/ProcessorWorker.cpp" line="707"/>
         <source>Refusing to run because an output path is already in use.</source>
         <translation>사용 중인 출력 경로가 있어 실행을 거부합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="720"/>
+        <location filename="../src/ProcessorWorker.cpp" line="721"/>
         <source>Existing output would be overwritten: &apos;%1&apos;</source>
         <translation>기존 출력 파일을 덮어쓰게 됩니다: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="731"/>
+        <location filename="../src/ProcessorWorker.cpp" line="732"/>
         <source>Additional output conflicts omitted.</source>
         <translation>추가 출력 충돌은 생략했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="735"/>
+        <location filename="../src/ProcessorWorker.cpp" line="736"/>
         <source>Preflight: output paths are available.</source>
         <translation>사전 점검: 모든 출력 경로를 사용할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1001"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1002"/>
         <source>Skipped unsafe output path for: %1</source>
         <translation>안전하지 않은 출력 경로를 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1044"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1045"/>
         <source>Skipped (file too large, %1 MB): %2</source>
         <translation>건너뜀(파일이 너무 큼, %1 MB): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1106"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1107"/>
         <source>Loading</source>
         <translation>로딩 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1136"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1151"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1137"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1152"/>
         <source>Skipped (%1): %2</source>
         <translation>건너뜀(%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1122"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1123"/>
         <source>Skipped (animated or multi-page images are not supported): %1</source>
         <translation>건너뜀(애니메이션 또는 다중 페이지 이미지는 지원되지 않음): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="948"/>
+        <location filename="../src/ProcessorWorker.cpp" line="949"/>
         <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
             <numerusform>경고: 파일 %n개에 검출 또는 추적 경고가 있습니다. 공유하기 전에 검토하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1025"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1179"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1026"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1180"/>
         <source>Skipped unreadable image: %1</source>
         <translation>읽을 수 없는 이미지를 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1036"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1037"/>
         <source>Source file changed during processing: %1</source>
         <translation>처리 중 원본 파일이 변경되었습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1056"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1083"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1093"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1057"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1084"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1094"/>
         <source>Failed to create a private source snapshot: %1</source>
         <translation>원본의 비공개 사본을 만들지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1207"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1208"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
         <translation>건너뜀(이미지가 너무 큼, %1 × %2): %3</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1217"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1218"/>
         <source>Detecting</source>
         <translation>감지 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1247"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1248"/>
         <source>Reviewing</source>
         <translation>검토 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1302"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1303"/>
         <location filename="../src/ProcessorWorker.cpp" line="1875"/>
         <source>Skipped without saving: %1</source>
         <translation>저장하지 않고 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1316"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1372"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1317"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1373"/>
         <source>Saving</source>
         <translation>저장 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1344"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1345"/>
         <source>Failed to copy: %1</source>
         <translation>복사 실패: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1350"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1351"/>
         <source>Skipped (original copied): %1</source>
         <translation>건너뜀(원본 복사됨): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1356"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1357"/>
         <source>Applying anonymization</source>
         <translation>익명화 적용 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1393"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1394"/>
         <source>Failed to save: %1</source>
         <translation>저장 실패: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1412"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1779"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1413"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1780"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>영역 %n개 가림: %1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1402"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1403"/>
         <source>Saved, but could not copy metadata: %1</source>
         <translation>저장했지만 메타데이터를 복사하지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1407"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1773"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1408"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1774"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>가려진 영역 없이 저장됨: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1010"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1011"/>
         <source>Skipped (source and destination are the same file): %1</source>
         <translation>건너뜀 (원본과 저장 위치가 같은 파일): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1431"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1432"/>
         <source>Error processing %1: %2</source>
         <translation>%1 처리 중 오류: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="980"/>
+        <location filename="../src/ProcessorWorker.cpp" line="981"/>
         <source>Unexpected error — processing stopped.</source>
         <translation>예기치 못한 오류로 처리를 중단했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="905"/>
+        <location filename="../src/ProcessorWorker.cpp" line="906"/>
         <source>Summary: %1 redacted, %2 saved without redaction, %3 copied, %4 skipped, %5 failed (of %6).</source>
         <translation>요약: 가림 완료 %1, 가리지 않고 저장 %2, 복사 %3, 건너뜀 %4, 실패 %5 (총 %6).</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="938"/>
+        <location filename="../src/ProcessorWorker.cpp" line="939"/>
         <source>Warning: %n image(s) were saved with no regions redacted. Check them before sharing.</source>
         <translation>
             <numerusform>주의: 이미지 %n장이 아무 영역도 가려지지 않은 채 저장되었습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="968"/>
+        <location filename="../src/ProcessorWorker.cpp" line="969"/>
         <source>Done.</source>
         <translation>완료.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="963"/>
+        <location filename="../src/ProcessorWorker.cpp" line="964"/>
         <source>Completed with warnings. Review the summary before sharing.</source>
         <translation>주의 사항과 함께 완료되었습니다. 공유하기 전에 요약을 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="974"/>
+        <location filename="../src/ProcessorWorker.cpp" line="975"/>
         <source>Error: %1</source>
         <translation>오류: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1439"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1440"/>
         <source>Error processing %1</source>
         <translation>%1 처리 중 오류</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1625"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1626"/>
         <source>Reviewing video tracks</source>
         <translation>동영상 트랙 검토 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1457"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1458"/>
         <source>Metadata preservation is not available for videos; metadata was removed: %1</source>
         <translation>동영상은 메타데이터 보존이 지원되지 않아 메타데이터가 제거되었습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="514"/>
+        <location filename="../src/ProcessorWorker.cpp" line="515"/>
         <source>GPU acceleration failed while processing %1; it and the rest of this run use the CPU.</source>
         <translation>GPU 가속이 %1 처리 중 실패했습니다. 이 파일과 이번 실행의 나머지는 CPU로 처리합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="532"/>
+        <location filename="../src/ProcessorWorker.cpp" line="533"/>
         <source>Error: review is on but no review window is available. Nothing was processed.</source>
         <translation>오류: 검토가 켜져 있지만 검토 창을 열 수 없습니다. 아무것도 처리하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="543"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1515"/>
+        <location filename="../src/ProcessorWorker.cpp" line="544"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1516"/>
         <source>The face detection model could not be loaded</source>
         <translation>얼굴 검출 모델을 불러오지 못했습니다</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="586"/>
+        <location filename="../src/ProcessorWorker.cpp" line="587"/>
         <source>The license plate detection model could not be loaded</source>
         <translation>번호판 검출 모델을 불러오지 못했습니다</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="634"/>
+        <location filename="../src/ProcessorWorker.cpp" line="635"/>
         <source>Not processed: %n file(s) of a type CloakFrame does not support (%1).</source>
         <translation>
             <numerusform>처리하지 않음: CloakFrame이 지원하지 않는 형식의 파일 %n개 (%1).</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="637"/>
+        <location filename="../src/ProcessorWorker.cpp" line="638"/>
         <source>no extension</source>
         <translation>확장자 없음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="651"/>
-        <location filename="../src/ProcessorWorker.cpp" line="657"/>
+        <location filename="../src/ProcessorWorker.cpp" line="652"/>
+        <location filename="../src/ProcessorWorker.cpp" line="658"/>
         <source>Could not read input &apos;%1&apos;: %2</source>
         <translation>입력 &apos;%1&apos;을(를) 읽을 수 없습니다: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="663"/>
+        <location filename="../src/ProcessorWorker.cpp" line="664"/>
         <source>Additional unreadable inputs omitted.</source>
         <translation>추가로 읽을 수 없는 입력은 생략했습니다.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="668"/>
+        <location filename="../src/ProcessorWorker.cpp" line="669"/>
         <source>Warning: %n input(s) could not be read, so nothing below covers them.</source>
         <translation>
             <numerusform>경고: 입력 %n개를 읽을 수 없어 아래 결과가 이를 포함하지 않습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1113"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1114"/>
         <source>Skipped (not a supported image format): %1</source>
         <translation>건너뜀(지원하지 않는 이미지 형식): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1268"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1269"/>
         <source>Failed (review could not be shown, nothing was saved): %1</source>
         <translation>실패 (검토를 표시할 수 없어 저장하지 않았습니다): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1420"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1815"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1421"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1816"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>경고: 검출된 영역 %n곳이 안전 한도를 넘어 %1에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1475"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1476"/>
         <source>Failed (%1): %2</source>
         <translation>실패 (%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1470"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1471"/>
         <source>Inspecting</source>
         <translation>확인 중</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="748"/>
+        <location filename="../src/ProcessorWorker.cpp" line="749"/>
         <source>%n video(s) in this run cannot be processed: %1</source>
         <translation>
             <numerusform>이번 작업의 동영상 %n개를 처리할 수 없습니다: %1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1464"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1465"/>
         <source>Failed (FFmpeg is not available): %1</source>
         <translation>실패 (FFmpeg를 사용할 수 없음): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1483"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1484"/>
         <source>Failed (unsupported video: %1): %2</source>
         <translation>실패 (지원되지 않는 동영상: %1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1490"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1491"/>
         <source>Note: variable frame rate is converted to a constant frame rate: %1</source>
         <translation>참고: 가변 프레임레이트는 고정 프레임레이트로 변환됩니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1601"/>
         <source>Analyzing %1%</source>
         <translation>분석 중 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1600"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1601"/>
         <source>Encoding %1%</source>
         <translation>인코딩 중 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1669"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1670"/>
         <source>Review could not be shown, nothing was saved.</source>
         <translation>검토를 표시할 수 없어 저장하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1682"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1683"/>
         <source>The reviewed tracks could not be applied safely, nothing was saved.</source>
         <translation>검토한 트랙을 안전하게 적용할 수 없어 저장하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1800"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1801"/>
         <source>Audio removed: %1</source>
         <translation>오디오 제거됨: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1805"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1806"/>
         <source>Audio kept; voices are not anonymized: %1</source>
         <translation>오디오 유지됨, 목소리는 익명화되지 않음: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1824"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1825"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>경고: %1에서 확실한 검출이 하나도 없는 트랙 %n개를 버렸습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1833"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1834"/>
         <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
             <numerusform>검토 전 %1의 %n개 프레임에서 대상을 추적하지 못했습니다. 파일별 결과에서 각 공백의 확인 상태를 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1838"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1839"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1에서 검토 전 발견한 추적 공백: %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1842"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1843"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>추가 추적 공백 %n개는 표시하지 않습니다.</numerusform>
@@ -1427,37 +1427,37 @@ Check these results before sharing them.</source>
         <translation>동영상 처리 실패 %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1512"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1513"/>
         <source>Loading face detection model for video...</source>
         <translation>동영상용 얼굴 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1534"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1535"/>
         <source>GPU acceleration can&apos;t run the video face model at %1 px; using the CPU instead.</source>
         <translation>GPU 가속으로 동영상 얼굴 모델을 %1 px에서 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1546"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1547"/>
         <source>Video face detection: %1 px · %2</source>
         <translation>동영상 얼굴 탐지: %1 px · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1607"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1608"/>
         <source>%1m %2s left</source>
         <translation>%1분 %2초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1608"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1609"/>
         <source>%1s left</source>
         <translation>%1초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1786"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1787"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>프레임 %1개를 %2초에 처리 (실시간의 %3배): %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1794"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1795"/>
         <source>Video encoder: %1</source>
         <translation>비디오 인코더: %1</translation>
     </message>
@@ -1643,27 +1643,27 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="239"/>
-        <source>Track %1 · Frames %2–%3 · %4</source>
-        <translation>트랙 %1 · 프레임 %2–%3 · %4</translation>
+        <source>Frames %1–%2 · %3</source>
+        <translation>프레임 %1–%2 · %3</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="243"/>
+        <location filename="../src/ResultsDialog.cpp" line="242"/>
         <source>Reviewed by user (coverage not verified)</source>
         <translation>사용자 확인 완료 (가려짐 미검증)</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="244"/>
+        <location filename="../src/ResultsDialog.cpp" line="243"/>
         <source>Pending review</source>
         <translation>미확인</translation>
     </message>
     <message>
-        <location filename="../src/ResultsDialog.cpp" line="271"/>
+        <location filename="../src/ResultsDialog.cpp" line="270"/>
         <source>Cannot open folder</source>
         <translation>폴더를 열 수 없음</translation>
     </message>
     <message>
         <location filename="../src/ResultsDialog.cpp" line="125"/>
-        <location filename="../src/ResultsDialog.cpp" line="271"/>
+        <location filename="../src/ResultsDialog.cpp" line="270"/>
         <source>Could not open: %1</source>
         <translation>열 수 없습니다: %1</translation>
     </message>
@@ -1916,22 +1916,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VelopackWorker</name>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="198"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="204"/>
         <source>Could not download the signature for %1. The update was not applied.</source>
         <translation>%1의 서명을 내려받지 못했습니다. 업데이트를 적용하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="217"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="226"/>
         <source>The update %1 failed its signature check and was not applied (%2).</source>
         <translation>업데이트 %1이(가) 서명 검증에 실패하여 적용하지 않았습니다(%2).</translation>
     </message>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="238"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="247"/>
         <source>The update cache at %1 is owned or writable by another account on this computer, so an update taken from it cannot be trusted. Remove that directory and try again.</source>
         <translation>%1의 업데이트 캐시를 이 컴퓨터의 다른 계정이 소유하고 있거나 쓸 수 있어, 거기서 가져온 업데이트는 신뢰할 수 없습니다. 해당 디렉터리를 삭제한 뒤 다시 시도하세요.</translation>
     </message>
     <message>
-        <location filename="../src/SelfUpdaterVelopack.cpp" line="286"/>
+        <location filename="../src/SelfUpdaterVelopack.cpp" line="295"/>
         <source>The cached update %1 is not the package this release describes and was not applied.</source>
         <translation>캐시된 업데이트 %1이(가) 이 릴리스가 설명하는 패키지와 달라 적용하지 않았습니다.</translation>
     </message>
@@ -2099,7 +2099,7 @@ Continue?</source>
     <name>cloakframe::VideoProcessor</name>
     <message>
         <location filename="../src/VideoProcessor.cpp" line="647"/>
-        <location filename="../src/VideoProcessor.cpp" line="991"/>
+        <location filename="../src/VideoProcessor.cpp" line="992"/>
         <source>No frames could be decoded.</source>
         <translation>디코딩할 수 있는 프레임이 없습니다.</translation>
     </message>
@@ -2138,19 +2138,19 @@ Continue?</source>
         <translation>동영상 검출 데이터가 안전 한도를 초과합니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="681"/>
-        <location filename="../src/VideoProcessor.cpp" line="752"/>
+        <location filename="../src/VideoProcessor.cpp" line="682"/>
+        <location filename="../src/VideoProcessor.cpp" line="753"/>
         <source>Video tracking data exceeds the safety limit.</source>
         <translation>동영상 추적 데이터가 안전 한도를 초과합니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="871"/>
-        <location filename="../src/VideoProcessor.cpp" line="997"/>
+        <location filename="../src/VideoProcessor.cpp" line="872"/>
+        <location filename="../src/VideoProcessor.cpp" line="998"/>
         <source>The source video changed during processing (frame count differs between passes).</source>
         <translation>처리 중 원본 동영상이 변경되었습니다(처리 단계 간 프레임 수가 다름).</translation>
     </message>
     <message>
-        <location filename="../src/VideoProcessor.cpp" line="921"/>
+        <location filename="../src/VideoProcessor.cpp" line="922"/>
         <source>Video redaction failed.</source>
         <translation>동영상 가림 처리에 실패했습니다.</translation>
     </message>
@@ -2186,37 +2186,32 @@ Continue?</source>
         <translation>추적 공백 (검토 전)</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="694"/>
-        <source>Track %1 · %2–%3 · Frames %4–%5</source>
-        <translation>트랙 %1 · %2–%3 · 프레임 %4–%5</translation>
-    </message>
-    <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="721"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="720"/>
         <source>No tracking gaps were reported.</source>
         <translation>보고된 추적 공백이 없습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="727"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="726"/>
         <source>Previous gap</source>
         <translation>이전 공백</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="728"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="727"/>
         <source>Next gap</source>
         <translation>다음 공백</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="886"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="885"/>
         <source>Previous frame (Left arrow)</source>
         <translation>이전 프레임 (왼쪽 방향키)</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="887"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="886"/>
         <source>Next frame (Right arrow)</source>
         <translation>다음 프레임 (오른쪽 방향키)</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1065"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1064"/>
         <source>%1 / %2 · Frame %3 / %4</source>
         <translation>%1 / %2 · 프레임 %3 / %4</translation>
     </message>
@@ -2256,22 +2251,22 @@ Continue?</source>
         <translation>확실한 검출이 적습니다 — 기본으로 포함됩니다. 이 트랙을 가리지 않으려면 체크를 해제하세요.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="706"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="705"/>
         <source>Check a gap after reviewing the entire interval; its check becomes available once its first, middle and last frames have been shown. This records your review, not verified coverage. Editing masks resets these checks.</source>
         <translation>공백 구간 전체를 검토한 뒤 체크하세요. 구간의 첫 프레임, 가운데 프레임, 마지막 프레임을 표시해야 체크할 수 있습니다. 검토 여부를 기록하며 가려짐을 검증하지는 않습니다. 마스크를 편집하면 체크가 초기화됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1311"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1310"/>
         <source>Or move the dashed box with the arrow keys, resize it with Alt and the arrow keys, and press Return to place it. Esc stops drawing.</source>
         <translation>또는 화살표 키로 점선 상자를 옮기고 Alt와 화살표 키로 크기를 조절한 뒤 Return을 눌러 배치하세요. Esc를 누르면 그리기를 멈춥니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1561"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1560"/>
         <source>Show the first, middle and last frame of this gap to check it.</source>
         <translation>이 공백의 첫 프레임, 가운데 프레임, 마지막 프레임을 표시하면 체크할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="768"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="767"/>
         <source>Add missed track</source>
         <translation>놓친 트랙 추가</translation>
     </message>
@@ -2281,67 +2276,72 @@ Continue?</source>
         <translation>검토할 동영상 프레임</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="769"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="694"/>
+        <source>%1–%2 · Frames %3–%4</source>
+        <translation>%1–%2 · 프레임 %3–%4</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="768"/>
         <source>Add / update keyframe</source>
         <translation>키프레임 추가 / 업데이트</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="770"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="769"/>
         <source>Set start here</source>
         <translation>시작 지점을 여기로 설정</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="771"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="770"/>
         <source>Set end here</source>
         <translation>종료 지점을 여기로 설정</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="772"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="771"/>
         <source>Remove manual track</source>
         <translation>수동 트랙 제거</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="815"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="814"/>
         <source>Include all</source>
         <translation>모두 포함</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="816"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="815"/>
         <source>Exclude all</source>
         <translation>모두 제외</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="875"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="874"/>
         <source>Video timeline</source>
         <translation>동영상 타임라인</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="927"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="926"/>
         <source>Cancel all</source>
         <translation>전체 취소</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="928"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="927"/>
         <source>Skip video</source>
         <translation>동영상 건너뛰기</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="931"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="930"/>
         <source>Moves on to the next file without saving this video.</source>
         <translation>이 동영상을 저장하지 않고 다음 파일로 넘어갑니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="932"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="931"/>
         <source>Encode video</source>
         <translation>동영상 인코딩</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="949"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
         <source>Cancel All?</source>
         <translation>모두 취소할까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="950"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="949"/>
         <source>Stop reviewing, discard this video and cancel the remaining files?
 
 Files already saved are kept.</source>
@@ -2350,12 +2350,12 @@ Files already saved are kept.</source>
 이미 저장된 파일은 유지됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="979"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="978"/>
         <source>Encode with nothing covered?</source>
         <translation>아무것도 가리지 않고 인코딩할까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="980"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="979"/>
         <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
 
 Continue?</source>
@@ -2364,56 +2364,56 @@ Continue?</source>
 계속할까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1031"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1030"/>
         <source>Skip this video?</source>
         <translation>이 동영상을 건너뛸까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1032"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1031"/>
         <source>This video will not be saved, and the changes made in this review are lost. The remaining files continue.</source>
         <translation>이 동영상은 저장되지 않으며 이번 검토에서 변경한 내용은 사라집니다. 남은 파일은 계속 처리됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1435"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1434"/>
         <source>Remove manual track?</source>
         <translation>수동 트랙을 제거할까요?</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1436"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1435"/>
         <source>Remove manual track %1 and its %n keyframe(s)? This cannot be undone.</source>
         <translation>
             <numerusform>수동 트랙 %1 및 키프레임 %n개를 제거할까요? 되돌릴 수 없습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1585"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1584"/>
         <source>%1 reviewed · %2 pending</source>
         <translation>확인 완료 %1개 · 미확인 %2개</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1308"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1307"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>현재 프레임에서 놓친 영역을 둘러싸는 상자를 드래그하세요.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1309"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1308"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>이 프레임에서 수동 트랙 %1의 새 상자를 드래그하세요.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1506"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1505"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>수동 %1  ·  %2–%3  ·  키프레임 %n개</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1569"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1568"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>자동 트랙 %2개 중 %1개 포함 · 수동 %3개</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1576"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1575"/>
         <source>%n tracking gap(s) found before review</source>
         <translation>
             <numerusform>검토 전 추적 공백 %n개</numerusform>
