@@ -8,6 +8,7 @@
 #include <QList>
 #include <QSet>
 
+class QKeyEvent;
 class QLabel;
 class QListWidget;
 class QProcess;
@@ -31,6 +32,9 @@ namespace cloakframe
         [[nodiscard]] VideoReviewResult reviewResult() const;
 
         void reject() override;
+
+    protected:
+        void keyPressEvent(QKeyEvent *event) override;
 
     private:
         void setFrame(int frame);

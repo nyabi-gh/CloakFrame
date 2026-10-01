@@ -1633,8 +1633,8 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ReviewDialog.cpp" line="686"/>
-        <source>Click or Return toggles a box · Drag an empty area to add · Arrow keys move the selection · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · Esc skips this image without saving</source>
-        <translation>单击或按 Return 切换检测框 · 在空白区域拖动以添加 · 方向键移动所选框 · 按住空格预览结果 · 滚轮缩放，右键拖动平移，按 0 重置 · %1 / %2 撤销/重做 · Esc 跳过此图像且不保存</translation>
+        <source>Click or Return toggles a box · Drag an empty area to add · Arrow keys move the selection · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · %3 saves and moves on · Esc skips this image without saving</source>
+        <translation>单击或按 Return 切换检测框 · 在空白区域拖动以添加 · 方向键移动所选框 · 按住空格预览结果 · 滚轮缩放，右键拖动平移，按 0 重置 · %1 / %2 撤销/重做 · %3 保存并继续 · Esc 跳过此图像且不保存</translation>
     </message>
     <message>
         <location filename="../src/ReviewDialog.cpp" line="681"/>

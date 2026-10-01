@@ -136,6 +136,7 @@ if(CLOAKFRAME_CLANG_TIDY AND CLOAKFRAME_RUN_CLANG_TIDY_COMMAND)
         cloakframe_parallel_tests
         cloakframe_video_io_tests
         cloakframe_video_review_tests
+        cloakframe_review_dialog_tests
         cloakframe_results_tests
         cloakframe_model_download_tests
         cloakframe_logging_tests

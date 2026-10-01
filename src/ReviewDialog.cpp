@@ -682,14 +682,15 @@ namespace cloakframe
         canvas_->setFocus(Qt::OtherFocusReason);
         root->addWidget(canvas_, 1);
 
-        hintLabel_ =
-            new QLabel(tr("Click or Return toggles a box · Drag an empty area to add · "
-                          "Arrow keys move the selection · Hold Space to preview the result · "
-                          "Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · "
-                          "Esc skips this image without saving")
-                           .arg(QKeySequence(QKeySequence::Undo).toString(QKeySequence::NativeText),
-                               QKeySequence(QKeySequence::Redo).toString(QKeySequence::NativeText)),
-                this);
+        hintLabel_ = new QLabel(
+            tr("Click or Return toggles a box · Drag an empty area to add · "
+               "Arrow keys move the selection · Hold Space to preview the result · "
+               "Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · "
+               "%3 saves and moves on · Esc skips this image without saving")
+                .arg(QKeySequence(QKeySequence::Undo).toString(QKeySequence::NativeText),
+                    QKeySequence(QKeySequence::Redo).toString(QKeySequence::NativeText),
+                    QKeySequence(Qt::CTRL | Qt::Key_Return).toString(QKeySequence::NativeText)),
+            this);
         hintLabel_->setProperty("role", "sectionHint");
         hintLabel_->setWordWrap(true);
         root->addWidget(hintLabel_);
@@ -719,7 +720,8 @@ namespace cloakframe
         auto *save = new QPushButton(tr("Save && Next"), this);
         save->setObjectName("primaryButton");
         save->setCursor(Qt::PointingHandCursor);
-        save->setDefault(true);
+        save->setToolTip(
+            QKeySequence(Qt::CTRL | Qt::Key_Return).toString(QKeySequence::NativeText));
 
         buttonRow->addWidget(cancelAll);
         buttonRow->addWidget(undoButton);
@@ -827,6 +829,14 @@ namespace cloakframe
                 redoButton->setEnabled(canvas_->canRedo());
             });
 
+        for (const auto key : {Qt::Key_Return, Qt::Key_Enter})
+        {
+            connect(new QShortcut(QKeySequence(Qt::CTRL | key), this),
+                &QShortcut::activated,
+                save,
+                &QPushButton::click);
+        }
+
         auto *undoShortcut = new QShortcut(QKeySequence::Undo, this);
         auto *redoShortcut = new QShortcut(QKeySequence::Redo, this);
         connect(undoShortcut,
@@ -857,5 +867,17 @@ namespace cloakframe
     {
         decision_ = ReviewDecision::DoNotSave;
         QDialog::reject();
+    }
+
+    void ReviewDialog::keyPressEvent(QKeyEvent *event)
+    {
+        // QDialog would turn a Return no child handled into a click on the default button,
+        // which here saves the image and moves on.
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+        {
+            event->accept();
+            return;
+        }
+        QDialog::keyPressEvent(event);
     }
 }

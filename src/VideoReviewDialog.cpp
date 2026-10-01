@@ -5,6 +5,8 @@
 #include <QCoreApplication>
 #include <QDialogButtonBox>
 #include <QHBoxLayout>
+#include <QKeyEvent>
+#include <QKeySequence>
 #include <QLabel>
 #include <QListWidget>
 #include <QMessageBox>
@@ -839,6 +841,16 @@ namespace cloakframe
         auto *buttons = new QDialogButtonBox(this);
         auto *cancel = buttons->addButton(tr("Cancel all"), QDialogButtonBox::RejectRole);
         auto *encode = buttons->addButton(tr("Encode video"), QDialogButtonBox::AcceptRole);
+        encode->setObjectName("encodeVideo");
+        encode->setToolTip(
+            QKeySequence(Qt::CTRL | Qt::Key_Return).toString(QKeySequence::NativeText));
+        for (const auto key : {Qt::Key_Return, Qt::Key_Enter})
+        {
+            connect(new QShortcut(QKeySequence(Qt::CTRL | key), this),
+                &QShortcut::activated,
+                encode,
+                &QPushButton::click);
+        }
         connect(cancel, &QPushButton::clicked, this, &VideoReviewDialog::reject);
         connect(encode,
             &QPushButton::clicked,
@@ -903,6 +915,18 @@ namespace cloakframe
     {
         decision_ = VideoReviewDecision::CancelAll;
         QDialog::reject();
+    }
+
+    void VideoReviewDialog::keyPressEvent(QKeyEvent *event)
+    {
+        // QDialog would turn a Return no child handled into a click on the default button,
+        // which here ends the review.
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
+        {
+            event->accept();
+            return;
+        }
+        QDialog::keyPressEvent(event);
     }
 
     void VideoReviewDialog::setFrame(int frame)

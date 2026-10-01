@@ -1633,8 +1633,8 @@ Check these results before sharing them.</source>
     </message>
     <message>
         <location filename="../src/ReviewDialog.cpp" line="686"/>
-        <source>Click or Return toggles a box · Drag an empty area to add · Arrow keys move the selection · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · Esc skips this image without saving</source>
-        <translation>클릭 또는 Return으로 상자 전환 · 빈 영역을 드래그해 추가 · 화살표 키로 선택 이동 · Space를 누르고 있으면 결과 미리보기 · 휠 스크롤 확대, 우클릭 드래그 이동, 0 초기화 · %1 / %2 실행 취소/다시 실행 · Esc는 저장하지 않고 건너뜀</translation>
+        <source>Click or Return toggles a box · Drag an empty area to add · Arrow keys move the selection · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · %3 saves and moves on · Esc skips this image without saving</source>
+        <translation>클릭 또는 Return으로 상자 전환 · 빈 영역을 드래그해 추가 · 화살표 키로 선택 이동 · Space를 누르고 있으면 결과 미리보기 · 휠 스크롤 확대, 우클릭 드래그 이동, 0 초기화 · %1 / %2 실행 취소/다시 실행 · %3 저장 후 다음 · Esc는 저장하지 않고 건너뜀</translation>
     </message>
     <message>
         <location filename="../src/ReviewDialog.cpp" line="681"/>

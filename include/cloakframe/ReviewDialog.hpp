@@ -8,6 +8,7 @@
 #include <QRectF>
 #include <QVector>
 
+class QKeyEvent;
 class QLabel;
 class QMouseEvent;
 class QPaintEvent;
@@ -45,6 +46,9 @@ namespace cloakframe
         [[nodiscard]] ReviewResult reviewResult() const;
 
         void reject() override;
+
+    protected:
+        void keyPressEvent(QKeyEvent *event) override;
 
     private:
         ReviewCanvas *canvas_ = nullptr;
