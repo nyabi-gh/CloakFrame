@@ -591,13 +591,6 @@ namespace cloakframe
             addFilesButton_->setCursor(Qt::PointingHandCursor);
             addFolderButton_->setCursor(Qt::PointingHandCursor);
             clearInputsButton_->setCursor(Qt::PointingHandCursor);
-            recursiveCheck_ = new QCheckBox(card);
-            addRetranslation(
-                [this]
-                {
-                    recursiveCheck_->setText(tr("Include subfolders"));
-                });
-            recursiveCheck_->setChecked(true);
             reviewCheck_ = new QCheckBox(card);
             addRetranslation(
                 [this]
@@ -614,6 +607,13 @@ namespace cloakframe
                            "  • Videos: scrub the timeline, exclude false tracks, or add "
                            "missed tracks with keyframes"));
                 });
+            recursiveCheck_ = new QCheckBox(card);
+            addRetranslation(
+                [this]
+                {
+                    recursiveCheck_->setText(tr("Include subfolders"));
+                });
+            recursiveCheck_->setChecked(true);
 
             connect(addFilesButton_, &QPushButton::clicked, this, &MainWindow::chooseFiles);
             connect(addFolderButton_, &QPushButton::clicked, this, &MainWindow::chooseFolder);

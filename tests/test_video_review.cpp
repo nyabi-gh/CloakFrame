@@ -173,6 +173,48 @@ namespace
         std::puts("manual track removal asks: ok");
     }
 
+    void testKeyboardAddsManualTrack()
+    {
+        QTemporaryDir temp;
+        auto request = renderableRequest(temp);
+        if (!request)
+        {
+            std::puts("SKIP keyboard adds a manual track: FFmpeg not found");
+            return;
+        }
+        request->initialFrame = 5;
+        cloakframe::VideoReviewDialog dialog(*request);
+        dialog.show();
+        assert(QTest::qWaitFor(
+            [&]
+            {
+                return dialog.property("lastViewedFrame").toInt() == 5;
+            },
+            30000));
+        auto *canvas = dialog.findChild<QWidget *>("videoCanvas");
+        auto *timeline = dialog.findChild<QSlider *>("videoTimeline");
+        dialog.findChild<QPushButton *>("addManualTrack")->click();
+        assert(QApplication::focusWidget() == canvas);
+        QTest::keyClick(canvas, Qt::Key_Right);
+        QTest::keyClick(canvas, Qt::Key_Down, Qt::AltModifier);
+        assert(timeline->value() == 5);
+        QTest::keyClick(canvas, Qt::Key_Return);
+        const auto added = dialog.reviewResult().addedTracks;
+        assert(added.size() == 1 && added.front().keyframes.size() == 1);
+        assert(added.front().keyframes.front().frame == 5);
+        assert(added.front().keyframes.front().rect == QRectF(145.2, 102, 36, 39.2));
+        assert(dialog.isVisible());
+
+        // Updating a keyframe starts from where the track is, not from the middle.
+        dialog.findChild<QPushButton *>("addKeyframe")->click();
+        QTest::keyClick(canvas, Qt::Key_Left, Qt::ShiftModifier);
+        QTest::keyClick(canvas, Qt::Key_Return);
+        const auto updated = dialog.reviewResult().addedTracks;
+        assert(updated.size() == 1 && updated.front().keyframes.size() == 1);
+        assert(updated.front().keyframes.front().rect == QRectF(142, 102, 36, 39.2));
+        std::puts("keyboard adds a manual track: ok");
+    }
+
     void testExitsKeepTheBatch(
         QApplication &application, const cloakframe::VideoReviewRequest &request)
     {
@@ -375,6 +417,7 @@ int main(int argc, char **argv)
     assert(dialog.reviewResult().excludedTrackIds.isEmpty());
     testGapChecksFollowWhatWasShown(application);
     testManualTrackRemovalAsks();
+    testKeyboardAddsManualTrack();
     testExitsKeepTheBatch(application, request);
     auto jumpRequest = request;
     jumpRequest.initialFrame = 45;

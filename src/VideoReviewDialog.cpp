@@ -82,6 +82,7 @@ namespace cloakframe
         {
             setMinimumSize(640, 360);
             setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+            setFocusPolicy(Qt::StrongFocus);
         }
 
         void setData(const VideoReviewRequest *request,
@@ -137,10 +138,16 @@ namespace cloakframe
             return drawingMode_;
         }
 
-        void setDrawingMode(bool enabled)
+        void setDrawingMode(bool enabled, const std::optional<QRectF> &start = std::nullopt)
         {
             drawingMode_ = enabled;
             drawing_ = false;
+            if (enabled && request_ != nullptr)
+            {
+                const QRectF bounds(QPointF(0, 0), QSizeF(request_->frameSize));
+                pendingBox_ =
+                    start ? start->intersected(bounds) : defaultReviewRect(bounds, bounds);
+            }
             setCursor(enabled ? Qt::CrossCursor : Qt::ArrowCursor);
             update();
         }
@@ -231,6 +238,17 @@ namespace cloakframe
                 }
             }
 
+            if (drawingMode_ && !drawing_)
+            {
+                const QRectF pending(target.x() + pendingBox_.x() * sx,
+                    target.y() + pendingBox_.y() * sy,
+                    pendingBox_.width() * sx,
+                    pendingBox_.height() * sy);
+                painter.setPen(QPen(QColor("#EC4899"), 2.0, Qt::DashLine));
+                painter.fillRect(pending, QColor(236, 72, 153, 38));
+                painter.drawRect(pending);
+            }
+
             if (drawing_)
             {
                 const QRectF drawn(dragStart_, dragCurrent_);
@@ -238,6 +256,42 @@ namespace cloakframe
                 painter.fillRect(drawn.normalized(), QColor(236, 72, 153, 38));
                 painter.drawRect(drawn.normalized());
             }
+        }
+
+        bool event(QEvent *event) override
+        {
+            // In drawing mode the arrow keys adjust the box instead of changing the frame.
+            if (event->type() == QEvent::ShortcutOverride && drawingMode_
+                && isArrowKey(static_cast<QKeyEvent *>(event)->key()))
+            {
+                event->accept();
+                return true;
+            }
+            return QWidget::event(event);
+        }
+
+        void keyPressEvent(QKeyEvent *event) override
+        {
+            if (!drawingMode_ || request_ == nullptr || image_.isNull())
+            {
+                QWidget::keyPressEvent(event);
+                return;
+            }
+            if (isArrowKey(event->key()))
+            {
+                pendingBox_ = nudgeReviewRect(pendingBox_,
+                    event->key(),
+                    event->modifiers().testFlag(Qt::AltModifier),
+                    QRectF(QPointF(0, 0), QSizeF(request_->frameSize)));
+                update();
+                return;
+            }
+            if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) && manualBox_)
+            {
+                manualBox_(frame_, pendingBox_);
+                return;
+            }
+            QWidget::keyPressEvent(event);
         }
 
         void mousePressEvent(QMouseEvent *event) override
@@ -359,6 +413,7 @@ namespace cloakframe
         int frame_ = 0;
         int selectedManualTrackId_ = 0;
         bool drawingMode_ = false;
+        QRectF pendingBox_;
         bool drawing_ = false;
         bool loading_ = false;
         QPointF dragStart_;
@@ -401,6 +456,11 @@ namespace cloakframe
                 style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderGroove, this);
             QPainter painter(this);
             painter.setRenderHint(QPainter::Antialiasing, false);
+            const bool light = palette().color(QPalette::Window).lightness() > 128;
+            const QColor includedColor(light ? "#B45309" : "#F59E0B");
+            const QColor excludedColor(light ? "#6B7280" : "#9CA3AF");
+            const QColor manualColor(light ? "#0E7490" : "#22D3EE");
+            const QColor gapColor(light ? "#DC2626" : "#EF4444");
             const int y = height() - 5;
             for (const auto &track : request_->tracks)
             {
@@ -415,9 +475,15 @@ namespace cloakframe
                 const int x2 = groove.left()
                                + static_cast<int>(std::lround(
                                    track.boxes.back().frame / denominator * groove.width()));
-                const bool excluded = excluded_ != nullptr && excluded_->contains(track.id);
-                painter.fillRect(QRect(x1, y, std::max(2, x2 - x1 + 1), 3),
-                    excluded ? QColor("#9CA3AF") : QColor("#F59E0B"));
+                if (excluded_ != nullptr && excluded_->contains(track.id))
+                {
+                    painter.setPen(QPen(excludedColor, 1, Qt::DotLine));
+                    painter.drawLine(x1, y + 1, std::max(x1 + 1, x2), y + 1);
+                }
+                else
+                {
+                    painter.fillRect(QRect(x1, y, std::max(2, x2 - x1 + 1), 3), includedColor);
+                }
             }
             if (manualTracks_ != nullptr)
             {
@@ -430,8 +496,7 @@ namespace cloakframe
                     const int x2 = groove.left()
                                    + static_cast<int>(
                                        std::lround(track.endFrame / denominator * groove.width()));
-                    painter.fillRect(
-                        QRect(x1, y - 4, std::max(2, x2 - x1 + 1), 3), QColor("#22D3EE"));
+                    painter.fillRect(QRect(x1, y - 4, std::max(2, x2 - x1 + 1), 3), manualColor);
                 }
             }
             // Drawn on their own row above the tracks: these are the frames no track
@@ -445,7 +510,7 @@ namespace cloakframe
                 const int x2 =
                     groove.left()
                     + static_cast<int>(std::lround(span.lastFrame / denominator * groove.width()));
-                painter.fillRect(QRect(x1, y - 8, std::max(2, x2 - x1 + 1), 3), QColor("#EF4444"));
+                painter.fillRect(QRect(x1, y - 8, std::max(2, x2 - x1 + 1), 3), gapColor);
             }
         }
 
@@ -503,6 +568,7 @@ namespace cloakframe
         auto *body = new QHBoxLayout();
         canvas_ = new VideoReviewCanvas(this);
         canvas_->setObjectName("videoCanvas");
+        canvas_->setAccessibleName(tr("Review video frame"));
         canvas_->setData(&request_, &excludedTrackIds_, &manualTracks_);
         canvas_->setToggleCallback(
             [this](int id)
@@ -705,6 +771,7 @@ namespace cloakframe
         setEndButton_ = new QPushButton(tr("Set end here"), this);
         removeManualTrackButton_ = new QPushButton(tr("Remove manual track"), this);
         addManualTrackButton_->setObjectName("addManualTrack");
+        addKeyframeButton_->setObjectName("addKeyframe");
         removeManualTrackButton_->setObjectName("removeManualTrack");
         side->addWidget(addManualTrackButton_);
         side->addWidget(addKeyframeButton_);
@@ -805,6 +872,7 @@ namespace cloakframe
         auto *timeRow = new QHBoxLayout();
         timeline_ = new VideoTimeline(this);
         timeline_->setObjectName("videoTimeline");
+        timeline_->setAccessibleName(tr("Video timeline"));
         timeline_->setRange(0, std::max(0, request_.frameCount - 1));
         timeline_->setPageStep(std::max(1, static_cast<int>(std::lround(request_.fps))));
         timeline_->setData(&request_, &excludedTrackIds_, &manualTracks_);
@@ -1228,7 +1296,10 @@ namespace cloakframe
     void VideoReviewDialog::setDrawingMode(const bool enabled, const int trackId)
     {
         drawingTrackId_ = enabled ? trackId : 0;
-        canvas_->setDrawingMode(enabled);
+        const auto *track = manualTrack(trackId);
+        canvas_->setDrawingMode(enabled,
+            enabled && track != nullptr ? manualTrackRectAtFrame(*track, currentFrame_)
+                                        : std::nullopt);
         drawStatusLabel_->setVisible(enabled);
         if (enabled)
         {
@@ -1236,7 +1307,11 @@ namespace cloakframe
                 trackId == 0
                     ? tr("Drag a box around the missed region on the current frame.")
                     : tr("Drag the new box for manual track %1 on this frame.").arg(trackId);
-            drawStatusLabel_->setText(instruction + QStringLiteral(" ") + tr("Esc stops drawing."));
+            drawStatusLabel_->setText(instruction + QStringLiteral(" ")
+                                      + tr("Or move the dashed box with the arrow keys, resize "
+                                           "it with Alt and the arrow keys, and press Return to "
+                                           "place it. Esc stops drawing."));
+            canvas_->setFocus(Qt::OtherFocusReason);
         }
         addManualTrackButton_->setEnabled(!enabled);
         addKeyframeButton_->setEnabled(!enabled && selectedManualTrackId_ != 0);

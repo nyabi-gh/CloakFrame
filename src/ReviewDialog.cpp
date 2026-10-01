@@ -105,6 +105,7 @@ namespace cloakframe
             {
                 return;
             }
+            lastNudgedIndex_ = -1;
             redoStack_.push_back(boxes_);
             boxes_ = undoStack_.back();
             undoStack_.pop_back();
@@ -120,6 +121,7 @@ namespace cloakframe
             {
                 return;
             }
+            lastNudgedIndex_ = -1;
             undoStack_.push_back(boxes_);
             boxes_ = redoStack_.back();
             redoStack_.pop_back();
@@ -362,6 +364,40 @@ namespace cloakframe
 
         void keyPressEvent(QKeyEvent *event) override
         {
+            const QRectF bounds(QPointF(0, 0), QSizeF(image_.size()));
+            if ((event->key() == Qt::Key_N || event->key() == Qt::Key_Insert) && !image_.isNull())
+            {
+                pushUndoSnapshot();
+                boxes_.push_back(
+                    Box{defaultReviewRect(screenToImage(QRectF(rect())), bounds), false, true});
+                focusedIndex_ = static_cast<int>(boxes_.size()) - 1;
+                update();
+                return;
+            }
+            if (isArrowKey(event->key())
+                && event->modifiers().testAnyFlags(Qt::ShiftModifier | Qt::AltModifier))
+            {
+                if (focusedIndex_ < 0 || boxes_[focusedIndex_].detected)
+                {
+                    return;
+                }
+                const QRectF nudged = nudgeReviewRect(boxes_[focusedIndex_].rect,
+                    event->key(),
+                    event->modifiers().testFlag(Qt::AltModifier),
+                    bounds);
+                if (nudged != boxes_[focusedIndex_].rect)
+                {
+                    // One undo step per run of nudges to the same box.
+                    if (lastNudgedIndex_ != focusedIndex_)
+                    {
+                        pushUndoSnapshot();
+                    }
+                    lastNudgedIndex_ = focusedIndex_;
+                    boxes_[focusedIndex_].rect = nudged;
+                    update();
+                }
+                return;
+            }
             switch (event->key())
             {
             case Qt::Key_Space:
@@ -610,6 +646,7 @@ namespace cloakframe
 
         void pushUndoSnapshot()
         {
+            lastNudgedIndex_ = -1;
             undoStack_.push_back(boxes_);
             redoStack_.clear();
             if (undoStack_.size() > kMaxUndo)
@@ -634,6 +671,7 @@ namespace cloakframe
         QVector<Box> boxes_;
         int hoveredIndex_ = -1;
         int focusedIndex_ = -1;
+        int lastNudgedIndex_ = -1;
         bool drawing_ = false;
         QPointF dragStart_;
         QPointF dragCurrent_;
@@ -683,8 +721,9 @@ namespace cloakframe
         root->addWidget(canvas_, 1);
 
         hintLabel_ = new QLabel(
-            tr("Click or Return toggles a box · Drag an empty area to add · "
-               "Arrow keys move the selection · Hold Space to preview the result · "
+            tr("Click or Return toggles a box · Drag an empty area or press N to add · "
+               "Arrow keys move the selection; with Shift they move an added box, with Alt "
+               "they resize it · Hold Space to preview the result · "
                "Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · "
                "%3 saves and moves on · Esc skips this image without saving")
                 .arg(QKeySequence(QKeySequence::Undo).toString(QKeySequence::NativeText),

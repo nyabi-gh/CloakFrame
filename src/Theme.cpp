@@ -446,7 +446,7 @@ namespace cloakframe
             palette.setColor(QPalette::ButtonText, QColor("#111827"));
             palette.setColor(QPalette::Highlight, QColor("#111827"));
             palette.setColor(QPalette::HighlightedText, QColor("#FFFFFF"));
-            palette.setColor(QPalette::PlaceholderText, QColor("#9CA3AF"));
+            palette.setColor(QPalette::PlaceholderText, QColor("#6B7280"));
             palette.setColor(QPalette::ToolTipBase, QColor("#FFFFFF"));
             palette.setColor(QPalette::ToolTipText, QColor("#111827"));
             palette.setColor(QPalette::Disabled, QPalette::Text, QColor("#9CA3AF"));
@@ -467,7 +467,7 @@ namespace cloakframe
             palette.setColor(QPalette::ButtonText, QColor("#E6EDF3"));
             palette.setColor(QPalette::Highlight, QColor("#1F6FEB"));
             palette.setColor(QPalette::HighlightedText, QColor("#FFFFFF"));
-            palette.setColor(QPalette::PlaceholderText, QColor("#6E7681"));
+            palette.setColor(QPalette::PlaceholderText, QColor("#8B949E"));
             palette.setColor(QPalette::ToolTipBase, QColor("#161B22"));
             palette.setColor(QPalette::ToolTipText, QColor("#E6EDF3"));
             palette.setColor(QPalette::Disabled, QPalette::Text, QColor("#6E7681"));

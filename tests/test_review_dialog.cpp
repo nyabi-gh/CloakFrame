@@ -55,6 +55,18 @@ int main(int argc, char **argv)
     assert(dialog.reviewResult().finalBoxes.size() == 1);
     assert(QApplication::focusWidget() == *canvas);
 
+    QTest::keyClick(*canvas, Qt::Key_N);
+    assert(dialog.reviewResult().finalBoxes.size() == 2);
+    const QRectF added = dialog.reviewResult().finalBoxes.back();
+    assert(added == QRectF(142, 102, 36, 36));
+    QTest::keyClick(*canvas, Qt::Key_Right, Qt::ShiftModifier);
+    QTest::keyClick(*canvas, Qt::Key_Down, Qt::AltModifier);
+    assert(dialog.reviewResult().finalBoxes.back() == QRectF(145.2, 102, 36, 39.2));
+    QTest::mouseClick(undo, Qt::LeftButton);
+    assert(dialog.reviewResult().finalBoxes.back() == added);
+    QTest::mouseClick(undo, Qt::LeftButton);
+    assert(dialog.reviewResult().finalBoxes.size() == 1);
+
     (*canvas)->setFocus();
     application.processEvents();
     QTest::keyClick(*canvas, Qt::Key_Return, Qt::ControlModifier);
