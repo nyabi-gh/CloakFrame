@@ -197,8 +197,11 @@ embed the project's updater. The app then links users to GitHub Releases.
 2. Keep changes focused and add regression coverage for changed behavior.
 3. Run the formatting and static-analysis checks.
 4. Update the Korean and Japanese translations in `translations/` when
-   user-visible strings change. The `translation_quality` test fails on an
-   unfinished entry or one left identical to the English source.
+   user-visible strings change. Regenerate the catalogs with the
+   `update_translations` target, then fill in the new entries and delete the
+   ones lupdate marks vanished. The `translation_quality` test fails on an
+   unfinished entry, a vanished one, or one left identical to the English
+   source.
 5. Write the commit subject for the person updating the app. Release notes are
    generated from the subjects of the commits since the previous release, so a
    subject such as "Keep the video source snapshot out of the output folder"

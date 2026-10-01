@@ -21,6 +21,11 @@ close it. Check the caller and the full scope before recording a change of state
   repository-scoped; see [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). Both
   update keys have been readable from any branch, so consider rotating them. Clients
   pin the public key, so a rotation needs a transitional release that trusts both keys.
+- **Check the first release after 2026-10-01.** The release workflow changed without a
+  tagged run: the Linux FFmpeg now comes from BtbN, Windows and Linux install Qt Image
+  Formats and check that the TIFF and WebP plugins are packaged, the bundled FFmpeg
+  license is checked on all three platforms, and the release notes are generated from
+  commit subjects. Watch that run, and open a TIFF and a WebP file in each package.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
   warns on first run.
 - **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
