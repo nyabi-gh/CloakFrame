@@ -46,8 +46,9 @@ add anything the detector missed.
 
 - **Nothing is uploaded.** Photos and videos are processed on your computer only.
 - **Metadata is removed.** Saved images carry no location, camera, or other embedded
-  data unless you choose to keep selected fields. Videos lose their container
-  metadata, subtitles, and GPS tracks.
+  data unless you choose to keep the camera, lens, exposure, and capture time. Location
+  is a separate choice, and serial numbers and owner or author names are never kept.
+  Videos lose their container metadata, subtitles, and GPS tracks.
 - **Audio is kept unless you remove it.** Voices and other sounds in a video are not
   anonymized. Turn on **Remove audio from videos** to save videos without sound; when a
   run keeps audio, its result says so.

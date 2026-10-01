@@ -1670,7 +1670,8 @@ namespace cloakframe
         const cv::Mat &image,
         const std::vector<int> &params,
         const std::filesystem::path &metadataSource,
-        const std::function<bool()> &publishGuard)
+        const std::function<bool()> &publishGuard,
+        const bool keepLocation)
     {
         if (!validRelativeDestination(relativeDestination))
         {
@@ -1706,7 +1707,7 @@ namespace cloakframe
                                         && syncDescriptor(stagedDescriptor);
                     closeIgnoringErrors(stagedDescriptor);
                     if (staged && (!publishGuard || publishGuard())
-                        && copyMetadata(metadataSource, stagedPath, true)
+                        && copyMetadata(metadataSource, stagedPath, true, keepLocation)
                         && (!publishGuard || publishGuard()))
                     {
                         std::error_code sizeError;
@@ -2044,7 +2045,8 @@ namespace cloakframe
 
     bool copyMetadata(const std::filesystem::path &source,
         const std::filesystem::path &destination,
-        bool normalizeOrientation)
+        bool normalizeOrientation,
+        bool keepLocation)
     {
 #ifdef CLOAKFRAME_HAVE_EXIV2
         if (!initializeExiv2())
@@ -2075,41 +2077,44 @@ namespace cloakframe
                     {
                         return static_cast<char>(std::tolower(value));
                     });
-                const bool standardGroup =
-                    key.starts_with("exif.image.") || key.starts_with("exif.photo.")
-                    || key.starts_with("exif.gpsinfo.") || key.starts_with("exif.iop.");
-                constexpr std::array<std::string_view, 25> blocked = {
-                    "thumbnail",
-                    "preview",
-                    "makernote",
-                    "stripoffset",
-                    "stripbyte",
-                    "tileoffset",
-                    "tilebyte",
-                    "jpeginterchange",
-                    "jpgfromraw",
-                    "otherimage",
-                    "originalraw",
-                    "dngprivate",
-                    "opcode",
-                    "subifd",
-                    "subimage",
-                    "imageoffset",
-                    "imagebytecount",
-                    "imagewidth",
-                    "imagelength",
-                    "pixeldimension",
-                    "xmlpacket",
-                    "applicationnotes",
-                    "imageresource",
-                    "photoshop",
-                    "intercolorprofile",
+                // Only what describes how the picture was taken. Anything else a camera, phone
+                // or editor writes (serial numbers, owner and author names, comments, IDs) is
+                // dropped, and so is anything added to the format later.
+                constexpr std::array<std::string_view, 31> allowed = {
+                    "exif.image.make",
+                    "exif.image.model",
+                    "exif.image.orientation",
+                    "exif.image.datetime",
+                    "exif.photo.datetimeoriginal",
+                    "exif.photo.datetimedigitized",
+                    "exif.photo.offsettime",
+                    "exif.photo.offsettimeoriginal",
+                    "exif.photo.offsettimedigitized",
+                    "exif.photo.subsectime",
+                    "exif.photo.subsectimeoriginal",
+                    "exif.photo.subsectimedigitized",
+                    "exif.photo.exposuretime",
+                    "exif.photo.fnumber",
+                    "exif.photo.exposureprogram",
+                    "exif.photo.isospeedratings",
+                    "exif.photo.photographicsensitivity",
+                    "exif.photo.exposurebiasvalue",
+                    "exif.photo.meteringmode",
+                    "exif.photo.flash",
+                    "exif.photo.focallength",
+                    "exif.photo.focallengthin35mmfilm",
+                    "exif.photo.exposuremode",
+                    "exif.photo.whitebalance",
+                    "exif.photo.scenecapturetype",
+                    "exif.photo.colorspace",
+                    "exif.photo.lensmake",
+                    "exif.photo.lensmodel",
+                    "exif.photo.lensspecification",
+                    "exif.photo.aperturevalue",
+                    "exif.photo.shutterspeedvalue",
                 };
-                const bool unsafe = std::ranges::any_of(blocked,
-                    [&](const auto value)
-                    {
-                        return key.find(value) != std::string::npos;
-                    });
+                const bool permitted = std::ranges::find(allowed, key) != allowed.end()
+                                       || (keepLocation && key.starts_with("exif.gpsinfo."));
                 const auto bytes = it->size();
                 const auto type = it->typeId();
                 const bool safeType = type == Exiv2::unsignedByte || type == Exiv2::asciiString
@@ -2118,7 +2123,7 @@ namespace cloakframe
                                       || type == Exiv2::signedByte || type == Exiv2::signedShort
                                       || type == Exiv2::signedLong || type == Exiv2::signedRational
                                       || type == Exiv2::tiffFloat || type == Exiv2::tiffDouble;
-                if (!standardGroup || unsafe || !safeType || bytes > metadataEntryLimit
+                if (!permitted || !safeType || bytes > metadataEntryLimit
                     || exifBytes > metadataTotalLimit - bytes)
                 {
                     it = exif.erase(it);
@@ -2150,6 +2155,7 @@ namespace cloakframe
         (void)source;
         (void)destination;
         (void)normalizeOrientation;
+        (void)keepLocation;
         return false;
 #endif
     }

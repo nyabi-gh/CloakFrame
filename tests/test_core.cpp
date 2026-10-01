@@ -2202,7 +2202,14 @@ namespace
         {
             auto image = Exiv2::ImageFactory::open(src.string());
             image->readMetadata();
+            image->exifData()["Exif.Image.Make"] = "TestCamera";
+            image->exifData()["Exif.Photo.LensModel"] = "TestLens";
             image->exifData()["Exif.Image.Artist"] = "TestPhotographer";
+            image->exifData()["Exif.Photo.CameraOwnerName"] = "TestOwner";
+            image->exifData()["Exif.Photo.BodySerialNumber"] = "TestSerial";
+            image->exifData()["Exif.Photo.LensSerialNumber"] = "TestLensSerial";
+            image->exifData()["Exif.GPSInfo.GPSLatitudeRef"] = "N";
+            image->exifData()["Exif.GPSInfo.GPSLatitude"] = "37/1 33/1 59/1";
             image->exifData()["Exif.Image.Orientation"] = static_cast<uint16_t>(6);
             image->exifData()["Exif.Photo.UserComment"] = "data:image/jpeg;base64,unsafe-payload";
             image->xmpData()["Xmp.tiff.Orientation"] = "6";
@@ -2219,9 +2226,23 @@ namespace
             image->readMetadata();
             const Exiv2::ExifData &exif = image->exifData();
 
-            const auto artist = exif.findKey(Exiv2::ExifKey("Exif.Image.Artist"));
-            assert(artist != exif.end());
-            assert(artist->toString() == "TestPhotographer");
+            const auto make = exif.findKey(Exiv2::ExifKey("Exif.Image.Make"));
+            assert(make != exif.end());
+            assert(make->toString() == "TestCamera");
+            const auto lens = exif.findKey(Exiv2::ExifKey("Exif.Photo.LensModel"));
+            assert(lens != exif.end());
+            assert(lens->toString() == "TestLens");
+            // Who took it, who owns the camera, which camera and where: none of it is allowed
+            // unless location is asked for, and the people and serials never are.
+            for (const char *key : {"Exif.Image.Artist",
+                     "Exif.Photo.CameraOwnerName",
+                     "Exif.Photo.BodySerialNumber",
+                     "Exif.Photo.LensSerialNumber",
+                     "Exif.GPSInfo.GPSLatitudeRef",
+                     "Exif.GPSInfo.GPSLatitude"})
+            {
+                assert(exif.findKey(Exiv2::ExifKey(key)) == exif.end());
+            }
 
             const auto orientation = exif.findKey(Exiv2::ExifKey("Exif.Image.Orientation"));
             assert(orientation != exif.end());
@@ -2238,6 +2259,20 @@ namespace
             assert(image->comment().empty());
         }
 
+        const std::filesystem::path located = root / "located.jpg";
+        assert(cv::imwrite(located.string(), img));
+        assert(cloakframe::copyMetadata(src, located, true, true));
+        {
+            auto image = Exiv2::ImageFactory::open(located.string());
+            image->readMetadata();
+            const Exiv2::ExifData &exif = image->exifData();
+            const auto latitude = exif.findKey(Exiv2::ExifKey("Exif.GPSInfo.GPSLatitudeRef"));
+            assert(latitude != exif.end());
+            assert(latitude->toString() == "N");
+            assert(exif.findKey(Exiv2::ExifKey("Exif.Image.Artist")) == exif.end());
+            assert(exif.findKey(Exiv2::ExifKey("Exif.Photo.BodySerialNumber")) == exif.end());
+        }
+
         const auto published = root / "published.jpg";
         assert(
             cloakframe::imwriteUnicodeNoReplaceAtRoot(
@@ -2245,12 +2280,29 @@ namespace
             == cloakframe::ImageWriteResult::Saved);
         auto publishedMetadata = Exiv2::ImageFactory::open(published.string());
         publishedMetadata->readMetadata();
-        const auto artist =
-            publishedMetadata->exifData().findKey(Exiv2::ExifKey("Exif.Image.Artist"));
-        assert(artist != publishedMetadata->exifData().end());
-        assert(artist->toString() == "TestPhotographer");
+        const auto &publishedExif = publishedMetadata->exifData();
+        const auto make = publishedExif.findKey(Exiv2::ExifKey("Exif.Image.Make"));
+        assert(make != publishedExif.end());
+        assert(make->toString() == "TestCamera");
+        assert(publishedExif.findKey(Exiv2::ExifKey("Exif.Image.Artist")) == publishedExif.end());
+        assert(publishedExif.findKey(Exiv2::ExifKey("Exif.GPSInfo.GPSLatitude"))
+               == publishedExif.end());
         assert(publishedMetadata->xmpData().findKey(Exiv2::XmpKey("Xmp.tiff.Orientation"))
                == publishedMetadata->xmpData().end());
+
+        const auto publishedWithLocation = root / "published-located.jpg";
+        assert(cloakframe::imwriteUnicodeNoReplaceAtRoot(root,
+                   publishedWithLocation.filename(),
+                   img,
+                   cloakframe::encodeParamsForExtension("jpg"),
+                   src,
+                   {},
+                   true)
+               == cloakframe::ImageWriteResult::Saved);
+        auto locatedMetadata = Exiv2::ImageFactory::open(publishedWithLocation.string());
+        locatedMetadata->readMetadata();
+        assert(locatedMetadata->exifData().findKey(Exiv2::ExifKey("Exif.GPSInfo.GPSLatitude"))
+               != locatedMetadata->exifData().end());
     }
 
     std::uint32_t pngCrc(const QByteArray &bytes)
@@ -2427,7 +2479,7 @@ namespace
         {
             auto image = Exiv2::ImageFactory::open(src.string());
             image->readMetadata();
-            image->exifData()["Exif.Image.Artist"] = "TestPhotographer";
+            image->exifData()["Exif.Image.Make"] = "TestCamera";
             Exiv2::ExifThumb thumb(image->exifData());
             thumb.setJpegThumbnail(thumbFile.string());
             image->writeMetadata();
@@ -2447,9 +2499,9 @@ namespace
             assert(exifThumbnailBytes(image->exifData()) == 0);
 
             const Exiv2::ExifData &exif = image->exifData();
-            const auto artist = exif.findKey(Exiv2::ExifKey("Exif.Image.Artist"));
-            assert(artist != exif.end());
-            assert(artist->toString() == "TestPhotographer");
+            const auto make = exif.findKey(Exiv2::ExifKey("Exif.Image.Make"));
+            assert(make != exif.end());
+            assert(make->toString() == "TestCamera");
         }
     }
 #endif

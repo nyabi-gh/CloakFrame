@@ -55,6 +55,7 @@ namespace cloakframe
         MaskShape shape = MaskShape::Rectangle;
         bool softEdges = false;
         bool preserveMetadata = false;
+        bool preserveLocation = false;
         bool reviewEnabled = false;
         bool detectFaces = true;
         bool detectPlates = false;
@@ -163,6 +164,7 @@ namespace cloakframe
         MaskShape shape_;
         bool softEdges_;
         bool preserveMetadata_;
+        bool preserveLocation_;
         bool reviewEnabled_;
         QPointer<QObject> reviewReceiver_;
         bool detectFaces_;

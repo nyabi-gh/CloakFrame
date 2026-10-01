@@ -686,11 +686,11 @@ namespace cloakframe
                         preserveMetaCheck_->setToolTip(
                             tr("Off (default): output carries no metadata — GPS, camera, and "
                                "timestamps are removed.\n"
-                               "On: copies selected EXIF fields such as camera, timestamps, and "
-                               "location. Embedded "
-                               "previews, IPTC, XMP, comments, and color profiles are removed. "
-                               "Format and bit depth "
-                               "are preserved at maximum quality."));
+                               "On: copies only the camera, lens, exposure and capture time. "
+                               "Location is kept only if you also choose it. Serial numbers, "
+                               "owner and author names, embedded previews, IPTC, XMP, comments, "
+                               "and color profiles are removed. Format and bit depth are "
+                               "preserved at maximum quality."));
                     }
                     else
                     {
@@ -701,6 +701,28 @@ namespace cloakframe
                 });
             preserveMetaCheck_->setEnabled(metadataSupportAvailable());
             cardLayout->addWidget(preserveMetaCheck_);
+
+            preserveLocationCheck_ = new QCheckBox(card);
+            addRetranslation(
+                [this]
+                {
+                    preserveLocationCheck_->setText(tr("Also keep location (GPS)"));
+                    preserveLocationCheck_->setToolTip(
+                        tr("Keeps where each photo was taken. Anyone who receives the file can "
+                           "see the place."));
+                });
+            preserveLocationCheck_->setEnabled(false);
+            connect(preserveMetaCheck_,
+                &QCheckBox::toggled,
+                this,
+                [this]
+                {
+                    updateLocationOption();
+                });
+            auto *locationRow = new QHBoxLayout();
+            locationRow->addSpacing(24);
+            locationRow->addWidget(preserveLocationCheck_);
+            cardLayout->addLayout(locationRow);
 
             removeAudioCheck_ = new QCheckBox(card);
             addRetranslation(
@@ -1639,6 +1661,7 @@ namespace cloakframe
         request.shape = static_cast<MaskShape>(shapeCombo_->currentData().toInt());
         request.softEdges = softEdgeCheck_->isChecked();
         request.preserveMetadata = metadataSupportAvailable() && preserveMetaCheck_->isChecked();
+        request.preserveLocation = request.preserveMetadata && preserveLocationCheck_->isChecked();
         request.removeAudio = removeAudioCheck_->isChecked();
         request.reviewEnabled = reviewCheck_->isChecked();
         request.detectFaces = detectFaces;
@@ -2135,6 +2158,8 @@ namespace cloakframe
         reviewCheck_->setChecked(settings.value("review", true).toBool());
         preserveMetaCheck_->setChecked(
             metadataSupportAvailable() && settings.value("preserveMetadata", false).toBool());
+        preserveLocationCheck_->setChecked(settings.value("preserveLocation", false).toBool());
+        updateLocationOption();
         removeAudioCheck_->setChecked(settings.value("removeAudio", false).toBool());
 
         scoreThresholdSpin_->setValue(
@@ -2260,6 +2285,7 @@ namespace cloakframe
         settings.setValue("recursive", recursiveCheck_->isChecked());
         settings.setValue("review", reviewCheck_->isChecked());
         settings.setValue("preserveMetadata", preserveMetaCheck_->isChecked());
+        settings.setValue("preserveLocation", preserveLocationCheck_->isChecked());
         settings.setValue("removeAudio", removeAudioCheck_->isChecked());
         settings.setValue("scoreThreshold", scoreThresholdSpin_->value());
         settings.setValue("nmsThreshold", nmsThresholdSpin_->value());
@@ -2745,6 +2771,7 @@ namespace cloakframe
         recursiveCheck_->setEnabled(!processing);
         reviewCheck_->setEnabled(!processing);
         preserveMetaCheck_->setEnabled(!processing && metadataSupportAvailable());
+        updateLocationOption();
         removeAudioCheck_->setEnabled(!processing);
         scoreThresholdSpin_->setEnabled(!processing);
         nmsThresholdSpin_->setEnabled(!processing);
@@ -2762,6 +2789,12 @@ namespace cloakframe
             modelBrowseButton_->setEnabled(facesNeeded);
             downloadButton_->setEnabled(facesNeeded);
         }
+    }
+
+    void MainWindow::updateLocationOption() const
+    {
+        preserveLocationCheck_->setEnabled(
+            !processing_ && metadataSupportAvailable() && preserveMetaCheck_->isChecked());
     }
 
     void MainWindow::setDropHighlight(bool active) const

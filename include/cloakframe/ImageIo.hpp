@@ -92,7 +92,8 @@ namespace cloakframe
         const cv::Mat &image,
         const std::vector<int> &params = {},
         const std::filesystem::path &metadataSource = {},
-        const std::function<bool()> &publishGuard = {});
+        const std::function<bool()> &publishGuard = {},
+        bool keepLocation = false);
 
     bool copyFileNoReplace(
         const std::filesystem::path &source, const std::filesystem::path &destination);
@@ -109,7 +110,11 @@ namespace cloakframe
 
     std::vector<int> encodeParamsForExtension(const std::string &extLower);
 
+    // Copies the EXIF fields that describe how the picture was taken (camera, lens, exposure,
+    // capture time), and the GPS fields only when `keepLocation` is set. Everything else,
+    // including XMP, IPTC, comments and color profiles, is removed from `destination`.
     bool copyMetadata(const std::filesystem::path &source,
         const std::filesystem::path &destination,
-        bool normalizeOrientation);
+        bool normalizeOrientation,
+        bool keepLocation = false);
 }

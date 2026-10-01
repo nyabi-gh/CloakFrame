@@ -33,8 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **Metadata preservation** [A-6]. The opt-in keeps GPS, serial numbers and owner names
-  through a blocklist. Switch to an allowlist and make GPS a separate choice.
 - **Skipped file types** [A-10]. Unsupported files in a folder (HEIC, AVIF, GIF, MKV)
   are dropped silently. Show their count by extension.
 - **Leftovers** [A-12, A-5]. Publication temp directories in the output folder survive a

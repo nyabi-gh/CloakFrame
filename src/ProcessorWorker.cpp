@@ -418,6 +418,7 @@ namespace cloakframe
         , shape_(request.shape)
         , softEdges_(request.softEdges)
         , preserveMetadata_(request.preserveMetadata)
+        , preserveLocation_(request.preserveMetadata && request.preserveLocation)
         , reviewEnabled_(request.reviewEnabled)
         , reviewReceiver_(request.reviewReceiver)
         , detectFaces_(request.detectFaces)
@@ -1266,7 +1267,8 @@ namespace cloakframe
                 image,
                 encodeParams,
                 preserveMetadata_ ? processingSource : std::filesystem::path{},
-                canPublish);
+                canPublish,
+                preserveLocation_);
             if (writeResult == ImageWriteResult::Failed)
             {
                 if (cancelled_.load(std::memory_order_acquire))
