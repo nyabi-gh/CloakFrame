@@ -2184,10 +2184,22 @@ namespace cloakframe
                 startLegacyUpdateCheck();
             });
         connect(updater,
+            &SelfUpdater::updateRejected,
+            this,
+            [this, updater](const QString &reason)
+            {
+                spdlog::warn(
+                    "refused an update that could not be verified: {}", reason.toStdString());
+                updater->deleteLater();
+                showUpdateRejectedBanner(reason);
+            });
+        connect(updater,
             &SelfUpdater::updateAvailable,
             this,
             [this, updater](const QString &version, const QString &releaseNotes)
             {
+                // A rejection from here on belongs to the download the user asked for.
+                disconnect(updater, &SelfUpdater::updateRejected, this, nullptr);
                 showUpdateBanner(version, UpdateChecker::releasesPageUrl());
                 if (askToUpdate(version, releaseNotes))
                 {
@@ -2225,6 +2237,18 @@ namespace cloakframe
         const QString text = tr("Update available: %1").arg(latestVersion);
         updateLabel_->setText(QStringLiteral("<a href=\"%1\">%2</a>")
                 .arg(releaseUrl.toHtmlEscaped(), text.toHtmlEscaped()));
+        updateLabel_->setVisible(true);
+    }
+
+    void MainWindow::showUpdateRejectedBanner(const QString &reason)
+    {
+        if (updateLabel_ == nullptr)
+        {
+            return;
+        }
+        updateLabel_->setText(
+            tr("⚠ An update was refused because it could not be verified.").toHtmlEscaped());
+        updateLabel_->setToolTip(reason);
         updateLabel_->setVisible(true);
     }
 
@@ -2283,6 +2307,32 @@ namespace cloakframe
                 {
                     QDesktopServices::openUrl(QUrl(UpdateChecker::releasesPageUrl()));
                 }
+                updater->deleteLater();
+            });
+        connect(updater,
+            &SelfUpdater::updateRejected,
+            this,
+            [this, updater, progress](const QString &reason)
+            {
+                if (progress)
+                {
+                    progress->close();
+                    progress->deleteLater();
+                }
+                spdlog::warn(
+                    "refused an update that could not be verified: {}", reason.toStdString());
+
+                // No download page here: the release that failed verification is the one it
+                // would offer.
+                QMessageBox message(this);
+                message.setWindowTitle(tr("Update Refused"));
+                message.setIcon(QMessageBox::Warning);
+                message.setTextFormat(Qt::PlainText);
+                message.setText(tr("The update was refused because it could not be verified. "
+                                   "Nothing was installed."));
+                message.setInformativeText(reason);
+                message.addButton(QMessageBox::Close);
+                message.exec();
                 updater->deleteLater();
             });
         connect(updater,

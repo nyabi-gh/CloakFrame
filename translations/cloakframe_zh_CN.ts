@@ -687,6 +687,18 @@ Check these results before sharing them.</source>
         <translation>更新失败</translation>
     </message>
     <message>
+        <source>⚠ An update was refused because it could not be verified.</source>
+        <translation>⚠ 由于无法验证，已拒绝更新。</translation>
+    </message>
+    <message>
+        <source>Update Refused</source>
+        <translation>已拒绝更新</translation>
+    </message>
+    <message>
+        <source>The update was refused because it could not be verified. Nothing was installed.</source>
+        <translation>由于无法验证此更新，已将其拒绝。未安装任何内容。</translation>
+    </message>
+    <message>
         <location filename="../src/MainWindow.cpp" line="2277"/>
         <source>The update could not be installed: %1</source>
         <translation>无法安装更新：%1</translation>

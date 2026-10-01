@@ -687,6 +687,18 @@ Check these results before sharing them.</source>
         <translation>업데이트 실패</translation>
     </message>
     <message>
+        <source>⚠ An update was refused because it could not be verified.</source>
+        <translation>⚠ 확인할 수 없는 업데이트를 거부했습니다.</translation>
+    </message>
+    <message>
+        <source>Update Refused</source>
+        <translation>업데이트 거부됨</translation>
+    </message>
+    <message>
+        <source>The update was refused because it could not be verified. Nothing was installed.</source>
+        <translation>업데이트를 확인할 수 없어 거부했습니다. 아무것도 설치하지 않았습니다.</translation>
+    </message>
+    <message>
         <location filename="../src/MainWindow.cpp" line="2277"/>
         <source>The update could not be installed: %1</source>
         <translation>업데이트를 설치하지 못했습니다: %1</translation>

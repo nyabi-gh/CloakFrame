@@ -136,6 +136,8 @@ namespace cloakframe
 
         void showUpdateBanner(const QString &latestVersion, const QString &releaseUrl);
 
+        void showUpdateRejectedBanner(const QString &reason);
+
         bool askToUpdate(const QString &latestVersion, const QString &releaseNotes);
 
         void downloadUpdateWithProgress(SelfUpdater *updater, const QString &version);

@@ -74,7 +74,7 @@ namespace cloakframe
                 if (QString rejection; !updateIsTrusted(*update_, &rejection))
                 {
                     update_.reset();
-                    emit checkFailed(rejection);
+                    emit updateRejected(rejection);
                     return;
                 }
                 emit updateAvailable(QString::fromStdString(update_->TargetFullRelease.Version),
@@ -90,7 +90,7 @@ namespace cloakframe
                 }
                 if (QString rejection; !cacheIsUsable(&rejection))
                 {
-                    emit downloadFailed(rejection);
+                    emit updateRejected(rejection);
                     return;
                 }
                 discardCachedPackagesThatDoNotMatch(*update_);
@@ -106,7 +106,7 @@ namespace cloakframe
                 if (QString rejection;
                     !cachedPackageIsTheOneDescribed(update_->TargetFullRelease, &rejection))
                 {
-                    emit downloadFailed(rejection);
+                    emit updateRejected(rejection);
                     return;
                 }
                 emit downloadFinished();
@@ -124,7 +124,7 @@ namespace cloakframe
                     !cacheIsUsable(&rejection)
                     || !cachedPackageIsTheOneDescribed(update_->TargetFullRelease, &rejection))
                 {
-                    emit downloadFailed(rejection);
+                    emit updateRejected(rejection);
                     return;
                 }
                 try
@@ -143,6 +143,8 @@ namespace cloakframe
             void updateAvailable(const QString &version, const QString &releaseNotes);
 
             void checkFailed(const QString &error);
+
+            void updateRejected(const QString &reason);
 
             void progress(int percent);
 
@@ -331,6 +333,8 @@ namespace cloakframe
                 connect(
                     worker_, &VelopackWorker::updateAvailable, this, &SelfUpdater::updateAvailable);
                 connect(worker_, &VelopackWorker::checkFailed, this, &SelfUpdater::checkFailed);
+                connect(
+                    worker_, &VelopackWorker::updateRejected, this, &SelfUpdater::updateRejected);
                 connect(worker_, &VelopackWorker::progress, this, &SelfUpdater::downloadProgress);
                 connect(worker_,
                     &VelopackWorker::downloadFinished,

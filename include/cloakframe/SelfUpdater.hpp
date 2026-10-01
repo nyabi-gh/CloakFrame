@@ -33,6 +33,10 @@ namespace cloakframe
 
         void checkFailed(const QString &error);
 
+        // The release on offer, or the package downloaded for it, could not be verified. Unlike
+        // the failures, this is not a reason to point the user at the same release another way.
+        void updateRejected(const QString &reason);
+
         void downloadProgress(int percent);
 
         void downloadFinished();
