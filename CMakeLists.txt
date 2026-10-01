@@ -111,6 +111,7 @@ if(BUILD_TESTING)
                     --strict-source-equality
                     "${CMAKE_CURRENT_SOURCE_DIR}/translations/cloakframe_ko.ts"
                     "${CMAKE_CURRENT_SOURCE_DIR}/translations/cloakframe_ja.ts")
+        set_tests_properties(translation_quality PROPERTIES TIMEOUT 60)
     endif()
 endif()
 

@@ -1,7 +1,7 @@
 find_package(Qt6 REQUIRED COMPONENTS Test)
 
 function(add_cloakframe_test name)
-    add_executable(${name} ${ARGN})
+    add_executable(${name} ${ARGN} ${CMAKE_CURRENT_SOURCE_DIR}/test_support.cpp)
     if(MSVC)
         target_compile_options(${name} PRIVATE /UNDEBUG)
     else()
@@ -10,6 +10,8 @@ function(add_cloakframe_test name)
     target_link_libraries(${name} PRIVATE cloakframe_core)
     cloakframe_harden(${name})
     add_test(NAME ${name} COMMAND ${name})
+    # A hung test otherwise runs until the CI job limit. Tests that need less say so below.
+    set_tests_properties(${name} PROPERTIES TIMEOUT 300)
 endfunction()
 
 add_cloakframe_test(cloakframe_tests test_core.cpp)
