@@ -44,17 +44,6 @@ jobs:
           git ls-files -z -- '*.cpp' '*.hpp' '*.mm' |
             xargs -0 "$clang_format" --dry-run --Werror
 
-      - name: Check release notes for the current version
-        run: |
-          version=$(sed -n 's/^project(CloakFrame VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
-          for language in ko en ja zh; do
-            notes="release-notes/${version}.${language}.md"
-            if [[ ! -s "$notes" ]]; then
-              echo "Missing release notes: $notes" >&2
-              exit 1
-            fi
-          done
-
       - name: Test download badge aggregation
         run: node --test .github/scripts/update-download-badge.test.js
 

@@ -29,7 +29,7 @@ namespace cloakframe
         virtual void restartToApply() = 0;
 
     signals:
-        void updateAvailable(const QString &version, const QString &releaseNotes);
+        void updateAvailable(const QString &version);
 
         void checkFailed(const QString &error);
 

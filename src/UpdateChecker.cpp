@@ -95,9 +95,7 @@ namespace cloakframe
                 const bool trustedUrl = parsedUrl.isValid()
                                         && parsedUrl.scheme() == QLatin1String("https")
                                         && parsedUrl.host() == QLatin1String("github.com");
-                const auto releaseNotes = object.value("body").toString().trimmed();
-                emit updateAvailable(
-                    tag, trustedUrl ? url : QString::fromLatin1(kReleasesPageUrl), releaseNotes);
+                emit updateAvailable(tag, trustedUrl ? url : QString::fromLatin1(kReleasesPageUrl));
             });
     }
 }

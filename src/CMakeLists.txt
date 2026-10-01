@@ -27,7 +27,6 @@ add_library(cloakframe_core STATIC
     OutputPlan.cpp
     PlateDetector.cpp
     ProcessorWorker.cpp
-    ReleaseNotes.cpp
     SceneCut.cpp
     ScrfdFaceDetector.cpp
     StageCleanup.cpp
@@ -60,7 +59,6 @@ add_library(cloakframe_core STATIC
     ${PROJECT_SOURCE_DIR}/include/cloakframe/PathUtil.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/PlateDetector.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ProcessorWorker.hpp
-    ${PROJECT_SOURCE_DIR}/include/cloakframe/ReleaseNotes.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ReviewTypes.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/SceneCut.hpp
     ${PROJECT_SOURCE_DIR}/include/cloakframe/ScrfdFaceDetector.hpp

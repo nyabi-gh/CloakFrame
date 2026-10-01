@@ -9,7 +9,6 @@
 #include "cloakframe/PathSafety.hpp"
 #include "cloakframe/PlateDetector.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
-#include "cloakframe/ReleaseNotes.hpp"
 #include "cloakframe/ReviewTypes.hpp"
 #include "cloakframe/ScrfdFaceDetector.hpp"
 #include "cloakframe/Yolo5FaceDetector.hpp"
@@ -1057,40 +1056,6 @@ namespace
             {
                 return message.contains("MB limit");
             }));
-    }
-
-    void testReleaseNotesPickTheInterfaceLanguage()
-    {
-        const QString combined =
-            QStringLiteral("<!-- notes:ko -->\n\n## 설치\n\n- 한국어 항목\n\n"
-                           "<details><summary>English</summary>\n\n<!-- notes:en -->\n\n"
-                           "## Install\n\n- English item\n\n</details>\n\n"
-                           "<details><summary>日本語</summary>\n\n<!-- notes:ja -->\n\n"
-                           "## インストール\n\n- 日本語の項目\n\n</details>\n");
-
-        const QString korean = cloakframe::releaseNotesForLanguage(combined, "ko");
-        assert(korean.startsWith("## 설치"));
-        assert(korean.contains("한국어 항목"));
-        assert(!korean.contains("English item"));
-        assert(!korean.contains("日本語の項目"));
-
-        const QString japanese = cloakframe::releaseNotesForLanguage(combined, "ja");
-        assert(japanese.contains("日本語の項目"));
-        assert(!japanese.contains("English item"));
-        // The <details> wrapper is markup, and the update dialog renders plain text.
-        assert(!japanese.contains("<details"));
-        assert(!japanese.contains("</details>"));
-        assert(!japanese.contains("<summary"));
-
-        // A language the release does not carry falls back to English.
-        const QString chinese = cloakframe::releaseNotesForLanguage(combined, "zh");
-        assert(chinese.contains("English item"));
-
-        // Notes without markers are shown as they are, so an older release still reads fine.
-        const QString plain = QStringLiteral("  ## Only one language\n\n- item\n ");
-        assert(cloakframe::releaseNotesForLanguage(plain, "ko")
-               == QStringLiteral("## Only one language\n\n- item"));
-        assert(cloakframe::releaseNotesForLanguage(QString(), "ko").isEmpty());
     }
 
     void testWorkerRejectsMultiFrameImages()
@@ -2540,7 +2505,6 @@ int main(int argc, char **argv)
     testWorkerUsesStableImageSnapshotDuringReview();
     testWorkerAcceptsThirtyMegabyteJpeg();
     testWorkerRejectsAnImageLargerThanTheMemoryBudget();
-    testReleaseNotesPickTheInterfaceLanguage();
     testWorkerRejectsMultiFrameImages();
     testAnimatedImageContainersAreDetectedWithoutDecodingAllFrames();
     testApplyMosaicTouchesOnlyDetectedRegion();

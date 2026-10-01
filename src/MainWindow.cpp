@@ -10,7 +10,6 @@
 #include "cloakframe/PathUtil.hpp"
 #include "cloakframe/PlateDetector.hpp"
 #include "cloakframe/ProcessorWorker.hpp"
-#include "cloakframe/ReleaseNotes.hpp"
 #include "cloakframe/ResultsDialog.hpp"
 #include "cloakframe/ReviewDialog.hpp"
 #include "cloakframe/SelfUpdater.hpp"
@@ -175,15 +174,6 @@ namespace cloakframe
                 canonicalPath = QDir::cleanPath(info.absoluteFilePath());
             }
             return {std::move(bgra), std::move(canonicalPath), {}};
-        }
-
-        QString releaseNotesSection(const QString &releaseNotes)
-        {
-            // Notes carry every language the release ships with, so the dialog shows the one
-            // matching the interface rather than all of them stacked together.
-            return releaseNotesForLanguage(releaseNotes,
-                QLocale().language() == QLocale::C ? QStringLiteral("en")
-                                                   : QLocale().name().left(2));
         }
 
         QString defaultOutputDirectory()
@@ -2187,12 +2177,12 @@ namespace cloakframe
         connect(updater,
             &SelfUpdater::updateAvailable,
             this,
-            [this, updater](const QString &version, const QString &releaseNotes)
+            [this, updater](const QString &version)
             {
                 // A rejection from here on belongs to the download the user asked for.
                 disconnect(updater, &SelfUpdater::updateRejected, this, nullptr);
                 showUpdateBanner(version, UpdateChecker::releasesPageUrl());
-                if (askToUpdate(version, releaseNotes))
+                if (askToUpdate(version))
                 {
                     downloadUpdateWithProgress(updater, version);
                 }
@@ -2206,12 +2196,10 @@ namespace cloakframe
         connect(checker,
             &UpdateChecker::updateAvailable,
             this,
-            [this](const QString &latestVersion,
-                const QString &releaseUrl,
-                const QString &releaseNotes)
+            [this](const QString &latestVersion, const QString &releaseUrl)
             {
                 showUpdateBanner(latestVersion, releaseUrl);
-                if (askToUpdate(latestVersion, releaseNotes))
+                if (askToUpdate(latestVersion))
                 {
                     QDesktopServices::openUrl(QUrl(releaseUrl));
                 }
@@ -2243,22 +2231,18 @@ namespace cloakframe
         updateLabel_->setVisible(true);
     }
 
-    bool MainWindow::askToUpdate(const QString &latestVersion, const QString &releaseNotes)
+    bool MainWindow::askToUpdate(const QString &latestVersion)
     {
         QMessageBox message(this);
         message.setWindowTitle(tr("Update Available"));
         message.setIcon(QMessageBox::Information);
         message.setTextFormat(Qt::PlainText);
-        message.setText(tr("CloakFrame %1 is available. What's new:").arg(latestVersion));
-        const QString localizedNotes = releaseNotesSection(releaseNotes);
-        message.setInformativeText(localizedNotes.isEmpty()
-                                       ? tr("No release notes were provided for this update.")
-                                       : localizedNotes);
+        message.setText(tr("CloakFrame %1 is available.").arg(latestVersion));
 
         auto *updateButton = message.addButton(tr("Update"), QMessageBox::AcceptRole);
-        auto *laterButton = message.addButton(tr("Later"), QMessageBox::RejectRole);
-        message.setDefaultButton(laterButton);
-        message.setEscapeButton(laterButton);
+        auto *cancelButton = message.addButton(tr("Cancel"), QMessageBox::RejectRole);
+        message.setDefaultButton(cancelButton);
+        message.setEscapeButton(cancelButton);
         message.exec();
 
         return message.clickedButton() == updateButton;

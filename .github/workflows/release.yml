@@ -51,7 +51,7 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
-      - name: Check that tag, project version and release notes agree
+      - name: Check that tag and project version agree
         id: identity
         run: |
           version=$(sed -n 's/^project(CloakFrame VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
@@ -68,13 +68,6 @@ jobs:
               echo "Tag '$GITHUB_REF_NAME' does not match project version '$version'" >&2
               exit 1
             fi
-            for language in ko en ja zh; do
-              notes="release-notes/${version}.${language}.md"
-              if [[ ! -s "$notes" ]]; then
-                echo "Missing release notes: $notes" >&2
-                exit 1
-              fi
-            done
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
@@ -332,18 +325,11 @@ jobs:
           SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
           SPARKLE_ED_PUBLIC_KEY: ${{ vars.SPARKLE_ED_PUBLIC_KEY }}
         run: |
-          # generate_appcast picks up <asset>.md as the default notes and <asset>.<lang>.md as
-          # the localized ones, so Sparkle shows each user their own language.
-          cp "release-notes/${CLOAKFRAME_VERSION}.en.md" "artifacts/${MACOS_ASSET_NAME%.dmg}.md"
-          cp "release-notes/${CLOAKFRAME_VERSION}.ko.md" "artifacts/${MACOS_ASSET_NAME%.dmg}.ko.md"
-          cp "release-notes/${CLOAKFRAME_VERSION}.ja.md" "artifacts/${MACOS_ASSET_NAME%.dmg}.ja.md"
-          cp "release-notes/${CLOAKFRAME_VERSION}.zh.md" "artifacts/${MACOS_ASSET_NAME%.dmg}.zh.md"
+          # No notes go into the appcast: the update prompt names the version and nothing more.
           generator="build-release/_deps/sparkle-src/bin/generate_appcast"
           args=(
             --link "https://github.com/nyabi-gh/CloakFrame"
             --download-url-prefix "https://github.com/nyabi-gh/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
-            --release-notes-url-prefix "https://github.com/nyabi-gh/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
-            --embed-release-notes
             artifacts
           )
           # The app only enforces EdDSA when it was built with the matching public key, so the
@@ -367,9 +353,6 @@ jobs:
             "$generator" "${args[@]}"
           fi
           rm -rf artifacts/old_updates
-          # The default notes are embedded in the appcast; the localized ones are linked by URL
-          # and must stay in artifacts/ so the release upload publishes them.
-          rm -f "artifacts/${MACOS_ASSET_NAME%.dmg}.md"
           test -s "artifacts/$MACOS_ASSET_NAME"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -512,9 +495,6 @@ jobs:
         shell: pwsh
         run: |
           $version = $env:CLOAKFRAME_VERSION
-          $notes = Join-Path $env:RUNNER_TEMP "release-notes-combined.md"
-          bash .github/scripts/compose_release_notes.sh $version $notes
-          $notesArgs = @('--releaseNotes', $notes)
           New-Item -ItemType Directory -Force -Path dist/windows/releases | Out-Null
           vpk pack -y `
             --packId CloakFrame `
@@ -528,8 +508,7 @@ jobs:
             --channel win `
             --delta None `
             --noPortable true `
-            --outputDir dist/windows/releases `
-            @notesArgs
+            --outputDir dist/windows/releases
 
       - name: Stage and verify installer
         shell: pwsh
@@ -701,9 +680,6 @@ jobs:
       - name: Package and verify AppImage
         run: |
           version="$CLOAKFRAME_VERSION"
-          combined="$RUNNER_TEMP/release-notes-combined.md"
-          .github/scripts/compose_release_notes.sh "$version" "$combined"
-          notes_args=(--releaseNotes "$combined")
           mkdir -p dist/linux artifacts
           vpk pack -y \
             --packId CloakFrame \
@@ -714,8 +690,7 @@ jobs:
             --packAuthors Nyabi \
             --channel linux \
             --delta None \
-            --outputDir dist/linux \
-            "${notes_args[@]}"
+            --outputDir dist/linux
           cp dist/linux/CloakFrame.AppImage "artifacts/$LINUX_ASSET_NAME"
           cp dist/linux/*-full.nupkg artifacts/
           cp dist/linux/releases.linux.json artifacts/
@@ -745,6 +720,9 @@ jobs:
       CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          # The release notes are the commit subjects since the previous tag.
+          fetch-depth: 0
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -769,10 +747,10 @@ jobs:
           cd artifacts
           sha256sum * > SHA256SUMS
 
-      - name: Assemble the release body
+      - name: Generate the release notes
         id: notes
         run: |
-          .github/scripts/compose_release_notes.sh \
+          .github/scripts/generate_release_notes.sh \
             "$CLOAKFRAME_VERSION" "$RUNNER_TEMP/release-body.md"
           echo "path=$RUNNER_TEMP/release-body.md" >> "$GITHUB_OUTPUT"
 

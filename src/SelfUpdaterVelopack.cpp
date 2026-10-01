@@ -77,8 +77,7 @@ namespace cloakframe
                     emit updateRejected(rejection);
                     return;
                 }
-                emit updateAvailable(QString::fromStdString(update_->TargetFullRelease.Version),
-                    QString::fromStdString(update_->TargetFullRelease.NotesMarkdown));
+                emit updateAvailable(QString::fromStdString(update_->TargetFullRelease.Version));
             }
 
             void download()
@@ -140,7 +139,7 @@ namespace cloakframe
             }
 
         signals:
-            void updateAvailable(const QString &version, const QString &releaseNotes);
+            void updateAvailable(const QString &version);
 
             void checkFailed(const QString &error);
 

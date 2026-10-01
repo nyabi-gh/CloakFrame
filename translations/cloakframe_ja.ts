@@ -386,13 +386,8 @@ On: copies selected EXIF fields such as camera, timestamps, and location. Embedd
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="2237"/>
-        <source>CloakFrame %1 is available. What&apos;s new:</source>
-        <translation>CloakFrame %1 が利用できます。主な変更点:</translation>
-    </message>
-    <message>
-        <location filename="../src/MainWindow.cpp" line="2240"/>
-        <source>No release notes were provided for this update.</source>
-        <translation>このアップデートにはリリースノートがありません。</translation>
+        <source>CloakFrame %1 is available.</source>
+        <translation>CloakFrame %1 が利用できます。</translation>
     </message>
     <message>
         <location filename="../src/MainWindow.cpp" line="2243"/>
