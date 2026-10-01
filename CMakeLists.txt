@@ -110,8 +110,7 @@ if(BUILD_TESTING)
                     "${CMAKE_CURRENT_SOURCE_DIR}/scripts/check_translations.py"
                     --strict-source-equality
                     "${CMAKE_CURRENT_SOURCE_DIR}/translations/cloakframe_ko.ts"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/translations/cloakframe_ja.ts"
-                    "${CMAKE_CURRENT_SOURCE_DIR}/translations/cloakframe_zh_CN.ts")
+                    "${CMAKE_CURRENT_SOURCE_DIR}/translations/cloakframe_ja.ts")
     endif()
 endif()
 

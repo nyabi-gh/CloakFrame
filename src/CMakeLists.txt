@@ -175,7 +175,6 @@ if(Qt6LinguistTools_FOUND)
         SOURCE_TARGETS CloakFrame cloakframe_core
         TS_FILES ${PROJECT_SOURCE_DIR}/translations/cloakframe_ko.ts
                  ${PROJECT_SOURCE_DIR}/translations/cloakframe_ja.ts
-                 ${PROJECT_SOURCE_DIR}/translations/cloakframe_zh_CN.ts
     )
 else()
     message(WARNING "Qt LinguistTools not found; building without embedded translations (English only).")

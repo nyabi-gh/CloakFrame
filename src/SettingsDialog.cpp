@@ -49,7 +49,6 @@ namespace cloakframe
         languageCombo_->addItem("English", "en");
         languageCombo_->addItem("한국어", "ko");
         languageCombo_->addItem("日本語", "ja");
-        languageCombo_->addItem("简体中文", "zh_CN");
         const int languageIndex = languageCombo_->findData(language);
         languageCombo_->setCurrentIndex(languageIndex >= 0 ? languageIndex : 0);
 

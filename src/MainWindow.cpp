@@ -2054,8 +2054,14 @@ namespace cloakframe
         videoQuality_ = std::clamp(settings.value("videoQuality", 0).toInt(), 0, 2);
         videoCodec_ = std::clamp(settings.value("videoCodec", 0).toInt(), 0, 1);
 
-        const auto savedLanguage = settings.value("language").toString();
-        QString language = savedLanguage;
+        QString language = settings.value("language").toString();
+        // A language an earlier version offered and this one does not, such as zh_CN, starts
+        // over from the system language rather than being saved back unchanged.
+        if (language != QLatin1String("en") && language != QLatin1String("ko")
+            && language != QLatin1String("ja"))
+        {
+            language.clear();
+        }
         if (language.isEmpty())
         {
             switch (QLocale::system().language())
@@ -2066,21 +2072,6 @@ namespace cloakframe
             case QLocale::Japanese:
                 language = QStringLiteral("ja");
                 break;
-            case QLocale::Chinese:
-            {
-                const QLocale locale = QLocale::system();
-                if (locale.script() == QLocale::SimplifiedHanScript
-                    || locale.territory() == QLocale::China
-                    || locale.territory() == QLocale::Singapore)
-                {
-                    language = QStringLiteral("zh_CN");
-                }
-                else
-                {
-                    language = QStringLiteral("en");
-                }
-                break;
-            }
             default:
                 language = QStringLiteral("en");
                 break;
