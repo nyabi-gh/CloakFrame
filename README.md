@@ -16,14 +16,15 @@
 
 ## Download
 
-Get the file for your platform from the
-[latest release](https://github.com/nyabi-gh/CloakFrame/releases/latest):
+Download CloakFrame from the
+[latest release](https://github.com/nyabi-gh/CloakFrame/releases/latest): the `.exe` for
+Windows, the `.dmg` for macOS, or the `.AppImage` for Linux.
 
-| Platform | Requires | File |
-| --- | --- | --- |
-| **Windows** | Windows 10 or later, 64-bit | `CloakFrame-<version>-Windows-x64-Setup.exe` |
-| **macOS** | macOS 15 or later, Apple silicon | `CloakFrame-<version>-macOS-arm64.dmg` |
-| **Linux** | x86_64 | `CloakFrame-<version>-Linux-x86_64.AppImage` |
+| Platform | Requires |
+| --- | --- |
+| **Windows** | Windows 10 or later, 64-bit |
+| **macOS** | macOS 15 or later, Apple silicon |
+| **Linux** | x86_64 |
 
 On Linux, make the AppImage executable first: `chmod +x CloakFrame-*-Linux-x86_64.AppImage`.
 
