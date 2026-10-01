@@ -13,7 +13,7 @@ else()
     set(CLOAKFRAME_SPARKLE_PUBLIC_KEY_ENTRY "")
     message(WARNING
         "CLOAKFRAME_SPARKLE_PUBLIC_KEY is unset; macOS updates are trusted on Apple code "
-        "signing alone. See BUILDING.md to create and configure the update key.")
+        "signing alone. See CONTRIBUTING.md to create and configure the update key.")
 endif()
 
 set(CLOAKFRAME_SPARKLE_VERSION "2.9.4")

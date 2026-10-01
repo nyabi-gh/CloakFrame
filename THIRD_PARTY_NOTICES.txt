@@ -6,14 +6,46 @@ distributed under its own license, reproduced in full in this file. These
 notices apply to the accompanying binary distribution of CloakFrame and are
 separate from CloakFrame's own license (GNU General Public License v3.0 or later).
 
-The YOLO5Face-n and YuNet face-detection models are NOT bundled with CloakFrame;
-the application downloads them on first use from their sources. YOLO5Face-n is
-downloaded from the yolov5-face-onnx-inference project, is based on the
-GPL-3.0-licensed YOLO5Face project, and was trained on the WIDER FACE dataset,
-whose use is restricted to non-commercial research. YuNet is downloaded from
-OpenCV Zoo, whose model directory identifies it as MIT-licensed. Custom SCRFD
-models remain supported and retain the terms imposed by their own sources. See
-the README for source links and details.
+================================================================================
+Detection models  (not bundled; downloaded on first use)
+--
+The built-in models are not committed to the CloakFrame repository or bundled
+with its packages. The application downloads each one from its pinned upstream
+location on first use, verifies its SHA-256 digest, and caches it locally. Their
+terms are separate from CloakFrame's license; confirm the upstream terms before
+commercial use or redistribution.
+
+YOLO5Face-n (recommended face detector)
+  ONNX conversion from the yolov5-face-onnx-inference release:
+  https://github.com/yakhyo/yolov5-face-onnx-inference/releases/tag/weights
+  It is based on YOLO5Face (https://github.com/deepcam-cn/yolov5-face), whose
+  code is GPL-3.0, and was trained on the WIDER FACE dataset, which is
+  restricted to non-commercial research use. Treat this model as
+  non-commercial only.
+
+YuNet (fast face detector)
+  face_detection_yunet_2023mar.onnx from the OpenCV Zoo:
+  https://github.com/opencv/opencv_zoo/tree/main/models/face_detection_yunet
+  That directory identifies the model license as MIT.
+
+License-plate detector
+  From open-image-models (https://github.com/ankandrew/open-image-models),
+  which is MIT-licensed. It uses the YOLOv9 architecture and remains subject to
+  its upstream project's terms.
+
+Custom SCRFD models
+  Selected by the user with Browse. Their terms depend on the provider.
+  InsightFace pretrained models are limited to non-commercial research use;
+  mirrors and file conversions do not replace those upstream terms.
+
+Citations
+  Guo, Deng, Lattas, Zafeiriou. Sample and Computation Redistribution for
+    Efficient Face Detection. arXiv:2105.04714, 2021.
+  Qi, Tan, Yao, Liu. YOLO5Face: Why Reinventing a Face Detector.
+    arXiv:2105.12931, 2021.
+  Wang, Liao. YOLOv9: Learning What You Want to Learn Using Programmable
+    Gradient Information. arXiv:2402.13616, 2024.
+================================================================================
 
 ================================================================================
 FFmpeg  (GPL-3.0-or-later builds; the FFmpeg core is LGPL-2.1-or-later)

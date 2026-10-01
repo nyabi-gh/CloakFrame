@@ -32,9 +32,6 @@ endif()
 install(FILES
     LICENSE
     README.md
-    README.en.md
-    README.ja.md
-    README.zh.md
     THIRD_PARTY_NOTICES.txt
     DESTINATION "${CLOAKFRAME_DOCUMENTATION_DESTINATION}"
 )
