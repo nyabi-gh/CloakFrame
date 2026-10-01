@@ -2914,6 +2914,110 @@ namespace
         }
     }
 
+    class FailingAcceleratedDetector final : public cloakframe::Detector
+    {
+    public:
+        cloakframe::DetectionResult detect(const cv::Mat &, float, float) override
+        {
+            ++calls;
+            throw Ort::Exception("device removed", ORT_FAIL);
+        }
+
+        [[nodiscard]] int inputSize() const noexcept override
+        {
+            return 640;
+        }
+
+        [[nodiscard]] bool accelerated() const noexcept override
+        {
+            return true;
+        }
+
+        std::atomic<int> calls{0};
+    };
+
+    void testAnAcceleratorFailureMidRunFallsBackToTheCpu()
+    {
+        const QString yoloPath = qEnvironmentVariable("CLOAKFRAME_TEST_YOLO5FACE_MODEL");
+        const QString faceImagePath = qEnvironmentVariable("CLOAKFRAME_TEST_FACE_IMAGE");
+        if (yoloPath.isEmpty() || faceImagePath.isEmpty())
+        {
+            std::puts("skipping accelerator fallback test: environment paths not set");
+            return;
+        }
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto source = root / "face.png";
+        assert(cv::imwrite(source.string(), cv::imread(faceImagePath.toStdString())));
+
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString(source.string())};
+        request.outputDirectory = QString::fromStdString((root / "out").string());
+        request.modelPath = yoloPath;
+        request.faceModelKind = cloakframe::FaceModelKind::Yolo5Face;
+        auto failing = std::make_shared<FailingAcceleratedDetector>();
+        cloakframe::DetectorCache cache;
+        cache.face = failing;
+
+        cloakframe::ProcessorWorker worker(std::move(request), std::move(cache));
+        QStringList logs;
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::logMessage,
+            [&](const QString &message)
+            {
+                logs.push_back(message);
+            });
+        cloakframe::RunOutcome result = cloakframe::RunOutcome::Failed;
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::finished,
+            [&](const cloakframe::RunOutcome value)
+            {
+                result = value;
+            });
+        worker.process();
+
+        assert(failing->calls == 1);
+        assert(result == cloakframe::RunOutcome::Completed);
+        assert(logs.join('\n').contains("GPU acceleration failed while processing face.png"));
+        assert(std::filesystem::exists(root / "out" / "face.png"));
+        const auto replacement = worker.takeDetector();
+        assert(replacement && replacement != failing && !replacement->accelerated());
+    }
+
+    void testAcceleratedAndCpuDetectionsAgree()
+    {
+        const QString yoloPath = qEnvironmentVariable("CLOAKFRAME_TEST_YOLO5FACE_MODEL");
+        const QString faceImagePath = qEnvironmentVariable("CLOAKFRAME_TEST_FACE_IMAGE");
+        if (yoloPath.isEmpty() || faceImagePath.isEmpty())
+        {
+            std::puts("skipping accelerator parity test: environment paths not set");
+            return;
+        }
+        cloakframe::Yolo5FaceDetector accelerated(yoloPath.toStdString(), true);
+        if (!accelerated.accelerated())
+        {
+            std::puts("skipping accelerator parity test: no accelerator on this machine");
+            return;
+        }
+        cloakframe::Yolo5FaceDetector cpu(yoloPath.toStdString(), false);
+        const cv::Mat image = cv::imread(faceImagePath.toStdString());
+        const auto expected = cpu.detect(image, 0.25F, 0.4F).detections;
+        const auto actual = accelerated.detect(image, 0.25F, 0.4F).detections;
+        assert(!expected.empty());
+        assert(actual.size() == expected.size());
+        for (const auto &want : expected)
+        {
+            assert(std::ranges::any_of(actual,
+                [&](const cloakframe::FaceDetection &got)
+                {
+                    const float overlap = (want.box & got.box).area();
+                    const float iou = overlap / (want.box.area() + got.box.area() - overlap);
+                    return iou >= 0.9F && std::abs(want.score - got.score) <= 0.05F;
+                }));
+        }
+    }
+
     void testPlateModelRunsWhenProvided()
     {
         const QString platePath = qEnvironmentVariable("CLOAKFRAME_TEST_PLATE_MODEL");
@@ -2998,6 +3102,8 @@ int main(int argc, char **argv)
     testDynamicScrfdModelRunsAtRequestedSize();
     testRecommendedFaceModels();
     testPlateModelRunsWhenProvided();
+    testAnAcceleratorFailureMidRunFallsBackToTheCpu();
+    testAcceleratedAndCpuDetectionsAgree();
     testDestinationPathSafety();
 #ifndef _WIN32
     testDestinationRejectsSymlinkEscape();

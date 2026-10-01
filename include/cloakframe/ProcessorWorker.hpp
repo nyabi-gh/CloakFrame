@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cloakframe/FaceDetection.hpp"
 #include "cloakframe/FileResult.hpp"
 #include "cloakframe/ImageScanner.hpp"
 #include "cloakframe/ModelCatalog.hpp"
@@ -147,6 +148,15 @@ namespace cloakframe
             int index,
             int total);
 
+        // Detects with the detector in `slot`. When an accelerated one fails, the slot gets a
+        // CPU detector for the rest of the run and the same image is detected again.
+        template <typename D>
+        DetectionResult detectWithCpuFallback(std::shared_ptr<D> &slot,
+            const cv::Mat &image,
+            float scoreThreshold,
+            const QString &fileName,
+            QStringList &logs);
+
         int initialVideoReviewFrame_ = -1;
         QString modelPath_;
         QByteArray modelSha256_;
@@ -182,6 +192,8 @@ namespace cloakframe
         // instead of waiting for a reservation that will never be granted.
         std::uint64_t imageMemoryBudget_ = 0;
         std::uint64_t imageMemoryAvailable_ = 0;
+        // Guards replacing the detectors below while parallel image workers read them.
+        std::mutex detectorMutex_;
         std::shared_ptr<Detector> detector_;
         std::shared_ptr<PlateDetector> plateDetector_;
         std::shared_ptr<Detector> videoDetector_;

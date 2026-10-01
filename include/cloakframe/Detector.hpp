@@ -42,6 +42,11 @@ namespace cloakframe
             return "CPU";
         }
 
+        [[nodiscard]] virtual bool accelerated() const noexcept
+        {
+            return false;
+        }
+
         [[nodiscard]] DetectorStageTimings stageTimings() const noexcept
         {
             return {preprocessMicros_.load(std::memory_order_relaxed),

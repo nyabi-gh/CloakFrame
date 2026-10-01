@@ -33,9 +33,6 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Coverage and honest results
 
-- **GPU errors mid-run** [C-2]. Only model creation falls back to CPU; a later accelerator
-  error fails every following file. Retry the file on CPU and add a CPU/accelerator
-  parity test.
 - **YOLO5Face score** [OW 10]. Uses objectness only; fixing it moves every threshold
   built on that scale.
 - **Small details.** Regions under 2 px are returned unblurred and unreported; ellipse

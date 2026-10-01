@@ -34,6 +34,11 @@ namespace cloakframe
             return accelerator_;
         }
 
+        [[nodiscard]] bool accelerated() const noexcept override
+        {
+            return accelerator_ != OrtAccelerator::None;
+        }
+
         [[nodiscard]] int inputSize() const noexcept override
         {
             return inputSize_;

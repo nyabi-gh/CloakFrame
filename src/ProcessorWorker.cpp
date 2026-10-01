@@ -42,6 +42,7 @@
 #include <stdexcept>
 #include <system_error>
 #include <thread>
+#include <type_traits>
 #include <utility>
 
 namespace cloakframe
@@ -471,6 +472,52 @@ namespace cloakframe
     std::shared_ptr<Detector> ProcessorWorker::takeVideoDetector()
     {
         return std::move(videoDetector_);
+    }
+
+    template <typename D>
+    DetectionResult ProcessorWorker::detectWithCpuFallback(std::shared_ptr<D> &slot,
+        const cv::Mat &image,
+        const float scoreThreshold,
+        const QString &fileName,
+        QStringList &logs)
+    {
+        std::shared_ptr<D> detector;
+        {
+            const std::lock_guard lock(detectorMutex_);
+            detector = slot;
+        }
+        try
+        {
+            return detector->detect(image, scoreThreshold, nmsThreshold_);
+        }
+        catch (const Ort::Exception &)
+        {
+            if (!detector->accelerated())
+            {
+                throw;
+            }
+        }
+        {
+            const std::lock_guard lock(detectorMutex_);
+            if (slot == detector)
+            {
+                if constexpr (std::is_same_v<D, PlateDetector>)
+                {
+                    slot = std::make_shared<PlateDetector>(
+                        pathToUtf8(pathFromQString(plateModelPath_)), false, plateModelSha256_);
+                }
+                else
+                {
+                    slot = makeFaceDetector(
+                        faceModelKind_, modelPath_, detector->inputSize(), false, modelSha256_);
+                }
+                logs.push_back(tr("GPU acceleration failed while processing %1; it and the rest "
+                                  "of this run use the CPU.")
+                        .arg(fileName));
+            }
+            detector = slot;
+        }
+        return detector->detect(image, scoreThreshold, nmsThreshold_);
     }
 
     void ProcessorWorker::process()
@@ -1154,13 +1201,15 @@ namespace cloakframe
             int omittedDetections = 0;
             if (detectFaces_ && detector_)
             {
-                auto faces = detector_->detect(detectMat, scoreThreshold_, nmsThreshold_);
+                auto faces = detectWithCpuFallback(
+                    detector_, detectMat, scoreThreshold_, fileName, outcome.logs);
                 detected = std::move(faces.detections);
                 omittedDetections += faces.omitted;
             }
             if (detectPlates_ && plateDetector_)
             {
-                auto plates = plateDetector_->detect(detectMat, scoreThreshold_, nmsThreshold_);
+                auto plates = detectWithCpuFallback(
+                    plateDetector_, detectMat, scoreThreshold_, fileName, outcome.logs);
                 detected.insert(detected.end(),
                     std::make_move_iterator(plates.detections.begin()),
                     std::make_move_iterator(plates.detections.end()));
@@ -1486,18 +1535,20 @@ namespace cloakframe
             std::min(options.tracker.lowScoreThreshold, scoreThreshold_);
         // Only pass 1's single detection loop calls this, so the accumulator needs no lock.
         int omittedDetections = 0;
-        const auto detect = [this, detectionThreshold, &omittedDetections](const cv::Mat &frame)
+        const auto detect = [&, this, detectionThreshold](const cv::Mat &frame)
         {
             FaceDetections detections;
             if (detectFaces_ && videoDetector_)
             {
-                auto faces = videoDetector_->detect(frame, detectionThreshold, nmsThreshold_);
+                auto faces = detectWithCpuFallback(
+                    videoDetector_, frame, detectionThreshold, fileName, outcome.logs);
                 detections = std::move(faces.detections);
                 omittedDetections += faces.omitted;
             }
             if (detectPlates_ && plateDetector_)
             {
-                auto plates = plateDetector_->detect(frame, detectionThreshold, nmsThreshold_);
+                auto plates = detectWithCpuFallback(
+                    plateDetector_, frame, detectionThreshold, fileName, outcome.logs);
                 detections.insert(detections.end(),
                     std::make_move_iterator(plates.detections.begin()),
                     std::make_move_iterator(plates.detections.end()));

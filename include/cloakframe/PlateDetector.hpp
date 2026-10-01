@@ -31,6 +31,11 @@ namespace cloakframe
             return accelerator_;
         }
 
+        [[nodiscard]] bool accelerated() const noexcept override
+        {
+            return accelerator_ != OrtAccelerator::None;
+        }
+
     private:
         int inputWidth_;
         int inputHeight_;
