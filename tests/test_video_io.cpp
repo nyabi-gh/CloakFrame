@@ -7,6 +7,9 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QProcess>
 #include <QTemporaryDir>
 
@@ -604,6 +607,128 @@ namespace
         assert(written->audioStreams.at(1).language == "jpn");
     }
 
+    // Everything but one video stream and the audio has to stay behind: subtitles, cover art,
+    // chapters, and the tags on the streams that are kept, any of which can carry a name or a
+    // place.
+    void testOnlyPictureAndSoundReachTheOutput(
+        const cloakframe::FfmpegTools &tools, const QString &directory)
+    {
+        const QString subtitles = directory + "/private.srt";
+        const QString chapters = directory + "/chapters.txt";
+        const QString cover = directory + "/cover.png";
+        {
+            QFile file(subtitles);
+            assert(file.open(QIODevice::WriteOnly));
+            file.write("1\n00:00:00,000 --> 00:00:01,000\nPrivateSubtitleLine\n");
+        }
+        {
+            QFile file(chapters);
+            assert(file.open(QIODevice::WriteOnly));
+            file.write(";FFMETADATA1\n[CHAPTER]\nTIMEBASE=1/1000\nSTART=0\nEND=1000\n"
+                       "title=PrivateChapterTitle\n");
+        }
+        assert(cv::imwrite(cover.toStdString(), cv::Mat(32, 32, CV_8UC3, cv::Scalar(10, 200, 30))));
+
+        const QString source = directory + "/side-streams.mp4";
+        assert(runFfmpeg(tools,
+            {"-v",
+                "error",
+                "-y",
+                "-f",
+                "lavfi",
+                "-i",
+                "testsrc=size=128x96:rate=10:duration=2",
+                "-f",
+                "lavfi",
+                "-i",
+                "sine=frequency=440:duration=2",
+                "-i",
+                subtitles,
+                "-i",
+                cover,
+                "-f",
+                "ffmetadata",
+                "-i",
+                chapters,
+                "-map",
+                "0:v:0",
+                "-map",
+                "1:a:0",
+                "-map",
+                "2:s:0",
+                "-map",
+                "3:v:0",
+                "-map_chapters",
+                "4",
+                "-c:v:0",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-c:v:1",
+                "png",
+                "-disposition:v:1",
+                "attached_pic",
+                "-c:a",
+                "aac",
+                "-c:s",
+                "mov_text",
+                "-metadata:s:v:0",
+                "title=PrivateVideoTitle",
+                "-metadata:s:a:0",
+                "title=PrivateAudioTitle",
+                "-metadata:s:s:0",
+                "title=PrivateSubtitleTitle",
+                "-metadata",
+                "artist=PrivateArtist",
+                "-t",
+                "2",
+                source}));
+        const QString sourceProbe = rawProbeOutput(tools, source);
+        assert(sourceProbe.contains("PrivateAudioTitle"));
+        assert(sourceProbe.contains("\"subtitle\""));
+
+        const auto info = cloakframe::probeVideo(tools, source);
+        assert(info);
+        assert(cloakframe::videoUnsupportedReason(*info).isEmpty());
+
+        const QString output = directory + "/side-streams-out.mp4";
+        cloakframe::VideoProcessOptions options;
+        options.hardwareEncoder = false;
+        std::atomic<bool> cancelled{false};
+        const auto result = cloakframe::processVideo(
+            tools,
+            source,
+            output,
+            *info,
+            options,
+            [](const cv::Mat &)
+            {
+                return cloakframe::FaceDetections{};
+            },
+            cancelled);
+        assert(result.status == cloakframe::VideoProcessStatus::Completed);
+
+        QProcess probe;
+        probe.start(tools.ffprobePath,
+            {"-v",
+                "error",
+                "-print_format",
+                "json",
+                "-show_streams",
+                "-show_format",
+                "-show_chapters",
+                output});
+        assert(probe.waitForFinished(60000));
+        const QByteArray written = probe.readAllStandardOutput();
+        assert(!written.contains("Private"));
+        const QJsonObject report = QJsonDocument::fromJson(written).object();
+        const QJsonArray streams = report.value("streams").toArray();
+        assert(streams.size() == 2);
+        assert(streams.at(0).toObject().value("codec_type").toString() == "video");
+        assert(streams.at(1).toObject().value("codec_type").toString() == "audio");
+        assert(report.value("chapters").toArray().isEmpty());
+    }
+
     void testRecoveredDecodeErrorsDoNotPublish(
         const cloakframe::FfmpegTools &tools, const QString &directory)
     {
@@ -787,6 +912,8 @@ int main(int argc, char **argv)
     testRecoveredDecodeErrorsDoNotPublish(*tools, tempDir.path());
     std::puts("recovered decode errors do not publish: ok");
     testEveryAudioStreamSurvives(*tools, tempDir.path());
+    testOnlyPictureAndSoundReachTheOutput(*tools, tempDir.path());
+    std::puts("only picture and sound reach the output: ok");
     std::puts("every audio stream survives: ok");
 #ifndef _WIN32
     testHardwareEncodeFailureRetriesInSoftware(*tools, tempDir.path());
