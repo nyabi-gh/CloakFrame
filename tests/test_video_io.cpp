@@ -221,6 +221,13 @@ namespace
         return QString::fromUtf8(process.readAllStandardOutput());
     }
 
+    QByteArray fileBytes(const QString &path)
+    {
+        QFile file(path);
+        assert(file.open(QIODevice::ReadOnly));
+        return file.readAll();
+    }
+
     void testUnsupportedReasons()
     {
         cloakframe::VideoInfo info;
@@ -683,9 +690,20 @@ namespace
                 "-t",
                 "2",
                 source}));
-        const QString sourceProbe = rawProbeOutput(tools, source);
-        assert(sourceProbe.contains("PrivateAudioTitle"));
-        assert(sourceProbe.contains("\"subtitle\""));
+        // The markers are looked for in the file, not in ffprobe's report: FFmpeg 8 writes
+        // track titles but does not report them, so a clean report proves nothing.
+        const QStringList markers = {"PrivateVideoTitle",
+            "PrivateAudioTitle",
+            "PrivateSubtitleTitle",
+            "PrivateSubtitleLine",
+            "PrivateChapterTitle",
+            "PrivateArtist"};
+        const QByteArray sourceBytes = fileBytes(source);
+        for (const auto &marker : markers)
+        {
+            assert(sourceBytes.contains(marker.toLatin1()));
+        }
+        assert(rawProbeOutput(tools, source).contains("\"subtitle\""));
 
         const auto info = cloakframe::probeVideo(tools, source);
         assert(info);
@@ -719,8 +737,8 @@ namespace
                 "-show_chapters",
                 output});
         assert(probe.waitForFinished(60000));
+        assert(!fileBytes(output).contains("Private"));
         const QByteArray written = probe.readAllStandardOutput();
-        assert(!written.contains("Private"));
         const QJsonObject report = QJsonDocument::fromJson(written).object();
         const QJsonArray streams = report.value("streams").toArray();
         assert(streams.size() == 2);
