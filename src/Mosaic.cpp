@@ -449,54 +449,65 @@ namespace cloakframe
             std::list<MaskKey>::iterator recency;
         };
 
-        std::mutex g_maskCacheMutex;
-        std::map<MaskKey, MaskCacheEntry> g_maskCache;
-        std::list<MaskKey> g_maskCacheRecency;
-        std::size_t g_maskCacheBytes = 0;
-        // Masks being computed right now. A thread that needs one of them waits for it instead
-        // of computing it again; masks with different keys are computed in parallel.
-        std::map<MaskKey, std::shared_future<cv::Mat>> g_maskInFlight;
+        struct MaskCache
+        {
+            std::mutex mutex;
+            std::map<MaskKey, MaskCacheEntry> entries;
+            std::list<MaskKey> recency;
+            std::size_t bytes = 0;
+            // Masks being computed right now. A thread that needs one of them waits for it
+            // instead of computing it again; masks with different keys are computed in parallel.
+            std::map<MaskKey, std::shared_future<cv::Mat>> inFlight;
+        };
+
+        // Function-local so that a failure to construct it reaches the caller instead of
+        // terminating the program during static initialization.
+        MaskCache &maskCache()
+        {
+            static MaskCache cache;
+            return cache;
+        }
         constexpr std::size_t kMaskCacheEntryCap = 2048;
         constexpr std::size_t kMaskCacheByteCap = std::size_t{32} * 1024 * 1024;
         constexpr std::size_t kMaskCacheSingleEntryCap = std::size_t{8} * 1024 * 1024;
 
-        // Called with g_maskCacheMutex held.
-        void storeMask(const MaskKey &key, const cv::Mat &mask)
+        // Called with the cache mutex held.
+        void storeMask(MaskCache &cache, const MaskKey &key, const cv::Mat &mask)
         {
             const std::size_t maskBytes = mask.total() * mask.elemSize();
-            if (maskBytes == 0 || maskBytes > kMaskCacheSingleEntryCap || g_maskCache.contains(key))
+            if (maskBytes == 0 || maskBytes > kMaskCacheSingleEntryCap
+                || cache.entries.contains(key))
             {
                 return;
             }
 
-            while (!g_maskCacheRecency.empty()
-                   && (g_maskCache.size() >= kMaskCacheEntryCap
-                       || g_maskCacheBytes > kMaskCacheByteCap - maskBytes))
+            while (!cache.recency.empty()
+                   && (cache.entries.size() >= kMaskCacheEntryCap
+                       || cache.bytes > kMaskCacheByteCap - maskBytes))
             {
-                const auto oldestKey = g_maskCacheRecency.back();
-                const auto oldest = g_maskCache.find(oldestKey);
-                if (oldest != g_maskCache.end())
+                const auto oldestKey = cache.recency.back();
+                const auto oldest = cache.entries.find(oldestKey);
+                if (oldest != cache.entries.end())
                 {
-                    g_maskCacheBytes -= oldest->second.bytes;
-                    g_maskCache.erase(oldest);
+                    cache.bytes -= oldest->second.bytes;
+                    cache.entries.erase(oldest);
                 }
-                g_maskCacheRecency.pop_back();
+                cache.recency.pop_back();
             }
 
             bool recencyAdded = false;
             try
             {
-                g_maskCacheRecency.push_front(key);
+                cache.recency.push_front(key);
                 recencyAdded = true;
-                g_maskCache.emplace(
-                    key, MaskCacheEntry{mask, maskBytes, g_maskCacheRecency.begin()});
-                g_maskCacheBytes += maskBytes;
+                cache.entries.emplace(key, MaskCacheEntry{mask, maskBytes, cache.recency.begin()});
+                cache.bytes += maskBytes;
             }
             catch (...)
             {
                 if (recencyAdded)
                 {
-                    g_maskCacheRecency.pop_front();
+                    cache.recency.pop_front();
                 }
             }
         }
@@ -517,24 +528,25 @@ namespace cloakframe
                 innerTransition,
                 outerTransition};
 
+            MaskCache &cache = maskCache();
             std::promise<cv::Mat> computation;
             {
-                std::unique_lock<std::mutex> lock(g_maskCacheMutex);
-                const auto cached = g_maskCache.find(key);
-                if (cached != g_maskCache.end())
+                std::unique_lock<std::mutex> lock(cache.mutex);
+                const auto cached = cache.entries.find(key);
+                if (cached != cache.entries.end())
                 {
-                    g_maskCacheRecency.splice(
-                        g_maskCacheRecency.begin(), g_maskCacheRecency, cached->second.recency);
+                    cache.recency.splice(
+                        cache.recency.begin(), cache.recency, cached->second.recency);
                     return cached->second.mask;
                 }
-                const auto running = g_maskInFlight.find(key);
-                if (running != g_maskInFlight.end())
+                const auto running = cache.inFlight.find(key);
+                if (running != cache.inFlight.end())
                 {
                     const auto result = running->second;
                     lock.unlock();
                     return result.get();
                 }
-                g_maskInFlight.emplace(key, computation.get_future().share());
+                cache.inFlight.emplace(key, computation.get_future().share());
             }
 
             cv::Mat mask;
@@ -545,17 +557,17 @@ namespace cloakframe
             catch (...)
             {
                 {
-                    const std::lock_guard<std::mutex> lock(g_maskCacheMutex);
-                    g_maskInFlight.erase(key);
+                    const std::lock_guard<std::mutex> lock(cache.mutex);
+                    cache.inFlight.erase(key);
                 }
                 computation.set_exception(std::current_exception());
                 throw;
             }
 
             {
-                const std::lock_guard<std::mutex> lock(g_maskCacheMutex);
-                storeMask(key, mask);
-                g_maskInFlight.erase(key);
+                const std::lock_guard<std::mutex> lock(cache.mutex);
+                storeMask(cache, key, mask);
+                cache.inFlight.erase(key);
             }
             computation.set_value(mask);
             return mask;

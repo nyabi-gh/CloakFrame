@@ -407,6 +407,7 @@ namespace
             return image;
         };
         std::vector<cv::Mat> expected;
+        expected.reserve(layouts.size());
         for (const auto &layout : layouts)
         {
             expected.push_back(render(layout));
@@ -414,6 +415,7 @@ namespace
 
         std::atomic<int> mismatches{0};
         std::vector<std::thread> threads;
+        threads.reserve(8);
         for (int thread = 0; thread < 8; ++thread)
         {
             threads.emplace_back(
