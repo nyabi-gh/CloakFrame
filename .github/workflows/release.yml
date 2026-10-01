@@ -273,7 +273,7 @@ jobs:
             sign "$tool"
           done
           codesign --force --timestamp --options runtime \
-            --entitlements scripts/entitlements.plist \
+            --entitlements assets/entitlements.plist \
             --sign "$DEVELOPER_ID" "$application"
           codesign --verify --deep --strict --verbose=2 "$application"
 
