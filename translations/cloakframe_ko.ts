@@ -4,7 +4,7 @@
 <context>
     <name>cloakframe::MainWindow</name>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1037"/>
+        <location filename="../src/MainWindow.cpp" line="1042"/>
         <source>File results…</source>
         <translation>파일별 결과…</translation>
     </message>
@@ -14,7 +14,7 @@
         <translation>모델 다운로드 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2245"/>
+        <location filename="../src/MainWindow.cpp" line="2250"/>
         <location filename="../src/ModelDownloader.cpp" line="29"/>
         <source>Cancel</source>
         <translation>취소</translation>
@@ -189,125 +189,125 @@ Load it anyway?</source>
 그래도 불러올까요?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="427"/>
+        <location filename="../src/MainWindow.cpp" line="432"/>
         <source>Local, private redaction of faces and license plates in photos and videos</source>
         <translation>사진과 동영상 속 얼굴과 번호판을 가립니다</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="326"/>
+        <location filename="../src/MainWindow.cpp" line="331"/>
         <source>Remove Selected</source>
         <translation>선택 항목 제거</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="329"/>
+        <location filename="../src/MainWindow.cpp" line="334"/>
         <source>Clear All</source>
         <translation>목록 비우기</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/MainWindow.cpp" line="1307"/>
+        <location filename="../src/MainWindow.cpp" line="1312"/>
         <source>Ignored %n unsupported file(s).</source>
         <translation>
             <numerusform>지원되지 않는 파일 %n개를 무시했습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="962"/>
+        <location filename="../src/MainWindow.cpp" line="967"/>
         <source>Preview</source>
         <translation>미리보기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="954"/>
+        <location filename="../src/MainWindow.cpp" line="959"/>
         <source>Anonymization style preview</source>
         <translation>처리 결과 미리보기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="956"/>
+        <location filename="../src/MainWindow.cpp" line="961"/>
         <source>Sample of the current anonymization style and block size.</source>
         <translation>현재 처리 방식과 블록 크기를 미리 확인합니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="561"/>
+        <location filename="../src/MainWindow.cpp" line="566"/>
         <source>Input images and folders</source>
         <translation>입력 이미지 및 폴더</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="563"/>
+        <location filename="../src/MainWindow.cpp" line="568"/>
         <source>Right-click for options · Delete removes selected items</source>
         <translation>우클릭으로 메뉴 열기 · Delete 키로 선택 항목 제거</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1117"/>
+        <location filename="../src/MainWindow.cpp" line="1122"/>
         <source>Processing progress</source>
         <translation>처리 진행률</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1124"/>
+        <location filename="../src/MainWindow.cpp" line="1129"/>
         <source>Open Output Folder</source>
         <translation>출력 폴더 열기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="445"/>
+        <location filename="../src/MainWindow.cpp" line="450"/>
         <source>Model</source>
         <translation>모델</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="454"/>
+        <location filename="../src/MainWindow.cpp" line="459"/>
         <source>Choose speed vs. accuracy, or load a custom SCRFD ONNX file.</source>
         <translation>속도와 정확도 중에서 고르거나, 커스텀 SCRFD ONNX 파일을 불러오세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="508"/>
-        <location filename="../src/MainWindow.cpp" line="798"/>
+        <location filename="../src/MainWindow.cpp" line="513"/>
+        <location filename="../src/MainWindow.cpp" line="803"/>
         <source>Browse…</source>
         <translation>찾아보기…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="500"/>
+        <location filename="../src/MainWindow.cpp" line="505"/>
         <source>Download</source>
         <translation>다운로드</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="538"/>
+        <location filename="../src/MainWindow.cpp" line="543"/>
         <source>Inputs</source>
         <translation>입력</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="547"/>
+        <location filename="../src/MainWindow.cpp" line="552"/>
         <source>Drag images, videos, or folders here, or use the buttons below.</source>
         <translation>이미지, 동영상, 폴더를 여기로 끌어놓거나 아래 버튼을 사용하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="560"/>
+        <location filename="../src/MainWindow.cpp" line="565"/>
         <source>Drop images, videos, or folders here</source>
         <translation>이미지, 동영상, 폴더를 여기로 드래그하세요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="573"/>
+        <location filename="../src/MainWindow.cpp" line="578"/>
         <source>Add Files</source>
         <translation>파일 추가</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="579"/>
+        <location filename="../src/MainWindow.cpp" line="584"/>
         <source>Add Folder</source>
         <translation>폴더 추가</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="585"/>
+        <location filename="../src/MainWindow.cpp" line="590"/>
         <source>Clear</source>
         <translation>목록 비우기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="594"/>
+        <location filename="../src/MainWindow.cpp" line="599"/>
         <source>Include subfolders</source>
         <translation>하위 폴더 포함</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="601"/>
+        <location filename="../src/MainWindow.cpp" line="606"/>
         <source>Review before saving</source>
         <translation>저장 전 검토</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="608"/>
+        <location filename="../src/MainWindow.cpp" line="613"/>
         <source>Review detections before output:
   • Images: exclude boxes or add missed regions
   • Videos: scrub the timeline, exclude false tracks, or add missed tracks with keyframes</source>
@@ -316,121 +316,121 @@ Load it anyway?</source>
   • 동영상: 타임라인을 탐색하고 오탐 트랙을 제외하거나 키프레임으로 놓친 트랙 추가</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="640"/>
+        <location filename="../src/MainWindow.cpp" line="645"/>
         <source>Output</source>
         <translation>출력</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="649"/>
+        <location filename="../src/MainWindow.cpp" line="654"/>
         <source>Anonymized copies are written here, preserving folder structure.</source>
         <translation>익명화된 사본이 폴더 구조를 유지한 채 여기에 저장됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="659"/>
+        <location filename="../src/MainWindow.cpp" line="664"/>
         <source>Choose…</source>
         <translation>선택…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="674"/>
+        <location filename="../src/MainWindow.cpp" line="679"/>
         <source>Preserve selected EXIF metadata</source>
         <translation>선별된 EXIF 메타데이터 유지</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="683"/>
+        <location filename="../src/MainWindow.cpp" line="688"/>
         <source>Off (default): output carries no metadata — GPS, camera, and timestamps are removed.
 On: copies selected EXIF fields such as camera, timestamps, and location. Embedded previews, IPTC, XMP, comments, and color profiles are removed. Format and bit depth are preserved at maximum quality.</source>
         <translation>꺼짐(기본값): 출력에 메타데이터가 남지 않습니다 — GPS·카메라·촬영 시각 제거.
 켜짐: 카메라·촬영 시각·위치 등 선별된 EXIF 필드만 복사합니다. 내장 미리보기, IPTC, XMP, 주석, 색 프로파일은 제거하며 포맷과 비트 심도는 최대 품질로 보존합니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="694"/>
+        <location filename="../src/MainWindow.cpp" line="699"/>
         <source>Metadata preservation is unavailable in this build. Output metadata will be removed.</source>
         <translation>이 빌드에서는 메타데이터 보존을 사용할 수 없습니다. 출력 메타데이터는 제거됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="719"/>
+        <location filename="../src/MainWindow.cpp" line="724"/>
         <source>Advanced Options</source>
         <translation>고급 옵션</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="731"/>
+        <location filename="../src/MainWindow.cpp" line="736"/>
         <source>Reset to defaults</source>
         <translation>기본값으로 초기화</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="393"/>
-        <location filename="../src/MainWindow.cpp" line="394"/>
+        <location filename="../src/MainWindow.cpp" line="398"/>
+        <location filename="../src/MainWindow.cpp" line="399"/>
         <source>Settings</source>
         <translation>설정</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2218"/>
+        <location filename="../src/MainWindow.cpp" line="2223"/>
         <source>Update available: %1</source>
         <translation>새 버전 있음: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2239"/>
+        <location filename="../src/MainWindow.cpp" line="2244"/>
         <source>Update Available</source>
         <translation>업데이트 가능</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2242"/>
+        <location filename="../src/MainWindow.cpp" line="2247"/>
         <source>CloakFrame %1 is available.</source>
         <translation>CloakFrame %1 버전을 사용할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2244"/>
+        <location filename="../src/MainWindow.cpp" line="2249"/>
         <source>Update</source>
         <translation>업데이트</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2343"/>
+        <location filename="../src/MainWindow.cpp" line="2348"/>
         <source>Later</source>
         <translation>나중에</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="465"/>
+        <location filename="../src/MainWindow.cpp" line="470"/>
         <source>Faces</source>
         <translation>얼굴</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="466"/>
+        <location filename="../src/MainWindow.cpp" line="471"/>
         <source>License plates</source>
         <translation>번호판</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="467"/>
+        <location filename="../src/MainWindow.cpp" line="472"/>
         <source>Faces + license plates</source>
         <translation>얼굴 + 번호판</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="750"/>
+        <location filename="../src/MainWindow.cpp" line="755"/>
         <source>Tweak detection and anonymization behavior. Defaults work for most photos.</source>
         <translation>감지와 익명화 방식을 조정합니다. 대부분의 사진은 기본값으로 충분합니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="762"/>
+        <location filename="../src/MainWindow.cpp" line="767"/>
         <source>Mosaic (pixelate)</source>
         <translation>모자이크(픽셀화)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="763"/>
+        <location filename="../src/MainWindow.cpp" line="768"/>
         <source>Gaussian blur</source>
         <translation>가우시안 블러</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="764"/>
+        <location filename="../src/MainWindow.cpp" line="769"/>
         <source>Solid fill (blackout)</source>
         <translation>단색 채우기(블랙아웃)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="765"/>
-        <location filename="../src/MainWindow.cpp" line="903"/>
+        <location filename="../src/MainWindow.cpp" line="770"/>
+        <location filename="../src/MainWindow.cpp" line="908"/>
         <source>Custom image</source>
         <translation>커스텀 이미지</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="771"/>
+        <location filename="../src/MainWindow.cpp" line="776"/>
         <source>How detected faces are obscured.
 Mosaic = pixelation (block size below).
 Gaussian blur = strong smoothing scaled to face size.
@@ -443,7 +443,7 @@ Custom image = place your selected image over every detected region. Default: Mo
 커스텀 이미지 = 선택한 이미지를 감지된 모든 영역 위에 배치. 기본값: 모자이크</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="841"/>
+        <location filename="../src/MainWindow.cpp" line="846"/>
         <source>Minimum confidence to accept a face.
 Higher = fewer false positives but may miss small or side-profile faces.
 Lower = catches more faces but may blur non-face regions. Default: 0.50</source>
@@ -452,7 +452,7 @@ Lower = catches more faces but may blur non-face regions. Default: 0.50</source>
 낮을수록 = 더 많은 얼굴을 잡지만 얼굴이 아닌 영역을 흐릴 수 있습니다. 기본값: 0.50</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="856"/>
+        <location filename="../src/MainWindow.cpp" line="861"/>
         <source>Non-Maximum Suppression overlap threshold for duplicate boxes.
 Lower = more aggressively removes overlapping detections.
 Higher = allows more overlap. Default: 0.40</source>
@@ -461,7 +461,7 @@ Higher = allows more overlap. Default: 0.40</source>
 높을수록 = 더 많은 겹침을 허용합니다. 기본값: 0.40</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="868"/>
+        <location filename="../src/MainWindow.cpp" line="873"/>
         <source>Mosaic block size in pixels.
 Larger = coarser blocks, harder to un-blur.
 Smaller = finer mosaic, higher recovery risk. Default: 14</source>
@@ -470,7 +470,7 @@ Smaller = finer mosaic, higher recovery risk. Default: 14</source>
 작을수록 = 모자이크가 세밀해 복원 위험이 높습니다. 기본값: 14</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="882"/>
+        <location filename="../src/MainWindow.cpp" line="887"/>
         <source>Extra margin around each detected face, as a fraction of its size.
 Covers ears, hairline, and chin that the detector may miss.
 0.00 = exact box, 0.18 = ~18% larger. Default: 0.18</source>
@@ -479,45 +479,45 @@ Covers ears, hairline, and chin that the detector may miss.
 0.00 = 정확한 상자, 0.18 = 약 18% 확대. 기본값: 0.18</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="896"/>
+        <location filename="../src/MainWindow.cpp" line="901"/>
         <source>Anonymization</source>
         <translation>처리 방식</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="910"/>
+        <location filename="../src/MainWindow.cpp" line="915"/>
         <source>Shape</source>
         <translation>모양</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="825"/>
-        <location filename="../src/MainWindow.cpp" line="917"/>
+        <location filename="../src/MainWindow.cpp" line="830"/>
+        <location filename="../src/MainWindow.cpp" line="922"/>
         <source>Soft edges</source>
         <translation>부드러운 가장자리</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="827"/>
+        <location filename="../src/MainWindow.cpp" line="832"/>
         <source>Fades the edge of the obscured region into the photo instead of a hard cutoff.
 The fade only extends outward, so the detected area stays fully covered. Default: off</source>
         <translation>가린 영역의 가장자리를 딱 끊는 대신 사진에 자연스럽게 녹아들게 합니다.
 번짐은 바깥쪽으로만 퍼지므로 탐지된 영역은 온전히 가려집니다. 기본값: 꺼짐</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="808"/>
+        <location filename="../src/MainWindow.cpp" line="813"/>
         <source>Rectangle</source>
         <translation>사각형</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="493"/>
+        <location filename="../src/MainWindow.cpp" line="498"/>
         <source>Face model path</source>
         <translation>얼굴 모델 경로</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="809"/>
+        <location filename="../src/MainWindow.cpp" line="814"/>
         <source>Rounded (ellipse)</source>
         <translation>둥근 모양 (타원)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="814"/>
+        <location filename="../src/MainWindow.cpp" line="819"/>
         <source>Shape of the obscured region.
 Rectangle = full padded box.
 Rounded = elliptical mask that follows the face and leaves corners untouched. Default: Rectangle</source>
@@ -526,98 +526,98 @@ Rounded = elliptical mask that follows the face and leaves corners untouched. De
 둥근 모양 = 얼굴을 따라가는 타원형 마스크로, 모서리는 원본을 남깁니다. 기본값: 사각형</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="924"/>
+        <location filename="../src/MainWindow.cpp" line="929"/>
         <source>Score threshold</source>
         <translation>점수 임계값</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="931"/>
+        <location filename="../src/MainWindow.cpp" line="936"/>
         <source>NMS threshold</source>
         <translation>NMS 임계값</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="938"/>
+        <location filename="../src/MainWindow.cpp" line="943"/>
         <source>Mosaic block size</source>
         <translation>모자이크 블록 크기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="945"/>
+        <location filename="../src/MainWindow.cpp" line="950"/>
         <source>Face padding</source>
         <translation>얼굴 여백</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1061"/>
+        <location filename="../src/MainWindow.cpp" line="1066"/>
         <source>Choose output folder</source>
         <translation>출력 폴더 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1080"/>
+        <location filename="../src/MainWindow.cpp" line="1085"/>
         <source>Activity</source>
         <translation>활동</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1106"/>
+        <location filename="../src/MainWindow.cpp" line="1111"/>
         <source>Ready</source>
         <translation>준비됨</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1145"/>
+        <location filename="../src/MainWindow.cpp" line="1150"/>
         <source>Stop</source>
         <translation>중지</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1155"/>
+        <location filename="../src/MainWindow.cpp" line="1160"/>
         <source>Start</source>
         <translation>시작</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1177"/>
+        <location filename="../src/MainWindow.cpp" line="1182"/>
         <source>Ready. Drop images, videos, or folders to begin.</source>
         <translation>준비됐습니다. 이미지, 동영상, 폴더를 끌어놓아 시작하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1319"/>
+        <location filename="../src/MainWindow.cpp" line="1324"/>
         <source>Select SCRFD ONNX Model</source>
         <translation>SCRFD ONNX 모델 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1319"/>
+        <location filename="../src/MainWindow.cpp" line="1324"/>
         <source>ONNX Models (*.onnx)</source>
         <translation>ONNX 모델 (*.onnx)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1329"/>
+        <location filename="../src/MainWindow.cpp" line="1334"/>
         <source>Could not read the custom model file.</source>
         <translation>커스텀 모델 파일을 읽지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1334"/>
-        <location filename="../src/MainWindow.cpp" line="1978"/>
+        <location filename="../src/MainWindow.cpp" line="1339"/>
+        <location filename="../src/MainWindow.cpp" line="1983"/>
         <source>Custom — %1</source>
         <translation>커스텀 — %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1378"/>
+        <location filename="../src/MainWindow.cpp" line="1383"/>
         <source>Select Images or Videos</source>
         <translation>이미지 또는 동영상 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1380"/>
+        <location filename="../src/MainWindow.cpp" line="1385"/>
         <source>Images &amp; Videos (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</source>
         <translation>이미지·동영상 (*.jpg *.jpeg *.png *.bmp *.tif *.tiff *.webp *.mp4 *.mov *.m4v *.webm)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1395"/>
+        <location filename="../src/MainWindow.cpp" line="1400"/>
         <source>Select Folder</source>
         <translation>폴더 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1410"/>
+        <location filename="../src/MainWindow.cpp" line="1415"/>
         <source>Select Output Folder</source>
         <translation>출력 폴더 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1860"/>
+        <location filename="../src/MainWindow.cpp" line="1865"/>
         <source>Processing finished, but some results need attention.
 
 Total: %1
@@ -658,178 +658,178 @@ Check these results before sharing them.</source>
 공유하기 전에 해당 결과를 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2256"/>
+        <location filename="../src/MainWindow.cpp" line="2261"/>
         <source>Downloading CloakFrame %1…</source>
         <translation>CloakFrame %1 다운로드 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2275"/>
+        <location filename="../src/MainWindow.cpp" line="2280"/>
         <source>Update Failed</source>
         <translation>업데이트 실패</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2231"/>
+        <location filename="../src/MainWindow.cpp" line="2236"/>
         <source>⚠ An update was refused because it could not be verified.</source>
         <translation>⚠ 확인할 수 없는 업데이트를 거부했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2305"/>
+        <location filename="../src/MainWindow.cpp" line="2310"/>
         <source>Update Refused</source>
         <translation>업데이트 거부됨</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2308"/>
+        <location filename="../src/MainWindow.cpp" line="2313"/>
         <source>The update was refused because it could not be verified. Nothing was installed.</source>
         <translation>업데이트를 확인할 수 없어 거부했습니다. 아무것도 설치하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2278"/>
+        <location filename="../src/MainWindow.cpp" line="2283"/>
         <source>The update could not be installed: %1</source>
         <translation>업데이트를 설치하지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2280"/>
+        <location filename="../src/MainWindow.cpp" line="2285"/>
         <source>Open Download Page</source>
         <translation>다운로드 페이지 열기</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2329"/>
-        <location filename="../src/MainWindow.cpp" line="2336"/>
+        <location filename="../src/MainWindow.cpp" line="2334"/>
+        <location filename="../src/MainWindow.cpp" line="2341"/>
         <source>Update Ready</source>
         <translation>업데이트 준비 완료</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2330"/>
+        <location filename="../src/MainWindow.cpp" line="2335"/>
         <source>CloakFrame %1 will finish installing the next time the app starts.</source>
         <translation>다음에 앱을 시작할 때 CloakFrame %1 설치가 완료됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2340"/>
+        <location filename="../src/MainWindow.cpp" line="2345"/>
         <source>CloakFrame %1 has been downloaded. Restart now to finish installing?</source>
         <translation>CloakFrame %1 다운로드가 완료되었습니다. 지금 다시 시작하여 설치를 마칠까요?</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2342"/>
+        <location filename="../src/MainWindow.cpp" line="2347"/>
         <source>Restart Now</source>
         <translation>지금 다시 시작</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2654"/>
+        <location filename="../src/MainWindow.cpp" line="2659"/>
         <source>Accurate  ·  YOLO5Face-n</source>
         <translation>정확  ·  YOLO5Face-n</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2655"/>
+        <location filename="../src/MainWindow.cpp" line="2660"/>
         <source>Fast  ·  YuNet</source>
         <translation>빠름  ·  YuNet</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2753"/>
+        <location filename="../src/MainWindow.cpp" line="2758"/>
         <source>The custom model was not approved, so nothing was processed.</source>
         <translation>커스텀 모델을 승인하지 않아 아무것도 처리하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1516"/>
-        <location filename="../src/MainWindow.cpp" line="1539"/>
-        <location filename="../src/MainWindow.cpp" line="1635"/>
-        <location filename="../src/MainWindow.cpp" line="2681"/>
+        <location filename="../src/MainWindow.cpp" line="1521"/>
+        <location filename="../src/MainWindow.cpp" line="1544"/>
+        <location filename="../src/MainWindow.cpp" line="1640"/>
+        <location filename="../src/MainWindow.cpp" line="2686"/>
         <source>Downloading %1…</source>
         <translation>%1 다운로드 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1519"/>
-        <location filename="../src/MainWindow.cpp" line="1542"/>
-        <location filename="../src/MainWindow.cpp" line="1640"/>
-        <location filename="../src/MainWindow.cpp" line="2688"/>
+        <location filename="../src/MainWindow.cpp" line="1524"/>
+        <location filename="../src/MainWindow.cpp" line="1547"/>
+        <location filename="../src/MainWindow.cpp" line="1645"/>
+        <location filename="../src/MainWindow.cpp" line="2693"/>
         <source>Model download was cancelled or failed.</source>
         <translation>모델 다운로드가 취소되었거나 실패했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1523"/>
-        <location filename="../src/MainWindow.cpp" line="1545"/>
-        <location filename="../src/MainWindow.cpp" line="1653"/>
-        <location filename="../src/MainWindow.cpp" line="2684"/>
+        <location filename="../src/MainWindow.cpp" line="1528"/>
+        <location filename="../src/MainWindow.cpp" line="1550"/>
+        <location filename="../src/MainWindow.cpp" line="1658"/>
+        <location filename="../src/MainWindow.cpp" line="2689"/>
         <source>Model ready: %1</source>
         <translation>모델 준비됨: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1551"/>
+        <location filename="../src/MainWindow.cpp" line="1556"/>
         <source>Add at least one image or folder.</source>
         <translation>이미지나 폴더를 하나 이상 추가하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1557"/>
+        <location filename="../src/MainWindow.cpp" line="1562"/>
         <source>Choose an output folder.</source>
         <translation>출력 폴더를 선택하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1582"/>
+        <location filename="../src/MainWindow.cpp" line="1587"/>
         <source>Refusing to run: output folder is inside input &apos;%1&apos;. Pick a different output folder so originals aren&apos;t overwritten.</source>
         <translation>실행을 거부합니다: 출력 폴더가 입력 &apos;%1&apos; 안에 있습니다. 원본이 덮어써지지 않도록 다른 출력 폴더를 선택하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1718"/>
-        <location filename="../src/MainWindow.cpp" line="1770"/>
+        <location filename="../src/MainWindow.cpp" line="1723"/>
+        <location filename="../src/MainWindow.cpp" line="1775"/>
         <source>Starting…</source>
         <translation>시작하는 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1778"/>
+        <location filename="../src/MainWindow.cpp" line="1783"/>
         <source>Stopping after the current processing step…</source>
         <translation>현재 처리 단계 후 중지합니다…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1779"/>
+        <location filename="../src/MainWindow.cpp" line="1784"/>
         <source>Stopping…</source>
         <translation>중지하는 중…</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1886"/>
+        <location filename="../src/MainWindow.cpp" line="1891"/>
         <source>Cancelled.</source>
         <translation>취소됨.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1846"/>
+        <location filename="../src/MainWindow.cpp" line="1851"/>
         <source>Finished.</source>
         <translation>완료됨.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1887"/>
+        <location filename="../src/MainWindow.cpp" line="1892"/>
         <source>Cancelled</source>
         <translation>취소됨</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1847"/>
+        <location filename="../src/MainWindow.cpp" line="1852"/>
         <source>Done</source>
         <translation>완료</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1851"/>
+        <location filename="../src/MainWindow.cpp" line="1856"/>
         <source>Completed with warnings — review the results before sharing.</source>
         <translation>주의 사항과 함께 완료됨 — 공유하기 전에 결과를 검토하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1856"/>
+        <location filename="../src/MainWindow.cpp" line="1861"/>
         <source>Review required</source>
         <translation>검토 필요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1859"/>
+        <location filename="../src/MainWindow.cpp" line="1864"/>
         <source>Review Required</source>
         <translation>검토 필요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1891"/>
+        <location filename="../src/MainWindow.cpp" line="1896"/>
         <source>Failed — check the log for details.</source>
         <translation>실패 — 자세한 내용은 로그를 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1895"/>
+        <location filename="../src/MainWindow.cpp" line="1900"/>
         <source>Failed — check the log</source>
         <translation>실패 — 로그를 확인하세요</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="2701"/>
+        <location filename="../src/MainWindow.cpp" line="2706"/>
         <source>Not downloaded yet — click Download</source>
         <translation>아직 다운로드하지 않음 — 다운로드를 누르세요</translation>
     </message>
@@ -845,64 +845,64 @@ Check these results before sharing them.</source>
         <translation>선택한 이미지는 64MB 이하여야 합니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="132"/>
+        <location filename="../src/MainWindow.cpp" line="137"/>
         <source>The selected file is not a supported image.</source>
         <translation>선택한 파일은 지원되는 이미지가 아닙니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="141"/>
+        <location filename="../src/MainWindow.cpp" line="146"/>
         <source>The selected image has invalid dimensions.</source>
         <translation>선택한 이미지의 크기 정보가 올바르지 않습니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="158"/>
+        <location filename="../src/MainWindow.cpp" line="163"/>
         <source>The selected image could not be decoded: %1</source>
         <translation>선택한 이미지를 디코딩할 수 없습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="793"/>
+        <location filename="../src/MainWindow.cpp" line="798"/>
         <source>Choose an image to cover detected faces</source>
         <translation>감지된 얼굴을 가릴 이미지 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="795"/>
+        <location filename="../src/MainWindow.cpp" line="800"/>
         <source>The image keeps its aspect ratio and follows detected face tilt when available. Transparent pixels reveal a safety mosaic instead of the original image.</source>
         <translation>이미지는 원본 비율을 유지하며, 가능한 경우 감지된 얼굴 기울기를 따라갑니다. 투명한 픽셀 부분에는 원본 이미지 대신 모자이크 처리된 영역이 표시됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="799"/>
+        <location filename="../src/MainWindow.cpp" line="804"/>
         <source>Choose custom image</source>
         <translation>커스텀 이미지 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1352"/>
+        <location filename="../src/MainWindow.cpp" line="1357"/>
         <source>Select Custom Image</source>
         <translation>커스텀 이미지 선택</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1354"/>
+        <location filename="../src/MainWindow.cpp" line="1359"/>
         <source>Images (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</source>
         <translation>이미지 (*.png *.jpg *.jpeg *.bmp *.tif *.tiff *.webp)</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1363"/>
+        <location filename="../src/MainWindow.cpp" line="1368"/>
         <source>Invalid Custom Image</source>
         <translation>잘못된 커스텀 이미지</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1504"/>
+        <location filename="../src/MainWindow.cpp" line="1509"/>
         <source>Choose a face ONNX model first.</source>
         <translation>먼저 얼굴 탐지용 ONNX 모델을 선택하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1513"/>
-        <location filename="../src/MainWindow.cpp" line="1670"/>
+        <location filename="../src/MainWindow.cpp" line="1518"/>
+        <location filename="../src/MainWindow.cpp" line="1675"/>
         <source>Choose a valid face ONNX model first.</source>
         <translation>먼저 올바른 얼굴 탐지용 ONNX 모델을 선택하세요.</translation>
     </message>
     <message>
-        <location filename="../src/MainWindow.cpp" line="1633"/>
-        <location filename="../src/MainWindow.cpp" line="1650"/>
+        <location filename="../src/MainWindow.cpp" line="1638"/>
+        <location filename="../src/MainWindow.cpp" line="1655"/>
         <source>Built-in model integrity check failed: %1</source>
         <translation>내장 모델 무결성 검사 실패: %1</translation>
     </message>
@@ -910,431 +910,436 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ProcessorWorker</name>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="226"/>
+        <location filename="../src/ProcessorWorker.cpp" line="228"/>
         <source>cannot inspect image dimensions</source>
         <translation>이미지 크기를 확인할 수 없음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="236"/>
+        <location filename="../src/ProcessorWorker.cpp" line="238"/>
         <source>image too large, %1 x %2</source>
         <translation>이미지가 너무 큼, %1 x %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1023"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1040"/>
         <source>needs about %1 MB of memory, over the %2 MB limit</source>
         <translation>약 %1 MB의 메모리가 필요하여 %2 MB 한도를 넘음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="620"/>
+        <location filename="../src/ProcessorWorker.cpp" line="627"/>
         <source>Output name collision: &apos;%1&apos; and &apos;%2&apos; would both write to &apos;%3&apos;</source>
         <translation>출력 이름 충돌: &apos;%1&apos;와(과) &apos;%2&apos;가 모두 &apos;%3&apos;에 기록됩니다</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="466"/>
+        <location filename="../src/ProcessorWorker.cpp" line="473"/>
         <source>Loading face detection model...</source>
         <translation>얼굴 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="499"/>
+        <location filename="../src/ProcessorWorker.cpp" line="506"/>
         <source>Reusing loaded face detection model.</source>
         <translation>이미 불러온 얼굴 탐지 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="501"/>
+        <location filename="../src/ProcessorWorker.cpp" line="508"/>
         <source>Face detection backend: %1</source>
         <translation>얼굴 탐지 백엔드: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="485"/>
+        <location filename="../src/ProcessorWorker.cpp" line="492"/>
         <source>GPU acceleration can&apos;t run the face model; using the CPU instead.</source>
         <translation>GPU 가속으로 얼굴 모델을 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="540"/>
+        <location filename="../src/ProcessorWorker.cpp" line="547"/>
         <source>License plate detection backend: %1</source>
         <translation>번호판 탐지 백엔드: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="509"/>
+        <location filename="../src/ProcessorWorker.cpp" line="516"/>
         <source>Loading license plate detection model...</source>
         <translation>번호판 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="538"/>
+        <location filename="../src/ProcessorWorker.cpp" line="545"/>
         <source>Reusing loaded license plate detection model.</source>
         <translation>이미 불러온 번호판 탐지 모델을 재사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="525"/>
+        <location filename="../src/ProcessorWorker.cpp" line="532"/>
         <source>GPU acceleration can&apos;t run the license plate model; using the CPU instead.</source>
         <translation>GPU 가속으로 번호판 모델을 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="545"/>
+        <location filename="../src/ProcessorWorker.cpp" line="552"/>
         <source>Scanning inputs...</source>
         <translation>입력 스캔 중...</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="549"/>
+        <location filename="../src/ProcessorWorker.cpp" line="556"/>
         <source>Preflight: found %n supported file(s).</source>
         <translation>
             <numerusform>사전 점검: 지원되는 파일 %n개를 찾았습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="590"/>
+        <location filename="../src/ProcessorWorker.cpp" line="597"/>
         <source>No supported files were found.</source>
         <translation>지원되는 파일을 찾지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="600"/>
+        <location filename="../src/ProcessorWorker.cpp" line="607"/>
         <source>Cannot create output directory: %1</source>
         <translation>출력 폴더를 만들 수 없습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="613"/>
+        <location filename="../src/ProcessorWorker.cpp" line="620"/>
         <source>Refusing to run because an output path is already in use.</source>
         <translation>사용 중인 출력 경로가 있어 실행을 거부합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="627"/>
+        <location filename="../src/ProcessorWorker.cpp" line="634"/>
         <source>Existing output would be overwritten: &apos;%1&apos;</source>
         <translation>기존 출력 파일을 덮어쓰게 됩니다: &apos;%1&apos;</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="638"/>
+        <location filename="../src/ProcessorWorker.cpp" line="645"/>
         <source>Additional output conflicts omitted.</source>
         <translation>추가 출력 충돌은 생략했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="642"/>
+        <location filename="../src/ProcessorWorker.cpp" line="649"/>
         <source>Preflight: output paths are available.</source>
         <translation>사전 점검: 모든 출력 경로를 사용할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="882"/>
+        <location filename="../src/ProcessorWorker.cpp" line="889"/>
         <source>Skipped unsafe output path for: %1</source>
         <translation>안전하지 않은 출력 경로를 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="925"/>
+        <location filename="../src/ProcessorWorker.cpp" line="932"/>
         <source>Skipped (file too large, %1 MB): %2</source>
         <translation>건너뜀(파일이 너무 큼, %1 MB): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="987"/>
+        <location filename="../src/ProcessorWorker.cpp" line="994"/>
         <source>Loading</source>
         <translation>로딩 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1007"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1022"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1024"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1039"/>
         <source>Skipped (%1): %2</source>
         <translation>건너뜀(%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="993"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1010"/>
         <source>Skipped (animated or multi-page images are not supported): %1</source>
         <translation>건너뜀(애니메이션 또는 다중 페이지 이미지는 지원되지 않음): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="829"/>
+        <location filename="../src/ProcessorWorker.cpp" line="836"/>
         <source>Warning: %n file(s) have detection or tracking warnings. Review them before sharing.</source>
         <translation>
             <numerusform>경고: 파일 %n개에 검출 또는 추적 경고가 있습니다. 공유하기 전에 검토하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="906"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1050"/>
+        <location filename="../src/ProcessorWorker.cpp" line="913"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1067"/>
         <source>Skipped unreadable image: %1</source>
         <translation>읽을 수 없는 이미지를 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="917"/>
+        <location filename="../src/ProcessorWorker.cpp" line="924"/>
         <source>Source file changed during processing: %1</source>
         <translation>처리 중 원본 파일이 변경되었습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="937"/>
-        <location filename="../src/ProcessorWorker.cpp" line="964"/>
-        <location filename="../src/ProcessorWorker.cpp" line="974"/>
+        <location filename="../src/ProcessorWorker.cpp" line="944"/>
+        <location filename="../src/ProcessorWorker.cpp" line="971"/>
+        <location filename="../src/ProcessorWorker.cpp" line="981"/>
         <source>Failed to create a private source snapshot: %1</source>
         <translation>원본의 비공개 사본을 만들지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1078"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1095"/>
         <source>Skipped (image too large, %1 × %2): %3</source>
         <translation>건너뜀(이미지가 너무 큼, %1 × %2): %3</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1088"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1105"/>
         <source>Detecting</source>
         <translation>감지 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1116"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1133"/>
         <source>Reviewing</source>
         <translation>검토 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1171"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1188"/>
         <source>Skipped without saving: %1</source>
         <translation>저장하지 않고 건너뜀: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1185"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1241"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1202"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1258"/>
         <source>Saving</source>
         <translation>저장 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1213"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1230"/>
         <source>Failed to copy: %1</source>
         <translation>복사 실패: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1219"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1236"/>
         <source>Skipped (original copied): %1</source>
         <translation>건너뜀(원본 복사됨): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1225"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1242"/>
         <source>Applying anonymization</source>
         <translation>익명화 적용 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1261"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1278"/>
         <source>Failed to save: %1</source>
         <translation>저장 실패: %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1280"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1636"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1297"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1653"/>
         <source>Redacted %n region(s): %1</source>
         <translation>
             <numerusform>영역 %n개 가림: %1</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1270"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1287"/>
         <source>Saved, but could not copy metadata: %1</source>
         <translation>저장했지만 메타데이터를 복사하지 못했습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1275"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1630"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1292"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1647"/>
         <source>Saved with no regions redacted: %1</source>
         <translation>가려진 영역 없이 저장됨: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="891"/>
+        <location filename="../src/ProcessorWorker.cpp" line="898"/>
         <source>Skipped (source and destination are the same file): %1</source>
         <translation>건너뜀 (원본과 저장 위치가 같은 파일): %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1299"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1316"/>
         <source>Error processing %1: %2</source>
         <translation>%1 처리 중 오류: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="861"/>
+        <location filename="../src/ProcessorWorker.cpp" line="868"/>
         <source>Unexpected error — processing stopped.</source>
         <translation>예기치 못한 오류로 처리를 중단했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="791"/>
+        <location filename="../src/ProcessorWorker.cpp" line="798"/>
         <source>Summary: %1 redacted, %2 saved without redaction, %3 copied, %4 skipped, %5 failed (of %6).</source>
         <translation>요약: 가림 완료 %1, 가리지 않고 저장 %2, 복사 %3, 건너뜀 %4, 실패 %5 (총 %6).</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="819"/>
+        <location filename="../src/ProcessorWorker.cpp" line="826"/>
         <source>Warning: %n image(s) were saved with no regions redacted. Check them before sharing.</source>
         <translation>
             <numerusform>주의: 이미지 %n장이 아무 영역도 가려지지 않은 채 저장되었습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="849"/>
+        <location filename="../src/ProcessorWorker.cpp" line="856"/>
         <source>Done.</source>
         <translation>완료.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="844"/>
+        <location filename="../src/ProcessorWorker.cpp" line="851"/>
         <source>Completed with warnings. Review the summary before sharing.</source>
         <translation>주의 사항과 함께 완료되었습니다. 공유하기 전에 요약을 확인하세요.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="855"/>
+        <location filename="../src/ProcessorWorker.cpp" line="862"/>
         <source>Error: %1</source>
         <translation>오류: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1307"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1324"/>
         <source>Error processing %1</source>
         <translation>%1 처리 중 오류</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1490"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1507"/>
         <source>Reviewing video tracks</source>
         <translation>동영상 트랙 검토 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1325"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1342"/>
         <source>Metadata preservation is not available for videos; metadata was removed: %1</source>
         <translation>동영상은 메타데이터 보존이 지원되지 않아 메타데이터가 제거되었습니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="456"/>
+        <location filename="../src/ProcessorWorker.cpp" line="463"/>
         <source>Error: review is on but no review window is available. Nothing was processed.</source>
         <translation>오류: 검토가 켜져 있지만 검토 창을 열 수 없습니다. 아무것도 처리하지 않았습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="467"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1383"/>
+        <location filename="../src/ProcessorWorker.cpp" line="474"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1400"/>
         <source>The face detection model could not be loaded</source>
         <translation>얼굴 검출 모델을 불러오지 못했습니다</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="510"/>
+        <location filename="../src/ProcessorWorker.cpp" line="517"/>
         <source>The license plate detection model could not be loaded</source>
         <translation>번호판 검출 모델을 불러오지 못했습니다</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="558"/>
-        <location filename="../src/ProcessorWorker.cpp" line="564"/>
+        <location filename="../src/ProcessorWorker.cpp" line="565"/>
+        <location filename="../src/ProcessorWorker.cpp" line="571"/>
         <source>Could not read input &apos;%1&apos;: %2</source>
         <translation>입력 &apos;%1&apos;을(를) 읽을 수 없습니다: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="570"/>
+        <location filename="../src/ProcessorWorker.cpp" line="577"/>
         <source>Additional unreadable inputs omitted.</source>
         <translation>추가로 읽을 수 없는 입력은 생략했습니다.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="575"/>
+        <location filename="../src/ProcessorWorker.cpp" line="582"/>
         <source>Warning: %n input(s) could not be read, so nothing below covers them.</source>
         <translation>
             <numerusform>경고: 입력 %n개를 읽을 수 없어 아래 결과가 이를 포함하지 않습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1137"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1001"/>
+        <source>Skipped (not a supported image format): %1</source>
+        <translation>건너뜀(지원하지 않는 이미지 형식): %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ProcessorWorker.cpp" line="1154"/>
         <source>Failed (review could not be shown, nothing was saved): %1</source>
         <translation>실패 (검토를 표시할 수 없어 저장하지 않았습니다): %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1288"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1659"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1305"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1676"/>
         <source>Warning: %n detected region(s) exceeded the safety limit and were left unredacted in %1. Review before sharing.</source>
         <translation>
             <numerusform>경고: 검출된 영역 %n곳이 안전 한도를 넘어 %1에서 가려지지 않았습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1334"/>
-        <location filename="../src/ProcessorWorker.cpp" line="1344"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1351"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1361"/>
         <source>Failed (%1): %2</source>
         <translation>실패 (%1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1339"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1356"/>
         <source>Inspecting</source>
         <translation>확인 중</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1352"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1369"/>
         <source>Failed (unsupported video: %1): %2</source>
         <translation>실패 (지원되지 않는 동영상: %1): %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1359"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1376"/>
         <source>Note: variable frame rate is converted to a constant frame rate: %1</source>
         <translation>참고: 가변 프레임레이트는 고정 프레임레이트로 변환됩니다: %1</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1465"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1482"/>
         <source>Analyzing %1%</source>
         <translation>분석 중 %1%</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1465"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1482"/>
         <source>Encoding %1%</source>
         <translation>인코딩 중 %1%</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1668"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1685"/>
         <source>Warning: %n track(s) in %1 held no confident detection and were dropped. Review before sharing.</source>
         <translation>
             <numerusform>경고: %1에서 확실한 검출이 하나도 없는 트랙 %n개를 버렸습니다. 공유하기 전에 확인하세요.</numerusform>
         </translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1677"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1694"/>
         <source>Tracking could not locate the subject in %n frame(s) of %1 before review. See the per-gap review status in File results.</source>
         <translation>
             <numerusform>검토 전 %1의 %n개 프레임에서 대상을 추적하지 못했습니다. 파일별 결과에서 각 공백의 확인 상태를 확인하세요.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1682"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1699"/>
         <source>Tracking gaps found before review in %1: %2</source>
         <translation>%1에서 검토 전 발견한 추적 공백: %2</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ProcessorWorker.cpp" line="1686"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1703"/>
         <source>%n further tracking gap(s) are not listed.</source>
         <translation>
             <numerusform>추가 추적 공백 %n개는 표시하지 않습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1710"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1727"/>
         <source>Tracking gap frames: %1 before review, %2 pending user review. Review acknowledgement does not verify coverage.</source>
         <translation>추적 공백 프레임: 검토 전 %1개, 사용자 미확인 %2개. 확인 완료 표시는 가려짐을 검증하지 않습니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1715"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1732"/>
         <source>Tracks excluded during review: %1</source>
         <translation>검토 중 제외한 트랙: %1개</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1723"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1740"/>
         <source>Failed to process video %1: %2</source>
         <translation>동영상 처리 실패 %1: %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1380"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1397"/>
         <source>Loading face detection model for video...</source>
         <translation>동영상용 얼굴 탐지 모델 로딩 중...</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1402"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1419"/>
         <source>GPU acceleration can&apos;t run the video face model at %1 px; using the CPU instead.</source>
         <translation>GPU 가속으로 동영상 얼굴 모델을 %1 px에서 실행할 수 없어 CPU를 대신 사용합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1414"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1431"/>
         <source>Video face detection: %1 px · %2</source>
         <translation>동영상 얼굴 탐지: %1 px · %2</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1472"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1489"/>
         <source>%1m %2s left</source>
         <translation>%1분 %2초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1473"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1490"/>
         <source>%1s left</source>
         <translation>%1초 남음</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1643"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1660"/>
         <source>Processed %1 frames in %2s (%3× real time): %4</source>
         <translation>프레임 %1개를 %2초에 처리 (실시간의 %3배): %4</translation>
     </message>
     <message>
-        <location filename="../src/ProcessorWorker.cpp" line="1651"/>
+        <location filename="../src/ProcessorWorker.cpp" line="1668"/>
         <source>Video encoder: %1</source>
         <translation>비디오 인코더: %1</translation>
     </message>

@@ -123,9 +123,14 @@ namespace cloakframe
                         "The selected image must be no larger than 64 MB.")};
             }
 
+            const auto format = sniffImageFormat(pathFromQString(file.fileName()));
             QImageReader reader(&file);
+            if (format)
+            {
+                restrictImageReader(reader, *format);
+            }
             reader.setAutoTransform(true);
-            if (!reader.canRead())
+            if (!format || !reader.canRead())
             {
                 return {{},
                     {},

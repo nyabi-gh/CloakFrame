@@ -20,6 +20,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <initializer_list>
 #include <iterator>
 #include <limits>
 #include <memory>
@@ -142,7 +143,13 @@ namespace cloakframe
 
         int qtImageOrientation(const std::filesystem::path &source)
         {
+            const auto format = sniffImageFormat(source);
+            if (!format)
+            {
+                return 1;
+            }
             QImageReader reader(pathToQString(source));
+            restrictImageReader(reader, *format);
             reader.setAutoTransform(false);
             return orientationFromQtTransformation(reader.transformation());
         }
@@ -1545,6 +1552,64 @@ namespace cloakframe
         return cv::imdecode(buffer, flags);
     }
 
+    std::optional<ImageFormat> sniffImageFormat(const std::filesystem::path &path)
+    {
+        std::ifstream file(path, std::ios::binary);
+        std::array<unsigned char, 12> head{};
+        file.read(reinterpret_cast<char *>(head.data()), head.size());
+        const auto read = static_cast<std::size_t>(file.gcount());
+        const auto startsWith = [&](std::initializer_list<unsigned char> prefix)
+        {
+            return read >= prefix.size() && std::equal(prefix.begin(), prefix.end(), head.begin());
+        };
+        if (startsWith({0xFF, 0xD8, 0xFF}))
+        {
+            return ImageFormat::Jpeg;
+        }
+        if (startsWith({0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A}))
+        {
+            return ImageFormat::Png;
+        }
+        if (startsWith({'B', 'M'}))
+        {
+            return ImageFormat::Bmp;
+        }
+        if (startsWith({'I', 'I', 0x2A, 0x00}) || startsWith({'M', 'M', 0x00, 0x2A})
+            || startsWith({'I', 'I', 0x2B, 0x00}) || startsWith({'M', 'M', 0x00, 0x2B}))
+        {
+            return ImageFormat::Tiff;
+        }
+        if (read == head.size() && startsWith({'R', 'I', 'F', 'F'}) && head[8] == 'W'
+            && head[9] == 'E' && head[10] == 'B' && head[11] == 'P')
+        {
+            return ImageFormat::Webp;
+        }
+        return std::nullopt;
+    }
+
+    void restrictImageReader(QImageReader &reader, const ImageFormat format)
+    {
+        switch (format)
+        {
+        case ImageFormat::Jpeg:
+            reader.setFormat("jpeg");
+            break;
+        case ImageFormat::Png:
+            reader.setFormat("png");
+            break;
+        case ImageFormat::Bmp:
+            reader.setFormat("bmp");
+            break;
+        case ImageFormat::Tiff:
+            reader.setFormat("tiff");
+            break;
+        case ImageFormat::Webp:
+            reader.setFormat("webp");
+            break;
+        }
+        reader.setAutoDetectImageFormat(false);
+    }
+
     std::size_t imageFrameCount(const std::filesystem::path &source)
     {
         std::size_t count =
@@ -1553,8 +1618,14 @@ namespace cloakframe
         {
             return count;
         }
+        const auto format = sniffImageFormat(source);
+        if (!format)
+        {
+            return count;
+        }
 
         QImageReader reader(pathToQString(source));
+        restrictImageReader(reader, *format);
         reader.setAutoTransform(false);
         const int qtCount = reader.imageCount();
         if (qtCount > 0)

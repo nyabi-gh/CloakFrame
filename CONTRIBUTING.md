@@ -26,6 +26,8 @@ and enable tests.
 ### Dependencies
 
 - Qt 6.8.1 or later: Core, Gui, Widgets, and Network
+- Qt Image Formats, for its TIFF and WebP plugins. Without them those inputs
+  are skipped and the metadata test fails
 - OpenCV 4.10 or later, including OpenCV 5: core, dnn, imgcodecs, imgproc,
   and objdetect
 - ONNX Runtime
@@ -139,7 +141,7 @@ cmake --build --preset release --parallel
 On Arch Linux, a CPU development environment can be installed with:
 
 ```bash
-yay -S --needed base-devel cmake ninja pkgconf qt6-base qt6-tools qt6-svg \
+yay -S --needed base-devel cmake ninja pkgconf qt6-base qt6-tools qt6-svg qt6-imageformats \
   opencv onnxruntime-cpu spdlog exiv2 ffmpeg
 ```
 

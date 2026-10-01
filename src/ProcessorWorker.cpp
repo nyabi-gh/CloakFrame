@@ -213,9 +213,11 @@ namespace cloakframe
             bool reserved_ = false;
         };
 
-        ImageDimensionCheck inspectImageDimensions(const std::filesystem::path &source)
+        ImageDimensionCheck inspectImageDimensions(
+            const std::filesystem::path &source, const ImageFormat format)
         {
             QImageReader reader(pathToQString(source));
+            restrictImageReader(reader, format);
             reader.setAutoTransform(false);
 
             const QSize size = reader.size();
@@ -250,7 +252,12 @@ namespace cloakframe
             std::uint64_t largestEstimate = 1;
             for (const auto index : indexes)
             {
-                const auto dimensions = inspectImageDimensions(items[index].sourcePath);
+                const auto format = sniffImageFormat(items[index].sourcePath);
+                if (!format)
+                {
+                    continue;
+                }
+                const auto dimensions = inspectImageDimensions(items[index].sourcePath, *format);
                 if (!dimensions.size.isValid())
                 {
                     continue;
@@ -986,6 +993,16 @@ namespace cloakframe
             };
             emit stageChanged(index, total, tr("Loading"), fileName);
 
+            // Decided on the private copy, which is what every decoder below reads.
+            const auto format = sniffImageFormat(processingSource);
+            if (!format)
+            {
+                outcome.logs.push_back(
+                    tr("Skipped (not a supported image format): %1").arg(fileName));
+                outcome.skipped = 1;
+                return outcome;
+            }
+
             const auto frameCount = imageFrameCount(processingSource);
             if (frameCount > 1)
             {
@@ -1001,7 +1018,7 @@ namespace cloakframe
                 return outcome;
             }
 
-            const auto dimensions = inspectImageDimensions(processingSource);
+            const auto dimensions = inspectImageDimensions(processingSource, *format);
             if (!dimensions.ok)
             {
                 outcome.logs.push_back(tr("Skipped (%1): %2").arg(dimensions.reason, fileName));

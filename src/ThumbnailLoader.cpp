@@ -1,5 +1,6 @@
 #include "cloakframe/ThumbnailLoader.hpp"
 
+#include "cloakframe/ImageIo.hpp"
 #include "cloakframe/ImageScanner.hpp"
 #include "cloakframe/PathUtil.hpp"
 #include "cloakframe/VideoIo.hpp"
@@ -52,7 +53,11 @@ namespace cloakframe
                     return {};
                 return QImage::fromData(process.readAllStandardOutput(), "PNG");
             }
+            const auto format = sniffImageFormat(pathFromQString(path));
+            if (!format)
+                return {};
             QImageReader reader(path);
+            restrictImageReader(reader, *format);
             reader.setAutoTransform(true);
             const QSize size = reader.size();
             // Some image plugins decode the full image before scaling. Bound that allocation

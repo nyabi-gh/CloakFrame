@@ -31,9 +31,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Model hashing on the GUI thread** [E-8, OW 8]. Each run hashes the selected model
   once on the GUI thread before starting; a custom model may be 512 MB. Move it to a
   worker and keep the single digest it produces for consent and loading.
-- **Metadata regression tests** [D-1]. Nothing asserts that a default-path image output
-  carries no EXIF, XMP, ICC, PNG text or WebP metadata chunks, or that a video output
-  drops subtitle, data and attachment streams and per-stream tags.
 - **Test timeouts** [OW 5]. Only one test has a `TIMEOUT`; give `add_cloakframe_test` a
   default.
 - **Output conflict key** [CF-021]. Case folding in `OutputPlan.cpp` and the scanner's
@@ -106,8 +103,8 @@ close it. Check the caller and the full scope before recording a change of state
 - **FFmpeg inputs** [B-9, B-11]. Pass `-protocol_whitelist file,pipe` and a `file:`
   prefix; require the checksum manifest in bundled builds.
 - **Hardening** [B-11]. `/CETCOMPAT`, `_FORTIFY_SOURCE=3`, stack-clash protection,
-  `SetDefaultDllDirectories`; trim macOS image plugins and stop content sniffing in
-  `QImageReader`; validate the feed's file name; cap the update-check response size.
+  `SetDefaultDllDirectories`; leave image plugins CloakFrame never selects out of the
+  bundles; validate the feed's file name; cap the update-check response size.
 - **Notices** [F-2, F-3]. Generate notices from each platform's bundle, ship or offer the
   corresponding source for bundled FFmpeg and Exiv2, and add an About dialog with the
   licenses and model terms.

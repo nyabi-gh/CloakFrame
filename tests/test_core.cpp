@@ -161,6 +161,13 @@ namespace
                == static_cast<qint64>(bytes.size()));
     }
 
+    QByteArray fileBytes(const std::filesystem::path &path)
+    {
+        QFile file(QString::fromStdString(path.string()));
+        assert(file.open(QIODevice::ReadOnly));
+        return file.readAll();
+    }
+
     void writeJpegWithExifOrientation(
         const std::filesystem::path &path, const unsigned char orientation)
     {
@@ -651,6 +658,79 @@ namespace
 
         assert(result == cloakframe::RunOutcome::Failed);
         assert(log.filter("The face detection model could not be loaded: ").size() == 1);
+    }
+
+    void testImageFormatsAreDecidedByContent()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const cv::Mat pixels(8, 8, CV_8UC3, cv::Scalar(10, 20, 30));
+        const std::vector<std::pair<std::string, cloakframe::ImageFormat>> encoded = {
+            {".jpg", cloakframe::ImageFormat::Jpeg},
+            {".png", cloakframe::ImageFormat::Png},
+            {".bmp", cloakframe::ImageFormat::Bmp},
+            {".tiff", cloakframe::ImageFormat::Tiff},
+            {".webp", cloakframe::ImageFormat::Webp},
+        };
+        for (const auto &[extension, format] : encoded)
+        {
+            std::vector<uchar> bytes;
+            assert(cv::imencode(extension, pixels, bytes));
+            // Named for none of them: only the content decides.
+            const auto path = root / ("image" + extension + ".bin");
+            writeBytes(path, bytes);
+            assert(cloakframe::sniffImageFormat(path) == format);
+        }
+
+        std::vector<uchar> ppm;
+        assert(cv::imencode(".ppm", pixels, ppm));
+        writeBytes(root / "netpbm.jpg", ppm);
+        assert(!cloakframe::sniffImageFormat(root / "netpbm.jpg"));
+        writeBytes(root / "short.jpg", std::vector<uchar>{0xFF, 0xD8});
+        assert(!cloakframe::sniffImageFormat(root / "short.jpg"));
+        writeBytes(root / "riff.webp",
+            std::vector<uchar>{'R', 'I', 'F', 'F', 0, 0, 0, 0, 'W', 'A', 'V', 'E'});
+        assert(!cloakframe::sniffImageFormat(root / "riff.webp"));
+        assert(!cloakframe::sniffImageFormat(root / "missing.png"));
+    }
+
+    // OpenCV would decode the NetPBM file below whatever its name, and Qt would too. Neither
+    // may see it; a correctly encoded PNG under the wrong name is still an image to process.
+    void testWorkerDecodesOnlySupportedContent()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root = std::filesystem::path(temp.path().toStdString());
+        const auto output = root / "out";
+        const cv::Mat pixels(24, 24, CV_8UC3, cv::Scalar(30, 60, 90));
+        std::vector<uchar> ppm;
+        std::vector<uchar> png;
+        assert(cv::imencode(".ppm", pixels, ppm));
+        assert(cv::imencode(".png", pixels, png));
+        writeBytes(root / "netpbm.jpg", ppm);
+        writeBytes(root / "renamed.jpg", png);
+
+        cloakframe::ProcessingRequest request;
+        request.inputs = {QString::fromStdString((root / "netpbm.jpg").string()),
+            QString::fromStdString((root / "renamed.jpg").string())};
+        request.outputDirectory = QString::fromStdString(output.string());
+        request.detectFaces = false;
+        cloakframe::RunSummary summary;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        QObject::connect(&worker,
+            &cloakframe::ProcessorWorker::summaryAvailable,
+            [&](const cloakframe::RunSummary value)
+            {
+                summary = value;
+            });
+        worker.process();
+
+        assert(summary.total == 2 && summary.skipped == 1);
+        assert(!std::filesystem::exists(output / "netpbm.jpg"));
+        assert(std::filesystem::exists(output / "renamed.jpg"));
+        assert(
+            cloakframe::sniffImageFormat(output / "renamed.jpg") == cloakframe::ImageFormat::Jpeg);
     }
 
     void testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun()
@@ -2067,6 +2147,153 @@ namespace
                == publishedMetadata->xmpData().end());
     }
 
+    std::uint32_t pngCrc(const QByteArray &bytes)
+    {
+        std::uint32_t crc = 0xFFFFFFFFU;
+        for (const char value : bytes)
+        {
+            crc ^= static_cast<unsigned char>(value);
+            for (int bit = 0; bit < 8; ++bit)
+            {
+                crc = (crc >> 1U) ^ (0xEDB88320U & (0U - (crc & 1U)));
+            }
+        }
+        return ~crc;
+    }
+
+    QByteArray pngChunk(const QByteArray &type, const QByteArray &data)
+    {
+        const auto bigEndian = [](std::uint32_t value)
+        {
+            QByteArray out(4, '\0');
+            for (int index = 3; index >= 0; --index)
+            {
+                out[index] = static_cast<char>(value & 0xFFU);
+                value >>= 8U;
+            }
+            return out;
+        };
+        return bigEndian(static_cast<std::uint32_t>(data.size())) + type + data
+               + bigEndian(pngCrc(type + data));
+    }
+
+    // Text, XMP and EXIF chunks after IHDR, written by hand so the fixture does not depend on
+    // which formats the installed Exiv2 can write.
+    void writePngWithMetadata(const std::filesystem::path &path, const cv::Mat &pixels)
+    {
+        std::vector<uchar> encoded;
+        assert(cv::imencode(".png", pixels, encoded));
+        QByteArray png(
+            reinterpret_cast<const char *>(encoded.data()), static_cast<qsizetype>(encoded.size()));
+        constexpr qsizetype kAfterHeader = 8 + 4 + 4 + 13 + 4;
+        const QByteArray metadata =
+            pngChunk("tEXt", QByteArray("Comment\0PrivateComment", 22))
+            + pngChunk("iTXt",
+                QByteArray("XML:com.adobe.xmp\0\0\0\0\0", 22)
+                    + "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">PrivateXmp</x:xmpmeta>")
+            + pngChunk("eXIf", QByteArray("MM\0*\0\0\0\x08\0\0", 10));
+        png.insert(kAfterHeader, metadata);
+        QFile file(QString::fromStdString(path.string()));
+        assert(file.open(QIODevice::WriteOnly));
+        assert(file.write(png) == png.size());
+    }
+
+    // Camera, phone and editor data written with Exiv2: EXIF with GPS and serial numbers, XMP,
+    // IPTC, a comment and an ICC profile. False when this Exiv2 cannot write the format.
+    bool writeWithExiv2Metadata(const std::filesystem::path &path, const cv::Mat &pixels)
+    {
+        assert(cv::imwrite(path.string(), pixels));
+        QByteArray icc(132, '\0');
+        icc[3] = static_cast<char>(132);
+        icc.replace(36, 4, "acsp");
+        try
+        {
+            auto image = Exiv2::ImageFactory::open(path.string());
+            image->readMetadata();
+            image->exifData()["Exif.Image.Artist"] = "PrivateArtist";
+            image->exifData()["Exif.Photo.BodySerialNumber"] = "PrivateSerial";
+            image->exifData()["Exif.GPSInfo.GPSLatitudeRef"] = "N";
+            image->exifData()["Exif.GPSInfo.GPSLatitude"] = "37/1 33/1 59/1";
+            image->xmpData()["Xmp.dc.description"] = "PrivateXmp";
+            if (path.extension() == ".jpg")
+            {
+                image->iptcData()["Iptc.Application2.Caption"] = "PrivateIptc";
+                image->setComment("PrivateComment");
+            }
+            image->setIccProfile(
+                Exiv2::DataBuf(reinterpret_cast<const Exiv2::byte *>(icc.constData()), icc.size()));
+            image->writeMetadata();
+        }
+        catch (const Exiv2::Error &)
+        {
+            return false;
+        }
+        return true;
+    }
+
+    // The default path writes pixels only. Every kind of embedded data a camera, phone or
+    // editor leaves behind has to be absent from the output, checked as raw bytes so a
+    // container a metadata library ignores cannot hide one.
+    void testDefaultOutputCarriesNoMetadata()
+    {
+        QTemporaryDir temp;
+        assert(temp.isValid());
+        const auto root =
+            std::filesystem::canonical(std::filesystem::path(temp.path().toStdString()));
+        const auto output = root / "out";
+        const cv::Mat pixels(32, 32, CV_8UC3, cv::Scalar(90, 120, 150));
+
+        std::vector<std::string> names;
+        writePngWithMetadata(root / "photo.png", pixels);
+        names.emplace_back("photo.png");
+        for (const std::string name : {"photo.jpg", "photo.webp"})
+        {
+            if (writeWithExiv2Metadata(root / name, pixels))
+            {
+                names.push_back(name);
+            }
+            else
+            {
+                std::printf("SKIP metadata fixture for %s: Exiv2 cannot write it\n", name.c_str());
+            }
+        }
+        QStringList inputs;
+        for (const auto &name : names)
+        {
+            assert(fileBytes(root / name).contains("Private"));
+            inputs.push_back(QString::fromStdString((root / name).string()));
+        }
+
+        cloakframe::ProcessingRequest request;
+        request.inputs = inputs;
+        request.outputDirectory = QString::fromStdString(output.string());
+        request.detectFaces = false;
+        cloakframe::ProcessorWorker worker(std::move(request));
+        worker.process();
+
+        for (const auto &name : names)
+        {
+            const QByteArray bytes = fileBytes(output / name);
+            assert(!cv::imread((output / name).string()).empty());
+            for (const char *marker : {"Private",
+                     "Exif",
+                     "http://ns.adobe.com/xap",
+                     "adobe:ns:meta",
+                     "ICC_PROFILE",
+                     "acsp",
+                     "iCCP",
+                     "eXIf",
+                     "tEXt",
+                     "iTXt",
+                     "zTXt",
+                     "XMP ",
+                     "ICCP"})
+            {
+                assert(!bytes.contains(marker));
+            }
+        }
+    }
+
     long exifThumbnailBytes(Exiv2::ExifData &exif)
     {
         Exiv2::ExifThumb thumb(exif);
@@ -2538,6 +2765,8 @@ int main(int argc, char **argv)
     testReviewConfirmsOnlyWhenDetectionsWereCleared();
     testWorkerFailsWhenTheReviewReceiverIsMissing();
     testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun();
+    testImageFormatsAreDecidedByContent();
+    testWorkerDecodesOnlySupportedContent();
     testAModelThatFailsToLoadIsReportedInTheInterfaceLanguage();
     testWorkerSavesNothingWhenTheReviewSlotIsMissing();
     testWorkerHonoursCancelRequestedBeforeProcess();
@@ -2588,6 +2817,7 @@ int main(int argc, char **argv)
 #ifdef CLOAKFRAME_HAVE_EXIV2
     testMetadataCopyAndOrientationNormalize();
     testMetadataCopyStripsEmbeddedThumbnail();
+    testDefaultOutputCarriesNoMetadata();
 #endif
     return 0;
 }

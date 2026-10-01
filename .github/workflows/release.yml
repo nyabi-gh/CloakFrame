@@ -160,6 +160,12 @@ jobs:
           test -x dist/macos/CloakFrame.app/Contents/MacOS/CloakFrame
           test -x dist/macos/CloakFrame.app/Contents/Resources/ffmpeg/ffmpeg
           test -x dist/macos/CloakFrame.app/Contents/Resources/ffmpeg/ffprobe
+          for plugin in libqtiff.dylib libqwebp.dylib; do
+            if ! find dist/macos/CloakFrame.app -name "$plugin" -print -quit | grep -q .; then
+              echo "Missing image format plugin: $plugin" >&2
+              exit 1
+            fi
+          done
           if find dist/macos/CloakFrame.app -name '*.onnx' -print -quit | grep -q .; then
             echo "ONNX model files must not be bundled" >&2
             exit 1
@@ -380,6 +386,8 @@ jobs:
           host: windows
           target: desktop
           arch: win64_msvc2022_64
+          # TIFF and WebP are read through the plugins in this add-on.
+          modules: qtimageformats
 
       - name: Set up MSVC environment
         shell: pwsh
@@ -477,6 +485,11 @@ jobs:
             "$package\ffmpeg\ffprobe.exe"
           )) {
             if (-not (Test-Path $required)) { throw "Missing packaged file: $required" }
+          }
+          foreach ($plugin in @('qtiff.dll', 'qwebp.dll')) {
+            if (-not (Get-ChildItem $package -Recurse -Filter $plugin -File)) {
+              throw "Missing image format plugin: $plugin"
+            }
           }
           if (-not (Get-ChildItem $package -Filter 'opencv_*.dll' -File)) {
             throw "Missing packaged OpenCV runtime"
@@ -619,6 +632,8 @@ jobs:
           host: linux
           target: desktop
           arch: linux_gcc_64
+          # TIFF and WebP are read through the plugins in this add-on.
+          modules: qtimageformats
 
       - name: Install ONNX Runtime
         run: |
@@ -672,6 +687,12 @@ jobs:
           test -x "$appdir/usr/bin/CloakFrame"
           test -x "$appdir/usr/bin/ffmpeg/ffmpeg"
           test -x "$appdir/usr/bin/ffmpeg/ffprobe"
+          for plugin in libqtiff.so libqwebp.so; do
+            if ! find "$appdir" -name "$plugin" -print -quit | grep -q .; then
+              echo "Missing image format plugin: $plugin" >&2
+              exit 1
+            fi
+          done
           if find "$appdir" -name '*.onnx' -print -quit | grep -q .; then
             echo "ONNX model files must not be bundled" >&2
             exit 1

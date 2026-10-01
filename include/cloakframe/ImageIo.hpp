@@ -10,8 +10,28 @@
 #include <string>
 #include <vector>
 
+class QImageReader;
+
 namespace cloakframe
 {
+    enum class ImageFormat
+    {
+        Jpeg,
+        Png,
+        Bmp,
+        Tiff,
+        Webp,
+    };
+
+    // The supported format the file's leading bytes identify, whatever its name says, or nothing
+    // for any other content. Qt's image reader and OpenCV both pick a decoder from the content
+    // among every format they were built with, so this is what keeps an input away from the
+    // decoders CloakFrame does not need.
+    [[nodiscard]] std::optional<ImageFormat> sniffImageFormat(const std::filesystem::path &path);
+
+    // Points `reader` at the decoder for `format` only, with content-based detection off.
+    void restrictImageReader(QImageReader &reader, ImageFormat format);
+
     enum class ImageWriteResult
     {
         Failed,
