@@ -181,7 +181,8 @@ build/_deps/sparkle-src/bin/generate_keys
 
 `generate_keys` stores the private key in the login keychain and prints the
 public key. Export the private key with `generate_keys -x private-key.txt`,
-store it as the `SPARKLE_ED_PRIVATE_KEY` repository secret, keep an offline
+store it as the `SPARKLE_ED_PRIVATE_KEY` secret of the `release` environment
+(see [Release secrets](#release-secrets)), keep an offline
 copy, and delete the exported file. Store the printed public key as the
 `SPARKLE_ED_PUBLIC_KEY` repository variable; the release workflow passes it to
 CMake and refuses to publish if only one of the two is configured.
@@ -205,7 +206,8 @@ openssl pkey -in cloakframe-update-key.pem -pubout -outform DER | tail -c 32 | b
 ```
 
 Store the printed public key as the `CLOAKFRAME_UPDATE_PUBLIC_KEY` repository
-variable and the PEM as the `CLOAKFRAME_UPDATE_PRIVATE_KEY` secret, keep an
+variable and the PEM as the `CLOAKFRAME_UPDATE_PRIVATE_KEY` secret of the
+`release` environment, keep an
 offline copy, and delete the local file. The release workflow refuses to run if
 only one of the two is configured, and `sign_update_packages.sh` refuses to sign
 if the secret's public half is not the pinned key.
@@ -233,3 +235,23 @@ The release workflow passes the staged Windows and Linux applications to
 Velopack, signs and notarizes the macOS application, and publishes the fixed
 asset names. It is the canonical description of the signed, pinned
 distribution builds.
+
+### Release secrets
+
+Every signing secret belongs to the `release` environment, never to the
+repository. Environment protection, which limits deployments to `v*` tags and
+requires a reviewer, applies only to environment secrets; a repository secret
+can be read by a workflow pushed to any branch. The release jobs already declare
+`environment: release`, so the secrets need no other change:
+
+- `CLOAKFRAME_UPDATE_PRIVATE_KEY`, `SPARKLE_ED_PRIVATE_KEY`
+- `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_DEVELOPER_ID`
+- `MACOS_NOTARY_KEY`, `MACOS_NOTARY_KEY_ID`, `MACOS_NOTARY_ISSUER_ID`
+
+```bash
+gh secret set CLOAKFRAME_UPDATE_PRIVATE_KEY --env release < cloakframe-update-key.pem
+gh secret list --env release
+gh secret list   # must not list any of the names above
+```
+
+The public keys are not secret and stay repository variables.

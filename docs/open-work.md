@@ -29,7 +29,7 @@
 | 순위 | 항목 | 위치 | 비용 |
 |---:|---|---|---|
 | 1 | `CF-001` 서명이 실제 릴리스에서 동작했는지 확인 | 릴리스 로그와 asset | 거의 없음 |
-| 2 | Apple 서명 secret 7개를 `release` 환경으로 | 저장소 설정 | 작음 |
+| 2 | 서명 secret 8개를 `release` 환경으로 | 저장소 설정 | 작음 |
 | 3 | `CF-021` 출력 충돌 판정과 입력 dedupe의 OS 가정 | `OutputPlan.cpp:18`, `ImageScanner.cpp:96` | 작음 |
 | 4 | soft-mask 전역 직렬화 | `Mosaic.cpp:451` | 작음 |
 | 5 | 나머지 16개 테스트에 timeout 없음 | `tests/CMakeLists.txt` | 한 줄 |
@@ -55,15 +55,18 @@ release job 로그에 `signed <package> <digest>`가 찍혔는지, release asset
 비용이 거의 없는데 확인하기 전까지는 업데이트 신뢰 체계 전체가 미검증이므로 가장
 먼저 둔다.
 
-### 2. Apple 서명 secret을 `release` 환경으로
+### 2. 서명 secret을 `release` 환경으로
 
 `CF-007`의 남은 절반이다. 코드 쪽은 `9699d83`이 서명 키를 읽는 네 job에
 `environment: release`를 붙여 끝냈다(`release.yml:47,117,384,588`). 남은 것은
-Apple 서명 secret 7개가 아직 repository scope라는 점이다. 그대로면 어느
-workflow의 어느 job이든 읽을 수 있다.
+secret 8개가 아직 repository scope라는 점이다. Apple 서명·공증 6개만이 아니라
+업데이트 서명 개인키 `CLOAKFRAME_UPDATE_PRIVATE_KEY`, `SPARKLE_ED_PRIVATE_KEY`도
+들어 있다. 그대로면 어느 브랜치의 어느 workflow든 승인 없이 읽을 수 있다.
+BUILDING.md도 repository secret으로 안내하고 있었으나 §Release secrets로 고쳤다.
 
-`gh secret list --env release`가 비어 있는지로 확인한다. 저장소 설정 작업이므로
-코드 변경은 없다.
+`gh secret list --env release`에 8개가 있고 `gh secret list`에 하나도 없는지로
+확인한다. 업데이트 키는 이미 repository scope에 있었으므로 교체도 검토한다.
+클라이언트가 공개키를 고정하므로 새 키를 함께 신뢰하는 과도기 릴리스가 필요하다.
 
 ### 3. `CF-021` — 출력 충돌 판정이 OS 가정에 묶여 있다
 
