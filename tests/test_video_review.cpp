@@ -215,6 +215,35 @@ namespace
         std::puts("keyboard adds a manual track: ok");
     }
 
+    void testEncodeAsksToPlaceThePendingBox(
+        QApplication &application, const cloakframe::VideoReviewRequest &request)
+    {
+        int shown = 0;
+        cloakframe::VideoReviewDialog dialog(request);
+        dialog.show();
+        application.processEvents();
+        dialog.findChild<QPushButton *>("addManualTrack")->click();
+        auto *encode = dialog.findChild<QPushButton *>("encodeVideo");
+
+        answerNextMessageBox(QMessageBox::No, shown);
+        encode->click();
+        assert(shown == 1 && dialog.isVisible());
+        assert(dialog.reviewResult().addedTracks.isEmpty());
+
+        auto *canvas = dialog.findChild<QWidget *>("videoCanvas");
+        canvas->activateWindow();
+        assert(QTest::qWaitForWindowActive(&dialog));
+        answerNextMessageBox(QMessageBox::Yes, shown);
+        QTest::keyClick(canvas, Qt::Key_Return, Qt::ControlModifier);
+        assert(shown == 2 && !dialog.isVisible());
+        const auto result = dialog.reviewResult();
+        assert(result.decision == cloakframe::VideoReviewDecision::Encode);
+        assert(result.addedTracks.size() == 1);
+        assert(result.addedTracks.front().keyframes.size() == 1);
+        assert(result.addedTracks.front().keyframes.front().rect == QRectF(142, 102, 36, 36));
+        std::puts("encode asks to place the pending box: ok");
+    }
+
     void testExitsKeepTheBatch(
         QApplication &application, const cloakframe::VideoReviewRequest &request)
     {
@@ -418,6 +447,7 @@ int main(int argc, char **argv)
     testGapChecksFollowWhatWasShown(application);
     testManualTrackRemovalAsks();
     testKeyboardAddsManualTrack();
+    testEncodeAsksToPlaceThePendingBox(application, request);
     testExitsKeepTheBatch(application, request);
     auto jumpRequest = request;
     jumpRequest.initialFrame = 45;

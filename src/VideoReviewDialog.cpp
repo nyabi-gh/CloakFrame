@@ -157,6 +157,20 @@ namespace cloakframe
             update();
         }
 
+        void placePendingBox()
+        {
+            if (!drawingMode_ || request_ == nullptr || !manualBox_)
+            {
+                return;
+            }
+            if (drawing_)
+            {
+                placeDrag();
+                return;
+            }
+            manualBox_(frame_, pendingBox_);
+        }
+
     protected:
         void paintEvent(QPaintEvent *) override
         {
@@ -286,9 +300,9 @@ namespace cloakframe
                 update();
                 return;
             }
-            if ((event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) && manualBox_)
+            if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)
             {
-                manualBox_(frame_, pendingBox_);
+                placePendingBox();
                 return;
             }
             QWidget::keyPressEvent(event);
@@ -379,9 +393,15 @@ namespace cloakframe
                 return;
             }
             mouseMoveEvent(event);
+            placeDrag();
+            update();
+        }
+
+    private:
+        void placeDrag()
+        {
             drawing_ = false;
-            const QRectF screenRect(dragStart_, dragCurrent_);
-            const QRectF normalized = screenRect.normalized();
+            const QRectF normalized = QRectF(dragStart_, dragCurrent_).normalized();
             if (normalized.width() >= 4.0 && normalized.height() >= 4.0 && manualBox_)
             {
                 const QRectF target = imageTarget();
@@ -393,10 +413,8 @@ namespace cloakframe
                     normalized.height() / sy);
                 manualBox_(frame_, frameRect);
             }
-            update();
         }
 
-    private:
         [[nodiscard]] QRectF imageTarget() const
         {
             const QSizeF fitted = image_.size().scaled(size(), Qt::KeepAspectRatio);
@@ -970,6 +988,20 @@ namespace cloakframe
             this,
             [this]
             {
+                if (canvas_->drawingMode())
+                {
+                    const auto answer = QMessageBox::question(this,
+                        tr("Place the dashed box?"),
+                        tr("The dashed box has not been placed, so the video would be encoded "
+                           "without it.\n\nPlace it on this frame and encode the video?"),
+                        QMessageBox::Yes | QMessageBox::No,
+                        QMessageBox::No);
+                    if (answer != QMessageBox::Yes)
+                    {
+                        return;
+                    }
+                    canvas_->placePendingBox();
+                }
                 const qsizetype remaining =
                     request_.tracks.size() - excludedTrackIds_.size() + manualTracks_.size();
                 if (reviewClearedEveryDetection(request_.tracks.size(), remaining))

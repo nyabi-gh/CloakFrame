@@ -2158,22 +2158,22 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewCanvas</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="171"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="185"/>
         <source>Loading frame preview…</source>
         <translation>프레임 미리보기 불러오는 중…</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="173"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="187"/>
         <source>Could not load this frame preview.</source>
         <translation>이 프레임의 미리보기를 불러오지 못했습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="209"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="223"/>
         <source>Track %1</source>
         <translation>트랙 %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="236"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="250"/>
         <source>Manual %1</source>
         <translation>수동 %1</translation>
     </message>
@@ -2181,167 +2181,167 @@ Continue?</source>
 <context>
     <name>cloakframe::VideoReviewDialog</name>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="668"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="686"/>
         <source>Tracking gaps (before review)</source>
         <translation>추적 공백 (검토 전)</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="720"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="738"/>
         <source>No tracking gaps were reported.</source>
         <translation>보고된 추적 공백이 없습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="726"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="744"/>
         <source>Previous gap</source>
         <translation>이전 공백</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="727"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="745"/>
         <source>Next gap</source>
         <translation>다음 공백</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="885"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="903"/>
         <source>Previous frame (Left arrow)</source>
         <translation>이전 프레임 (왼쪽 방향키)</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="886"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="904"/>
         <source>Next frame (Right arrow)</source>
         <translation>다음 프레임 (오른쪽 방향키)</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1064"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1096"/>
         <source>%1 / %2 · Frame %3 / %4</source>
         <translation>%1 / %2 · 프레임 %3 / %4</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="534"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="552"/>
         <source>Review video tracks — %1</source>
         <translation>동영상 트랙 검토 — %1</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="540"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="558"/>
         <source>Scrub the timeline and uncheck false detections. To cover a missed region, draw a manual track and add keyframes as it moves; the boxes between keyframes are interpolated before encoding.</source>
         <translation>타임라인을 탐색하고 오탐을 선택 해제하세요. 놓친 영역을 가리려면 수동 트랙을 그리고 움직임에 따라 키프레임을 추가하세요. 키프레임 사이의 상자는 인코딩 전에 보간됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="552"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="570"/>
         <source>Tracks marked &quot;low confidence&quot; had too few confident detections and are included by default — uncheck only false detections.</source>
         <translation>‘낮은 신뢰도’ 트랙은 확실한 검출이 적었지만 기본적으로 포함됩니다. 잘못 검출된 트랙만 선택 해제하세요.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="559"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="577"/>
         <source>The red marks show gaps found before review where tracking could not locate the subject. Add manual masks where needed. These marks remain after editing because adding a mask does not verify the subject&apos;s position.</source>
         <translation>빨간 표시는 검토 전에 추적이 대상의 위치를 찾지 못한 구간입니다. 필요한 곳에 수동 마스크를 추가하세요. 마스크를 추가해도 대상의 실제 위치가 검증되지는 않으므로 편집 후에도 표시는 유지됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="603"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="621"/>
         <source>Track %1  ·  %2–%3</source>
         <translation>트랙 %1  ·  %2–%3</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="608"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="626"/>
         <source>%1  ·  low confidence</source>
         <translation>%1  ·  신뢰도 낮음</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="614"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="632"/>
         <source>Few confident detections — included by default. Uncheck it to leave this track unredacted.</source>
         <translation>확실한 검출이 적습니다 — 기본으로 포함됩니다. 이 트랙을 가리지 않으려면 체크를 해제하세요.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="705"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="723"/>
         <source>Check a gap after reviewing the entire interval; its check becomes available once its first, middle and last frames have been shown. This records your review, not verified coverage. Editing masks resets these checks.</source>
         <translation>공백 구간 전체를 검토한 뒤 체크하세요. 구간의 첫 프레임, 가운데 프레임, 마지막 프레임을 표시해야 체크할 수 있습니다. 검토 여부를 기록하며 가려짐을 검증하지는 않습니다. 마스크를 편집하면 체크가 초기화됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1310"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1342"/>
         <source>Or move the dashed box with the arrow keys, resize it with Alt and the arrow keys, and press Return to place it. Esc stops drawing.</source>
         <translation>또는 화살표 키로 점선 상자를 옮기고 Alt와 화살표 키로 크기를 조절한 뒤 Return을 눌러 배치하세요. Esc를 누르면 그리기를 멈춥니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1560"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1592"/>
         <source>Show the first, middle and last frame of this gap to check it.</source>
         <translation>이 공백의 첫 프레임, 가운데 프레임, 마지막 프레임을 표시하면 체크할 수 있습니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="767"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="785"/>
         <source>Add missed track</source>
         <translation>놓친 트랙 추가</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="571"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="589"/>
         <source>Review video frame</source>
         <translation>검토할 동영상 프레임</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="694"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="712"/>
         <source>%1–%2 · Frames %3–%4</source>
         <translation>%1–%2 · 프레임 %3–%4</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="768"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="786"/>
         <source>Add / update keyframe</source>
         <translation>키프레임 추가 / 업데이트</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="769"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="787"/>
         <source>Set start here</source>
         <translation>시작 지점을 여기로 설정</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="770"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="788"/>
         <source>Set end here</source>
         <translation>종료 지점을 여기로 설정</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="771"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="789"/>
         <source>Remove manual track</source>
         <translation>수동 트랙 제거</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="814"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="832"/>
         <source>Include all</source>
         <translation>모두 포함</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="815"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="833"/>
         <source>Exclude all</source>
         <translation>모두 제외</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="874"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="892"/>
         <source>Video timeline</source>
         <translation>동영상 타임라인</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="926"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="944"/>
         <source>Cancel all</source>
         <translation>전체 취소</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="927"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="945"/>
         <source>Skip video</source>
         <translation>동영상 건너뛰기</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="930"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
         <source>Moves on to the next file without saving this video.</source>
         <translation>이 동영상을 저장하지 않고 다음 파일로 넘어갑니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="931"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="949"/>
         <source>Encode video</source>
         <translation>동영상 인코딩</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="948"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="966"/>
         <source>Cancel All?</source>
         <translation>모두 취소할까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="949"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="967"/>
         <source>Stop reviewing, discard this video and cancel the remaining files?
 
 Files already saved are kept.</source>
@@ -2350,12 +2350,26 @@ Files already saved are kept.</source>
 이미 저장된 파일은 유지됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="978"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="994"/>
+        <source>Place the dashed box?</source>
+        <translation>점선 상자를 배치할까요?</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="995"/>
+        <source>The dashed box has not been placed, so the video would be encoded without it.
+
+Place it on this frame and encode the video?</source>
+        <translation>점선 상자가 아직 배치되지 않아 이대로 인코딩하면 동영상에 포함되지 않습니다.
+
+이 프레임에 배치하고 동영상을 인코딩할까요?</translation>
+    </message>
+    <message>
+        <location filename="../src/VideoReviewDialog.cpp" line="1010"/>
         <source>Encode with nothing covered?</source>
         <translation>아무것도 가리지 않고 인코딩할까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="979"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1011"/>
         <source>Every track the detector found has been excluded and none were added in their place, so this video will be encoded with nothing covered.
 
 Continue?</source>
@@ -2364,56 +2378,56 @@ Continue?</source>
 계속할까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1030"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1062"/>
         <source>Skip this video?</source>
         <translation>이 동영상을 건너뛸까요?</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1031"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1063"/>
         <source>This video will not be saved, and the changes made in this review are lost. The remaining files continue.</source>
         <translation>이 동영상은 저장되지 않으며 이번 검토에서 변경한 내용은 사라집니다. 남은 파일은 계속 처리됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1434"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1466"/>
         <source>Remove manual track?</source>
         <translation>수동 트랙을 제거할까요?</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1435"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1467"/>
         <source>Remove manual track %1 and its %n keyframe(s)? This cannot be undone.</source>
         <translation>
             <numerusform>수동 트랙 %1 및 키프레임 %n개를 제거할까요? 되돌릴 수 없습니다.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1584"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1616"/>
         <source>%1 reviewed · %2 pending</source>
         <translation>확인 완료 %1개 · 미확인 %2개</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1307"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1339"/>
         <source>Drag a box around the missed region on the current frame.</source>
         <translation>현재 프레임에서 놓친 영역을 둘러싸는 상자를 드래그하세요.</translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1308"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1340"/>
         <source>Drag the new box for manual track %1 on this frame.</source>
         <translation>이 프레임에서 수동 트랙 %1의 새 상자를 드래그하세요.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1505"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1537"/>
         <source>Manual %1  ·  %2–%3  ·  %n keyframe(s)</source>
         <translation>
             <numerusform>수동 %1  ·  %2–%3  ·  키프레임 %n개</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/VideoReviewDialog.cpp" line="1568"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1600"/>
         <source>%1 of %2 automatic tracks included · %3 manual</source>
         <translation>자동 트랙 %2개 중 %1개 포함 · 수동 %3개</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/VideoReviewDialog.cpp" line="1575"/>
+        <location filename="../src/VideoReviewDialog.cpp" line="1607"/>
         <source>%n tracking gap(s) found before review</source>
         <translation>
             <numerusform>검토 전 추적 공백 %n개</numerusform>
