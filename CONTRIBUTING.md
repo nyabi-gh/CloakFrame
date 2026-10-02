@@ -37,11 +37,12 @@ and enable tests.
 - Qt SVG (optional, renders the settings icon as SVG)
 - FFmpeg and FFprobe at runtime for video processing
 
-Official Windows and Linux releases use Qt 6.11.2 and OpenCV 5.0.0. The Linux
-AppImage is built on Ubuntu 24.04, whose glibc is the oldest it runs on, with
-spdlog, Exiv2 and libsodium linked statically from vcpkg, OpenCV's own image codecs,
-and Qt Image Formats built from source. macOS release builds use the stable Homebrew
-packages available to the release workflow.
+Official releases use Qt 6.11.2, OpenCV 5.0.0 and ONNX Runtime 1.29.0 (1.24.4
+with DirectML on Windows), with spdlog and Exiv2 from vcpkg at the commit in
+`VCPKG_COMMIT`; every version is pinned in the workflows. The Linux AppImage is
+built on Ubuntu 24.04, whose glibc is the oldest it runs on, with OpenCV's own
+image codecs and Qt Image Formats built from source. The macOS build installs its
+dependencies with `.github/scripts/install_macos_dependencies.sh`, not Homebrew.
 
 The detection models are runtime data, not build dependencies. They are not
 bundled or committed. The application downloads them on first use, or you can
@@ -348,8 +349,11 @@ the secret is missing would strand existing installs.
 Every signing secret belongs to the `release` environment, never to the
 repository. Environment protection, which limits deployments to `v*` tags and
 requires a reviewer, applies only to environment secrets; a repository secret
-can be read by a workflow pushed to any branch. The release jobs already declare
-`environment: release`, so the secrets need no other change:
+can be read by a workflow pushed to any branch. The jobs that use them
+(`check-secrets`, `sign-macos`, `sign-updates` and `release`) already declare
+`environment: release`, so the secrets need no other change. The build jobs
+reference no secret, so the third-party tools they run never see one; keep
+signing out of them.
 
 - `CLOAKFRAME_UPDATE_PRIVATE_KEY`, `SPARKLE_ED_PRIVATE_KEY`
 - `MACOS_CERTIFICATE_P12`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_DEVELOPER_ID`

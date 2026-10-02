@@ -23,6 +23,10 @@ env:
   OPENCV_WINDOWS_SHA256: 9c6c1fcea58acdf06edba13148b2246e00c2658143fa51e61ecd370db8c39f63
   ONNXRUNTIME_VERSION: 1.29.0
   ONNXRUNTIME_LINUX_SHA256: c3fddc4f139a045b0c4902c57410f0694f1c2fdf9b6939fbe38b1aeae7cd14ba
+  ONNXRUNTIME_MACOS_SHA256: d0706fc34f315d8c88639d0a8c81f2e09e815f282cabed3493c06a054352cf92
+  LIBSODIUM_VERSION: 1.0.22
+  LIBSODIUM_SHA256: adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349
+  VCPKG_COMMIT: f05ff9f0adbd630c4fada9072b4a68eeeb7d738a
   ONNXRUNTIME_DIRECTML_VERSION: 1.24.4
   ONNXRUNTIME_DIRECTML_SHA256: 57e9f11b73437bef7a309496135d4c1f96b1a8e9ddba60013fa27bfc1d788681
   DIRECTML_VERSION: 1.15.4
@@ -37,14 +41,12 @@ env:
   LINUX_FFMPEG_URL: https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz
   LINUX_FFMPEG_SHA256: 97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79
 
+# The build jobs run third-party build tools and see no secret. Only the check-secrets,
+# sign-* and release jobs enter the `release` environment, and they run nothing but the
+# runner's own tools, scripts from this repository and the hash-pinned Sparkle.
 jobs:
-  verify-version:
+  identity:
     name: Verify release identity
-    # Reads the private half of the update signing key to reject a half configuration. A
-    # repository-scoped secret would be readable from any branch a workflow_dispatch can
-    # select, so the key belongs to this environment and every job that names it has to
-    # declare the environment too.
-    environment: release
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.identity.outputs.version }}
@@ -71,6 +73,14 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+  check-secrets:
+    name: Check release secrets
+    needs: identity
+    # The `release` environment must restrict deployments to v* tags and require a reviewer,
+    # so a workflow_dispatch from an arbitrary branch cannot reach its secrets.
+    environment: release
+    runs-on: ubuntu-latest
+    steps:
       - name: Check the update signing key
         env:
           CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
@@ -113,28 +123,28 @@ jobs:
           fi
 
   macos:
-    name: Build macOS DMG
-    needs: verify-version
-    # Holds the Apple Developer ID and notarization credentials. The `release`
-    # environment must restrict deployments to v* tags and require a reviewer so a
-    # workflow_dispatch from an arbitrary branch cannot reach these secrets.
-    environment: release
+    name: Build macOS app
+    needs: identity
     runs-on: macos-15
     timeout-minutes: 90
     env:
-      CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
-      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
-      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
-      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
-      CMAKE_PREFIX_PATH: /opt/homebrew
-      PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig
-      HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
       MACOSX_DEPLOYMENT_TARGET: "15.0"
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
+      - name: Install Qt
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4
+        with:
+          version: "${{ env.QT_VERSION }}"
+          aqtsource: "${{ env.AQTINSTALL_SOURCE }}"
+          host: mac
+          target: desktop
+          arch: clang_64
+          # TIFF and WebP are read through the plugins in this add-on.
+          modules: qtimageformats
+
       - name: Install dependencies
-        run: brew install cmake ninja qt opencv onnxruntime spdlog exiv2 libsodium
+        run: bash .github/scripts/install_macos_dependencies.sh "$RUNNER_TEMP/deps"
 
       - name: Prepare pinned FFmpeg
         run: |
@@ -157,7 +167,8 @@ jobs:
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
-            "-DCMAKE_PREFIX_PATH=$(brew --prefix qt);/opt/homebrew" \
+            "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR;$CLOAKFRAME_DEPS_PREFIX_PATH" \
+            "-DONNXRUNTIME_ROOT=$ONNXRUNTIME_ROOT" \
             "-DCLOAKFRAME_FFMPEG_DIR=$PWD/ffmpeg-bundle" \
             "-DCLOAKFRAME_SPARKLE_PUBLIC_KEY=$SPARKLE_ED_PUBLIC_KEY"
 
@@ -184,6 +195,38 @@ jobs:
             echo "ONNX model files must not be bundled" >&2
             exit 1
           fi
+
+      - name: Check that the application loads only what it bundles
+        run: |
+          application="$PWD/dist/macos/CloakFrame.app"
+          failed=0
+          while IFS= read -r -d '' binary; do
+            file "$binary" | grep -q 'Mach-O' || continue
+            while read -r library; do
+              case "$library" in
+                /System/* | /usr/lib/* | @rpath/* | @executable_path/* | @loader_path/*) ;;
+                *) echo "$binary loads $library" >&2; failed=1 ;;
+              esac
+            done < <(otool -L "$binary" | awk '!/:$/ { print $1 }')
+            while read -r path; do
+              case "$path" in
+                @executable_path/* | @loader_path*) ;;
+                *) echo "$binary searches $path" >&2; failed=1 ;;
+              esac
+            done < <(otool -l "$binary" | awk '$2 == "LC_RPATH" { getline; getline; print $2 }')
+          done < <(find "$application" -type f -print0)
+          if [[ "$failed" != 0 ]]; then
+            exit 1
+          fi
+          "$application/Contents/MacOS/CloakFrame" > "$RUNNER_TEMP/launch.log" 2>&1 &
+          pid=$!
+          sleep 15
+          if ! kill -0 "$pid" 2> /dev/null; then
+            cat "$RUNNER_TEMP/launch.log" >&2
+            echo "CloakFrame exited right after starting" >&2
+            exit 1
+          fi
+          kill "$pid"
 
       - name: Verify macOS compatibility
         run: |
@@ -218,6 +261,51 @@ jobs:
               awk '$1 == "minos" { print $2 }')
           done < <(find "$application" -type f -print0)
           exit "$failed"
+
+      # A tar keeps the bundle's symlinks and permissions, which an artifact upload does not.
+      - name: Archive the unsigned application
+        run: tar -C dist/macos -cf CloakFrame-unsigned.tar CloakFrame.app
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos-unsigned
+          path: CloakFrame-unsigned.tar
+          if-no-files-found: error
+
+  sign-macos:
+    name: Sign macOS DMG
+    needs: [identity, check-secrets, macos]
+    # Holds the Apple Developer ID, notarization and Sparkle credentials.
+    environment: release
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      CLOAKFRAME_VERSION: ${{ needs.identity.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-macOS-arm64.dmg
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: macos-unsigned
+
+      - name: Unpack the application
+        run: |
+          mkdir -p dist/macos
+          tar -C dist/macos -xf CloakFrame-unsigned.tar
+          test -x dist/macos/CloakFrame.app/Contents/MacOS/CloakFrame
+
+      # The appcast generator runs next to the signing key, so it comes from the pinned
+      # Sparkle release rather than from the build job.
+      - name: Fetch Sparkle
+        run: |
+          version=$(sed -n 's/^set(CLOAKFRAME_SPARKLE_VERSION "\(.*\)")$/\1/p' cmake/CloakFrameSparkle.cmake)
+          sha256=$(sed -n 's/^ *"\([0-9a-f]\{64\}\)")$/\1/p' cmake/CloakFrameSparkle.cmake)
+          curl -fsSL "https://github.com/sparkle-project/Sparkle/releases/download/${version}/Sparkle-${version}.tar.xz" \
+            -o "$RUNNER_TEMP/sparkle.tar.xz"
+          echo "$sha256  $RUNNER_TEMP/sparkle.tar.xz" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/sparkle"
+          tar -xJf "$RUNNER_TEMP/sparkle.tar.xz" -C "$RUNNER_TEMP/sparkle"
 
       - name: Import signing certificate
         env:
@@ -350,7 +438,7 @@ jobs:
           SPARKLE_ED_PUBLIC_KEY: ${{ vars.SPARKLE_ED_PUBLIC_KEY }}
         run: |
           # No notes go into the appcast: the update prompt names the version and nothing more.
-          generator="build-release/_deps/sparkle-src/bin/generate_appcast"
+          generator="$RUNNER_TEMP/sparkle/bin/generate_appcast"
           args=(
             --link "https://github.com/nyabi-gh/CloakFrame"
             --download-url-prefix "https://github.com/nyabi-gh/CloakFrame/releases/download/v${CLOAKFRAME_VERSION}/"
@@ -387,16 +475,14 @@ jobs:
 
   windows:
     name: Build Windows installer
-    needs: verify-version
-    # Signs the update packages with CLOAKFRAME_UPDATE_PRIVATE_KEY.
-    environment: release
+    needs: identity
     runs-on: windows-2025
     timeout-minutes: 60
     env:
-      CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
-      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
-      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
-      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
+      CLOAKFRAME_VERSION: ${{ needs.identity.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-Linux-x86_64.AppImage
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
@@ -456,7 +542,14 @@ jobs:
       - name: Install spdlog, Exiv2, and Velopack
         shell: pwsh
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md" "libsodium:x64-windows-static-md"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $vcpkg = "$env:RUNNER_TEMP\vcpkg"
+          git init -q $vcpkg
+          git -C $vcpkg fetch -q --depth 1 https://github.com/microsoft/vcpkg.git $env:VCPKG_COMMIT
+          git -C $vcpkg checkout -q FETCH_HEAD
+          & "$vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+          & "$vcpkg\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md" "libsodium:x64-windows-static-md"
+          "VCPKG_ROOT=$vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
           dotnet tool install --global vpk --version $env:VELOPACK_VERSION
 
       - name: Prepare pinned FFmpeg
@@ -481,7 +574,7 @@ jobs:
         env:
           CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
         run: |
-          $prefix = "$env:QT_ROOT_DIR;$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static-md"
+          $prefix = "$env:QT_ROOT_DIR;$env:VCPKG_ROOT\installed\x64-windows-static-md"
           cmake -S . -B build-windows -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             "-DCMAKE_PREFIX_PATH=$prefix" `
@@ -591,13 +684,6 @@ jobs:
           }
           Stop-Process -Id $process.Id -Force
 
-      - name: Sign the update package
-        shell: bash
-        env:
-          CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
-          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
-        run: .github/scripts/sign_update_packages.sh artifacts win "$CLOAKFRAME_VERSION"
-
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: windows-velopack
@@ -606,17 +692,15 @@ jobs:
 
   linux:
     name: Build Linux AppImage
-    needs: verify-version
-    # Signs the update packages with CLOAKFRAME_UPDATE_PRIVATE_KEY.
-    environment: release
+    needs: identity
     # The AppImage runs only where glibc is at least as new as on this runner.
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
-      CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
-      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
-      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
-      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
+      CLOAKFRAME_VERSION: ${{ needs.identity.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-Linux-x86_64.AppImage
       APPIMAGE_EXTRACT_AND_RUN: 1
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -633,7 +717,13 @@ jobs:
       # Linked statically: the host's copies of these differ in version between distributions.
       - name: Install spdlog, Exiv2, and libsodium
         run: |
-          "$VCPKG_INSTALLATION_ROOT/vcpkg" install spdlog:x64-linux exiv2:x64-linux libsodium:x64-linux
+          vcpkg="$RUNNER_TEMP/vcpkg"
+          git init -q "$vcpkg"
+          git -C "$vcpkg" fetch -q --depth 1 https://github.com/microsoft/vcpkg.git "$VCPKG_COMMIT"
+          git -C "$vcpkg" checkout -q FETCH_HEAD
+          "$vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+          "$vcpkg/vcpkg" install spdlog:x64-linux exiv2:x64-linux libsodium:x64-linux
+          echo "VCPKG_ROOT=$vcpkg" >> "$GITHUB_ENV"
 
       - name: Install OpenCV
         run: |
@@ -717,7 +807,7 @@ jobs:
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR;$VCPKG_INSTALLATION_ROOT/installed/x64-linux;$HOME/opencv" \
+            "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR;$VCPKG_ROOT/installed/x64-linux;$HOME/opencv" \
             "-DOpenCV_DIR=$OpenCV_DIR" \
             "-DONNXRUNTIME_ROOT=$ONNXRUNTIME_ROOT" \
             "-DCLOAKFRAME_FFMPEG_DIR=$PWD/ffmpeg-bundle" \
@@ -783,21 +873,52 @@ jobs:
               bash /w/.github/scripts/check_linux_launch.sh "/w/artifacts/$LINUX_ASSET_NAME"
           done
 
-      - name: Sign the update package
-        env:
-          CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
-          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
-        run: .github/scripts/sign_update_packages.sh artifacts linux "$CLOAKFRAME_VERSION"
-
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: linux-velopack
           path: artifacts/*
           if-no-files-found: error
 
+  sign-updates:
+    name: Sign update packages
+    needs: [identity, check-secrets, windows, linux]
+    # Holds CLOAKFRAME_UPDATE_PRIVATE_KEY.
+    environment: release
+    runs-on: ubuntu-latest
+    env:
+      CLOAKFRAME_VERSION: ${{ needs.identity.outputs.version }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-velopack
+          path: windows
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: linux-velopack
+          path: linux
+
+      - name: Sign the update packages
+        env:
+          CLOAKFRAME_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME_UPDATE_PRIVATE_KEY }}
+          CLOAKFRAME_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME_UPDATE_PUBLIC_KEY }}
+        run: |
+          .github/scripts/sign_update_packages.sh windows win "$CLOAKFRAME_VERSION"
+          .github/scripts/sign_update_packages.sh linux linux "$CLOAKFRAME_VERSION"
+          mkdir -p signed
+          mv windows/* linux/* signed/
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: signed-updates
+          path: signed/*
+          if-no-files-found: error
+
   release:
     name: Publish release
-    needs: [verify-version, macos, windows, linux]
+    needs: [identity, sign-macos, sign-updates]
     if: startsWith(github.ref, 'refs/tags/')
     # Publishes to the updates repository with CLOAKFRAME_UPDATES_TOKEN.
     environment: release
@@ -805,10 +926,10 @@ jobs:
     permissions:
       contents: write
     env:
-      CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
-      MACOS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-macOS-arm64.dmg
-      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
-      LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
+      CLOAKFRAME_VERSION: ${{ needs.identity.outputs.version }}
+      MACOS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-macOS-arm64.dmg
+      WINDOWS_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-Windows-x64-Setup.exe
+      LINUX_ASSET_NAME: CloakFrame-${{ needs.identity.outputs.version }}-Linux-x86_64.AppImage
       UPDATES_REPOSITORY: nyabi-gh/CloakFrame-updates
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
@@ -818,8 +939,13 @@ jobs:
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
+          name: macos-dmg
           path: artifacts
-          merge-multiple: true
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: signed-updates
+          path: artifacts
 
       - name: Sort downloads from update files
         run: |

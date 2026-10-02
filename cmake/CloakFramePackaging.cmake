@@ -122,6 +122,59 @@ if(APPLE)
     endif()
 endif()
 
+if(APPLE)
+    # macdeployqt cannot resolve the @rpath install names of these libraries, so they go into
+    # the bundle under those names and the executable looks there.
+    set(_cloakframe_bundled_libraries)
+    set(_cloakframe_visited)
+    set(_cloakframe_pending onnxruntime::onnxruntime ${OpenCV_LIBS})
+    while(_cloakframe_pending)
+        list(POP_FRONT _cloakframe_pending _cloakframe_library)
+        if(NOT TARGET ${_cloakframe_library} OR _cloakframe_library IN_LIST _cloakframe_visited)
+            continue()
+        endif()
+        list(APPEND _cloakframe_visited ${_cloakframe_library})
+        # The OpenCV modules CloakFrame names load others, such as features and flann.
+        get_target_property(_cloakframe_dependencies
+            ${_cloakframe_library} INTERFACE_LINK_LIBRARIES)
+        if(_cloakframe_dependencies)
+            list(APPEND _cloakframe_pending ${_cloakframe_dependencies})
+        endif()
+        get_target_property(_cloakframe_type ${_cloakframe_library} TYPE)
+        if(_cloakframe_type MATCHES "STATIC_LIBRARY|INTERFACE_LIBRARY")
+            continue()
+        endif()
+        get_target_property(_cloakframe_location
+            ${_cloakframe_library} IMPORTED_LOCATION_RELEASE)
+        if(NOT _cloakframe_location)
+            get_target_property(_cloakframe_location
+                ${_cloakframe_library} IMPORTED_LOCATION)
+        endif()
+        if(NOT _cloakframe_location)
+            continue()
+        endif()
+        get_filename_component(_cloakframe_location "${_cloakframe_location}" REALPATH)
+        execute_process(COMMAND otool -D "${_cloakframe_location}"
+            OUTPUT_VARIABLE _cloakframe_install_name
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY)
+        string(REGEX REPLACE ".*\n" "" _cloakframe_install_name "${_cloakframe_install_name}")
+        if(NOT _cloakframe_install_name MATCHES "^@rpath/")
+            continue()
+        endif()
+        get_filename_component(_cloakframe_name "${_cloakframe_install_name}" NAME)
+        if(_cloakframe_name IN_LIST _cloakframe_bundled_libraries)
+            continue()
+        endif()
+        list(APPEND _cloakframe_bundled_libraries "${_cloakframe_name}")
+        install(FILES "${_cloakframe_location}"
+            DESTINATION "CloakFrame.app/Contents/Frameworks"
+            RENAME "${_cloakframe_name}")
+    endwhile()
+    set_property(TARGET CloakFrame APPEND PROPERTY
+        INSTALL_RPATH "@executable_path/../Frameworks")
+endif()
+
 set(_cloakframe_deploy_include_regexes)
 if(UNIX AND NOT APPLE)
     # Qt's xcb plugin needs these and X11 desktops may lack them; the xcb libraries Mesa uses and
