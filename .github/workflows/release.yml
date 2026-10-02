@@ -196,6 +196,38 @@ jobs:
             exit 1
           fi
 
+      - name: Check that the application loads only what it bundles
+        run: |
+          application="$PWD/dist/macos/CloakFrame.app"
+          failed=0
+          while IFS= read -r -d '' binary; do
+            file "$binary" | grep -q 'Mach-O' || continue
+            while read -r library; do
+              case "$library" in
+                /System/* | /usr/lib/* | @rpath/* | @executable_path/* | @loader_path/*) ;;
+                *) echo "$binary loads $library" >&2; failed=1 ;;
+              esac
+            done < <(otool -L "$binary" | awk 'NR > 1 { print $1 }')
+            while read -r path; do
+              case "$path" in
+                @executable_path/* | @loader_path*) ;;
+                *) echo "$binary searches $path" >&2; failed=1 ;;
+              esac
+            done < <(otool -l "$binary" | awk '$2 == "LC_RPATH" { getline; getline; print $2 }')
+          done < <(find "$application" -type f -print0)
+          if [[ "$failed" != 0 ]]; then
+            exit 1
+          fi
+          "$application/Contents/MacOS/CloakFrame" > "$RUNNER_TEMP/launch.log" 2>&1 &
+          pid=$!
+          sleep 15
+          if ! kill -0 "$pid" 2> /dev/null; then
+            cat "$RUNNER_TEMP/launch.log" >&2
+            echo "CloakFrame exited right after starting" >&2
+            exit 1
+          fi
+          kill "$pid"
+
       - name: Verify macOS compatibility
         run: |
           application="$PWD/dist/macos/CloakFrame.app"

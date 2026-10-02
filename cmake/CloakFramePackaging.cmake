@@ -120,9 +120,18 @@ if(APPLE)
         list(APPEND _cloakframe_deploy_tool_options
             "-libpath=${CLOAKFRAME_SPARKLE_DIR}")
     endif()
-    # macdeployqt resolves the @rpath install names of these libraries only through -libpath.
+endif()
+
+if(APPLE)
+    # macdeployqt cannot resolve the @rpath install names of these libraries, so they go into
+    # the bundle under those names and the executable looks there.
+    set(_cloakframe_bundled_libraries)
     foreach(_cloakframe_library IN ITEMS onnxruntime::onnxruntime ${OpenCV_LIBS})
         if(NOT TARGET ${_cloakframe_library})
+            continue()
+        endif()
+        get_target_property(_cloakframe_type ${_cloakframe_library} TYPE)
+        if(_cloakframe_type MATCHES "STATIC_LIBRARY|INTERFACE_LIBRARY")
             continue()
         endif()
         get_target_property(_cloakframe_location
@@ -131,12 +140,29 @@ if(APPLE)
             get_target_property(_cloakframe_location
                 ${_cloakframe_library} IMPORTED_LOCATION)
         endif()
-        if(_cloakframe_location)
-            get_filename_component(_cloakframe_directory "${_cloakframe_location}" DIRECTORY)
-            list(APPEND _cloakframe_deploy_tool_options "-libpath=${_cloakframe_directory}")
+        if(NOT _cloakframe_location)
+            continue()
         endif()
+        get_filename_component(_cloakframe_location "${_cloakframe_location}" REALPATH)
+        execute_process(COMMAND otool -D "${_cloakframe_location}"
+            OUTPUT_VARIABLE _cloakframe_install_name
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY)
+        string(REGEX REPLACE ".*\n" "" _cloakframe_install_name "${_cloakframe_install_name}")
+        if(NOT _cloakframe_install_name MATCHES "^@rpath/")
+            continue()
+        endif()
+        get_filename_component(_cloakframe_name "${_cloakframe_install_name}" NAME)
+        if(_cloakframe_name IN_LIST _cloakframe_bundled_libraries)
+            continue()
+        endif()
+        list(APPEND _cloakframe_bundled_libraries "${_cloakframe_name}")
+        install(FILES "${_cloakframe_location}"
+            DESTINATION "CloakFrame.app/Contents/Frameworks"
+            RENAME "${_cloakframe_name}")
     endforeach()
-    list(REMOVE_DUPLICATES _cloakframe_deploy_tool_options)
+    set_property(TARGET CloakFrame APPEND PROPERTY
+        INSTALL_RPATH "@executable_path/../Frameworks")
 endif()
 
 set(_cloakframe_deploy_include_regexes)

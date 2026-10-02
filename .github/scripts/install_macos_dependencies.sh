@@ -67,6 +67,7 @@ if [[ ! -d "$prefix/opencv/lib" ]]; then
         -DCMAKE_OSX_DEPLOYMENT_TARGET="$MACOSX_DEPLOYMENT_TARGET" \
         -DBUILD_LIST=core,dnn,imgcodecs,imgproc,objdetect \
         -DBUILD_SHARED_LIBS=ON \
+        -DCMAKE_INSTALL_RPATH=@loader_path \
         -DOPENCV_FORCE_3RDPARTY_BUILD=ON \
         -DWITH_OPENEXR=OFF \
         -DWITH_OPENJPEG=OFF \

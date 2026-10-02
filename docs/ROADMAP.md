@@ -51,9 +51,8 @@ close it. Check the caller and the full scope before recording a change of state
   file name. Sparkle signs only the DMG and the appcast is not signed; check whether
   Sparkle refuses an older signed DMG listed under a newer version, and sign the feed if
   it does not.
-- **Signing job** [B-4, CF-025]. Signing keys are used in jobs that first run unpinned
-  Homebrew, vcpkg and dotnet tools. Sign in a separate job, pin vcpkg with a baseline,
-  pin Homebrew, and publish an SBOM.
+- **SBOM** [B-4, CF-025]. Publish one with each release: the pinned versions from the
+  workflows plus the SPDX files vcpkg writes for each port.
 - **Sparkle checks after opt-out** [B-6]. Turning update checks off takes effect on macOS
   only after a restart.
 - **Release publication** [B-11]. Publish as a draft, then release; staple the app
@@ -66,8 +65,8 @@ close it. Check the caller and the full scope before recording a change of state
   corresponding source for bundled FFmpeg and Exiv2, and add an About dialog with the
   licenses and model terms.
 - **Policy and versions.** macOS may ship without an update key while Windows and Linux
-  may not; the Windows ONNX Runtime drifts from the others, and macOS takes whatever Qt
-  Homebrew has while Windows and Linux pin theirs.
+  may not; the Windows ONNX Runtime drifts from the others. The Clang-Tidy job still
+  takes its dependencies from Homebrew.
 
 ## Code quality
 
