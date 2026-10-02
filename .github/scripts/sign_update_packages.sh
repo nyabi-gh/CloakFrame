@@ -9,8 +9,6 @@ set -euo pipefail
 # keeps a hundred-megabyte package out of memory on both sides, and it stops an older signed
 # package from being republished as a newer version.
 #
-# <package>.legacy.sig is the signature over the digest alone that clients up to 1.11.3 check.
-#
 # Usage: sign_update_packages.sh <directory> <channel> <version>
 # Reads CLOAKFRAME_UPDATE_PRIVATE_KEY (PEM) and CLOAKFRAME_UPDATE_PUBLIC_KEY (base64, optional).
 
@@ -63,7 +61,5 @@ for package in "${packages[@]}"; do
     printf 'CloakFrame update v2\nchannel: %s\nversion: %s\nfile: %s\nsha256: %s\n' \
         "$channel" "$version" "$(basename "$package")" "$digest" > "$work/release"
     sign "$work/release" "$package.sig"
-    printf '%s' "$digest" > "$work/digest"
-    sign "$work/digest" "$package.legacy.sig"
     echo "signed $(basename "$package") $channel $version $digest"
 done

@@ -17,30 +17,16 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Waiting on the maintainer
 
-- **Set up the updates repository before the next release.** Create
-  `nyabi-gh/CloakFrame-updates` as a public repository with a README (a release tag needs
-  a commit), and store a fine-grained token for it as `CLOAKFRAME_UPDATES_TOKEN`; see
-  [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). A tagged release refuses to start
-  without the token.
-- **Turn off the legacy update feed after the next release.** That release also puts the
-  old feed, packages, digest-only signatures and `appcast.xml` in this repository, so
-  clients up to 1.11.3 can update to it and then read the updates repository. Set
-  `PUBLISH_LEGACY_UPDATE_FEED` in `release.yml` to `false` once it is out and drop the
-  `.legacy.sig` from `sign_update_packages.sh`; from then on a
-  release here has only the three downloads.
 - **Move the signing secrets to the `release` environment** [B-1]. All eight are still
   repository-scoped; see [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). Both
   update keys have been readable from any branch, so consider rotating them. Clients
   pin the public key, so a rotation needs a transitional release that trusts both keys.
-- **Check the first release after 2026-10-01.** The release workflow changed without a
-  tagged run: the Linux FFmpeg now comes from BtbN, Windows and Linux install Qt Image
-  Formats and check that the TIFF and WebP plugins are packaged, the bundled FFmpeg
-  license is checked on all three platforms, and the release notes are generated from
-  commit subjects. Watch that run, and open a TIFF and a WebP file in each package, and
-  process a video in the macOS package: signing changed its bundled FFmpeg after the
-  checksum manifests were written (since 85fb6b6, confirmed in the v1.11.3 DMG).
-  Release builds also turn crash dumps off at startup, which no test exercises: on Linux,
-  the running app's `/proc/<pid>` entries are owned by root when it is not dumpable.
+- **Try the 1.12.0 packages by hand.** Its release run passed, both update signatures
+  verified and the macOS bundled FFmpeg matches its checksum manifests. Still unchecked:
+  opening a TIFF and a WebP file in each package, processing a video in the macOS
+  package (broken by signing since 85fb6b6), and crash dumps being off in Release builds,
+  which no test exercises: on Linux, the running app's `/proc/<pid>` entries are owned by
+  root when it is not dumpable.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
   warns on first run.
 - **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
@@ -108,6 +94,12 @@ close it. Check the caller and the full scope before recording a change of state
 - **Offline update signing.** Sign releases with a hardware-held key outside CI.
 
 ## Accepted risk
+
+**Clients up to 1.11.3 that missed 1.12.0.** Only 1.12.0 carried their update feed in
+this repository. macOS clients read `appcast.xml` from the latest release here and find
+nothing from 1.12.1 on; Windows and Linux clients scan the ten newest releases and lose
+1.12.0 once nine more are out. Neither falls back to a notice, so they stay on their
+version until the user downloads a new one.
 
 **Shared Velopack cache on Linux** [CF-002]. Velopack keeps packages under `/var/tmp`,
 which every account can write. Another hostile local account is outside the threat

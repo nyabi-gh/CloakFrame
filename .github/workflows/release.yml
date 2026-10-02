@@ -771,9 +771,6 @@ jobs:
       WINDOWS_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Windows-x64-Setup.exe
       LINUX_ASSET_NAME: CloakFrame-${{ needs.verify-version.outputs.version }}-Linux-x86_64.AppImage
       UPDATES_REPOSITORY: nyabi-gh/CloakFrame-updates
-      # Clients up to 1.11.3 look for updates in this repository's releases. One release that
-      # also carries their feed here moves them to the updates repository; turn this off after it.
-      PUBLISH_LEGACY_UPDATE_FEED: "true"
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
@@ -787,7 +784,6 @@ jobs:
 
       - name: Sort downloads from update files
         run: |
-          shopt -s nullglob
           mkdir -p downloads updates
           for asset in "$MACOS_ASSET_NAME" "$WINDOWS_ASSET_NAME" "$LINUX_ASSET_NAME"; do
             if [[ ! -s "artifacts/$asset" ]]; then
@@ -802,13 +798,6 @@ jobs:
               exit 1
             fi
           done
-          if [[ "$PUBLISH_LEGACY_UPDATE_FEED" == true ]]; then
-            cp artifacts/appcast.xml artifacts/releases.*.json artifacts/*.nupkg downloads/
-            for legacy in artifacts/*.nupkg.legacy.sig; do
-              cp "$legacy" "downloads/$(basename "${legacy%.legacy.sig}").sig"
-            done
-          fi
-          rm -f artifacts/*.legacy.sig
           mv artifacts/* updates/
           ls -l downloads updates
 
