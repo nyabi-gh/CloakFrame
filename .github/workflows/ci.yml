@@ -24,6 +24,13 @@ env:
   OPENCV_WINDOWS_SHA256: 9c6c1fcea58acdf06edba13148b2246e00c2658143fa51e61ecd370db8c39f63
   ONNXRUNTIME_VERSION: 1.29.0
   ONNXRUNTIME_LINUX_SHA256: c3fddc4f139a045b0c4902c57410f0694f1c2fdf9b6939fbe38b1aeae7cd14ba
+  ONNXRUNTIME_MACOS_SHA256: d0706fc34f315d8c88639d0a8c81f2e09e815f282cabed3493c06a054352cf92
+  LIBSODIUM_VERSION: 1.0.22
+  LIBSODIUM_SHA256: adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349
+  VCPKG_COMMIT: f05ff9f0adbd630c4fada9072b4a68eeeb7d738a
+  MACOS_FFMPEG_BASE_URL: https://ffmpeg.martin-riedl.de/download/macos/arm64/1783011502_8.1.2
+  MACOS_FFMPEG_SHA256: ef1aa60006c7b77ce170c1608c08d8e4ba1c30c5746f2ac986ded932d0ac2c3c
+  MACOS_FFPROBE_SHA256: c39787f4af7a3932502d2d48db6f6feaaa836b48a73ef78c32cc3285df61dfaf
   ONNXRUNTIME_DIRECTML_VERSION: 1.24.4
   ONNXRUNTIME_DIRECTML_SHA256: 57e9f11b73437bef7a309496135d4c1f96b1a8e9ddba60013fa27bfc1d788681
   DIRECTML_VERSION: 1.15.4
@@ -83,15 +90,43 @@ jobs:
     name: Build & test macOS
     runs-on: macos-15
     env:
-      CMAKE_PREFIX_PATH: /opt/homebrew
-      PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig
-      HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
       MACOSX_DEPLOYMENT_TARGET: '15.0'
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
+      - name: Install Qt
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4
+        with:
+          version: '${{ env.QT_VERSION }}'
+          aqtsource: '${{ env.AQTINSTALL_SOURCE }}'
+          host: mac
+          target: desktop
+          arch: clang_64
+          # TIFF and WebP are read through the plugins in this add-on.
+          modules: qtimageformats
+          cache: true
+
+      # The release workflow builds the same versions without a cache.
+      - name: Cache dependencies
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/deps
+          key: macos-deps-${{ hashFiles('.github/scripts/install_macos_dependencies.sh') }}-${{ env.OPENCV_VERSION }}-${{ env.ONNXRUNTIME_VERSION }}-${{ env.LIBSODIUM_VERSION }}-${{ env.VCPKG_COMMIT }}
+
       - name: Install dependencies
-        run: brew install cmake qt opencv onnxruntime spdlog exiv2 libsodium ffmpeg
+        run: bash .github/scripts/install_macos_dependencies.sh "$RUNNER_TEMP/deps"
+
+      - name: Install FFmpeg
+        run: |
+          mkdir -p "$RUNNER_TEMP/ffmpeg"
+          for tool in ffmpeg ffprobe; do
+            curl -fsSL "$MACOS_FFMPEG_BASE_URL/$tool.zip" -o "$RUNNER_TEMP/$tool.zip"
+          done
+          echo "$MACOS_FFMPEG_SHA256  $RUNNER_TEMP/ffmpeg.zip" | shasum -a 256 -c -
+          echo "$MACOS_FFPROBE_SHA256  $RUNNER_TEMP/ffprobe.zip" | shasum -a 256 -c -
+          unzip -q "$RUNNER_TEMP/ffmpeg.zip" ffmpeg -d "$RUNNER_TEMP/ffmpeg"
+          unzip -q "$RUNNER_TEMP/ffprobe.zip" ffprobe -d "$RUNNER_TEMP/ffmpeg"
+          echo "$RUNNER_TEMP/ffmpeg" >> "$GITHUB_PATH"
 
       - name: Configure
         run: >-
@@ -99,6 +134,8 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0
           -DCLOAKFRAME_WARNINGS_AS_ERRORS=ON
+          "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR;$CLOAKFRAME_DEPS_PREFIX_PATH"
+          "-DONNXRUNTIME_ROOT=$ONNXRUNTIME_ROOT"
 
       - name: Build
         run: cmake --build build --parallel
@@ -249,7 +286,14 @@ jobs:
       - name: Install spdlog and Exiv2
         shell: pwsh
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md" "libsodium:x64-windows-static-md"
+          $PSNativeCommandUseErrorActionPreference = $true
+          $vcpkg = "$env:RUNNER_TEMP\vcpkg"
+          git init -q $vcpkg
+          git -C $vcpkg fetch -q --depth 1 https://github.com/microsoft/vcpkg.git $env:VCPKG_COMMIT
+          git -C $vcpkg checkout -q FETCH_HEAD
+          & "$vcpkg\bootstrap-vcpkg.bat" -disableMetrics
+          & "$vcpkg\vcpkg.exe" install "spdlog:x64-windows-static-md" "exiv2:x64-windows-static-md" "libsodium:x64-windows-static-md"
+          "VCPKG_ROOT=$vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Install FFmpeg
         run: choco install ffmpeg -y --no-progress
@@ -257,7 +301,7 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          $env:CMAKE_PREFIX_PATH = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows-static-md"
+          $env:CMAKE_PREFIX_PATH = "$env:VCPKG_ROOT\installed\x64-windows-static-md"
           cmake -S . -B build -G Ninja `
             -DCMAKE_BUILD_TYPE=Release `
             -DCLOAKFRAME_WARNINGS_AS_ERRORS=ON `

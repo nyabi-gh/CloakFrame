@@ -120,6 +120,23 @@ if(APPLE)
         list(APPEND _cloakframe_deploy_tool_options
             "-libpath=${CLOAKFRAME_SPARKLE_DIR}")
     endif()
+    # macdeployqt resolves the @rpath install names of these libraries only through -libpath.
+    foreach(_cloakframe_library IN ITEMS onnxruntime::onnxruntime ${OpenCV_LIBS})
+        if(NOT TARGET ${_cloakframe_library})
+            continue()
+        endif()
+        get_target_property(_cloakframe_location
+            ${_cloakframe_library} IMPORTED_LOCATION_RELEASE)
+        if(NOT _cloakframe_location)
+            get_target_property(_cloakframe_location
+                ${_cloakframe_library} IMPORTED_LOCATION)
+        endif()
+        if(_cloakframe_location)
+            get_filename_component(_cloakframe_directory "${_cloakframe_location}" DIRECTORY)
+            list(APPEND _cloakframe_deploy_tool_options "-libpath=${_cloakframe_directory}")
+        endif()
+    endforeach()
+    list(REMOVE_DUPLICATES _cloakframe_deploy_tool_options)
 endif()
 
 set(_cloakframe_deploy_include_regexes)
