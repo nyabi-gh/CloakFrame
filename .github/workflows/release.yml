@@ -15,6 +15,7 @@ concurrency:
 
 env:
   QT_VERSION: 6.10.3
+  QT_IMAGEFORMATS_SHA256: 84605dd91037482b5b7c7ecc5c27aee8acc1cd7f1fe77bc564777ddf365d7d28
   OPENCV_VERSION: 5.0.0
   OPENCV_SOURCE_SHA256: b0528f5a1d379d59d4701cb28c36e22214cc51cf64594e5b56f2d3e6c0233095
   OPENCV_WINDOWS_SHA256: 9c6c1fcea58acdf06edba13148b2246e00c2658143fa51e61ecd370db8c39f63
@@ -605,7 +606,8 @@ jobs:
     needs: verify-version
     # Signs the update packages with CLOAKFRAME_UPDATE_PRIVATE_KEY.
     environment: release
-    runs-on: ubuntu-26.04
+    # The AppImage runs only where glibc is at least as new as on this runner.
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:
       CLOAKFRAME_VERSION: ${{ needs.verify-version.outputs.version }}
@@ -621,9 +623,14 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build build-essential pkg-config curl unzip file desktop-file-utils patchelf \
-            libjpeg-dev libpng-dev libtiff-dev libwebp-dev \
-            libspdlog-dev libexiv2-dev libsodium-dev \
-            libgl1-mesa-dev libxcb-cursor0 libxcb-xinerama0 libxkbcommon-x11-0
+            squashfs-tools autoconf autoconf-archive automake libtool \
+            libgl1-mesa-dev libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-render-util0 libxcb-xinerama0 libxkbcommon-x11-0
+
+      # Linked statically: the host's copies of these differ in version between distributions.
+      - name: Install spdlog, Exiv2, and libsodium
+        run: |
+          "$VCPKG_INSTALLATION_ROOT/vcpkg" install spdlog:x64-linux exiv2:x64-linux libsodium:x64-linux
 
       - name: Install OpenCV
         run: |
@@ -636,6 +643,12 @@ jobs:
             -DCMAKE_INSTALL_LIBDIR=lib \
             -DBUILD_LIST=core,dnn,imgcodecs,imgproc,objdetect \
             -DBUILD_SHARED_LIBS=ON \
+            '-DCMAKE_INSTALL_RPATH=$ORIGIN' \
+            -DOPENCV_FORCE_3RDPARTY_BUILD=ON \
+            -DWITH_OPENEXR=OFF \
+            -DWITH_OPENJPEG=OFF \
+            -DWITH_JASPER=OFF \
+            -DWITH_GTK=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_PERF_TESTS=OFF \
             -DBUILD_EXAMPLES=OFF \
@@ -648,7 +661,6 @@ jobs:
           cmake --build opencv-build --parallel
           cmake --install opencv-build
           echo "OpenCV_DIR=$HOME/opencv/lib/cmake/opencv5" >> "$GITHUB_ENV"
-          echo "LD_LIBRARY_PATH=$HOME/opencv/lib" >> "$GITHUB_ENV"
 
       - name: Install Qt
         uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4
@@ -657,8 +669,19 @@ jobs:
           host: linux
           target: desktop
           arch: linux_gcc_64
-          # TIFF and WebP are read through the plugins in this add-on.
-          modules: qtimageformats
+
+      # TIFF and WebP are read through these plugins. Qt's Linux binaries link the host's
+      # libtiff.so.5, which current distributions no longer ship, so they use Qt's own copies.
+      - name: Build Qt Image Formats
+        run: |
+          source="qtimageformats-everywhere-src-${QT_VERSION}"
+          curl -fL "https://download.qt.io/official_releases/qt/${QT_VERSION%.*}/${QT_VERSION}/submodules/${source}.tar.xz" -o qtimageformats.tar.xz
+          echo "${QT_IMAGEFORMATS_SHA256}  qtimageformats.tar.xz" | sha256sum -c -
+          tar -xJf qtimageformats.tar.xz
+          "$QT_ROOT_DIR/bin/qt-cmake" -S "$source" -B qtimageformats-build -G Ninja \
+            -DFEATURE_system_tiff=OFF -DFEATURE_system_webp=OFF
+          cmake --build qtimageformats-build --parallel
+          cmake --install qtimageformats-build
 
       - name: Install ONNX Runtime
         run: |
@@ -690,7 +713,7 @@ jobs:
           cmake -S . -B build-release -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/usr \
-            "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR;$HOME/opencv" \
+            "-DCMAKE_PREFIX_PATH=$QT_ROOT_DIR;$VCPKG_INSTALLATION_ROOT/installed/x64-linux;$HOME/opencv" \
             "-DOpenCV_DIR=$OpenCV_DIR" \
             "-DONNXRUNTIME_ROOT=$ONNXRUNTIME_ROOT" \
             "-DCLOAKFRAME_FFMPEG_DIR=$PWD/ffmpeg-bundle" \
@@ -714,8 +737,13 @@ jobs:
           test -x "$appdir/usr/bin/ffmpeg/ffprobe"
           bash .github/scripts/check_ffmpeg_manifests.sh "$appdir/usr/bin/ffmpeg"
           for plugin in libqtiff.so libqwebp.so; do
-            if ! find "$appdir" -name "$plugin" -print -quit | grep -q .; then
+            path="$(find "$appdir" -name "$plugin" -print -quit)"
+            if [[ -z "$path" ]]; then
               echo "Missing image format plugin: $plugin" >&2
+              exit 1
+            fi
+            if readelf -d "$path" | grep -E 'NEEDED.*lib(tiff|webp)'; then
+              echo "$plugin loads a codec library from the host" >&2
               exit 1
             fi
           done
@@ -743,6 +771,13 @@ jobs:
           cp dist/linux/releases.linux.json artifacts/
           test -x "artifacts/$LINUX_ASSET_NAME"
           "artifacts/$LINUX_ASSET_NAME" --appimage-version
+
+      - name: Start the AppImage on other distributions
+        run: |
+          for image in ubuntu:24.04 debian:13 fedora:43 archlinux:latest; do
+            docker run --rm -v "$PWD:/w:ro" "$image" \
+              bash /w/.github/scripts/check_linux_launch.sh "/w/artifacts/$LINUX_ASSET_NAME"
+          done
 
       - name: Sign the update package
         env:

@@ -37,9 +37,11 @@ and enable tests.
 - Qt SVG (optional, renders the settings icon as SVG)
 - FFmpeg and FFprobe at runtime for video processing
 
-Official Windows and Linux releases use Qt 6.10.3 and OpenCV 5.0.0. The
-Linux release baseline is Ubuntu 26.04. macOS release builds use the stable
-Homebrew packages available to the release workflow.
+Official Windows and Linux releases use Qt 6.10.3 and OpenCV 5.0.0. The Linux
+AppImage is built on Ubuntu 24.04, whose glibc is the oldest it runs on, with
+spdlog, Exiv2 and libsodium linked statically from vcpkg, OpenCV's own image codecs,
+and Qt Image Formats built from source. macOS release builds use the stable Homebrew
+packages available to the release workflow.
 
 The detection models are runtime data, not build dependencies. They are not
 bundled or committed. The application downloads them on first use, or you can
@@ -264,6 +266,9 @@ cmake --install build --config Release --prefix /path/to/staging
 For a Linux AppImage staging tree, configure with
 `-DCMAKE_INSTALL_PREFIX=/usr -DCLOAKFRAME_APPIMAGE_LAYOUT=ON` and install with
 `DESTDIR` pointing to a directory whose name ends in `.AppDir`.
+`.github/scripts/check_linux_launch.sh` starts the result in a distribution
+container, as the release does on Ubuntu, Debian, Fedora and Arch:
+`docker run --rm -v "$PWD:/w:ro" debian:13 bash /w/.github/scripts/check_linux_launch.sh /w/<AppDir>/AppRun`.
 
 The release workflow passes the staged Windows and Linux applications to
 Velopack, signs and notarizes the macOS application, and publishes two releases

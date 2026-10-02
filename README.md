@@ -24,7 +24,7 @@ Windows, the `.dmg` for macOS, or the `.AppImage` for Linux.
 | --- | --- |
 | **Windows** | Windows 10 or later, 64-bit |
 | **macOS** | macOS 15 or later, Apple silicon |
-| **Linux** | x86_64 |
+| **Linux** | x86_64 with glibc 2.39 or later, such as Ubuntu 24.04, Debian 13, or Fedora 40 |
 
 On Linux, make the AppImage executable first: `chmod +x CloakFrame-*-Linux-x86_64.AppImage`.
 
@@ -71,8 +71,9 @@ add anything the detector missed.
 10-bit and HDR videos are not supported. Video support is in beta: play each result
 to the end before sharing it.
 
-CloakFrame uses your GPU where it can and falls back to the CPU automatically. The app
-is available in English, Korean, and Japanese.
+CloakFrame uses your GPU where it can and falls back to the CPU automatically. On Linux,
+detection runs on the CPU; video encoding still uses NVIDIA or Intel hardware when its
+drivers are installed. The app is available in English, Korean, and Japanese.
 
 ## FAQ
 

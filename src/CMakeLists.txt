@@ -200,6 +200,14 @@ if(APPLE)
     endif()
 endif()
 
+if(UNIX AND NOT APPLE)
+    # The loader finds the libraries Qt's deployment bundles only through this path.
+    file(RELATIVE_PATH _cloakframe_bin_to_lib
+        "/${CMAKE_INSTALL_BINDIR}" "/${CMAKE_INSTALL_LIBDIR}")
+    set_target_properties(CloakFrame PROPERTIES
+        INSTALL_RPATH "$ORIGIN/${_cloakframe_bin_to_lib}")
+endif()
+
 install(TARGETS CloakFrame
     BUNDLE DESTINATION .
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

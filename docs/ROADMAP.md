@@ -27,6 +27,11 @@ close it. Check the caller and the full scope before recording a change of state
   package (broken by signing since 85fb6b6), and crash dumps being off in Release builds,
   which no test exercises: on Linux, the running app's `/proc/<pid>` entries are owned by
   root when it is not dumpable.
+- **Watch the Linux job of the next release.** No AppImage since 1.11.0 started: the
+  executable had no RUNPATH and needed spdlog, fmt and Exiv2 from the host, built against
+  glibc 2.43. The job now builds on Ubuntu 24.04 and starts the AppImage on Ubuntu,
+  Debian, Fedora and Arch images before publishing; only a local run has checked this.
+  Open a TIFF file in the AppImage too.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
   warns on first run.
 - **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
@@ -48,9 +53,6 @@ close it. Check the caller and the full scope before recording a change of state
 - **Signing job** [B-4, CF-025]. Signing keys are used in jobs that first run unpinned
   Homebrew, vcpkg and dotnet tools. Sign in a separate job, pin vcpkg with a baseline,
   pin Homebrew, and publish an SBOM.
-- **AppImage libraries** [B-5]. No RUNPATH on the executable, several libraries taken
-  from the host, a CI RUNPATH in the bundled OpenCV, and a smoke test that never loads
-  the app. Fix the RUNPATHs and launch the app on other distributions in CI.
 - **Sparkle checks after opt-out** [B-6]. Turning update checks off takes effect on macOS
   only after a restart.
 - **Release publication** [B-11]. Publish as a draft, then release; staple the app
@@ -87,6 +89,9 @@ close it. Check the caller and the full scope before recording a change of state
 - **Masking strength** [A-7]. Fixed 12-cell mosaics and a truncated blur kernel may not
   stop recognition among known people; lock the grid per track and offer a stronger
   default.
+- **GPU detection on Linux.** The AppImage ships the CPU build of ONNX Runtime, so the
+  CUDA, MIGraphX and ROCm paths in `OrtAcceleration.cpp` never run. A GPU build adds
+  hundreds of megabytes and ties the package to the host's CUDA or ROCm version.
 - **Tiled detection** [C-4]. Large photos are scaled to one 640 px pass, so small faces
   are missed.
 - **Pass 1 throughput** [OW 6, 7]. Run scene-cut detection on a worker and detection

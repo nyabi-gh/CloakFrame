@@ -122,10 +122,21 @@ if(APPLE)
     endif()
 endif()
 
+set(_cloakframe_deploy_include_regexes)
+if(UNIX AND NOT APPLE)
+    # Qt's xcb plugin needs these and X11 desktops may lack them; the xcb libraries Mesa uses and
+    # libxkbcommon-x11 must match the host's. Qt writes the patterns unquoted: no parentheses.
+    foreach(_cloakframe_library IN ITEMS xcb-cursor xcb-icccm xcb-image xcb-keysyms
+            xcb-render xcb-render-util xcb-shape xcb-util xcb-xkb)
+        list(APPEND _cloakframe_deploy_include_regexes "/lib${_cloakframe_library}[.]so")
+    endforeach()
+endif()
+
 qt_generate_deploy_app_script(
     TARGET CloakFrame
     OUTPUT_SCRIPT cloakframe_deploy_script
     DEPLOY_TOOL_OPTIONS ${_cloakframe_deploy_tool_options}
+    POST_INCLUDE_REGEXES ${_cloakframe_deploy_include_regexes}
     NO_UNSUPPORTED_PLATFORM_ERROR
 )
 install(SCRIPT ${cloakframe_deploy_script})
