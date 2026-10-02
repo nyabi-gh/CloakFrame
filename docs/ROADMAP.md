@@ -18,7 +18,8 @@ close it. Check the caller and the full scope before recording a change of state
 ## Waiting on the maintainer
 
 - **Move the signing secrets to the `release` environment** [B-1]. All eight are still
-  repository-scoped; see [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). Both
+  repository-scoped; see [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). The
+  build jobs no longer reference them, but a workflow on any branch still could. Both
   update keys have been readable from any branch, so consider rotating them. Clients
   pin the public key, so a rotation needs a transitional release that trusts both keys.
 - **Try the 1.12.0 packages by hand.** Its release run passed, both update signatures
@@ -27,11 +28,12 @@ close it. Check the caller and the full scope before recording a change of state
   package (broken by signing since 85fb6b6), and crash dumps being off in Release builds,
   which no test exercises: on Linux, the running app's `/proc/<pid>` entries are owned by
   root when it is not dumpable.
-- **Watch the Linux job of the next release.** No AppImage since 1.11.0 started: the
-  executable had no RUNPATH and needed spdlog, fmt and Exiv2 from the host, built against
-  glibc 2.43. The job now builds on Ubuntu 24.04 and starts the AppImage on Ubuntu,
-  Debian, Fedora and Arch images before publishing; only a local run has checked this.
-  Open a TIFF file in the AppImage too.
+- **Watch the next release run and try its packages.** The sign-macos and sign-updates
+  jobs have never run: a branch dispatch stops at the environment. The build jobs have,
+  including the AppImage starting on four distributions and the macOS app starting. No
+  AppImage since 1.11.0 started at all, and the macOS app now uses the official Qt,
+  ONNX Runtime and a source-built OpenCV instead of Homebrew's, so open a TIFF file in
+  the AppImage and process a photo and a video in the DMG, checking that CoreML is used.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
   warns on first run.
 - **Release aqtinstall for Qt.** CI installs aqtinstall from a pinned commit because
