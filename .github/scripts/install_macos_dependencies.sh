@@ -17,7 +17,7 @@ trap 'rm -rf "$work"' EXIT
 jobs="$(sysctl -n hw.ncpu)"
 
 fetch() {
-    curl -fsSL "$1" -o "$2"
+    curl -fsSL --retry 3 "$1" -o "$2"
     echo "$3  $2" | shasum -a 256 -c -
 }
 
@@ -30,7 +30,7 @@ fi
 
 # The release tarball carries its configure script; vcpkg's port needs autotools the runner lacks.
 if [[ ! -f "$prefix/sodium/lib/libsodium.a" ]]; then
-    fetch "https://download.libsodium.org/libsodium/releases/libsodium-${LIBSODIUM_VERSION}.tar.gz" \
+    fetch "https://github.com/jedisct1/libsodium/releases/download/${LIBSODIUM_VERSION}-RELEASE/libsodium-${LIBSODIUM_VERSION}.tar.gz" \
         "$work/libsodium.tar.gz" "$LIBSODIUM_SHA256"
     tar -xzf "$work/libsodium.tar.gz" -C "$work"
     (
