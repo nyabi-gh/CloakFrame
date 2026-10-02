@@ -14,8 +14,10 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  QT_VERSION: 6.10.3
-  QT_IMAGEFORMATS_SHA256: 84605dd91037482b5b7c7ecc5c27aee8acc1cd7f1fe77bc564777ddf365d7d28
+  QT_VERSION: 6.11.2
+  QT_IMAGEFORMATS_SHA256: cecd8900f34b6550076309bc94f62f828008b633a4239e0a08c86788f41001f8
+  # aqtinstall 3.3.0 cannot find Windows Qt from 6.11 on; the fix is not in a release yet.
+  AQTINSTALL_SOURCE: git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7
   OPENCV_VERSION: 5.0.0
   OPENCV_SOURCE_SHA256: b0528f5a1d379d59d4701cb28c36e22214cc51cf64594e5b56f2d3e6c0233095
   OPENCV_WINDOWS_SHA256: 9c6c1fcea58acdf06edba13148b2246e00c2658143fa51e61ecd370db8c39f63
@@ -402,6 +404,7 @@ jobs:
         uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4
         with:
           version: "${{ env.QT_VERSION }}"
+          aqtsource: "${{ env.AQTINSTALL_SOURCE }}"
           host: windows
           target: desktop
           arch: win64_msvc2022_64
@@ -666,6 +669,7 @@ jobs:
         uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4
         with:
           version: "${{ env.QT_VERSION }}"
+          aqtsource: "${{ env.AQTINSTALL_SOURCE }}"
           host: linux
           target: desktop
           arch: linux_gcc_64

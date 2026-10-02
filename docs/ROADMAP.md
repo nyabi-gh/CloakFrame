@@ -34,8 +34,9 @@ close it. Check the caller and the full scope before recording a change of state
   Open a TIFF file in the AppImage too.
 - **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
   warns on first run.
-- **Windows Qt 6.11 pin.** Blocked on aqtinstall, which does not yet handle the
-  per-architecture Windows repository layout in a release.
+- **Release aqtinstall for Qt.** CI installs aqtinstall from a pinned commit because
+  3.3.0 cannot find Windows Qt from 6.11 on; return to a PyPI version once one ships
+  the fix (miurahr/aqtinstall#1000).
 
 ## Review screens and everyday use
 
@@ -65,7 +66,8 @@ close it. Check the caller and the full scope before recording a change of state
   corresponding source for bundled FFmpeg and Exiv2, and add an About dialog with the
   licenses and model terms.
 - **Policy and versions.** macOS may ship without an update key while Windows and Linux
-  may not; the Windows ONNX Runtime and the per-platform Qt versions drift apart.
+  may not; the Windows ONNX Runtime drifts from the others, and macOS takes whatever Qt
+  Homebrew has while Windows and Linux pin theirs.
 
 ## Code quality
 
