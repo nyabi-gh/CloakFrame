@@ -126,9 +126,19 @@ if(APPLE)
     # macdeployqt cannot resolve the @rpath install names of these libraries, so they go into
     # the bundle under those names and the executable looks there.
     set(_cloakframe_bundled_libraries)
-    foreach(_cloakframe_library IN ITEMS onnxruntime::onnxruntime ${OpenCV_LIBS})
-        if(NOT TARGET ${_cloakframe_library})
+    set(_cloakframe_visited)
+    set(_cloakframe_pending onnxruntime::onnxruntime ${OpenCV_LIBS})
+    while(_cloakframe_pending)
+        list(POP_FRONT _cloakframe_pending _cloakframe_library)
+        if(NOT TARGET ${_cloakframe_library} OR _cloakframe_library IN_LIST _cloakframe_visited)
             continue()
+        endif()
+        list(APPEND _cloakframe_visited ${_cloakframe_library})
+        # The OpenCV modules CloakFrame names load others, such as features and flann.
+        get_target_property(_cloakframe_dependencies
+            ${_cloakframe_library} INTERFACE_LINK_LIBRARIES)
+        if(_cloakframe_dependencies)
+            list(APPEND _cloakframe_pending ${_cloakframe_dependencies})
         endif()
         get_target_property(_cloakframe_type ${_cloakframe_library} TYPE)
         if(_cloakframe_type MATCHES "STATIC_LIBRARY|INTERFACE_LIBRARY")
@@ -160,7 +170,7 @@ if(APPLE)
         install(FILES "${_cloakframe_location}"
             DESTINATION "CloakFrame.app/Contents/Frameworks"
             RENAME "${_cloakframe_name}")
-    endforeach()
+    endwhile()
     set_property(TARGET CloakFrame APPEND PROPERTY
         INSTALL_RPATH "@executable_path/../Frameworks")
 endif()
