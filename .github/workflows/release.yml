@@ -207,7 +207,7 @@ jobs:
                 /System/* | /usr/lib/* | @rpath/* | @executable_path/* | @loader_path/*) ;;
                 *) echo "$binary loads $library" >&2; failed=1 ;;
               esac
-            done < <(otool -L "$binary" | awk 'NR > 1 { print $1 }')
+            done < <(otool -L "$binary" | awk '!/:$/ { print $1 }')
             while read -r path; do
               case "$path" in
                 @executable_path/* | @loader_path*) ;;
