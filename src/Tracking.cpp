@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <map>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 
@@ -848,6 +849,12 @@ namespace cloakframe
         {
             requireTrackingContinue(continueGuard);
             const int last = before->lastFrame();
+            const std::optional<int> nextCut = cuts.firstCutAfter(last);
+            if (!nextCut)
+            {
+                continue;
+            }
+            const int cut = *nextCut;
             auto candidate = std::ranges::upper_bound(byStart, last + 1, {}, &Track::firstFrame);
             for (; candidate != byStart.end(); ++candidate)
             {
@@ -859,8 +866,7 @@ namespace cloakframe
                 }
                 const TrackedBox &end = before->boxes.back();
                 const TrackedBox &start = after.boxes.front();
-                if (!cuts.spansCut(last, after.firstFrame())
-                    || (end.box & start.box).area() <= 0.0F)
+                if (cut > after.firstFrame() || (end.box & start.box).area() <= 0.0F)
                 {
                     continue;
                 }
@@ -872,7 +878,6 @@ namespace cloakframe
                     }
                     const TrackedBox bridge{
                         0, end.box | start.box, std::min(end.score, start.score), true};
-                    const int cut = *cuts.firstCutAfter(last);
                     for (int frame = last + 1; frame < cut; ++frame)
                     {
                         before->boxes.push_back(bridge);
