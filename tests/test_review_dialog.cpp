@@ -67,6 +67,16 @@ int main(int argc, char **argv)
     QTest::mouseClick(undo, Qt::LeftButton);
     assert(dialog.reviewResult().finalBoxes.size() == 1);
 
+    QTest::keyClick(*canvas, Qt::Key_N);
+    QTest::keyClick(*canvas, Qt::Key_Return);
+    assert(dialog.reviewResult().finalBoxes.size() == 2);
+    QTest::keyClick(*canvas, Qt::Key_Delete);
+    assert(dialog.reviewResult().finalBoxes.size() == 1);
+    QTest::keyClick(*canvas, Qt::Key_Return);
+    assert(dialog.reviewResult().finalBoxes.isEmpty());
+    QTest::keyClick(*canvas, Qt::Key_Return);
+    assert(dialog.reviewResult().finalBoxes.size() == 1);
+
     (*canvas)->setFocus();
     application.processEvents();
     QTest::keyClick(*canvas, Qt::Key_Return, Qt::ControlModifier);

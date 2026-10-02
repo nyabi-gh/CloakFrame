@@ -424,7 +424,12 @@ namespace cloakframe
             case Qt::Key_Enter:
                 if (focusedIndex_ >= 0)
                 {
-                    activateBox(focusedIndex_);
+                    // Only Delete removes an added box, so Return right after N cannot remove the
+                    // box just added.
+                    if (boxes_[focusedIndex_].detected)
+                    {
+                        activateBox(focusedIndex_);
+                    }
                     return;
                 }
                 break;
@@ -721,7 +726,8 @@ namespace cloakframe
         root->addWidget(canvas_, 1);
 
         hintLabel_ = new QLabel(
-            tr("Click or Return toggles a box · Drag an empty area or press N to add · "
+            tr("Click toggles a box or removes an added one · Return toggles a detected box "
+               "and Delete removes the selected box · Drag an empty area or press N to add · "
                "Arrow keys move the selection; with Shift they move an added box, with Alt "
                "they resize it · Hold Space to preview the result · "
                "Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · "

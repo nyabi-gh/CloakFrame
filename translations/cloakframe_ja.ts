@@ -1671,32 +1671,27 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ReviewDialog</name>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="700"/>
+        <location filename="../src/ReviewDialog.cpp" line="705"/>
         <source>Review — %1</source>
         <translation>確認 — %1</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="719"/>
+        <location filename="../src/ReviewDialog.cpp" line="724"/>
         <source>Review image</source>
         <translation>画像を確認</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="724"/>
-        <source>Click or Return toggles a box · Drag an empty area or press N to add · Arrow keys move the selection; with Shift they move an added box, with Alt they resize it · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · %3 saves and moves on · Esc skips this image without saving</source>
-        <translation>クリックまたは Return で枠を切り替え · 空いた場所をドラッグするか N キーで追加 · 矢印キーで選択を移動、Shift と一緒に押すと追加した枠を移動、Alt と一緒に押すとサイズを変更 · Space を押している間は結果をプレビュー · スクロールで拡大縮小、右ドラッグで移動、0 でリセット · %1 / %2 で元に戻す・やり直し · %3 で保存して次へ · Esc は保存せずにこの画像をスキップ</translation>
-    </message>
-    <message>
-        <location filename="../src/ReviewDialog.cpp" line="740"/>
+        <location filename="../src/ReviewDialog.cpp" line="746"/>
         <source>Cancel All</source>
         <translation>すべてキャンセル</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="785"/>
+        <location filename="../src/ReviewDialog.cpp" line="791"/>
         <source>Cancel All?</source>
         <translation>すべてキャンセルしますか？</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ReviewDialog.cpp" line="786"/>
+        <location filename="../src/ReviewDialog.cpp" line="792"/>
         <source>Stop reviewing and cancel the remaining %n image(s)?
 
 Images already saved are kept.</source>
@@ -1707,37 +1702,42 @@ Images already saved are kept.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="743"/>
+        <location filename="../src/ReviewDialog.cpp" line="749"/>
         <source>Undo</source>
         <translation>元に戻す</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="747"/>
+        <location filename="../src/ReviewDialog.cpp" line="729"/>
+        <source>Click toggles a box or removes an added one · Return toggles a detected box and Delete removes the selected box · Drag an empty area or press N to add · Arrow keys move the selection; with Shift they move an added box, with Alt they resize it · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · %3 saves and moves on · Esc skips this image without saving</source>
+        <translation>クリックで枠を切り替え、追加した枠は削除 · Return で検出された枠を切り替え、Delete で選択した枠を削除 · 空いた場所をドラッグするか N キーで追加 · 矢印キーで選択を移動、Shift と一緒に押すと追加した枠を移動、Alt と一緒に押すとサイズを変更 · Space を押している間は結果をプレビュー · スクロールで拡大縮小、右ドラッグで移動、0 でリセット · %1 / %2 で元に戻す・やり直し · %3 で保存して次へ · Esc は保存せずにこの画像をスキップ</translation>
+    </message>
+    <message>
+        <location filename="../src/ReviewDialog.cpp" line="753"/>
         <source>Redo</source>
         <translation>やり直す</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="751"/>
+        <location filename="../src/ReviewDialog.cpp" line="757"/>
         <source>Do Not Save</source>
         <translation>保存しない</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="754"/>
+        <location filename="../src/ReviewDialog.cpp" line="760"/>
         <source>Copy Original</source>
         <translation>オリジナルをコピー</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="757"/>
+        <location filename="../src/ReviewDialog.cpp" line="763"/>
         <source>Saves the image without anonymizing it.</source>
         <translation>画像を匿名化せずに保存します。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="833"/>
+        <location filename="../src/ReviewDialog.cpp" line="839"/>
         <source>Copy Original?</source>
         <translation>オリジナルをコピーしますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="834"/>
+        <location filename="../src/ReviewDialog.cpp" line="840"/>
         <source>This image will not be anonymized.
 
 %1
@@ -1750,12 +1750,12 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="853"/>
+        <location filename="../src/ReviewDialog.cpp" line="859"/>
         <source>Save with nothing covered?</source>
         <translation>何も覆わずに保存しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="854"/>
+        <location filename="../src/ReviewDialog.cpp" line="860"/>
         <source>Every region the detector found has been excluded and none were added in their place, so this image will be saved with nothing covered.
 
 Continue?</source>
@@ -1764,17 +1764,17 @@ Continue?</source>
 続行しますか？</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="828"/>
+        <location filename="../src/ReviewDialog.cpp" line="834"/>
         <source>The unredacted original will be saved to the output folder, including its original metadata (EXIF, GPS, timestamps).</source>
         <translation>匿名化していない元の画像が、メタデータ（EXIF、GPS、撮影日時）を含んだまま出力フォルダーに保存されます。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="830"/>
+        <location filename="../src/ReviewDialog.cpp" line="836"/>
         <source>The unredacted original will be saved to the output folder (re-encoded without metadata).</source>
         <translation>匿名化していない元の画像が出力フォルダーに保存されます（メタデータなしで再エンコードされます）。</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="759"/>
+        <location filename="../src/ReviewDialog.cpp" line="765"/>
         <source>Save &amp;&amp; Next</source>
         <translation>保存して次へ</translation>
     </message>

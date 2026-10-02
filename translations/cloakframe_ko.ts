@@ -1671,32 +1671,27 @@ Check these results before sharing them.</source>
 <context>
     <name>cloakframe::ReviewDialog</name>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="700"/>
+        <location filename="../src/ReviewDialog.cpp" line="705"/>
         <source>Review — %1</source>
         <translation>검토 — %1</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="719"/>
+        <location filename="../src/ReviewDialog.cpp" line="724"/>
         <source>Review image</source>
         <translation>이미지 검토</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="724"/>
-        <source>Click or Return toggles a box · Drag an empty area or press N to add · Arrow keys move the selection; with Shift they move an added box, with Alt they resize it · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · %3 saves and moves on · Esc skips this image without saving</source>
-        <translation>클릭 또는 Return으로 상자 전환 · 빈 영역을 드래그하거나 N을 눌러 추가 · 화살표 키로 선택 이동, Shift와 함께 누르면 추가한 상자 이동, Alt와 함께 누르면 크기 조절 · Space를 누르고 있으면 결과 미리보기 · 휠 스크롤 확대, 우클릭 드래그 이동, 0 초기화 · %1 / %2 실행 취소/다시 실행 · %3 저장 후 다음 · Esc는 저장하지 않고 건너뜀</translation>
-    </message>
-    <message>
-        <location filename="../src/ReviewDialog.cpp" line="740"/>
+        <location filename="../src/ReviewDialog.cpp" line="746"/>
         <source>Cancel All</source>
         <translation>모두 취소</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="785"/>
+        <location filename="../src/ReviewDialog.cpp" line="791"/>
         <source>Cancel All?</source>
         <translation>모두 취소할까요?</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/ReviewDialog.cpp" line="786"/>
+        <location filename="../src/ReviewDialog.cpp" line="792"/>
         <source>Stop reviewing and cancel the remaining %n image(s)?
 
 Images already saved are kept.</source>
@@ -1707,37 +1702,42 @@ Images already saved are kept.</source>
         </translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="743"/>
+        <location filename="../src/ReviewDialog.cpp" line="749"/>
         <source>Undo</source>
         <translation>실행 취소</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="747"/>
+        <location filename="../src/ReviewDialog.cpp" line="729"/>
+        <source>Click toggles a box or removes an added one · Return toggles a detected box and Delete removes the selected box · Drag an empty area or press N to add · Arrow keys move the selection; with Shift they move an added box, with Alt they resize it · Hold Space to preview the result · Scroll to zoom, right-drag to pan, 0 resets · %1 / %2 to undo/redo · %3 saves and moves on · Esc skips this image without saving</source>
+        <translation>클릭하면 상자 전환, 추가한 상자는 삭제 · Return은 검출된 상자 전환, Delete는 선택한 상자 삭제 · 빈 영역을 드래그하거나 N을 눌러 추가 · 화살표 키로 선택 이동, Shift와 함께 누르면 추가한 상자 이동, Alt와 함께 누르면 크기 조절 · Space를 누르고 있으면 결과 미리보기 · 휠 스크롤 확대, 우클릭 드래그 이동, 0 초기화 · %1 / %2 실행 취소/다시 실행 · %3 저장 후 다음 · Esc는 저장하지 않고 건너뜀</translation>
+    </message>
+    <message>
+        <location filename="../src/ReviewDialog.cpp" line="753"/>
         <source>Redo</source>
         <translation>다시 실행</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="751"/>
+        <location filename="../src/ReviewDialog.cpp" line="757"/>
         <source>Do Not Save</source>
         <translation>저장 안 함</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="754"/>
+        <location filename="../src/ReviewDialog.cpp" line="760"/>
         <source>Copy Original</source>
         <translation>원본 복사</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="757"/>
+        <location filename="../src/ReviewDialog.cpp" line="763"/>
         <source>Saves the image without anonymizing it.</source>
         <translation>이미지를 가리지 않고 저장합니다.</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="833"/>
+        <location filename="../src/ReviewDialog.cpp" line="839"/>
         <source>Copy Original?</source>
         <translation>원본을 복사할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="834"/>
+        <location filename="../src/ReviewDialog.cpp" line="840"/>
         <source>This image will not be anonymized.
 
 %1
@@ -1750,12 +1750,12 @@ Continue?</source>
 계속할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="853"/>
+        <location filename="../src/ReviewDialog.cpp" line="859"/>
         <source>Save with nothing covered?</source>
         <translation>아무것도 가리지 않고 저장할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="854"/>
+        <location filename="../src/ReviewDialog.cpp" line="860"/>
         <source>Every region the detector found has been excluded and none were added in their place, so this image will be saved with nothing covered.
 
 Continue?</source>
@@ -1764,17 +1764,17 @@ Continue?</source>
 계속할까요?</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="828"/>
+        <location filename="../src/ReviewDialog.cpp" line="834"/>
         <source>The unredacted original will be saved to the output folder, including its original metadata (EXIF, GPS, timestamps).</source>
         <translation>가리지 않은 원본이 메타데이터(EXIF, GPS, 촬영 시간)를 그대로 담은 채 출력 폴더에 저장됩니다.</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="830"/>
+        <location filename="../src/ReviewDialog.cpp" line="836"/>
         <source>The unredacted original will be saved to the output folder (re-encoded without metadata).</source>
         <translation>가리지 않은 원본이 출력 폴더에 저장됩니다(메타데이터 없이 다시 인코딩됨).</translation>
     </message>
     <message>
-        <location filename="../src/ReviewDialog.cpp" line="759"/>
+        <location filename="../src/ReviewDialog.cpp" line="765"/>
         <source>Save &amp;&amp; Next</source>
         <translation>저장 후 다음</translation>
     </message>
