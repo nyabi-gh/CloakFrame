@@ -2,6 +2,7 @@
 
 #include <opencv2/core.hpp>
 
+#include <optional>
 #include <vector>
 
 namespace cloakframe
@@ -18,6 +19,8 @@ namespace cloakframe
         [[nodiscard]] bool isCut(int frame) const;
 
         [[nodiscard]] bool spansCut(int fromFrame, int toFrame) const;
+
+        [[nodiscard]] std::optional<int> firstCutAfter(int frame) const;
 
         [[nodiscard]] SceneCuts reversed(int frameCount) const;
 

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <stdexcept>
 #include <utility>
 
@@ -823,7 +824,16 @@ namespace cloakframe
 
         // A cut ends every track, so frames missed right after one belong to no track. When the
         // tracks on either side of the cut overlap in space, a gap no longer than an interior
-        // one is covered with both boxes, as inside a track; a longer one is reported.
+        // one is covered with both boxes, as inside a track; a longer one is reported. Each
+        // track takes the covered frames on its own side of the cut, so excluding one track in
+        // review cannot uncover the other's subject.
+        struct BridgedStart
+        {
+            int firstFrame = 0;
+            TrackedBox box;
+        };
+        // Starts move only after the scan below, which depends on their order.
+        std::map<Track *, BridgedStart> bridgedStarts;
         std::vector<Track *> byStart;
         byStart.reserve(tracks.size());
         for (auto &track : tracks)
@@ -862,10 +872,20 @@ namespace cloakframe
                     }
                     const TrackedBox bridge{
                         0, end.box | start.box, std::min(end.score, start.score), true};
-                    for (int frame = last + 1; frame < after.firstFrame(); ++frame)
+                    const int cut = *cuts.firstCutAfter(last);
+                    for (int frame = last + 1; frame < cut; ++frame)
                     {
                         before->boxes.push_back(bridge);
                         before->boxes.back().frame = frame;
+                    }
+                    const auto [bridged, inserted] =
+                        bridgedStarts.try_emplace(*candidate, BridgedStart{cut, bridge});
+                    if (!inserted)
+                    {
+                        bridged->second.firstFrame = std::min(bridged->second.firstFrame, cut);
+                        bridged->second.box.box |= bridge.box;
+                        bridged->second.box.score =
+                            std::min(bridged->second.box.score, bridge.score);
                     }
                     totalBoxes += static_cast<std::size_t>(gap);
                 }
@@ -875,6 +895,17 @@ namespace cloakframe
                 }
                 break;
             }
+        }
+        for (auto &[track, start] : bridgedStarts)
+        {
+            std::vector<TrackedBox> prefix;
+            prefix.reserve(static_cast<std::size_t>(track->firstFrame() - start.firstFrame));
+            for (int frame = start.firstFrame; frame < track->firstFrame(); ++frame)
+            {
+                prefix.push_back(start.box);
+                prefix.back().frame = frame;
+            }
+            track->boxes.insert(track->boxes.begin(), prefix.begin(), prefix.end());
         }
 
         // Several tracks can miss the same frames; a reviewer needs each frame range once.

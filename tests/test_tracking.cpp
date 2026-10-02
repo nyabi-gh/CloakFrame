@@ -602,6 +602,38 @@ namespace
         }
     }
 
+    void testCoveredCutGapStaysWithEachSideOfTheCut()
+    {
+        const cloakframe::SceneCuts cuts({12});
+        auto tracks = cloakframe::buildBidirectionalTracks(missedAfterCut(50.0F), {}, 0.5F, cuts);
+        assert(tracks.size() == 2);
+
+        cloakframe::TrackPostProcessConfig config;
+        config.extensionFrames = 0;
+        const auto report = cloakframe::postProcessTracks(tracks, config, 20, cuts);
+        assert(report.uncoveredFrames == 0);
+        const auto &before = tracks[0].firstFrame() == 0 ? tracks[0] : tracks[1];
+        const auto &after = tracks[0].firstFrame() == 0 ? tracks[1] : tracks[0];
+        assert(before.lastFrame() == 11);
+        assert(after.firstFrame() == 12);
+        for (std::size_t i = 1; i < after.boxes.size(); ++i)
+        {
+            assert(after.boxes[i].frame == after.boxes[i - 1].frame + 1);
+        }
+
+        // Excluding the earlier track in review must leave the new scene's frames covered.
+        const std::vector<cloakframe::Track> withoutBefore{after};
+        const std::vector<cloakframe::Track> withoutAfter{before};
+        for (int frame = 12; frame <= 13; ++frame)
+        {
+            assert(cloakframe::trackRegionsForFrame(withoutBefore, frame).size() == 1);
+        }
+        for (int frame = 10; frame <= 11; ++frame)
+        {
+            assert(cloakframe::trackRegionsForFrame(withoutAfter, frame).size() == 1);
+        }
+    }
+
     void testLongGapAcrossSceneCutIsReportedWhenTracksMeet()
     {
         const cloakframe::SceneCuts cuts({10});
@@ -1019,6 +1051,7 @@ int main()
     testBidirectionalTracksRespectSceneCuts();
     testTrackingWindowsFollowTheFrameRate();
     testShortGapAcrossSceneCutIsCoveredWhenTracksMeet();
+    testCoveredCutGapStaysWithEachSideOfTheCut();
     testLongGapAcrossSceneCutIsReportedWhenTracksMeet();
     testGapsSharedByTracksAreReportedOnce();
     testGapAcrossSceneCutIsNotReportedForAnotherPlace();

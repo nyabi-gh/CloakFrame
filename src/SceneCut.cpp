@@ -79,6 +79,12 @@ namespace cloakframe
         return it != frames_.end() && *it <= high;
     }
 
+    std::optional<int> SceneCuts::firstCutAfter(const int frame) const
+    {
+        const auto it = std::ranges::upper_bound(frames_, frame);
+        return it != frames_.end() ? std::optional<int>(*it) : std::nullopt;
+    }
+
     SceneCuts SceneCuts::reversed(const int frameCount) const
     {
         std::vector<int> mapped;
