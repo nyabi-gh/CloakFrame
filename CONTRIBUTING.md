@@ -205,10 +205,9 @@ embed the project's updater. The app then links users to GitHub Releases.
    ones lupdate marks vanished. The `translation_quality` test fails on an
    unfinished entry, a vanished one, or one left identical to the English
    source.
-5. Write the commit subject for the person updating the app. Release notes are
-   generated from the subjects of the commits since the previous release, so a
-   subject such as "Keep the video source snapshot out of the output folder"
-   ends up on the release page as it is.
+5. Add a line under `## Unreleased` in [CHANGELOG.md](CHANGELOG.md) when the
+   change is something people using the app would notice. Write it for them,
+   not as a commit subject; build and CI changes stay out.
 6. Update [README.md](README.md) when user instructions change.
 
 The local quality-gate commands are:
@@ -288,9 +287,12 @@ The workflow is the canonical description of the signed, pinned distribution
 builds.
 
 Pushing a `v<major>.<minor>.<patch>` tag that matches the project version in
-`CMakeLists.txt` starts the release. The workflow writes the release notes from
-the commit subjects since the previous tag; there are no notes to prepare by
-hand.
+`CMakeLists.txt` starts the release. The "Prepare x.y.z" commit that sets the
+version also renames `## Unreleased` in `CHANGELOG.md` to `## x.y.z`, reviewed
+so it reads as release notes (group the changes, lead with what matters most,
+and say what users of older versions have to do). The workflow publishes that
+section with a compare link and the SHA-256 of the downloads, and stops before
+building when the section is missing or empty.
 
 ### macOS update signing key
 

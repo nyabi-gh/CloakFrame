@@ -73,6 +73,9 @@ jobs:
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
+      - name: Check that the changelog has notes for this version
+        run: .github/scripts/generate_release_notes.sh "${{ steps.identity.outputs.version }}" "$RUNNER_TEMP/release-notes.md"
+
   check-secrets:
     name: Check release secrets
     needs: identity
@@ -934,7 +937,7 @@ jobs:
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
         with:
-          # The release notes are the commit subjects since the previous tag.
+          # The compare link in the release notes needs the previous tag.
           fetch-depth: 0
 
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
