@@ -2,6 +2,8 @@
 
 What changed in each CloakFrame release, written for the people using it. The release workflow publishes a version's section as the notes of its GitHub release. Releases before 1.12.0 list their changes on their release pages.
 
+## Unreleased
+
 ## 1.12.1
 
 ### Fixed

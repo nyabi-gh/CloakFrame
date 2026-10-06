@@ -32,6 +32,7 @@ and enable tests.
   and objdetect
 - ONNX Runtime
 - spdlog
+- libsodium, which verifies update signatures
 - Exiv2 (optional, enables metadata preservation)
 - Qt Linguist Tools (optional, embeds non-English translations)
 - Qt SVG (optional, renders the settings icon as SVG)
@@ -86,7 +87,7 @@ Turn it on to see the activity log in a terminal.
 Install the development dependencies with Homebrew:
 
 ```bash
-brew install cmake ninja qt opencv onnxruntime spdlog exiv2 ffmpeg
+brew install cmake ninja qt opencv onnxruntime spdlog libsodium exiv2 ffmpeg
 cmake --preset debug
 cmake --build --preset debug --parallel
 open out/build/debug/CloakFrame.app
@@ -99,7 +100,7 @@ that includes the tools.
 ### Windows
 
 Run from a Visual Studio developer PowerShell. Make Qt, OpenCV, ONNX Runtime,
-spdlog, and optional Exiv2 discoverable through `CMAKE_PREFIX_PATH` and
+spdlog, libsodium, and optional Exiv2 discoverable through `CMAKE_PREFIX_PATH` and
 `ONNXRUNTIME_ROOT`:
 
 ```powershell
@@ -122,7 +123,7 @@ On Ubuntu, install the base packages with:
 ```bash
 sudo apt install cmake ninja-build build-essential pkg-config ffmpeg patchelf \
   libjpeg-dev libpng-dev libtiff-dev libwebp-dev \
-  libspdlog-dev libexiv2-dev
+  libspdlog-dev libsodium-dev libexiv2-dev
 ```
 
 `patchelf` is only needed to stage a package. Qt otherwise rewrites plugin
@@ -145,7 +146,7 @@ On Arch Linux, a CPU development environment can be installed with:
 
 ```bash
 yay -S --needed base-devel cmake ninja pkgconf qt6-base qt6-tools qt6-svg qt6-imageformats \
-  opencv onnxruntime-cpu spdlog exiv2 ffmpeg
+  opencv onnxruntime-cpu spdlog libsodium exiv2 ffmpeg
 ```
 
 Use `onnxruntime-opt-cuda` for supported NVIDIA GPUs or `onnxruntime-rocm` for
