@@ -3,13 +3,10 @@
 Open work, most important first within each section. Items are removed when they are
 done; the commit that closes one says so.
 
-This list replaces three earlier documents: the code, privacy and security review of
-v1.11.3 (`REVIEW.md`), the project review (`docs/PROJECT_REVIEW.ko.md`) and the
-audit follow-up list (`docs/open-work.md`). The IDs in brackets point into them, with
-the evidence and line references: `git log --diff-filter=D -1 -- REVIEW.md` names the
-commit that removed them, and `git show <that commit>^:REVIEW.md` prints one.
-`A-` to `F-` come from the review, `R` from the project review, `CF-` and `OW`
-(open-work section) from the audit list.
+IDs in brackets point to the evidence in three removed documents: `A-` to `F-` to the
+v1.11.3 review (`REVIEW.md`), `R` to `docs/PROJECT_REVIEW.ko.md`, and `CF-` and `OW` to
+`docs/open-work.md`. Print one with `git show <commit>^:<path>`, where
+`git log --diff-filter=D -1 -- <path>` names the commit that removed it.
 
 **Evidence rule.** An item is closed only when the value it is about reaches the user.
 A field that is written but never read, or a fix that covers part of the cases, does not
@@ -18,7 +15,7 @@ close it. Check the caller and the full scope before recording a change of state
 ## Waiting on the maintainer
 
 - **Move the signing secrets to the `release` environment** [B-1]. All eight are still
-  repository-scoped; see [CONTRIBUTING.md](../CONTRIBUTING.md#release-secrets). The
+  repository-scoped; see [RELEASING.md](RELEASING.md#release-secrets). The
   build jobs no longer reference them, but a workflow on any branch still could. Both
   update keys have been readable from any branch, so consider rotating them. Clients
   pin the public key, so a rotation needs a transitional release that trusts both keys.

@@ -71,6 +71,6 @@ function(cloakframe_enable_velopack target)
     else()
         message(WARNING
             "CLOAKFRAME_UPDATE_PUBLIC_KEY is unset; Windows and Linux updates are trusted on "
-            "whatever the release feed says. See CONTRIBUTING.md to create and configure the key.")
+            "whatever the release feed says. See docs/RELEASING.md to create and configure the key.")
     endif()
 endfunction()
