@@ -146,19 +146,19 @@ wgpu의 OS별 backend와 추론용 GPU는 별개의 선택이다. GPU가 없는/
 | tract | Rust 중심의 작은 배포와 ONNX 지원. 현재 공식 문서는 CPU뿐 아니라 Metal/CUDA도 명시 | 대상 모델의 operator·shape·Windows GPU 지원 조합을 확인해야 함. MIT/Apache-2.0. 과거의 “CPU 전용” 설명은 현재 자료와 맞지 않음 | 별도 CPU/소형 배포 실험 후보. 세 OS 주력 엔진으로는 미검증. [공식 저장소][A-tract] |
 | Burn + burn-onnx | Rust GPU backend와 빌드 시 모델 코드 생성. WGPU 계열 활용 가능 | opset 범위 지원과 모든 operator configuration 지원은 다름. 번들 모델 3종만 지원하므로 빌드 시 변환 방식도 가능. MIT/Apache-2.0 | 번들 모델 연구 후보. Windows GPU와 세 모델의 operator 검증 전에는 주 엔진 대체 보류. [공식 ONNX 문서][A-burn] |
 | Candle | Rust 중심 ML, CPU/CUDA/Metal, 모델 코드를 직접 제어 | ONNX 지원을 ORT 전체 호환으로 간주할 수 없음. Windows 다중 vendor GPU 요구를 별도로 해결해야 함. MIT/Apache-2.0 | 이 앱에서는 모델 구현·검증 부담이 더 큼. [공식 저장소][A-candle] |
-| 플랫폼별 CoreML/WinML/OpenVINO 직접 구현 | 특정 장치에 맞춘 최적화·공급사 지원 | 모델 변환·패키지·후처리·결과 parity 경로가 늘어남 | 공통 ORT adapter 안의 EP 우선. 필요가 측정된 플랫폼만 별도 adapter 검토 |
+| 플랫폼별 CoreML/WinRT ML/OpenVINO API 직접 구현 | 특정 장치에 맞춘 최적화·공급사 지원 | 모델 변환·패키지·후처리·결과 parity 경로가 늘어남 | 공통 ORT adapter 안의 EP 우선. 필요가 측정된 플랫폼만 별도 adapter 검토 |
 
 **권장 EP 정책:**
 
 | 플랫폼 | 기본 가속 / 폴백 | 배포와 검증 조건 |
 | --- | --- | --- |
-| Windows x64 | DirectML → ORT CPU | NVIDIA/AMD/Intel의 DirectX 12 GPU를 폭넓게 지원하는 실용적 초기안. DML은 현재 sustained engineering이며 새 개발은 WinML 쪽이라는 공식 안내를 위험에 기록. DML이 도입된 Windows 10 1903과 CPU 최소 OS를 구별. 순차 세션 실행·memory pattern 제약 준수. [DML][A-dml] |
+| Windows x64 | **Windows ML self-contained 런타임**의 DirectML → ORT CPU | ORT를 직접 번들하지 않고 Windows ML NuGet(`Microsoft.Windows.AI.MachineLearning` 또는 `Microsoft.WindowsAppSDK.ML`)의 `onnxruntime.dll`·`DirectML.dll`을 앱에 함께 넣는다(약 41MB). Microsoft가 ORT·DML 조합을 검증하고, DML이 유지보수 모드인 상황에서 새 개발이 이어지는 경로다. CPU·DML은 다운로드 없이 동작한다. C/C++ 계열은 self-contained만 지원하며 MSIX 없는 설치본도 지원한다. 최소 OS는 패키지에 따라 Windows 10 1809(17763) 또는 1903(18362)이다. 순차 세션 실행·memory pattern 제약은 그대로 지킨다. [Windows ML 배포][A-winml], [DML][A-dml] |
 | macOS arm64 | CoreML MLProgram → ORT CPU | CoreML 전체 연산 배치가 보장되지 않음. model hash·ORT/OS/옵션별 compiled cache, cold compile 시간과 warm latency를 분리. GPU/ANE 실제 사용을 profile. [CoreML][A-coreml] |
 | Linux x86_64 | 기본 CPU; 선택 CUDA 패키지 → CPU | 기존 공식 CPU 지원을 유지하고 NVIDIA용 별도 서명 패키지를 검증 후 제공. CUDA/cuDNN/driver 조합 고정. AMD MIGraphX·Intel OpenVINO는 후보이며 검증 전 지원 표에 넣지 않음. [EP 목록][A-ep], [CUDA 요구사항][A-cuda] |
 
 1.12.1의 YuNet은 OpenCV CPU로만 실행되므로, YuNet을 ORT로 옮겨 이 EP 정책을 적용하는 것은 기존 동작 유지가 아니라 새 GPU 경로다. M3에서 CPU와 별도로 검증한다.
 
-DirectML을 영구 해법으로 고정하지 않는다. M0에서 WinML의 Rust 연동, 최소 OS, EP 자동 다운로드를 끌 수 있는지, 설치·오프라인 실행을 조사한다. 기존 Windows 10 호환성을 이유 없이 올리거나 미디어 앱에서 허가하지 않은 런타임 다운로드를 도입하지 않는다.
+Windows ML의 **EP 카탈로그**(NVIDIA TensorRT-RTX, Intel OpenVINO, AMD MIGraphX·VitisAI, Qualcomm QNN)는 첫 stable에서 쓰지 않는다. Windows 11 24H2 이상이 필요하고, 첫 실행에 네트워크로 받고 Windows Update로 자동 갱신되어 오프라인 실행·고정 manifest 원칙과 맞지 않기 때문이다. 이 앱의 모델은 작아 DML로 충분하다. 필요가 측정되면 사용자가 켜는 opt-in 기능으로 따로 설계한다. M0에서는 Windows ML 패키지의 ORT 버전과 `ort`의 API feature(`api-N`)가 맞는지, `ort::init_from`으로 그 `onnxruntime.dll`을 불러 DML EP를 붙일 수 있는지, 깨끗한 Windows 10 VM에서 설치·오프라인 실행이 되는지 확인한다. [EP 카탈로그와 직접 번들 비교][A-winml-eps]
 
 **검증 시작 조합은 rc.14와 그 릴리스가 대상으로 삼은 ORT 1.31 계열**로 잡고 각 OS/EP 배포물 존재·C API·MSRV를 M0에서 확인한다. 일치하는 배포물이 없으면 지원 API 수준에 맞는 ort/ORT 쌍으로 낮추어 고정한다. `default-features`의 자동 다운로드·자동 provider 선택에 맡기지 않고 번들 절대 경로와 허용 EP 목록을 명시한다. 일반 사용자의 `PATH`/환경변수에서 임의 ORT를 로드하지 않는다.
 
@@ -403,7 +403,7 @@ preview는 별도 앱 ID·설정·업데이트 channel을 사용하며 stable �
   3. 순수 Rust codec과 core의 메모리 안전. 위험한 parser 중 ORT·FFmpeg는 Rust로 옮겨도 네이티브로 남으므로 이 목적의 효과는 제한적이다.
 - **시간 예산:** 미정. M0–M8 전체와 단계별 예산을 M0 시작 시 적는다. 1.12.1의 알려진 결함이 이 기간 내내 배포판에 남으므로, 예산은 곧 사용자 노출 기간이다.
 - **범위 조정 순서:** 되돌아갈 레거시 개선 경로가 없으므로, 예산이 넘치면 아래 순서대로 첫 stable 뒤로 미룬다. 안전에 대한 영향이 작은 것부터다.
-  1. WinML 전환
+  1. Windows ML EP 카탈로그(opt-in)
   2. Linux CUDA 패키지
   3. masked playback의 지속 재생(frame 단위 masked preview는 유지)
   4. 검토 저장/재개
@@ -420,9 +420,9 @@ preview는 별도 앱 ID·설정·업데이트 channel을 사용하며 stable �
 ### M0 — 핵심 위험 검증과 기준선 확정
 
 - **목표/구현 대상:** 스택·지원 범위·품질 기준을 확정하는 작은 실행 spike와 baseline harness.
-- **작업:** 8.2절 기준 fixture 추출(2절 결함별 실패 재현 fixture 포함); 1.12.1 릴리스 패키지 기준 측정; 모델별 tensor/전처리/후처리 계약 추출; 세 OS에서 빈 egui 앱과 CJK IME·접근성·HiDPI·4K canvas·RDP 시험; ort/ORT/EP 쌍으로 세 모델 로드·추론; codec/U16/ICC/EXIF 지원 행렬과 31개 allowlist를 JPEG/PNG/WebP/TIFF에 새로 쓰는 Rust EXIF writer spike; 추론 worker의 IPC 비용 검증; 패키지에 FFmpeg/ORT를 넣는 최소 설치 시험.
+- **작업:** 8.2절 기준 fixture 추출(2절 결함별 실패 재현 fixture 포함); 1.12.1 릴리스 패키지 기준 측정; 모델별 tensor/전처리/후처리 계약 추출; 세 OS에서 빈 egui 앱과 CJK IME·접근성·HiDPI·4K canvas·RDP 시험; ort/ORT/EP 쌍으로 세 모델 로드·추론(Windows는 Windows ML 런타임의 ORT·DML); codec/U16/ICC/EXIF 지원 행렬과 31개 allowlist를 JPEG/PNG/WebP/TIFF에 새로 쓰는 Rust EXIF writer spike; 추론 worker의 IPC 비용 검증; 패키지에 FFmpeg/ORT를 넣는 최소 설치 시험.
 - **선행/의존성:** 8.2절의 목적·예산·범위 조정 순서 기록, 1.12.1 릴리스 패키지, 사용 허가된 fixture, Windows/macOS GPU와 Linux CPU 장치, native 배포물. 서명 credential은 안전한 릴리스 환경에서만 필요.
-- **예상 문제:** RC API·DML runtime 배포물 불일치, YuNet raw 출력 해석, 그래픽/접근성 누락, codec 기능 차이, TIFF 출력의 EXIF IFD 작성.
+- **예상 문제:** RC API와 Windows ML 패키지의 ORT 버전 불일치, YuNet raw 출력 해석, 그래픽/접근성 누락, codec 기능 차이, TIFF 출력의 EXIF IFD 작성.
 - **검증:** 실제 세 OS 실행과 모델 양성 샘플, 1.12.1 기준 비교 보고서, 측정 로그의 개인정보 여부 확인.
 - **완료 조건:** 버전/feature/native manifest, 지원 입력 행렬, baseline·성능 목표, 동작 변경 장부 승인 가능 상태. GUI 필수 동작 또는 핵심 모델 실패는 우회하여 후속 대규모 구현을 시작하지 않고 후보 재평가. Rust EXIF writer가 행렬을 통과하지 못한 포맷만 4.3절의 대안을 적용.
 
@@ -599,7 +599,7 @@ M0에서 Windows x64(최소 한 대씩 Intel/AMD/NVIDIA DML), Apple silicon 16 G
 
 | 플랫폼 | 첫 stable 대체판의 기준 | 빌드·패키지·GPU 정책 |
 | --- | --- | --- |
-| Windows | 기존 Windows 10+ x64 유지, GPU는 DML 요구 OS/장치 별도 표기 | MSVC stable Rust + 고정 Windows SDK, Velopack installer(현재는 `--noPortable`로 설치본만 제공하며 portable은 새 범위). ORT/DML·FFmpeg DLL과 worker를 명시적으로 포함. DLL search 경로는 앱 자산으로 제한 |
+| Windows | 기존 Windows 10+ x64 유지. Windows ML 패키지 하한(1809 또는 1903)이 실제 최소 빌드가 되므로 지원 표에 빌드 번호를 적는다. GPU는 DML 요구 장치 별도 표기 | MSVC stable Rust + 고정 Windows SDK, Velopack installer(현재는 `--noPortable`로 설치본만 제공하며 portable은 새 범위). Windows ML self-contained 런타임(`onnxruntime.dll`·`DirectML.dll`, Windows ML API DLL은 카탈로그를 쓰지 않으면 제외 검토)·FFmpeg DLL과 worker를 명시적으로 포함. DLL search 경로는 앱 자산으로 제한 |
 | macOS | macOS 15+ arm64 유지 | 고정 Xcode/SDK와 Rust target, app bundle+DMG. ORT/CoreML·Sparkle·FFmpeg·worker·필요 dylib의 rpath/architecture 검증, nested Developer ID 서명·notarization |
 | Linux | x86_64/glibc 2.39+ 유지 | 최소 glibc 기반 container/sysroot에서 build, AppImage+Velopack. CPU ORT 기본; CUDA 선택 package는 CUDA/cuDNN/driver matrix와 license 검증 후 별도 제공 |
 
@@ -647,7 +647,7 @@ macOS는 Sparkle를 유지한다. 현재 Sparkle 2.9.4가 고정되어 있고 In
 | --- | --- | --- |
 | egui 접근성/IME/graphics 호환성 | Qt 대비 desktop 사용성 회귀, M0/M6 | 실제 편집 canvas·3언어·screen reader·RDP 시험. 필수 동작 실패 시 Slint/Iced 재평가(CloakFrame이 GPL-3.0이므로 Slint의 GPL 조건은 장애가 아님). headless 우선이라 UI 결정을 바꿔도 engine 작업은 버려지지 않음. 단순 테마 차이와 접근 불가를 구분 |
 | ort RC와 ORT/EP ABI | build 성공 후 로드/추론 crash, M0/M3 | 검증한 exact 쌍·feature·C API 고정, 작은 adapter 뒤에 숨김. 배포물 없는 조합은 이전 호환 쌍으로 변경; custom C API wrapper를 즉흥적으로 확장하지 않음 |
-| DirectML 유지보수 방향 | Windows GPU의 장기 지원, M0/M7 | 초기 DML 실기기 지원 유지, WinML 이전 실험은 별도. 최소 OS/오프라인/라이선스 조건을 충족할 때 전환 |
+| Windows ML 런타임 | ORT 버전이 Windows ML 릴리스에 묶임, DML 유지보수 모드, M0/M7 | Windows ML 패키지 버전을 manifest에 고정하고 `ort` API feature와 함께 올린다. 맞는 쌍이 없으면 그 Windows ML 버전에 머문다. DML 회귀는 실기기 gate로 잡고, 카탈로그 EP는 opt-in으로만 검토 |
 | YuNet 결과 변화 | 얼굴 누락·성능 악화, M0/M3 | OpenCV `FaceDetectorYN` 대신 ORT 원시 출력을 직접 해석하므로 원시 tensor와 최종 box/landmark를 독립 비교. 정확도 gate 실패 시 기존 지원 대체 완료로 선언하지 않음 |
 | 사용자 ONNX 제거 | SCRFD 사용자가 기능을 잃음, M7 | 첫 실행 안내와 CHANGELOG에 대체 모델(YOLO5Face-n, YuNet)을 명시. 수요가 확인되면 sandbox 설계를 포함한 별도 기능으로 다시 산정 |
 | image codec/ICC/EXIF 차이 | format·bit depth·색·metadata 회귀, M0/M2 | 입력 행렬·허용오차·metadata 추출로 검증. 작은 검증된 codec adapter 추가 가능. EXIF writer가 실패한 포맷만 선택 보존 범위에서 빼고 동작 변경 장부에 기록 |
@@ -694,6 +694,8 @@ macOS는 Sparkle를 유지한다. 현재 Sparkle 2.9.4가 고정되어 있고 In
 [A-burn]: https://burn.dev/books/burn/onnx-import.html
 [A-candle]: https://github.com/huggingface/candle
 [A-dml]: https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html
+[A-winml]: https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/distributing-your-app
+[A-winml-eps]: https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/windows-ml-eps-vs-bring-your-own
 [A-coreml]: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html
 [A-ep]: https://onnxruntime.ai/docs/execution-providers/index.html
 [A-cuda]: https://onnxruntime.ai/docs/execution-providers/CUDA-ExecutionProvider.html
