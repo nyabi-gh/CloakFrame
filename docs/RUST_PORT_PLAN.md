@@ -169,7 +169,7 @@ GPU 실패 시 현재 item/frame을 검증된 CPU 세션으로 **한 번** 다�
 | 후보 | 적합성·제약 | 결정 |
 | --- | --- | --- |
 | **image** | JPEG/PNG/BMP/TIFF/WebP codec, 다양한 pixel type, orientation/metadata 접근·decoder limits. default feature는 불필요한 포맷까지 포함 | 기본 입출력. 0.25.10을 검증 시작점으로 하고 필요한 codec만 켠다. 모든 TIFF 압축·WebP mode를 지원한다고 가정하지 않음. MIT/Apache-2.0. [image][I-image], [decoder 계약][I-decoder] |
-| **fast_image_resize** | U8/U16 등과 SIMD. 색 공간의 선형화는 호출자가 책임져야 함 | resize·letterbox·preview에 사용. 6.1.0 검증 시작. 전처리는 모델 훈련 계약을 따르고 표시용 resize와 혼동하지 않는다. MIT/Apache-2.0. [공식 문서][I-resize] |
+| **fast_image_resize** | U8/U16 등과 SIMD. 색 공간의 선형화는 호출자가 책임져야 함. bilinear도 축소 시 필터 폭을 넓히는 convolution 방식이라 OpenCV와 결과가 다를 것으로 본다(미측정) | preview·thumbnail 등 표시용 resize에만 사용. 6.1.0 검증 시작. **모델 전처리에는 쓰지 않는다.** 1.12.1과 같은 감지 결과를 내려면 OpenCV `INTER_LINEAR`(안티에일리어싱 없는 bilinear, 11-bit 고정소수점)를 그대로 옮긴 core의 resize를 써야 하며, M0 spike에서 바이트 단위 일치를 확인했다([M0 결과](M0_ORT_SPIKE.md)). MIT/Apache-2.0. [공식 문서][I-resize] |
 | **imageproc** | 필터·기하 연산. 전용 GPU 미디어 엔진은 아님 | 필요한 blur/기하 연산만 사용. ROI·mask union·alpha 정책은 core 소유. 0.27.0 검증 시작, MIT. [공식 저장소][I-imageproc] |
 | libvips | demand-driven 처리로 거대 이미지의 메모리 절약에 유리 | 네이티브 라이브러리·codec·FFI와 별도 처리 모델 추가. LGPL-2.1-or-later | 이미지 크기 요구가 현재 메모리 예산을 넘을 때 재검토. 기본값으로 추가하지 않음. [공식 API][I-vips], [저장소·라이선스][I-vips-license] |
 
