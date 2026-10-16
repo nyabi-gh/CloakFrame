@@ -6,7 +6,7 @@
 
 - `ort` 2.0.0-rc.14로 YOLO5Face-n, YuNet, 번호판 YOLOv9-t를 모두 로드·추론했고, CPU에서 **1.12.1 감지기와 같은 결과**를 냈다. 감지 개수, box, score, roll이 출력 정밀도(소수 4–5자리) 안에서 같다.
 - YuNet은 OpenCV `FaceDetectorYN` 없이 ORT 원시 출력(`cls/obj/bbox/kps` × stride 8·16·32)을 직접 해석해 같은 결과를 냈다. 계획의 "YuNet raw 출력 해석" 위험은 해소됐다.
-- 모델 전처리의 resize는 OpenCV `INTER_LINEAR`를 그대로 옮겨야 한다. 옮긴 구현은 시험한 8개 크기 조합 전부에서 OpenCV 출력과 바이트 단위로 같았다. 계획 4.3절을 이에 맞게 고쳤다.
+- 모델 전처리의 resize는 OpenCV `INTER_LINEAR`를 그대로 옮겨야 한다. 옮긴 구현은 시험한 8개 크기 조합 전부에서 OpenCV 출력과 바이트 단위로 같았다. 계획 3장의 이미지 항목에 반영했다.
 - CoreML은 1.12.1과 같은 옵션(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`)을 줘야 한다. 이때 결과가 CPU와 같고, 프로파일상 YOLO5Face-n·번호판 그래프 대부분이 CoreML 파티션에서 실행된다. 기본값(NeuralNetwork 형식)에서는 결과가 조금 달라졌다(box IoU 최소 0.954, 12px 얼굴의 roll 차이 최대 0.22 rad).
 
 ## 조건
@@ -28,7 +28,7 @@
 | YuNet(ORT CPU) | 같음(roll 차 ≤ 1e-5) | 해당 없음(1.12.1도 CPU 전용) |
 | 번호판 | 같음(차 이미지에서 1건 검출) | 같음 |
 
-지연시간(512×512 입력, 전처리 포함, 50회 p50)은 실행마다 크게 흔들렸다. 예를 들어 Rust CoreML YOLO5Face-n은 실행에 따라 12–23 ms, 번호판은 7.5–15.8 ms였다(MLProgram 기준). 아래는 한 번씩 잰 참고값이며, 성능 판정은 계획 10.3절대로 고정 장치에서 반복 측정해야 한다.
+지연시간(512×512 입력, 전처리 포함, 50회 p50)은 실행마다 크게 흔들렸다. 예를 들어 Rust CoreML YOLO5Face-n은 실행에 따라 12–23 ms, 번호판은 7.5–15.8 ms였다(MLProgram 기준). 아래는 한 번씩 잰 참고값이며, 성능 판정은 계획 9.3절대로 고정 장치에서 반복 측정해야 한다.
 
 | 모델 | 1.12.1 CPU | Rust CPU | 1.12.1 CoreML | Rust CoreML |
 | --- | --- | --- | --- | --- |
@@ -40,10 +40,10 @@ Rust 전처리(512→640 resize + letterbox + blob)는 아직 SIMD가 없는 단
 
 ## 계획에 반영할 것
 
-- 모델 전처리 resize는 core가 소유하는 OpenCV 호환 구현으로 한다(4.3절 반영).
-- CoreML 옵션은 `MLProgram` + `ALL`을 명시하고, compiled-model cache 위치는 worker 전용으로 지정한다. 1.12.1 harness가 앱 이름 없이 실행되자 `~/Library/Caches/coreml-models`에 cache를 만들었다. Rust에서는 경로를 앱 cache 아래로 명시해야 한다.
+- 모델 전처리 resize는 core가 소유하는 OpenCV 호환 구현으로 한다(계획 3장 반영).
+- CoreML 옵션은 `MLProgram` + `ALL`을 명시하고, compiled-model cache 위치는 앱 캐시 폴더 아래로 지정한다. 1.12.1 harness가 앱 이름 없이 실행되자 `~/Library/Caches/coreml-models`에 cache를 만들었다. Rust에서는 경로를 앱 cache 아래로 명시해야 한다.
 - rc.14는 `Session::builder(&Environment)`로 Environment를 명시적으로 넘긴다. 계획의 "번들 절대 경로에서 ORT 로드, 전역 자동 설정에 맡기지 않음"과 맞는다.
-- 남은 M0 추론 항목: Linux CPU, 작은 얼굴·번호판 양성 샘플을 늘린 비교, 깨끗한 Windows 10 설치, Windows ML 런타임 라이선스 판단(아래).
+- 남은 M0 추론 항목: Linux CPU, 작은 얼굴·번호판 양성 샘플을 늘린 비교, 깨끗한 Windows 10 설치. Windows ML 런타임 라이선스는 Apache-2.0 전환으로 정리됐다(계획 10.1).
 
 ## Windows ML · DirectML
 
@@ -56,7 +56,7 @@ Rust 전처리(512→640 resize + letterbox + blob)는 아직 SIMD가 없는 단
 - 프로파일상 YOLO5Face-n·YuNet은 모든 노드가 DML에서, 번호판은 end-to-end `NonMaxSuppression` 1개만 CPU에서 실행된다.
 - 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4(1.12.1이 쓰는 버전)가 마지막이다. DirectML은 두 경로 모두 1.15.4로 같으므로, Windows ML로 옮겨 얻는 것은 새 DML이 아니라 이어지는 ORT 갱신이다.
 - 네트워크를 끈 Windows Sandbox(Windows 11 Enterprise 26100, VC++ 재배포 패키지 없음)에서 같은 결과로 CPU·DML 모두 실행됐다. 이 `onnxruntime.dll`은 UCRT(`api-ms-win-crt-*`)·`dxgi`·`d3d12`·`DirectML.dll`만 import하므로 VC++ 런타임이 필요 없다. 반면 기본 설정(`/MD`)의 Rust 실행 파일은 `VCRUNTIME140.dll`이 없어 `0xC0000135`로 시작하지 못했고, `+crt-static`으로 빌드하면 실행됐다. 배포 실행 파일은 정적 CRT로 빌드해야 한다.
-- **라이선스가 1.12.1과 다르다.** 1.12.1의 ORT는 MIT이고 DirectML은 1(a)항의 단순 재배포 허용이다. Windows ML 런타임 약관(nupkg의 `license.txt`)은 `onnxruntime.dll`까지 포함한 재배포에 3(b)항 조건을 붙인다: 앱에 주요 기능을 더할 것, 배포자·최종 사용자가 이 약관만큼 Microsoft를 보호하는 조건에 동의하게 할 것, Microsoft를 면책할 것. GPL-3.0 배포와 양립하는지는 판단하지 않았다. Windows ML 채택 전에 결정할 항목이다.
+- **라이선스가 1.12.1과 다르다.** 1.12.1의 ORT는 MIT이고 DirectML은 1(a)항의 단순 재배포 허용이다. Windows ML 런타임 약관(nupkg의 `license.txt`)은 `onnxruntime.dll`까지 포함한 재배포에 3(b)항 조건을 붙인다: 앱에 주요 기능을 더할 것, 배포자·최종 사용자가 이 약관만큼 Microsoft를 보호하는 조건에 동의하게 할 것, Microsoft를 면책할 것. 이 조건은 GPL 배포와 충돌하므로, CloakFrame은 같은 날 Apache-2.0으로 라이선스를 바꿨다(계획 10.1).
 
 ### 조건
 
@@ -99,6 +99,6 @@ macOS에서 맞춘 구현을 다시 쓰면서 x86에서 처음엔 1 차이가 �
 ### 계획에 반영할 것
 
 - Windows의 `ort` API feature는 Windows ML 패키지의 ORT 버전으로 정해진다. 2.4.89 기준 `api-27`.
-- Windows 배포 실행 파일(worker 포함)은 `+crt-static`으로 빌드한다.
-- Windows ML 런타임의 재배포 조건이 GPL-3.0 배포와 맞는지 결정해야 한다. 맞지 않으면 대안은 1.24.4에 머무는 독립 ORT DirectML 패키지(MIT)나 ORT를 DML EP와 함께 직접 빌드하는 것이다.
+- Windows 배포 실행 파일은 `+crt-static`으로 빌드한다.
+- Windows ML 런타임의 재배포 조건은 Apache-2.0 전환으로 해결했다(계획 10.1). Microsoft 약관 3(b)의 동의 요건은 M7 전에 정한다.
 - 남은 Windows 항목: 깨끗한 Windows 10 설치, 작업 중 DML 실패 시 같은 입력을 CPU로 다시 실행하는 폴백, 다른 GPU 공급사(Intel·AMD) 실기기.

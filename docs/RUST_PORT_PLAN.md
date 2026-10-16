@@ -84,8 +84,8 @@
 | --- | --- | --- |
 | 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.36.x 기준 1.95)가 결정 |
 | UI | egui/eframe 0.36.x(wgpu, glow 대체 경로는 M0 확인), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda` 연동을 M0에서 확인. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL). UI 시험은 `egui_kittest` |
-| 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. M0에서 세 모델의 CPU·CoreML 결과가 1.12.1과 같음을 확인. RC이므로 정확한 버전으로 고정 |
-| 이미지 | `image` 0.25(필요 codec만), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(M0에서 바이트 일치 확인). `fast_image_resize`는 화면 표시용에만 |
+| 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 세 모델의 CPU·CoreML 결과가 1.12.1과 같음을 확인. RC이므로 정확한 버전으로 고정 |
+| 이미지 | `image` 0.25(필요 codec만), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(M0에서 바이트 일치 확인). 정확히 2배 축소일 때 OpenCV가 쓰는 `INTER_AREA` 경로는 아직 옮기지 않았으므로 M2에서 이식한다. `fast_image_resize`는 화면 표시용에만 |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. 처리량이 부족하면 4.4의 대안(라이브러리로 링크하면 LGPL 빌드만 가능) |
 | 동시성 | 작은 Tokio runtime(HTTP, 자식 프로세스 감독, 이벤트), Rayon pool(CPU 연산), 전용 추론 스레드 | CPU 연산을 async executor에서 돌리지 않는다 |
 | 설정·로그·오류 | serde + TOML + `directories`, `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
@@ -255,9 +255,9 @@ crates/
 
 - **완료:**
   - Apple M4에서 `ort` rc.14 + ORT 1.30으로 세 모델의 CPU·CoreML MLProgram 결과가 1.12.1과 같음. YuNet 원시 출력 직접 해석. `INTER_LINEAR` 이식 resize 바이트 일치. ([기록](M0_ORT_SPIKE.md))
-  - Windows ML 2.4.89(ORT 1.27.1)를 `ort::init_from`과 `api-27`로 불러 DML EP가 붙음. 네트워크 없는 Windows 11 Sandbox에서 실행. ([기록](M0_ORT_SPIKE.md#windows-ml--directml))
+  - Windows ML 2.4.89(ORT 1.27.1)를 `ort::init_from`과 `api-27`로 불러 DML EP가 붙음. RTX 5080에서 세 모델의 CPU 결과가 1.12.1과 같고 DML 결과도 개수가 같음(IoU ≥ 0.999997). YOLO5Face-n·YuNet은 모든 노드가, 번호판은 NMS 하나만 빼고 DML에서 실행. 네트워크 없는 Windows 11 Sandbox에서 실행(정적 CRT 빌드 필요). x86에서 `INTER_LINEAR` 이식이 36개 크기 조합에서 바이트 일치. ([기록](M0_ORT_SPIKE.md#windows-ml--directml))
 - **남은 작업:**
-  - DirectML 결과를 1.12.1과 비교, 깨끗한 Windows 10 1903 VM에서 설치·오프라인 실행. Linux CPU 비교
+  - 깨끗한 Windows 10 1903 VM에서 설치·오프라인 실행, 작업 중 DML 실패 시 같은 입력의 CPU 재실행, Intel·AMD GPU 실기기. Linux CPU 비교
   - macOS·Linux도 `api-27`로 다시 빌드해 같은 결과인지 확인. 세 OS에서 ORT 텔레메트리를 끈 상태로 네트워크 감시
   - egui spike: 한글·일본어 표시와 텍스트 입력(IME), VoiceOver·Narrator, OS 파일 드롭, 네이티브 메뉴(`muda`), 4K 텍스처 확대·이동, 1080p 프레임 30fps 업로드, GPU 없는 환경·원격 데스크톱
   - EXIF writer spike: JPEG/PNG/WebP/TIFF에 allowlist 태그 새로 쓰기
@@ -273,7 +273,7 @@ crates/
 
 ### M2 — 사진 (CPU, YOLO5Face-n)
 
-- **작업:** 지원 형식·bit depth·alpha·방향, 색 정책, EXIF writer, 마스크 4종·shape·padding·roll·soft edge, 인코딩 기본값, 게시 게이트, 검토 결정 적용, 익명화 없이 내보내기
+- **작업:** `INTER_LINEAR` 이식 규칙(M0 기록)을 시험으로 고정하고 2배 축소의 `INTER_AREA` 경로 추가, 지원 형식·bit depth·alpha·방향, 색 정책, EXIF writer, 마스크 4종·shape·padding·roll·soft edge, 인코딩 기본값, 게시 게이트, 검토 결정 적용, 익명화 없이 내보내기
 - **완료 기준:** 사진 fixture 통과, D2·D3·D6·D9·P-2(타입) 시험 통과
 
 ### M3 — 모델·GPU·다운로드·타일
@@ -349,7 +349,7 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받고, `cargo-deny`로 의존�
 
 | 플랫폼 | 패키지 | 포함할 것 |
 | --- | --- | --- |
-| Windows | Velopack 설치본 | Windows ML 런타임 DLL, FFmpeg, 앱. DLL 검색 경로를 앱 폴더로 제한. Authenticode 확보 여부는 운영 결정(ROADMAP) |
+| Windows | Velopack 설치본 | Windows ML 런타임 DLL, FFmpeg, 앱. 실행 파일은 `+crt-static`으로 빌드한다(VC++ 런타임 없는 PC에서 시작 실패를 막음, M0 확인). `System32`에 OS의 오래된 ORT·DirectML이 있으므로 `ort::init_from`에 앱 폴더의 절대 경로를 준다. DLL 검색 경로를 앱 폴더로 제한. Authenticode 확보 여부는 운영 결정(ROADMAP) |
 | macOS | app bundle + DMG | Developer ID 서명과 공증, Sparkle 2.9.x, ORT dylib, FFmpeg |
 | Linux | AppImage(Ubuntu 24.04에서 빌드) + Velopack | CPU ORT, FFmpeg |
 
