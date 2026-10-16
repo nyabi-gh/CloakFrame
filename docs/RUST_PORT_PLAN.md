@@ -4,7 +4,7 @@
 
 **레거시 정책:** 1.12.1이 기존 구현의 마지막 릴리스다. 기존 코드는 더 이상 수정·릴리스하지 않으며, 이 문서에서는 Rust 구현이 대체할 **동작의 근거**로만 쓴다. 기존 코드 링크는 위 분석 커밋에 고정한다.
 
-**권고:** 독립된 Rust 애플리케이션을 **headless engine과 CLI부터** 완성하고, 1.12.1 동작에서 추출한 fixture와 2절 결함의 올바른 기대 결과로 검증한 뒤 desktop UI를 붙여 기존 배포판을 교체한다. 2절의 P0·P1 결함은 Rust 구현의 필수 요건으로 처음부터 반영한다. GUI는 egui/eframe(M0 spike로 확정), 추론은 ort + ONNX Runtime, 이미지 처리와 EXIF 작성은 Rust 구현, 동영상은 번들 FFmpeg 외부 프로세스를 사용한다. 안전한 출력 게시와 검토 상태를 핵심 도메인으로 만든다. 프로세스 격리는 신뢰하지 않는 **사용자 ONNX 모델의 추론**에 집중하고, 해시로 고정된 번들 모델과 순수 Rust codec은 별도 sandbox 대상으로 만들지 않는다. Qt와 OpenCV를 제품 런타임에서 제거하되, 검증된 네이티브 라이브러리까지 무리하게 재작성하지 않는다.
+**권고:** 독립된 Rust 애플리케이션을 **headless engine과 CLI부터** 완성하고, 1.12.1 동작에서 추출한 fixture와 2절 결함의 올바른 기대 결과로 검증한 뒤 desktop UI를 붙여 기존 배포판을 교체한다. 2절의 P0·P1 결함은 Rust 구현의 필수 요건으로 처음부터 반영한다. GUI는 egui/eframe(M0 spike로 확정), 추론은 ort + ONNX Runtime, 이미지 처리와 EXIF 작성은 Rust 구현, 동영상은 번들 FFmpeg 외부 프로세스를 사용한다. 안전한 출력 게시와 검토 상태를 핵심 도메인으로 만든다. 얼굴은 YOLO5Face-n·YuNet, 번호판은 YOLOv9-t의 해시로 고정된 번들 모델만 지원하고 **사용자 ONNX(SCRFD) 지원은 제거한다**. 추론은 GPU driver 장애를 격리하기 위해 별도 worker 프로세스에서 하지만, 신뢰하지 않는 모델을 실행하지 않으므로 첫 stable에 OS sandbox를 요구하지 않는다. Qt와 OpenCV를 제품 런타임에서 제거하되, 검증된 네이티브 라이브러리까지 무리하게 재작성하지 않는다.
 
 **호환 범위:** 기존 사용자 이전은 CloakFrame만 대상으로 한다. Redactly는 지원을 종료한 레거시로 취급하며, 설정·모델 캐시·승인 기록·앱 ID·설치 및 업데이트 경로의 호환 계층을 구현하지 않는다. 아래의 Redactly 언급은 기존 구현 분석 또는 지원 제외 범위의 설명이다.
 
@@ -55,10 +55,10 @@ flowchart TD
 | --- | --- | --- |
 | GUI·사용자 상호작용 | Qt Widgets, 드래그앤드롭, 폴더 입력, 고급 설정, 상태·진행률·결과 목록. `MainWindow.cpp` 약 3,070행에서 검증·모델 캐시·설정·업데이트·검토까지 조정 | 데스크톱 동작과 접근성 작업은 자산. 실행 전 검증을 서비스로 이동하고 UI는 명령·상태 표시만 담당. [MainWindow](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/MainWindow.cpp) |
 | 이미지 입출력 | 확장자 스캔 뒤 실제 컨테이너 확인, 비공개 원본 사본, Qt로 크기·프레임 수 검사, OpenCV 디코딩·인코딩, EXIF 방향 정규화, 메모리 예약, 원본 식별자 검사 | 안전 검사는 유지. 중복 파싱과 서로 다른 디코더의 지원 차이를 줄인다. 16-bit/alpha와 방향을 명시적 타입·포맷 계약으로 관리. [이미지 처리](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L987), [ImageIo](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ImageIo.cpp) |
-| 얼굴 감지 | YOLO5Face-n 640 입력, SCRFD 다중 출력/stride 해석·landmark(사진 640, 영상 960 입력), YuNet 640 입력. 네 감지기 모두 추론 락. 전처리·추론·후처리 시간 측정은 YOLO5Face와 번호판만 | **추론에 OpenCV `FaceDetectorYN`을 쓰는 것은 YuNet뿐**이고 YuNet은 GPU 옵션이 없는 CPU 전용이다. YOLO와 번호판도 전처리에 `cv::dnn::blobFromImage`를 쓰므로 OpenCV 제거 시 함께 대체한다. ORT로 통합하려면 YuNet 원시 출력 해석을 새로 검증해야 한다. 모델별 전처리·출력 계약을 공통 인터페이스 뒤에 둔다. [YOLO](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/Yolo5FaceDetector.cpp#L217), [SCRFD](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ScrfdFaceDetector.cpp), [YuNet](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/YuNetFaceDetector.cpp#L110), [영상 입력 크기](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L1514) |
+| 얼굴 감지 | YOLO5Face-n 640 입력, SCRFD 다중 출력/stride 해석·landmark(사진 640, 영상 960 입력), YuNet 640 입력. 네 감지기 모두 추론 락. 전처리·추론·후처리 시간 측정은 YOLO5Face와 번호판만 | **추론에 OpenCV `FaceDetectorYN`을 쓰는 것은 YuNet뿐**이고 YuNet은 GPU 옵션이 없는 CPU 전용이다. YOLO와 번호판도 전처리에 `cv::dnn::blobFromImage`를 쓰므로 OpenCV 제거 시 함께 대체한다. ORT로 통합하려면 YuNet 원시 출력 해석을 새로 검증해야 한다. 모델별 전처리·출력 계약을 공통 인터페이스 뒤에 둔다. SCRFD(사용자 모델)는 Rust에서 지원하지 않는다. [YOLO](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/Yolo5FaceDetector.cpp#L217), [SCRFD](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ScrfdFaceDetector.cpp), [YuNet](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/YuNetFaceDetector.cpp#L110), [영상 입력 크기](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L1514) |
 | 번호판 감지 | YOLOv9-t end-to-end ONNX, 통상 512 입력, letterbox·출력 텐서 검사 | 얼굴 결과와 합칠 때 종류가 사라진다. 종류·모델·관측 출처를 유지하고 NMS/추적을 종류별로 수행. [PlateDetector](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/PlateDetector.cpp), [FaceDetection](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/include/cloakframe/FaceDetection.hpp) |
-| 모델 관리 | URL·SHA-256·예상 크기 카탈로그, 첫 사용 다운로드 동의, 재시도·크기/시간 제한, 원자적 캐시 저장, 사용자 모델 digest+size 동의. 모델 경로는 CloakFrame cache, Redactly cache, `앱/models`, macOS 번들 `Resources/models`, 개발 경로, `cwd/models`의 6개 후보를 차례로 탐색한다. 실행 시작 시 MainWindow가 번들 모델 digest를 비교하고, 각 감지기가 읽은 bytes를 다시 hash한 뒤 그 bytes로 세션을 만든다 | 상당 부분 유지할 정책. 특히 hash한 bytes로 세션을 만드는 방식(경로 재오픈 없음)은 TOCTOU 방지 계약으로 유지. 다운로드는 Qt 수신 버퍼를 64KB로 제한할 뿐 본문 전체를 `QByteArray` 하나에 누적한 뒤 hash하고(상한 `max(예상 크기×4, 64MB)`), ModelStore가 임시 파일에 쓴 뒤 디스크에서 다시 hash한다. 메모리 사본은 하나지만 모델 크기만큼 RAM을 쓴다. [후보 경로](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelCatalog.cpp#L32) ONNX 파싱은 메인 프로세스 내부이며 SCRFD용 자체 protobuf graph patcher까지 있다. 다운로드를 디스크로 스트리밍하고 승인한 바이트만 격리 추론기로 전달. 그래프 재작성은 제품 런타임에서 제거. [카탈로그](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelCatalog.cpp#L29), [다운로드](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelDownload.cpp#L51), [저장](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelStore.cpp), [patcher](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/OnnxGraphPatch.cpp) |
-| GPU·CPU 폴백 | macOS CoreML MLProgram/캐시, Windows DirectML 순차 실행·메모리 패턴 비활성화. Linux CUDA/MIGraphX/ROCm 탐색 코드. 로드·warmup 중 ORT 오류 시 CPU 세션 재생성, 작업 중 실패 시 같은 이미지/프레임을 CPU로 한 번 재실행하고 이후 run 전체를 CPU로 처리. 두 폴백 모두 `Ort::Exception`만 잡으므로 `std::bad_alloc` 같은 다른 예외는 폴백되지 않는다. YuNet은 가속 대상이 아님. 사용자 모델도 GPU 설정을 그대로 따른다 | 공식 Linux 패키지는 CPU ORT이므로 GPU 탐색 코드 존재가 배포 기능을 뜻하지 않는다. 같은 작업을 CPU에서 다시 처리하는 정책은 유지하되, 폴백 대상 오류의 범위(EP 오류·GPU 메모리 부족·worker 종료)를 명시적으로 정한다. EP 등록과 실제 GPU 노드 실행은 따로 측정. [OrtAcceleration](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/OrtAcceleration.cpp), [폴백](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L479), [release](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/.github/workflows/release.yml) |
+| 모델 관리 | URL·SHA-256·예상 크기 카탈로그, 첫 사용 다운로드 동의, 재시도·크기/시간 제한, 원자적 캐시 저장, 사용자 모델 digest+size 동의. 모델 경로는 CloakFrame cache, Redactly cache, `앱/models`, macOS 번들 `Resources/models`, 개발 경로, `cwd/models`의 6개 후보를 차례로 탐색한다. 실행 시작 시 MainWindow가 번들 모델 digest를 비교하고, 각 감지기가 읽은 bytes를 다시 hash한 뒤 그 bytes로 세션을 만든다 | 상당 부분 유지할 정책. 특히 hash한 bytes로 세션을 만드는 방식(경로 재오픈 없음)은 TOCTOU 방지 계약으로 유지. 다운로드는 Qt 수신 버퍼를 64KB로 제한할 뿐 본문 전체를 `QByteArray` 하나에 누적한 뒤 hash하고(상한 `max(예상 크기×4, 64MB)`), ModelStore가 임시 파일에 쓴 뒤 디스크에서 다시 hash한다. 메모리 사본은 하나지만 모델 크기만큼 RAM을 쓴다. [후보 경로](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelCatalog.cpp#L32) ONNX 파싱은 메인 프로세스 내부이며 SCRFD용 자체 protobuf graph patcher까지 있다. 다운로드를 디스크로 스트리밍하고 hash한 바이트만 추론 worker로 전달. 사용자 모델 동의·graph patcher는 사용자 ONNX 지원과 함께 제거. [카탈로그](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelCatalog.cpp#L29), [다운로드](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelDownload.cpp#L51), [저장](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ModelStore.cpp), [patcher](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/OnnxGraphPatch.cpp) |
+| GPU·CPU 폴백 | macOS CoreML MLProgram/캐시, Windows DirectML 순차 실행·메모리 패턴 비활성화. Linux CUDA/MIGraphX/ROCm 탐색 코드. 로드·warmup 중 ORT 오류 시 CPU 세션 재생성, 작업 중 실패 시 같은 이미지/프레임을 CPU로 한 번 재실행하고 이후 run 전체를 CPU로 처리. 두 폴백 모두 `Ort::Exception`만 잡으므로 `std::bad_alloc` 같은 다른 예외는 폴백되지 않는다. YuNet은 가속 대상이 아님. 사용자 모델(SCRFD)도 GPU 설정을 그대로 따른다 | 공식 Linux 패키지는 CPU ORT이므로 GPU 탐색 코드 존재가 배포 기능을 뜻하지 않는다. 같은 작업을 CPU에서 다시 처리하는 정책은 유지하되, 폴백 대상 오류의 범위(EP 오류·GPU 메모리 부족·worker 종료)를 명시적으로 정한다. EP 등록과 실제 GPU 노드 실행은 따로 측정. [OrtAcceleration](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/OrtAcceleration.cpp), [폴백](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L479), [release](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/.github/workflows/release.yml) |
 | 익명화 | 모자이크·블러·검정 채움·사용자 이미지, 사각/타원, padding·soft edge. 사용자 이미지 아래 모자이크, landmark 기반 roll, 타원 모서리와 가는 ROI 보완 | geometry 회귀 테스트는 유지. 식별 방지 강도는 별도 평가. 불투명 채움을 안전 기본값으로 제안하며 기존 방식은 유지한다. [Mosaic](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/Mosaic.cpp) |
 | 동영상 입출력 | QProcess FFmpeg/ffprobe, 로컬 파일 protocol 제한, raw BGR, 선읽기·버퍼 재사용, 분석(긴 변 960 축소)/인코딩 2패스. 인코딩 전 하드웨어 인코더 probe, 인코딩 중 실패 시 인코딩 패스만 소프트웨어로 재시작. rotation은 pixel에 반영하고 odd size는 오른쪽·아래 1px crop | VFR은 `setpts`+`fps`로 CFR화하지만 검토 preview는 `-copyts`+`fps(start_time)`+`select(t)`의 다른 필터 경로로 float 초 기준 프레임을 고른다. 기준점도 다르다. 분석은 첫 frame PTS(`STARTPTS`)로, preview는 ffprobe stream `start_time`으로 맞추므로 edit list·B-frame으로 둘이 다르면 검토 frame이 한 칸 어긋날 수 있다. 오디오는 `start_time`이 양수일 때만 `-ss`를 적용하고 `-t`(stream duration, 없으면 format duration)로 자르며, CFR 변환으로 frame 수가 바뀌어도 보정하지 않는다. 비트스트림·색 정보·오디오 동기화 검증이 필요. [preview 기준점](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/VideoIo.cpp#L543), [오디오 trim](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/VideoIo.cpp#L1160) 두 패스 계약은 유지하되 시간축을 하나의 값으로 공유. [VideoIo](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/VideoIo.cpp#L709), [인코더 probe](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/VideoIo.cpp#L293), [SW 재시도](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/VideoProcessor.cpp#L1049), [preview 선택](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/VideoReviewTypes.cpp#L135) |
 | 추적·장면 전환 | 고/저 점수 2단계 greedy IoU와 속도 예측, 앞/뒤 추적 병합, 보간·평활화·끝 연장·cut 경계 보정. SceneCut은 48×27 회색조 차이·최근 중앙값·후속 2프레임 확인 | 이름이 `ByteTracker`여도 표준 ByteTrack의 Kalman 필터·선형 할당(LAPJV) 구현과 같지 않다. 보간 box는 이미 `interpolated`로 구분되어 검토 UI까지 전달된다. 평활화는 **관측 box**에 대해서만 원래 box와의 합집합을 쓰며, 합집합 면적이 1.25배를 넘으면 원래 box로 되돌린다. 보간 box에는 합집합을 쓰지 않아 평활화로 줄어들 수 있다. SceneCut은 후보 확정을 기다리는 2프레임 동안 새 spike를 평가하지 않아 그 안의 두 번째 cut을 놓친다(코드 주석에 명시). 보간 구분은 유지하고, 관측·보간 모두 평활화가 보호 영역을 줄이지 않도록 바꾸면서 종류별 연관·짧은 구간 처리·명시적 불확실성으로 재설계. [Tracking](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/Tracking.cpp), [SceneCut](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/SceneCut.cpp) |
@@ -84,7 +84,7 @@ flowchart TD
 | 우선순위 | 근거·문제 | 재설계 조치와 사용자 영향 |
 | --- | --- | --- |
 | P0 | `ProcessorWorker`가 출력을 저장·게시한 다음 omitted/gap/drop 등의 경고를 집계한다. omitted 수와 미해결 구간은 저장 전에 이미 알고 있다. 정상 폴더에 파일은 있으나 `NeedsReview`일 수 있다. `NeedsReview`에는 트랙 제외·원본 복사·영역 0개·metadata 복사 실패처럼 사용자의 명시적 결정이나 비감지 사유도 섞여 있다. 영상에서 metadata 보존 설정이 켜져 있으면 “영상은 보존 불가” 경고로 모든 영상이 `NeedsReview`가 된다 | 자동 감지의 미해결 문제(omitted, dropped track, 미확인 gap)가 있으면 정상 출력 게시를 막는다. 사용자가 검토에서 명시적으로 결정한 항목은 차단하지 않고 결과에 적용 범위로 표시한다. 검토 작업으로 보관하거나 별도 명시적 예외 내보내기를 제공. 자동 배치에서 결과가 바로 생기지 않을 수 있음을 안내. [저장 후 경고](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L1418), [상태 결정](https://github.com/nyabi-gh/CloakFrame/blob/735f63cda62a8b1753a3e82befd77c30fbe605bb/src/ProcessorWorker.cpp#L803) |
-| P0 | 사용자 승인·해시 일치는 출처/바이트 확인이지 ONNX의 안전성 증명이 아니다. ORT와 자체 graph patcher가 앱 안에서 파싱. patcher는 사용자 SCRFD의 입력과 Resize sizes를 요청 크기(사진 640, 영상 960)로 다시 쓴다. 고정 shape가 요청 크기와 다르면 크든 작든 양방향으로 바꾸고 dynamic 모델도 고정한다. 패치 결과는 probe 실행으로 확인한다. 실패 시 원래 크기로 돌아가는 것은 CPU의 고정 shape 모델뿐이고, dynamic 모델은 패치하지 않은 그래프를 요청 크기로 실행하며, GPU 사용 중 실패는 예외로 올라가 CPU 재시도로 처리된다. ROADMAP은 patcher가 파일 크기보다 훨씬 큰 할당을 할 수 있다고 기록한다 | 별도 추론 프로세스, 리소스 제한, 네트워크·출력 권한 제거. SCRFD는 유지하고 런타임 graph patch를 없앤다. 고정 shape 모델은 원래 입력 크기로, dynamic 모델은 ORT에 입력 크기를 직접 지정해 실행한다. 이로써 **요청 크기와 다른 고정 shape 모델 전부**의 동작이 바뀐다. 작은 모델은 빨라지는 대신 작은 얼굴 재현율이 떨어질 수 있고(영상 960 확대도 사라짐), 큰 모델은 느려진다. 속도가 아니라 정확도 변화를 측정·고지한다 |
+| P0 | 사용자 승인·해시 일치는 출처/바이트 확인이지 ONNX의 안전성 증명이 아니다. 신뢰하지 않는 사용자 SCRFD 모델을 ORT와 자체 graph patcher가 앱 프로세스 안에서 파싱한다. patcher는 입력과 Resize sizes를 요청 크기(사진 640, 영상 960)로 다시 쓰며, ROADMAP은 patcher가 파일 크기보다 훨씬 큰 할당을 할 수 있다고 기록한다 | **사용자 ONNX 지원을 제거한다.** 번들 모델만 실행하므로 신뢰하지 않는 모델의 sandbox, graph patch, 사용자 모델 동의가 모두 필요 없어진다. SCRFD를 쓰던 사용자는 YOLO5Face-n 또는 YuNet으로 옮겨야 하며, 이를 동작 변경 장부와 첫 실행 안내에 기록한다 |
 | P0 | `FaceDetection`에 종류가 없고 face+plate 결과가 같은 추적기로 들어간다. NMS는 감지기 내부에서만 수행하므로 혼합되는 것은 추적 연관이다. 영상 감지 임계값 `min(0.1, scoreThreshold)`가 번호판에도 적용되어, 낮은 점수의 번호판 후보가 low-score 단계에서 얼굴 track을 연장하거나 그 반대가 될 수 있다 | `DetectionKind`를 끝까지 보존. cross-class 연관 금지. 잘못된 트랙·검토 분류 위험을 예방하되 실제 발생률은 미측정 |
 | P1 | 큰 사진도 얼굴 640·번호판 512 단일 입력으로 줄인다(타일링 없음). 영상은 분석 해상도를 긴 변 960으로 먼저 줄이고, 얼굴 모델은 SCRFD만 960·나머지 640, 번호판은 512 입력 | 전체 보기+겹치는 타일 감지, 작은 객체 평가셋, 품질 preset. 처리 시간 증가는 명시적으로 측정 |
 | P1 | 영상의 전체 detections와 양방향 tracks가 RAM에 쌓이고, 고정 상한을 넘는 긴 영상은 실패한다 | 감지·track 결과를 디스크 레코드 파일에 쓰고 active track만 메모리에 두되 전체 양방향 추적은 유지(5.4절), preview cache도 byte 예산. 긴 영상에서 RAM이 길이에 비례하지 않게 하고 현재 상한 때문에 실패하던 길이도 처리 |
@@ -144,7 +144,7 @@ wgpu의 OS별 backend와 추론용 GPU는 별개의 선택이다. GPU가 없는/
 | --- | --- | --- | --- |
 | **ort + ORT** | 기존 ONNX 자산 활용, CPU와 여러 EP, 모델 변환 비용이 작음 | Rust wrapper는 Microsoft 공식 Rust API와 동일하지 않음. ort는 MIT/Apache-2.0, ORT는 MIT이며 EP·번들 런타임 조건은 별도. 확인한 ort 2.0.0-rc.14는 Environment/API 변경과 ORT 1.31 반영, MSRV 1.92를 명시 | **선정하되 exact pin과 실기기 검증 필수.** RC를 안정 API라고 표현하지 않음. workspace의 최소 toolchain은 eframe의 MSRV 1.95가 결정한다. [ort][A-ort], [rc.14 변경][A-ort-release] |
 | tract | Rust 중심의 작은 배포와 ONNX 지원. 현재 공식 문서는 CPU뿐 아니라 Metal/CUDA도 명시 | 대상 모델의 operator·shape·Windows GPU 지원 조합을 확인해야 함. MIT/Apache-2.0. 과거의 “CPU 전용” 설명은 현재 자료와 맞지 않음 | 별도 CPU/소형 배포 실험 후보. 세 OS 주력 엔진으로는 미검증. [공식 저장소][A-tract] |
-| Burn + burn-onnx | Rust GPU backend와 빌드 시 모델 코드 생성. WGPU 계열 활용 가능 | opset 범위 지원과 모든 operator configuration 지원은 다름. 동적 사용자 ONNX 로딩 요구와 빌드 시 변환 방식의 차이. MIT/Apache-2.0 | 번들 모델 연구 후보. SCRFD 사용자 모델을 포함한 주 엔진 대체는 보류. [공식 ONNX 문서][A-burn] |
+| Burn + burn-onnx | Rust GPU backend와 빌드 시 모델 코드 생성. WGPU 계열 활용 가능 | opset 범위 지원과 모든 operator configuration 지원은 다름. 번들 모델 3종만 지원하므로 빌드 시 변환 방식도 가능. MIT/Apache-2.0 | 번들 모델 연구 후보. Windows GPU와 세 모델의 operator 검증 전에는 주 엔진 대체 보류. [공식 ONNX 문서][A-burn] |
 | Candle | Rust 중심 ML, CPU/CUDA/Metal, 모델 코드를 직접 제어 | ONNX 지원을 ORT 전체 호환으로 간주할 수 없음. Windows 다중 vendor GPU 요구를 별도로 해결해야 함. MIT/Apache-2.0 | 이 앱에서는 모델 구현·검증 부담이 더 큼. [공식 저장소][A-candle] |
 | 플랫폼별 CoreML/WinML/OpenVINO 직접 구현 | 특정 장치에 맞춘 최적화·공급사 지원 | 모델 변환·패키지·후처리·결과 parity 경로가 늘어남 | 공통 ORT adapter 안의 EP 우선. 필요가 측정된 플랫폼만 별도 adapter 검토 |
 
@@ -234,18 +234,15 @@ flowchart LR
     UI --> C[core: 타입·기하·검토 정책]
     E --> C
     E <-->|제한된 IPC| W[worker: 번들 모델 추론]
-    E <-->|제한된 IPC| S[worker: 사용자 모델 추론, sandbox CPU]
     W --> C
-    S --> C
     W --> O[ORT / EP]
-    S --> OC[ORT CPU]
     E --> N[image / moxcms / EXIF writer]
     E <-->|pipe| F[FFmpeg / ffprobe 프로세스]
     E --> D[비공개 감지 기록·snapshot·staging]
     E --> P[검증 후 no-replace 게시]
 ```
 
-UI(또는 CLI)와 `engine`은 같은 프로세스의 다른 책임이다. UI thread와 engine runtime은 메시지로 통신한다. 추론은 항상 `worker` 프로세스에서 한다. ORT를 UI 프로세스에 링크하지 않고, GPU driver hang·crash를 worker 종료로 복구하기 위해서다. 번들 모델 worker는 hash로 고정된 모델만 실행하므로 GPU EP를 쓰며 OS sandbox 대상이 아니다. **사용자 ONNX는 별도 worker 인스턴스에서 strict CPU sandbox profile로만** 실행한다. 이렇게 하면 CoreML·DirectML과 sandbox를 함께 만족시키는 문제가 사라진다. 이미지 decode·encode는 순수 Rust(`image`, `moxcms`, 자체 EXIF writer)이므로 engine 안의 Rayon pool에서 decoder limit을 걸고 실행한다. 별도 codec worker는 두지 않는다. 네이티브 codec을 도입하게 되면 그것만 worker로 격리한다. FFmpeg도 engine이 감독한다. 별도 프로세스 자체는 sandbox가 아니므로 OS 권한 제한은 9절의 독립 요건이다.
+UI(또는 CLI)와 `engine`은 같은 프로세스의 다른 책임이다. UI thread와 engine runtime은 메시지로 통신한다. 추론은 항상 `worker` 프로세스에서 한다. ORT를 UI 프로세스에 링크하지 않고, GPU driver hang·crash를 worker 종료로 복구하기 위해서다. worker는 hash로 고정된 번들 모델만 실행하고 engine이 만든 tensor만 받으므로 GPU EP를 그대로 쓰며 OS sandbox 대상이 아니다. 사용자 ONNX를 지원하지 않으므로 CoreML·DirectML과 sandbox를 함께 만족시킬 문제도 없다. 이미지 decode·encode는 순수 Rust(`image`, `moxcms`, 자체 EXIF writer)이므로 engine 안의 Rayon pool에서 decoder limit을 걸고 실행한다. 별도 codec worker는 두지 않는다. 네이티브 codec을 도입하게 되면 그것만 worker로 격리한다. FFmpeg도 engine이 감독한다. 별도 프로세스 자체는 sandbox가 아니므로 OS 권한 제한은 9절의 독립 요건이다.
 
 플랫폼 코드는 `engine/platform/{windows,macos,unix}` 및 UI의 작은 native adapter에 한정한다. OS별 출력 게시·프로세스 제어·설정 이전을 동일한 계약으로 시험한다. 교체나 실패 주입이 필요한 추론 transport, media process, 파일 게시, HTTP 경계에만 trait를 두고, 기하·추적 내부는 구체 타입과 함수로 구현한다.
 
@@ -352,7 +349,7 @@ U8/U16 grayscale/RGB/RGBA, alpha, EXIF 1–8 방향을 별도 시험한다. CMYK
 | core | std, 검증된 수치/이미지 연산, serde 정도. GUI·네트워크·파일시스템·ORT 금지. codec feature가 전이 의존성으로 들어오는지도 검사 | 값 타입, mask/track/review 함수, versioned worker DTO. 앱 전체의 내부 타입을 공개하지 않음 |
 | engine | core, Tokio, Rayon, image, moxcms, kamadak-exif, HTTP, OS API. ORT·네이티브 codec·UI 금지 | 작업 명령·event stream·review query. CLI는 같은 공개 API만 사용. 최종 게시 API는 내부 전용 |
 | desktop | engine/core, egui/eframe, Fluent, platform updater. pixel 처리·ffmpeg 인자 생성 금지 | 실행 파일. 화면 상태와 presentation model만 소유 |
-| worker | core, ort. engine/desktop 의존 금지. 번들 모델 mode와 사용자 모델 sandbox CPU mode를 시작 인자로 구분 | 실행 파일의 versioned IPC. 전처리된 tensor를 받아 원시 출력 또는 해석된 감지를 반환. 일반 플러그인/원격 RPC 서버로 노출하지 않음 |
+| worker | core, ort. engine/desktop 의존 금지. 번들 모델 3종만 로드하며 manifest의 hash와 다른 모델은 거부 | 실행 파일의 versioned IPC. 전처리된 tensor를 받아 원시 출력 또는 해석된 감지를 반환. 일반 플러그인/원격 RPC 서버로 노출하지 않음 |
 
 worker 모드에 필요한 feature만 OS별로 빌드하고 `--all-features`로 상충 EP를 한 번에 묶지 않는다. headless core/engine 시험은 GUI·GPU 없이 실행한다. `unsafe`는 기본 금지하고 필요한 FFI/OS adapter에서만 국소 허용, safety 설명과 회귀 시험을 붙인다. 크레이트 분리는 컴파일·보안 경계의 필요가 실제로 나타날 때 늘린다.
 
@@ -364,8 +361,9 @@ worker 모드에 필요한 feature만 OS별로 빌드하고 `--all-features`로 
 | `ImageScanner`, `OutputPlan`, `PathUtil`, `PathSafety` | engine scan/snapshot/publish | 취소·입력 중복·출력 재스캔 방어 추가. 원본 불변·동명 파일 no-replace 유지 |
 | `ProcessorWorker`, `ProcessingRequest`/`RunSummary`, `OrderedParallel` | engine jobs + core 상태 타입 | 큰 worker의 책임 분리. 자동/검토 mode·진행률·결과 순서 유지, 미해결 결과의 정상 게시 차단은 의도적 변경 |
 | `ImageIo`의 codec·metadata 처리 | engine codecs/metadata/snapshot/publish | 지원 포맷·bit depth·alpha·orientation 회귀셋으로 대체. Exiv2 대신 allowlist EXIF writer. EXIF 선택 보존·GPS 독립 동의 유지. 색 공간 유지 + 표준 profile |
-| `Yolo5FaceDetector`, `YuNetFaceDetector`, `ScrfdFaceDetector`, `PlateDetector` | worker inference/model adapter | 네 모델 경로 유지. YuNet ORT 후처리 새 구현(OpenCV `FaceDetectorYN`과 `blobFromImage` 전처리 대체), SCRFD는 patch 없이 고정 shape는 원래 크기·dynamic은 지정 크기로 실행. box·score·landmark·omission parity 시험 |
-| `OnnxGraphPatch` | 제거; worker의 shape 검증으로 대체 | 런타임 protobuf 변조 제거. 현재 640/960으로 확대되던 작은 고정 shape 사용자 모델은 원래 크기로 돌아 작은 얼굴 재현율이 떨어질 수 있음을 고지. dynamic 모델의 사진/영상 입력 크기 규칙을 정하고 지원 범위를 모델 fixture로 명시 |
+| `Yolo5FaceDetector`, `YuNetFaceDetector`, `PlateDetector` | worker inference/model adapter | 세 모델 경로 유지. YuNet ORT 후처리 새 구현(OpenCV `FaceDetectorYN`과 `blobFromImage` 전처리 대체). box·score·landmark·omission parity 시험 |
+| `ScrfdFaceDetector`, `CustomModelConsent`, MainWindow의 사용자 모델 선택 | 없음(제거) | 사용자 ONNX 지원 종료. 동작 변경 장부와 첫 실행 안내에 기록 |
+| `OnnxGraphPatch` | 없음(제거) | SCRFD 전용이었으므로 사용자 ONNX 지원과 함께 제거 |
 | `ModelCatalog`, `ModelDownload`, `ModelStore` | engine models + manifest | 동의·hash·크기·재시도 유지. 메모리 누적 다운로드를 디스크 stream으로, 모델의 cwd·개발 경로 탐색 제거. 현재 CloakFrame cache만 검증 후 이전하며 Redactly cache 제자리 조회는 제거 |
 | `OrtAcceleration` | worker device/session manager | CoreML/DML/CPU 유지, 작업 중 GPU 실패 시 같은 item/frame CPU 재실행(현재 `ProcessorWorker` 책임) 유지. 폴백 대상 오류를 `Ort::Exception`에 한정하지 않고 명시한 목록(EP 오류·GPU 메모리 부족·worker 비정상 종료)으로 정함. Linux GPU는 실제 배포·검증된 조합만 노출. fallback 이유를 비민감 오류 코드로 표시 |
 | `Mosaic`, MainWindow의 custom image 선택·미리보기 | core mask + desktop mask editor | 4가지 방식·shape·padding·roll 유지. 불투명 채움 기본, 투명 custom image 밑 안전 fill, soft edge는 보호 core 바깥에만 적용 |
@@ -380,7 +378,7 @@ worker 모드에 필요한 feature만 OS별로 빌드하고 `--all-features`로 
 | `SelfUpdater*`, `UpdateSignature` | desktop updates + engine download/verify + native adapter | 기존 설치/feed 계보 유지. 키 없는 빌드의 무검증 수락(`Unpinned`) 제거, downgrade·키 순환·실시간 opt-out 강화 |
 | CMake/CTest/GitHub Actions/release scripts | Cargo + native manifest + Actions/package tests | 기존 보안 시험의 의도를 새 계약의 fixture로 이전. Qt/OpenCV/Exiv2 빌드는 이어받지 않고 FFmpeg/ORT/Sparkle의 배포 검증 유지 |
 
-**동작 변경 장부**를 M0부터 유지한다. 각 변경에는 1.12.1 동작, 새 계약, 사용자 영향, fixture와 수용 이유를 기록한다. 최소 항목은 2절 결함 수정으로 생기는 변경(미해결 자동 감지 문제의 게시 차단, 종류별 추적, 영상 상한 초과의 실패→검토 전환, 평활화·연속 cut 수정), 기본 마스크 강도, metadata 원본 복사 분리, 색 공간 유지와 표준 profile 교체(알 수 없는 profile만 sRGB 변환), 출력 포맷별 EXIF 선택 보존 지원 범위, odd size pad, YuNet 후처리와 GPU 경로 신설, SCRFD graph patch 제거와 입력 크기 변화, 사용자 모델의 strict CPU 전환(현재는 GPU 설정을 따름), 키 없는 업데이트 거부, Redactly 호환 종료다. Redactly 데이터만 있는 환경에서는 설정·모델을 자동 이전하지 않고 새 기본 설정으로 시작한다. 이는 레거시 지원 종료에 따른 의도적 변경이다. 이 장부에 없는 포맷 손실·기능 소실·정확도 저하는 회귀로 다룬다.
+**동작 변경 장부**를 M0부터 유지한다. 각 변경에는 1.12.1 동작, 새 계약, 사용자 영향, fixture와 수용 이유를 기록한다. 최소 항목은 2절 결함 수정으로 생기는 변경(미해결 자동 감지 문제의 게시 차단, 종류별 추적, 영상 상한 초과의 실패→검토 전환, 평활화·연속 cut 수정), 기본 마스크 강도, metadata 원본 복사 분리, 색 공간 유지와 표준 profile 교체(알 수 없는 profile만 sRGB 변환), 출력 포맷별 EXIF 선택 보존 지원 범위, odd size pad, YuNet 후처리와 GPU 경로 신설, 사용자 ONNX(SCRFD) 지원 종료, 키 없는 업데이트 거부, Redactly 호환 종료다. Redactly 데이터만 있는 환경에서는 설정·모델을 자동 이전하지 않고 새 기본 설정으로 시작한다. 이는 레거시 지원 종료에 따른 의도적 변경이다. 이 장부에 없는 포맷 손실·기능 소실·정확도 저하는 회귀로 다룬다.
 
 ## 8. 단계별 구현 로드맵
 
@@ -397,11 +395,21 @@ preview는 별도 앱 ID·설정·업데이트 channel을 사용하며 stable �
 
 ### 8.2 착수 조건과 기준 fixture
 
-**재작성의 목적과 예산을 M0 전에 기록한다.** 기존 구현은 소스 약 24k행, 테스트 약 8.6k행이고 유지보수 인력은 한 명이다. 이 계획은 언어 교체에 더해 2절의 결함 수정과 7절의 의도적 동작 변경, 새 하위 시스템을 담고 있어 기존 코드보다 범위가 크다. 따라서 다음을 유지보수자가 정해 이 절에 적은 뒤 M0를 시작한다.
+**재작성의 목적과 예산을 M0 전에 기록한다.** 기존 구현은 소스 약 24k행, 테스트 약 8.6k행이고 유지보수 인력은 한 명이다. 이 계획은 언어 교체에 더해 2절의 결함 수정과 7절의 의도적 동작 변경, 새 하위 시스템을 담고 있어 기존 코드보다 범위가 크다. 따라서 다음을 이 절에 기록한 뒤 M0를 시작한다.
 
-- **목적:** 재작성으로 얻으려는 것을 우선순위대로 적는다. 예: Qt/OpenCV 빌드·패키징 부담 제거, 순수 Rust codec과 core의 메모리 안전, 사용자 ONNX 격리 구조. 위험한 parser 중 ORT·FFmpeg는 Rust로 옮겨도 네이티브로 남으므로, 메모리 안전만을 목적으로 삼으면 효과가 제한된다.
-- **시간 예산:** M0–M8 전체와 단계별 예산. 1.12.1의 알려진 결함이 이 기간 내내 배포판에 남으므로, 예산은 곧 사용자 노출 기간이다.
-- **범위 조정 기준:** 되돌아갈 레거시 개선 경로가 없으므로, 예산 초과 시 무엇을 첫 stable 뒤로 미룰지 미리 순서를 정한다. 후보는 타일 감지, 검토 저장/재개, masked playback의 지속 재생, Linux CUDA 패키지, WinML 전환이다. 2절 결함 수정과 9절 보안 요건은 조정 대상이 아니다. M0의 GUI·ORT 핵심 gate가 실패하면 4절의 차선 후보로 재평가한다.
+- **목적(우선순위 순):**
+  1. Qt/OpenCV 빌드·패키징 부담 제거. **Qt 제거는 조정 대상이 아니다.** GUI 후보가 M0 gate를 통과하지 못해도 Qt나 Qt binding으로 돌아가지 않고 Iced·Slint 중에서 다시 고른다.
+  2. 지원 범위 축소로 유지보수 표면 줄이기. 사용자 ONNX(SCRFD) 지원을 제거하고 번들 모델 3종만 유지한다.
+  3. 순수 Rust codec과 core의 메모리 안전. 위험한 parser 중 ORT·FFmpeg는 Rust로 옮겨도 네이티브로 남으므로 이 목적의 효과는 제한적이다.
+- **시간 예산:** 미정. M0–M8 전체와 단계별 예산을 M0 시작 시 적는다. 1.12.1의 알려진 결함이 이 기간 내내 배포판에 남으므로, 예산은 곧 사용자 노출 기간이다.
+- **범위 조정 순서:** 되돌아갈 레거시 개선 경로가 없으므로, 예산이 넘치면 아래 순서대로 첫 stable 뒤로 미룬다. 안전에 대한 영향이 작은 것부터다.
+  1. WinML 전환
+  2. Linux CUDA 패키지
+  3. masked playback의 지속 재생(frame 단위 masked preview는 유지)
+  4. 검토 저장/재개
+  5. 타일 감지(작은 얼굴 재현율에 영향이 있어 마지막)
+
+  2절 결함 수정, 9절 보안 요건, Qt 제거는 조정 대상이 아니다. M0의 ORT 핵심 gate가 실패하면 4.2절의 차선 후보로 재평가한다.
 
 **기준 fixture는 M0에서 만든다.** 기존 테스트의 의도와 1.12.1 릴리스 패키지의 실제 출력에서 입력과 기대 결과를 언어 중립 형식(fixture 파일 + 기대 JSON)으로 추출한다. 2절 결함에 해당하는 경우는 1.12.1 출력이 아니라 **올바른 기대 결과**를 적고, 그 차이를 동작 변경 장부에 연결한다. 이후 Rust 각 단계는 이 fixture를 기준선으로 쓴다.
 
@@ -412,10 +420,10 @@ preview는 별도 앱 ID·설정·업데이트 channel을 사용하며 stable �
 ### M0 — 핵심 위험 검증과 기준선 확정
 
 - **목표/구현 대상:** 스택·지원 범위·품질 기준을 확정하는 작은 실행 spike와 baseline harness.
-- **작업:** 8.2절 기준 fixture 추출(2절 결함별 실패 재현 fixture 포함); 1.12.1 릴리스 패키지 기준 측정; 모델별 tensor/전처리/후처리 계약 추출; 세 OS에서 빈 egui 앱과 CJK IME·접근성·HiDPI·4K canvas·RDP 시험; ort/ORT/EP 쌍으로 네 모델 로드·추론; codec/U16/ICC/EXIF 지원 행렬과 31개 allowlist를 JPEG/PNG/WebP/TIFF에 새로 쓰는 Rust EXIF writer spike; 사용자 모델용 CPU sandbox worker와 IPC 비용 검증; 패키지에 FFmpeg/ORT를 넣는 최소 설치 시험.
+- **작업:** 8.2절 기준 fixture 추출(2절 결함별 실패 재현 fixture 포함); 1.12.1 릴리스 패키지 기준 측정; 모델별 tensor/전처리/후처리 계약 추출; 세 OS에서 빈 egui 앱과 CJK IME·접근성·HiDPI·4K canvas·RDP 시험; ort/ORT/EP 쌍으로 세 모델 로드·추론; codec/U16/ICC/EXIF 지원 행렬과 31개 allowlist를 JPEG/PNG/WebP/TIFF에 새로 쓰는 Rust EXIF writer spike; 추론 worker의 IPC 비용 검증; 패키지에 FFmpeg/ORT를 넣는 최소 설치 시험.
 - **선행/의존성:** 8.2절의 목적·예산·범위 조정 순서 기록, 1.12.1 릴리스 패키지, 사용 허가된 fixture, Windows/macOS GPU와 Linux CPU 장치, native 배포물. 서명 credential은 안전한 릴리스 환경에서만 필요.
-- **예상 문제:** RC API·DML runtime 배포물 불일치, YuNet raw 출력 해석, 고정 shape SCRFD, 그래픽/접근성 누락, codec 기능 차이, TIFF 출력의 EXIF IFD 작성.
-- **검증:** 실제 세 OS 실행과 모델 양성 샘플, 1.12.1 기준 비교 보고서, 악성 사용자 모델 worker의 네트워크/임의 파일 접근 거부, 측정 로그의 개인정보 여부 확인.
+- **예상 문제:** RC API·DML runtime 배포물 불일치, YuNet raw 출력 해석, 그래픽/접근성 누락, codec 기능 차이, TIFF 출력의 EXIF IFD 작성.
+- **검증:** 실제 세 OS 실행과 모델 양성 샘플, 1.12.1 기준 비교 보고서, 측정 로그의 개인정보 여부 확인.
 - **완료 조건:** 버전/feature/native manifest, 지원 입력 행렬, baseline·성능 목표, 동작 변경 장부 승인 가능 상태. GUI 필수 동작 또는 핵심 모델 실패는 우회하여 후속 대규모 구현을 시작하지 않고 후보 재평가. Rust EXIF writer가 행렬을 통과하지 못한 포맷만 4.3절의 대안을 적용.
 
 ### M1 — 작업 상태·자원·안전 게시의 골격 (headless)
@@ -438,12 +446,12 @@ preview는 별도 앱 ID·설정·업데이트 channel을 사용하며 stable �
 
 ### M3 — 전체 모델·GPU·다운로드 관리
 
-- **목표/구현 대상:** YOLO5Face-n, YuNet, 번호판, 사용자 SCRFD와 CoreML/DML/CPU의 실제 동작.
-- **작업:** model manifest·stream download·hash cache·명시적 승인; YuNet ORT adapter; SCRFD shape/output 검사; model별 omitted 처리; 번들 모델 worker(GPU EP)와 사용자 모델의 sandbox CPU worker; timeout·CPU fallback·compiled cache; 타일 감지 모드; model license 안내.
-- **선행/의존성:** M2와 M0 EP 조합; 양성 얼굴·번호판·SCRFD fixture.
-- **예상 문제:** OpenCV와 ORT의 YuNet NMS/resize 차이, EP 일부만 가속, custom model memory 폭증, GPU driver crash·hang 뒤 worker 재시작과 같은 frame의 CPU 재실행.
+- **목표/구현 대상:** YOLO5Face-n, YuNet, 번호판과 CoreML/DML/CPU의 실제 동작.
+- **작업:** model manifest·stream download·hash cache·명시적 승인; YuNet ORT adapter; model별 omitted 처리; 추론 worker(GPU EP); timeout·CPU fallback·compiled cache; 타일 감지 모드; model license 안내.
+- **선행/의존성:** M2와 M0 EP 조합; 양성 얼굴·번호판 fixture.
+- **예상 문제:** OpenCV와 ORT의 YuNet NMS/resize 차이, EP 일부만 가속, GPU driver crash·hang 뒤 worker 재시작과 같은 frame의 CPU 재실행.
 - **검증:** CPU/EP 각각 box·score·landmark 허용오차와 라벨 재현율, GPU 실패 시 같은 frame CPU 재시도, hash/승인 불일치·모델 timeout, 실제 GPU 사용 profile.
-- **완료 조건:** 모든 기존 모델 경로가 지원 행렬대로 통과하고 GPU 부재 시 CPU로 사용 가능. 사용자 모델은 sandbox CPU worker로만 실행.
+- **완료 조건:** 모든 기존 모델 경로가 지원 행렬대로 통과하고 GPU 부재 시 CPU로 사용 가능.
 
 ### M4 — 영상 시간축·인코딩의 최소 완성 흐름 (headless)
 
@@ -494,16 +502,11 @@ preview는 별도 앱 ID·설정·업데이트 channel을 사용하며 stable �
 
 ### 9.1 위협 모델과 실행 경계
 
-입력 미디어·ICC/EXIF·사용자 ONNX·업데이트 응답·사용자 지정 경로를 신뢰하지 않는다. 손상 파일, decoder/ORT 취약점, 재귀/크기 폭탄, symlink/reparse 경쟁, 교체된 모델·실행 파일, 부분 출력, 진단 로그 유출을 방어 대상으로 삼는다. 이미 관리자 권한으로 장악된 OS, kernel/GPU driver 전체의 무결성, 화면 촬영, SSD 잔존 데이터까지 앱만으로 보장하지 않는다.
+입력 미디어·ICC/EXIF·업데이트 응답·사용자 지정 경로를 신뢰하지 않는다. 손상 파일, decoder/ORT 취약점, 재귀/크기 폭탄, symlink/reparse 경쟁, 교체된 모델·실행 파일, 부분 출력, 진단 로그 유출을 방어 대상으로 삼는다. 이미 관리자 권한으로 장악된 OS, kernel/GPU driver 전체의 무결성, 화면 촬영, SSD 잔존 데이터까지 앱만으로 보장하지 않는다.
 
 | 경계 | 적용할 통제 | 구현·검증상 한계 |
 | --- | --- | --- |
-| 격리 수준 | **사용자 모델 worker:** 아래 OS sandbox 전체(파일·네트워크 차단, 자원 제한). **번들 모델 worker·FFmpeg:** 별도 프로세스, 상속 handle allowlist, private IPC, CPU/RAM/시간·프로세스 수 제한(Job Object·rlimit 등)과 watchdog. OS sandbox는 첫 stable의 필수 조건이 아님. **이미지 codec:** engine 안의 순수 Rust decoder에 크기·픽셀·metadata 한도 | 번들 모델은 hash로 고정된 신뢰 입력이고 미디어 bytes를 직접 해석하지 않으므로(engine이 만든 tensor만 받음) sandbox 이득이 작고 GPU EP와 충돌함. FFmpeg는 미디어 parser라 위험이 남으므로 sandbox는 M8 이후 강화 후보로 기록. 명령행 옵션이나 process 분리만으로 OS sandbox가 되지는 않음 |
-| Windows | Job Object로 자식 생명주기/자원 제한, AppContainer 또는 제한된 token/ACL profile로 파일·네트워크 권한 제한 | Job Object는 프로세스 그룹 관리·자원 제한용이며 파일·네트워크 접근을 막지 않으므로 단독 sandbox로 쓰지 않음. DML·driver/codec 동작과 handle 전달을 실제 시험. [Job Objects][S-job], [AppContainer][S-appcontainer] |
-| macOS | 서명된 전용 helper의 App Sandbox/최소 entitlement와 명시적 파일 전달을 M0에서 검증, CoreML cache는 worker 전용 위치 | 일반 process spawn만으로 sandbox 활성화되지 않음. 정확한 helper/XPC 구성·CoreML 권한 조합은 이번 분석에서 실행 확인하지 못함 |
-| Linux | namespace·최소 mount/권한과 seccomp profile 조합, network namespace·자식 제한, 허용 library/device만 노출 | seccomp 자체는 파일 경로 sandbox가 아니며 배포판의 user namespace 정책이 다름. AppImage와 GPU profile을 별도로 시험. [kernel 문서][S-seccomp] |
-
-사용자 모델용 sandbox를 시작하지 못하면 이를 숨기고 같은 권한으로 실행하지 않는다. 실패 원인을 알리고 그 모델로 하는 작업을 중단한다. 사용자 ONNX는 strict CPU profile로만 제공하며, 이로 인한 custom 모델 GPU 사용 제한은 의도적 변경으로 고지한다. GPU sandbox profile은 수요와 검증 결과가 있을 때 별도로 검토한다. 기본 번들 모델의 Windows/macOS GPU 지원은 sandbox와 무관한 M3/M7 완료 조건이다.
+| 격리 수준 | **추론 worker·FFmpeg:** 별도 프로세스, 상속 handle allowlist, private IPC, CPU/RAM/시간·프로세스 수 제한(Windows Job Object, Unix rlimit 등)과 watchdog. **이미지 codec:** engine 안의 순수 Rust decoder에 크기·픽셀·metadata 한도 | 추론 worker는 hash로 고정된 번들 모델과 engine이 만든 tensor만 받으므로 OS sandbox 이득이 작고 GPU EP와 충돌함. FFmpeg는 미디어 parser라 위험이 남으므로 OS sandbox(Windows AppContainer, macOS App Sandbox helper, Linux namespace+seccomp)는 첫 stable 뒤 강화 후보로 둔다. Job Object·rlimit은 자원 제한일 뿐 파일·네트워크 접근을 막지 않으며, 명령행 옵션이나 process 분리만으로 sandbox가 되지는 않음. [Job Objects][S-job], [AppContainer][S-appcontainer], [seccomp][S-seccomp] |
 
 IPC는 protocol version·job ID·request ID·generation·payload length를 검사하고 message/frame 수·응답 시간을 제한한다. 인증된 부모가 만든 전용 pipe만 사용하며 전역 포트에서 수신하지 않는다. worker는 결과 이름·임의 경로·최종 게시 명령을 선택할 수 없다. `NaN`, oversize box, 잘못된 frame 번호, 중복 terminal 메시지, worker 종료 후 도착한 응답도 적대적 입력으로 시험한다.
 
@@ -530,7 +533,7 @@ IPC는 protocol version·job ID·request ID·generation·payload length를 검�
 
 미디어·경로·crop·인물 embedding을 외부로 전송하지 않는다. 네트워크 허용 기능은 동의한 모델 다운로드와 사용자가 허용한 업데이트뿐이다. telemetry·crash 업로드는 기본 구현 범위에서 제외한다. 실행 중 업데이트 확인 OFF는 다음 시작뿐 아니라 현재 timer·pending request에도 반영한다. 오프라인 mode에서는 모델·업데이트 요청도 하지 않는다.
 
-model download는 HTTPS, catalog origin·redirect allowlist, 크기·시간·재시도 한도, streaming hash, private 임시 파일, 검증 후 cache publish로 구현한다. custom model 승인 기록은 digest+크기에 묶고 읽은 바로 그 bytes를 실행한다. ONNX external data 경로는 기본 거부하며 필요 시 manifest로 승인한 동일 private model bundle만 허용한다. custom operator library/임의 실행 확장은 제공하지 않는다.
+model download는 HTTPS, catalog origin·redirect allowlist, 크기·시간·재시도 한도, streaming hash, private 임시 파일, 검증 후 cache publish로 구현한다. worker는 manifest digest로 검증한 바로 그 bytes로 세션을 만든다. ONNX external data 경로는 기본 거부하며 필요 시 manifest로 승인한 동일 private model bundle만 허용한다. custom operator library/임의 실행 확장은 제공하지 않는다.
 
 FFmpeg는 shell 없이 고정 실행 파일과 argument 배열로 실행한다. protocol/demuxer allowlist, local file handle 또는 검증된 private 경로, script/playlist/원격 URL 금지, 입력·출력 스트림 수 한도를 적용한다. 번들 worker/FFmpeg/ORT 파일의 실제 최종 hash·서명을 확인하고 cwd/PATH의 같은 이름 바이너리를 실행하지 않는다.
 
@@ -545,7 +548,7 @@ FFmpeg는 shell 없이 고정 실행 파일과 argument 배열로 실행한다. 
 | 수준 | 필수 범위 | 판정 기준 |
 | --- | --- | --- |
 | core 단위/property | 좌표변환·clip·rotation·alpha·U16·NMS·class 연관·감지/track 레코드 파일 왕복·상태 전이 | NaN/overflow/빈 ROI 안전 처리, 관측 보호 영역의 축소 금지, 잘못된 revision/publish 전이 불가 |
-| 추론 계약 | 네 모델의 input/output tensor, NMS, landmark, cap, CPU/EP | 고정 fixture의 결과 차이를 허용오차로 비교하고 실제 대상 재현율도 평가. “추론 호출 성공”만으로 통과하지 않음 |
+| 추론 계약 | 세 모델의 input/output tensor, NMS, landmark, cap, CPU/EP | 고정 fixture의 결과 차이를 허용오차로 비교하고 실제 대상 재현율도 평가. “추론 호출 성공”만으로 통과하지 않음 |
 | 이미지 통합 | 지원 codec·bit depth·orientation·ICC·EXIF·alpha·manual edit→output | 디코딩/방향/색 허용오차, 선언한 보호 core 100% 적용, 금지 metadata 0개, 원본·기존 출력 불변 |
 | 영상 통합 | CFR/VFR, 23.976/29.97 등 유리수 FPS, start offset, B-frame, rotation/SAR, odd size, 여러 audio | canonical frame index와 적용 영역 정확히 일치, frame 수·duration 계약 일치, stream별 금지 metadata 제거, 전체 decode 성공 |
 | 추적·검토 | 빠른 이동/가림/flash/짧은 shot, face↔plate 근접, 연속 cut, track 제외·수동 keyframe·seek·재개 | 알려진 누락/미해결 구간이 유실되지 않음. preview와 export의 같은 frame·revision이 같은 mask geometry 사용 |
@@ -571,7 +574,7 @@ fuzz 대상은 geometry/state/IPC 길이·모델 출력 parser·metadata allowli
 
 ### 10.3 성능 실험 protocol과 목표
 
-비교 대상은 1.12.1 릴리스 패키지와 Rust release profile이다. 같은 입력·모델 hash·threshold·전처리 크기·출력 codec/품질·오디오·검토 여부를 사용한다. Rust가 더 낮은 품질/해상도 또는 생략된 검증으로 빨라진 결과를 개선으로 기록하지 않는다. 새 sandbox·전체 output 검증 비용은 단계별로 분리하고 최종 end-to-end 시간에도 포함한다.
+비교 대상은 1.12.1 릴리스 패키지와 Rust release profile이다. 같은 입력·모델 hash·threshold·전처리 크기·출력 codec/품질·오디오·검토 여부를 사용한다. Rust가 더 낮은 품질/해상도 또는 생략된 검증으로 빨라진 결과를 개선으로 기록하지 않는다. worker 프로세스·전체 output 검증 비용은 단계별로 분리하고 최종 end-to-end 시간에도 포함한다.
 
 M0에서 Windows x64(최소 한 대씩 Intel/AMD/NVIDIA DML), Apple silicon 16 GB, Linux x64 16 GB CPU 기준 장치의 CPU/GPU/driver/OS/storage/power mode를 고정한다. Linux CUDA는 지원을 출시할 때 별도 장치를 추가한다. 공유 CI VM의 timing은 참고용이며 성능 release gate는 고정 장치에서 실행한다.
 
@@ -632,7 +635,7 @@ macOS는 Sparkle를 유지한다. 현재 Sparkle 2.9.4가 고정되어 있고 In
 - **공존과 이전 범위:** preview는 별도 디렉터리를 쓴다. stable 첫 실행에서 기존 CloakFrame 설정만 읽고, 없으면 새 기본 설정으로 시작한다. Redactly namespace·디렉터리·설정·모델 캐시·승인 기록은 탐색하거나 이전하지 않는다. CloakFrame의 source namespace·OS 저장 위치는 `main.cpp`와 각 platform QSettings fixture로 확인한다. Windows registry, macOS preferences, Linux 설정 파일을 읽는 일회성 adapter만 구현하고 Qt를 새 앱에 포함하지 않는다.
 - **키별 변환:** theme/locale, detector·threshold, mask·padding·shape, metadata/GPS, review, video codec·quality, update opt-in, output directory 등 현재 키를 목록화한다. enum/range/schema를 검증해 새 TOML로 atomic 저장한다. Qt window geometry blob은 재사용하지 않고 안전한 창 크기로 시작한다. 허용 안 된 설정은 이유를 알리고 안전 기본값을 적용한다.
 - **동의·개인정보:** 기본 review는 유지하고 새 안전 기본값·metadata/원본 복사 변경을 첫 실행에서 요약한다. 상세 로그 OFF 등 보수적 기본을 유지한다. 출력 폴더 기억 설정과 임시 stage 복구 journal은 서로 다른 데이터다. 기존 `processing/outputDir` 등 사용자 경로 설정은 이전 사실을 알리고 비우기 선택을 제공한다.
-- **모델:** 현재 CloakFrame cache만 이전 대상으로 삼고, 파일명만 믿지 않고 catalog digest+size를 다시 확인하여 새 private cache로 복사한다. CloakFrame에 저장된 custom ONNX 승인도 실제 hash+size가 같을 때만 이관하며 다르면 새 동의. compiled EP cache는 runtime/OS/options가 바뀌면 폐기한다. cwd의 파일을 자동 탐색·실행하지 않는다. 사용자가 파일을 직접 선택하는 일반 custom ONNX import는 유지하되 Redactly 전용 import 기능은 만들지 않는다.
+- **모델:** 현재 CloakFrame cache만 이전 대상으로 삼고, 파일명만 믿지 않고 catalog digest+size를 다시 확인하여 새 private cache로 복사한다. 사용자 ONNX 승인 기록과 사용자 모델 경로 설정은 이전하지 않는다. compiled EP cache는 runtime/OS/options가 바뀌면 폐기한다. cwd의 파일을 자동 탐색·실행하지 않는다.
 - **안전한 rollback:** 기존 설정·cache·원본·결과를 수정/삭제하지 않는다. 새 schema와 migration 완료 marker는 새 설정 저장 성공 뒤 기록한다. 실패하면 새 부분 설정을 제거하고 재시도 가능하게 한다. 이전 release로 돌아가도 기존 설정을 그대로 사용할 수 있어야 한다. 저장된 Rust review job을 1.12.1에서 읽을 수 있다고 약속하지 않는다.
 - **업데이트 경로:** 현재 문서는 별도 `CloakFrame-updates` 저장소를 업데이트 feed로 설명하며, feed 저장소는 [RELEASING](RELEASING.md)에, 1.11.3 이하가 업데이트를 받지 못할 수 있다는 내용은 ROADMAP과 CHANGELOG에 있다. CloakFrame 1.11.3 이하처럼 옛 feed에 묶인 사용자는 자동 연결이 된다고 가정하지 않고 수동 설치/bridge 안내를 유지한다. 마지막 레거시 릴리스인 1.12.1에서 새 Rust package로의 실제 설치 이전을 시험한 후 stable feed를 전환한다. Redactly의 앱 ID·설치 경로·update feed·bridge는 지원하지 않는다. [기존 릴리스 운영](RELEASING.md), [CloakFrame 구버전 feed 제약](ROADMAP.md#accepted-risk)
 
@@ -645,8 +648,8 @@ macOS는 Sparkle를 유지한다. 현재 Sparkle 2.9.4가 고정되어 있고 In
 | egui 접근성/IME/graphics 호환성 | Qt 대비 desktop 사용성 회귀, M0/M6 | 실제 편집 canvas·3언어·screen reader·RDP 시험. 필수 동작 실패 시 Slint/Iced 재평가(CloakFrame이 GPL-3.0이므로 Slint의 GPL 조건은 장애가 아님). headless 우선이라 UI 결정을 바꿔도 engine 작업은 버려지지 않음. 단순 테마 차이와 접근 불가를 구분 |
 | ort RC와 ORT/EP ABI | build 성공 후 로드/추론 crash, M0/M3 | 검증한 exact 쌍·feature·C API 고정, 작은 adapter 뒤에 숨김. 배포물 없는 조합은 이전 호환 쌍으로 변경; custom C API wrapper를 즉흥적으로 확장하지 않음 |
 | DirectML 유지보수 방향 | Windows GPU의 장기 지원, M0/M7 | 초기 DML 실기기 지원 유지, WinML 이전 실험은 별도. 최소 OS/오프라인/라이선스 조건을 충족할 때 전환 |
-| 사용자 모델 sandbox | 보안 경계 실패 또는 custom 모델 사용 불가, M0/M3 | sandbox는 사용자 모델 CPU worker에만 적용하므로 GPU EP와 충돌하지 않음. 세 OS에서 네트워크·파일 접근 거부를 공격 시험으로 확인. 특정 OS에서 sandbox를 만들 수 없으면 그 OS에서 custom 모델 기능을 끄고 stable 전환은 막지 않음 |
-| YuNet·SCRFD 결과 변화 | 얼굴 누락·성능 악화, M0/M3 | 원시 tensor와 최종 box/landmark를 독립 비교. shape별 fixture, patch 제거로 입력 크기가 바뀌는 fixed shape 모델(작은 모델의 작은 얼굴 재현율, 큰 모델의 속도)과 dynamic 모델의 변화 표시. 정확도 gate 실패한 모델은 기존 지원 대체 완료로 선언하지 않음 |
+| YuNet 결과 변화 | 얼굴 누락·성능 악화, M0/M3 | OpenCV `FaceDetectorYN` 대신 ORT 원시 출력을 직접 해석하므로 원시 tensor와 최종 box/landmark를 독립 비교. 정확도 gate 실패 시 기존 지원 대체 완료로 선언하지 않음 |
+| 사용자 ONNX 제거 | SCRFD 사용자가 기능을 잃음, M7 | 첫 실행 안내와 CHANGELOG에 대체 모델(YOLO5Face-n, YuNet)을 명시. 수요가 확인되면 sandbox 설계를 포함한 별도 기능으로 다시 산정 |
 | image codec/ICC/EXIF 차이 | format·bit depth·색·metadata 회귀, M0/M2 | 입력 행렬·허용오차·metadata 추출로 검증. 작은 검증된 codec adapter 추가 가능. EXIF writer가 실패한 포맷만 선택 보존 범위에서 빼고 동작 변경 장부에 기록 |
 | 추적 디스크 저장·장면 전환 | 저장 오류로 track 유실, 장시간 군중 장면의 active track 폭증, M5 | 전체 양방향 추적 의미를 유지해 M0 추적 fixture와 직접 비교. 레코드 파일 checksum·버전, active track·요약 예산 측정. 예산 초과가 실제로 측정될 때만 구간 추적 재검토 |
 | FFmpeg 타임라인/오디오 | 다른 frame 마스킹·음성 drift, M0/M4/M5 | 단일 TimelineSpec·합성 counter/impulse·전체 출력 검증. 원본 VFR 보존 요구가 확정되면 FFmpeg binding worker를 별도 설계하고 범위를 다시 산정 |
@@ -657,18 +660,18 @@ macOS는 Sparkle를 유지한다. 현재 Sparkle 2.9.4가 고정되어 있고 In
 | 부정확한 품질 데이터 | 평균 개선 뒤 특정 조건의 누락 증가, M0/M8 | 층화 corpus·독립 라벨 검토·노출 시간 지표·신뢰구간. 양성 샘플과 실기기 없는 시험을 필수 gate에서 skip하지 않음 |
 | 재작성 범위 팽창 | 기존 대체가 끝나지 않음, 전 단계 | 8.2절의 시간 예산과 범위 조정 순서, 네 crate와 headless 우선 단계 유지. 검증 도구 이상의 CLI 기능(preset·스크립팅), live stream, HDR/HEIC/RAW, Re-ID, 원본 VFR, GPU zero-copy는 기존 대체의 범위와 분리 |
 
-**아직 확인하지 못한 핵심 사항:** 후보 Rust 앱의 실제 빌드/성능, 네 모델의 ORT-only parity, 세 OS의 사용자 모델 worker sandbox, Rust codec의 기존 입력 전체 호환, 실제 최소 OS 실행, Windows 코드 서명 확보, 운영 secret의 범위·보관 상태. 이는 기능이 없다는 단정이 아니라 구현 착수 전후에 확보해야 할 증거 목록이다. M0에서 버전 조합·담당·결과 문서 위치를 지정하고, 보안/핵심 기능을 막는 미확인 항목은 release 전에 해소한다.
+**아직 확인하지 못한 핵심 사항:** 후보 Rust 앱의 실제 빌드/성능, 세 모델의 ORT-only parity, Rust codec의 기존 입력 전체 호환, 실제 최소 OS 실행, Windows 코드 서명 확보, 운영 secret의 범위·보관 상태. 이는 기능이 없다는 단정이 아니라 구현 착수 전후에 확보해야 할 증거 목록이다. M0에서 버전 조합·담당·결과 문서 위치를 지정하고, 보안/핵심 기능을 막는 미확인 항목은 release 전에 해소한다.
 
 ## 13. 최종 완료 기준
 
 다음은 **Rust 재작성 프로젝트의 완료 기준**이다. 이번 계획 문서 작성의 완료와 구분한다.
 
 - [ ] 7절의 모든 기존 핵심 기능에 새 구현·검증 근거가 있으며, 제거/변경 항목은 영향·수용 이유·회귀 fixture가 기록되어 있다. 사진만 되는 preview를 전면 대체 완료로 세지 않는다.
-- [ ] 이미지 지원 포맷·bit depth·alpha·orientation·metadata, 얼굴/번호판/사용자 SCRFD, 네 가지 마스크, 수동 검토·수정·재검토가 지원 행렬대로 동작한다.
+- [ ] 이미지 지원 포맷·bit depth·alpha·orientation·metadata, 얼굴(YOLO5Face-n·YuNet)/번호판, 네 가지 마스크, 수동 검토·수정·재검토가 지원 행렬대로 동작한다.
 - [ ] 동영상 지원 입력/출력, CFR 시간축·오디오·추적·장면 전환·수동 keyframe·masked preview·gap 검토·저장/재개가 검증되었다. 원본 VFR 보존 등 후속 범위를 제품 설명에 혼동 없이 표시한다.
 - [ ] Windows/macOS의 검증된 기본 모델 GPU 가속과 모든 플랫폼 CPU 경로가 동작한다. CPU fallback·GPU failure/hang·메모리 예산을 실제 장치에서 시험했으며 지원하지 않는 EP를 지원으로 광고하지 않는다.
 - [ ] 원본·기존 출력 불변, 금지 metadata 제거, 알려진 미해결 결과의 정상 게시 차단, 취소·crash·disk-full·경로 경쟁 시험을 통과한다. 자동 미검토/사용자 검토/경고 내보내기/원본 복사를 정확히 구별한다.
-- [ ] 사용자 모델 worker의 sandbox(파일·네트워크 차단), 번들 worker·FFmpeg의 자원 제한, IPC 검증·runtime 무결성·stage 정리를 세 OS에서 시험했다. 사용자 미디어 업로드·기본 민감 로그·허가되지 않은 네트워크 요청이 없다.
+- [ ] 추론 worker·FFmpeg의 자원 제한, IPC 검증·runtime 무결성·stage 정리를 세 OS에서 시험했다. 사용자 미디어 업로드·기본 민감 로그·허가되지 않은 네트워크 요청이 없다.
 - [ ] 고정 corpus에서 1.12.1 기준과 독립 품질 gate를 모두 평가했고, 새 심각한 누락·노출 회귀가 없다. 차이가 통계적으로 불명확한 경우의 추가 검증까지 끝냈다.
 - [ ] 시작/이미지/추론/영상 처리량, 전체 process tree RAM·VRAM, UI·취소, 긴 작업 안정성의 측정 원자료와 비교 보고서가 있다. 성능 tradeoff는 수치·이유·사용자 영향으로 설명되어 있다.
 - [ ] 한국어·영어·일본어, HiDPI·키보드·접근성·CJK 입력·플랫폼 file dialog가 실제 UI 시나리오를 통과한다.
@@ -676,7 +679,7 @@ macOS는 Sparkle를 유지한다. 현재 Sparkle 2.9.4가 고정되어 있고 In
 - [ ] 기존 CloakFrame 설정과 모델 이전이 idempotent하며 실패·rollback 시 원본 설정을 보존한다. 1.12.1→Rust와 옛 CloakFrame feed 사용자의 전환 경로가 확인되었다. Redactly 데이터만 있는 환경에서는 이전 없이 새 기본 설정으로 시작하며, Redactly 호환은 완료 조건에서 제외한다.
 - [ ] 필수 시험이 skip된 상태, 미해결 P0/P1 보안 결함, 미구현 핵심 기능을 stable 전환의 예외로 남기지 않는다. 운영 문서와 의도적 변경 안내가 완료되어 있다.
 
-최초 착수는 8.2절의 목적·예산·범위 조정 순서 기록이다. Rust 구현은 M0의 기준 fixture·GUI/ORT/codec·EXIF writer/사용자 모델 sandbox spike부터 한다. 그 결과로 기술 결정을 조정하더라도, UI 독립 코어·신뢰하지 않는 입력의 격리·검증 후 안전 게시·명시적인 검토 상태라는 제품 계약은 유지한다.
+최초 착수는 8.2절의 목적·예산·범위 조정 순서 기록이다. Rust 구현은 M0의 기준 fixture·GUI/ORT/codec·EXIF writer spike부터 한다. 그 결과로 기술 결정을 조정하더라도, UI 독립 코어·신뢰하지 않는 입력의 격리·검증 후 안전 게시·명시적인 검토 상태라는 제품 계약은 유지한다.
 
 <!-- 공식 자료: 2026-10-15 확인. latest/main 링크는 이후 변경될 수 있으므로 M0에서 채택 버전의 문서/commit도 고정한다. -->
 [G-egui]: https://github.com/emilk/egui/blob/main/README.md
