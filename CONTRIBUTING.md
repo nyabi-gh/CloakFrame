@@ -246,12 +246,16 @@ or the updater, and update it when an item changes state.
 
 ## Dependencies and licenses
 
-Record any new runtime dependency and its license in
-[THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt). Dependencies linked into the
-application must be compatible with `GPL-3.0-or-later`, and redistributable
-files must be included by every affected packaging path. Bundled FFmpeg builds
-must be GPL-3.0-or-later without `--enable-nonfree`;
+CloakFrame is licensed under the Apache License 2.0. Record any new runtime
+dependency and its license in [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt).
+Code linked into the application must be under a license compatible with
+Apache-2.0, so GPL and AGPL libraries are not linked; redistributable files must
+be included by every affected packaging path. FFmpeg runs as a separate process,
+so a GPL build may be bundled, but never one configured with `--enable-nonfree`;
 `.github/scripts/check_ffmpeg_license.sh` enforces this in the release workflow.
+
+The C++ implementation up to 1.12.1 links Exiv2 (GPL-2.0-or-later), so its
+packages were distributed under GPL-3.0-or-later. It is no longer developed.
 
 ## Releasing
 

@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://github.com/nyabi-gh/CloakFrame/releases/latest"><img src="https://img.shields.io/github/v/release/nyabi-gh/CloakFrame?style=flat-square&color=6366f1" alt="Latest release"></a>
   <a href="https://github.com/nyabi-gh/CloakFrame/releases"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fnyabi-gh%2FCloakFrame%2Fdownload-badge%2Fdownloads.json&style=flat-square" alt="Downloads"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--or--later-6366f1?style=flat-square" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-6366f1?style=flat-square" alt="License"></a>
 </p>
 
 ## Download
@@ -91,7 +91,10 @@ models carry over automatically.
 
 ## License
 
-CloakFrame is free software under the [GNU GPL v3.0 or later](LICENSE).
+CloakFrame's source code is licensed under the [Apache License 2.0](LICENSE). Releases up
+to and including 1.12.1 were distributed under the GNU GPL v3.0 or later: their packages
+link Exiv2, which is GPL-2.0-or-later, so those packages as a whole are covered by the
+GPL, as [THIRD_PARTY_NOTICES.txt](THIRD_PARTY_NOTICES.txt) describes.
 
 The detection models are downloaded on first use and keep their own terms. The
 recommended face model, **YOLO5Face-n**, was trained on WIDER FACE and is for

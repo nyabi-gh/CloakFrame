@@ -1,12 +1,13 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16. 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md), [M0 ORT 스파이크](M0_ORT_SPIKE.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows M0 결과 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md), [M0 ORT 스파이크](M0_ORT_SPIKE.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
 - **레거시 정책:** 1.12.1이 C++ 구현의 마지막 릴리스다. 기존 코드는 수정·릴리스하지 않고, 새 구현이 대체할 동작의 근거로만 쓴다. 기존 코드 참조는 `v1.12.1` 태그 기준이다.
 - **스택:** Rust stable, UI는 egui/eframe, 추론은 ort + ONNX Runtime, 이미지는 `image` + `moxcms` + 자체 EXIF writer, 영상은 번들 FFmpeg/ffprobe 외부 프로세스, 업데이트는 Velopack(Windows·Linux)과 Sparkle(macOS).
 - **순서:** headless engine과 CLI를 먼저 완성하고(M1–M5), 새 UX의 desktop 앱을 붙이고(M6), 배포·이전(M7), 검증·전환(M8)을 거쳐 stable 직후 HEIC·HDR 입력(M9)을 추가한다.
+- **라이선스:** Apache-2.0(2026-10-16 결정, 10.1).
 - **원칙:** 제품 계약(원본 불변, 덮어쓰기 금지, 미해결 결과 비공개, 메타데이터 최소화)은 지킨다. 방어 장치는 위협 모델에 맞춰 줄이고, 1인 유지보수 규모를 넘는 장치는 측정된 필요가 생겼을 때 추가한다.
 
 ### 0.1 이전 판에서 바뀐 결정
@@ -22,6 +23,7 @@
 | UI | 기존 사용자 흐름 재현 | 새 정보 구조(6장) | 보고서 9장의 UX 결함 |
 | HEIC·HDR 입력 | 대체 범위 밖 | stable 직후 첫 기능(M9) | 아이폰 기본 촬영물을 처리하지 못하는 것이 가장 큰 제품 공백 |
 | 원본 복사 | 원본 바이트 복사와 메타데이터 제거 복사를 별도 경로로 유지 | 메타데이터를 제거한 재인코딩 "익명화 없이 내보내기"만 제공 | 바이트 복사는 GPS·시리얼까지 남긴다(D9). 원본 파일 복사는 OS 파일 관리자로 충분 |
+| 라이선스 | GPL-3.0-or-later | Apache-2.0 | Windows ML·DirectML 재배포 약관과 GPL의 충돌을 없앤다(10.1) |
 | 시험 게이트 | Miri·sanitizer·fuzz·통계 신뢰구간이 필수 | 단위·property·골든 출력·소규모 탐지 벤치마크가 필수, fuzz는 parser 두 곳만 | 범위 팽창 방지 |
 
 ## 1. 범위
@@ -36,7 +38,7 @@
 - 얼굴(YOLO5Face-n, YuNet), 번호판(YOLOv9-t), 채우기·모자이크·블러·사용자 이미지, 사각형·타원, padding, soft edge
 - 수동 검토: 영역 추가·제외, undo/redo, 키보드 조작. 영상은 track 제외, 수동 keyframe, gap 검토
 - 오디오 기본 보존(음성은 가리지 않음을 표시), 전체 제거 선택
-- Windows 10+ x64(Windows ML 하한 빌드), macOS 15+ arm64, Linux x86_64 glibc 2.39+
+- Windows 10 1903(빌드 18362)+ x64, macOS 15+ arm64, Linux x86_64 glibc 2.39+. Windows 하한은 Windows ML 패키지가 정한다(3장).
 - 영어·한국어·일본어, 시스템·밝음·어두움 테마
 
 ### 1.2 제거
@@ -82,9 +84,9 @@
 | --- | --- | --- |
 | 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.36.x 기준 1.95)가 결정 |
 | UI | egui/eframe 0.36.x(wgpu, glow 대체 경로는 M0 확인), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda` 연동을 M0에서 확인. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL). UI 시험은 `egui_kittest` |
-| 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `default-features = false`) + ONNX Runtime 번들 | M0에서 세 모델의 CPU·CoreML 결과가 1.12.1과 같음을 확인. RC이므로 정확한 버전으로 고정 |
+| 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. M0에서 세 모델의 CPU·CoreML 결과가 1.12.1과 같음을 확인. RC이므로 정확한 버전으로 고정 |
 | 이미지 | `image` 0.25(필요 codec만), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(M0에서 바이트 일치 확인). `fast_image_resize`는 화면 표시용에만 |
-| 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 처리량이 부족하면 4.4의 대안 |
+| 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. 처리량이 부족하면 4.4의 대안(라이브러리로 링크하면 LGPL 빌드만 가능) |
 | 동시성 | 작은 Tokio runtime(HTTP, 자식 프로세스 감독, 이벤트), Rayon pool(CPU 연산), 전용 추론 스레드 | CPU 연산을 async executor에서 돌리지 않는다 |
 | 설정·로그·오류 | serde + TOML + `directories`, `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
@@ -96,11 +98,15 @@
 
 | 플랫폼 | 가속 → 폴백 | 조건 |
 | --- | --- | --- |
-| Windows x64 | Windows ML self-contained 런타임의 DirectML → CPU | ORT를 따로 번들하지 않고 Windows ML NuGet(`Microsoft.Windows.AI.MachineLearning` 또는 `Microsoft.WindowsAppSDK.ML`)의 `onnxruntime.dll`·`DirectML.dll`을 넣는다. 세션 순차 실행, memory pattern 비활성화. EP 카탈로그는 쓰지 않는다(Windows 11 24H2 필요, 첫 실행 다운로드) |
+| Windows x64 | Windows ML self-contained 런타임의 DirectML → CPU | ORT를 따로 번들하지 않고 `Microsoft.Windows.AI.MachineLearning` 2.4.89의 `onnxruntime.dll`(ORT 1.27.1)·`DirectML.dll`을 넣는다. 이 패키지의 최소 OS가 Windows 10 1903(18362)이다(1809는 `Microsoft.WindowsAppSDK.ML`이 필요하므로 지원하지 않음). M0에서 `ort::init_from`으로 이 DLL을 `api-27`로 불러 DML EP가 붙는 것과, 네트워크 없는 Windows 11 Sandbox에서 실행되는 것을 확인했다([기록](M0_ORT_SPIKE.md#windows-ml--directml)). 세션 순차 실행, memory pattern 비활성화. 재배포 약관은 10.1 |
 | macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시 |
 | Linux x86_64 | CPU | CUDA는 1.3의 후보 |
 
+Windows ML의 **EP 카탈로그**(NVIDIA TensorRT-RTX, Intel OpenVINO, AMD MIGraphX·VitisAI, Qualcomm QNN)는 첫 stable에서 쓰지 않는다. Windows 11 24H2 이상이 필요하고, 첫 실행에 네트워크로 받고 Windows Update로 자동 갱신되어 오프라인 실행·고정 manifest 원칙과 맞지 않는다. 이 앱의 모델은 작아 DML로 충분하다. 필요가 측정되면 사용자가 켜는 opt-in 기능으로 따로 설계한다.
+
 GPU 실패(ORT 오류, GPU 메모리 부족) 시 현재 항목을 CPU 세션으로 한 번 다시 실행하고, 그 실행의 나머지는 CPU로 처리하며 이유를 표시한다. CPU 실패, shape 불일치, 모델 해시 오류는 폴백으로 숨기지 않는다.
+
+**ORT 텔레메트리:** Microsoft가 배포하는 ORT 빌드는 텔레메트리가 기본으로 켜져 있다. Windows 구성 요소(Windows ML)는 OS 진단 데이터 경로(TraceLogging)로, 그 밖의 공식 빌드는 1DS SDK로 앱 프로세스가 직접 HTTPS로 보낸다. 1.31부터는 네이티브 빌드의 기본이 1DS다. 그래서 환경 생성 시 `with_telemetry(false)`를 호출하고, ORT를 불러오기 전에 `ORT_DISABLE_TELEMETRY=1`을 설정한다. M0와 M8에서 네트워크 감시로 아무것도 나가지 않음을 확인한다. ORT 1.31 이상 공식 빌드는 이 확인 없이 채택하지 않는다.
 
 ## 4. 아키텍처
 
@@ -195,7 +201,7 @@ crates/
 | 모델 | 해시 고정, 해시한 바이트로 세션 생성, ONNX external data 거부 |
 | 업데이트 | Velopack 업데이트는 기존 v2 Ed25519 payload(channel·version·filename·digest) 검증 유지, Sparkle은 EdDSA + `SURequireSignedFeed` + `SUVerifyUpdateBeforeExtraction`. 최고 설치 버전을 기록해 downgrade 차단 |
 | 크래시·로그 | 릴리스 빌드 크래시 덤프 차단, 기본 로그는 단계·오류 코드·수치만. 상세 로그는 opt-in |
-| 네트워크 | 모델 다운로드와 업데이트만. telemetry 없음. 업데이트 확인을 끄면 진행 중인 요청과 타이머에도 즉시 반영 |
+| 네트워크 | 모델 다운로드와 업데이트만. 앱 telemetry 없음, ORT telemetry 끔(3장). 업데이트 확인을 끄면 진행 중인 요청과 타이머에도 즉시 반영. Windows ML·DirectML 약관의 데이터 수집 조항(OS 진단 데이터 경로)은 정보 창과 개인정보 안내에 적는다 |
 
 **익명화 기본값:** 단색 채우기를 기본값으로 한다. 모자이크는 셀 수 상한(D3)과 트랙별 고정 격자, 블러는 커널을 자르지 않고 최소 강도를 둔다. 사용자 이미지 밑에는 불투명 바탕을 깐다. soft edge는 보호 영역 바깥에만 적용한다. 이것들을 식별 불가의 증명으로 표현하지 않는다.
 
@@ -221,7 +227,7 @@ crates/
 
 **결과:** "12개 저장, 2개 검토 필요 — 영상 1개에서 얼굴을 1.2초간 놓침" 같은 문장 요약과 항목별 바로가기. 숫자를 나열하는 모달은 쓰지 않는다. 재검토는 같은 세션에서 연다.
 
-**플랫폼:** 시작 시 모달 금지(업데이트는 비모달 배너), 네이티브 메뉴, 정보 창(앱 GPL 고지, 모델 라이선스와 이용 조건), 표준 단축키, 시스템 테마, CJK 글꼴 번들, 접근성 이름과 포커스 순서, 창 위치 기억.
+**플랫폼:** 시작 시 모달 금지(업데이트는 비모달 배너), 네이티브 메뉴, 정보 창(앱의 Apache-2.0 라이선스, 서드파티 고지와 Microsoft 약관, 모델 라이선스와 이용 조건), 표준 단축키, 시스템 테마, CJK 글꼴 번들, 접근성 이름과 포커스 순서, 창 위치 기억.
 
 ## 7. 저장소와 전환
 
@@ -236,7 +242,8 @@ crates/
   tools/            fixture 추출, 번역 이전, 패키지 검사
 ```
 
-- M1 첫 커밋에서 레거시 C++ 소스·빌드 파일·CI를 지운다(`v1.12.1` 태그로 보존). 아이콘 등 재사용 자산만 `assets/`로 옮긴다.
+- M1 첫 커밋에서 레거시 C++ 소스·빌드 파일·CI를 지운다(`v1.12.1` 태그로 보존). 아이콘 등 재사용 자산만 `assets/`로 옮긴다. THIRD_PARTY_NOTICES도 이때 새 의존성 기준으로 다시 쓴다.
+- workspace의 모든 crate는 `license = "Apache-2.0"`이다. `cargo-deny`로 의존성 라이선스를 검사해 GPL·AGPL crate를 막는다. 네이티브 라이브러리는 manifest에 라이선스를 적고, LGPL은 동적 링크로만 쓴다.
 - M0의 기준 측정과 fixture 추출은 1.12.1 릴리스 패키지(또는 태그 빌드)로 한다.
 - 1.12.1과 달라지는 동작은 `docs/CHANGES_FROM_1.12.md`에 한 줄씩 적는다(1.12.1 동작, 새 동작, 이유). 최종 CHANGELOG와 첫 실행 안내의 재료가 된다.
 
@@ -246,9 +253,12 @@ crates/
 
 ### M0 — 위험 검증과 기준선 (진행 중)
 
-- **완료:** Apple M4에서 `ort` rc.14 + ORT 1.30으로 세 모델의 CPU·CoreML MLProgram 결과가 1.12.1과 같음. YuNet 원시 출력 직접 해석. `INTER_LINEAR` 이식 resize 바이트 일치. ([기록](M0_ORT_SPIKE.md))
+- **완료:**
+  - Apple M4에서 `ort` rc.14 + ORT 1.30으로 세 모델의 CPU·CoreML MLProgram 결과가 1.12.1과 같음. YuNet 원시 출력 직접 해석. `INTER_LINEAR` 이식 resize 바이트 일치. ([기록](M0_ORT_SPIKE.md))
+  - Windows ML 2.4.89(ORT 1.27.1)를 `ort::init_from`과 `api-27`로 불러 DML EP가 붙음. 네트워크 없는 Windows 11 Sandbox에서 실행. ([기록](M0_ORT_SPIKE.md#windows-ml--directml))
 - **남은 작업:**
-  - Windows ML 런타임의 DirectML로 같은 비교, 깨끗한 Windows 10 VM에서 오프라인 실행. Linux CPU 비교
+  - DirectML 결과를 1.12.1과 비교, 깨끗한 Windows 10 1903 VM에서 설치·오프라인 실행. Linux CPU 비교
+  - macOS·Linux도 `api-27`로 다시 빌드해 같은 결과인지 확인. 세 OS에서 ORT 텔레메트리를 끈 상태로 네트워크 감시
   - egui spike: 한글·일본어 표시와 텍스트 입력(IME), VoiceOver·Narrator, OS 파일 드롭, 네이티브 메뉴(`muda`), 4K 텍스처 확대·이동, 1080p 프레임 30fps 업로드, GPU 없는 환경·원격 데스크톱
   - EXIF writer spike: JPEG/PNG/WebP/TIFF에 allowlist 태그 새로 쓰기
   - FFmpeg 파이프 처리량(1080p, 4K)
@@ -317,7 +327,7 @@ crates/
 | UI | `egui_kittest` 상호작용 + 수동 OS 체크리스트(IME, 파일 대화상자, 스크린리더, HiDPI) |
 | fuzz | EXIF 읽기 입력, ffprobe JSON 파서 두 곳만 |
 
-CI에서 모델과 FFmpeg는 해시로 고정해 받는다. 필수 시험에 필요한 자산이 없으면 건너뛰지 않고 실패한다.
+CI에서 모델과 FFmpeg는 해시로 고정해 받고, `cargo-deny`로 의존성 라이선스와 보안 권고를 검사한다. 필수 시험에 필요한 자산이 없으면 건너뛰지 않고 실패한다.
 
 ### 9.2 탐지 품질
 
@@ -347,12 +357,30 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받는다. 필수 시험에 필
 - 릴리스 흐름: 빌드 → 패키지 실행 시험 → 보호된 release 환경에서 서명(서명 비밀은 environment secret으로) → 게시. 기존 `CloakFrame-updates` 저장소의 feed를 이어 쓴다.
 - 1.11.3 이하처럼 옛 feed에 묶인 사용자는 수동 설치 안내를 유지한다(ROADMAP의 수용 위험).
 
+### 10.1 라이선스: Apache-2.0 (2026-10-16 결정)
+
+CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENSE`도 이날 바꿨다. 1.12.1까지의 패키지는 Exiv2(GPL-2.0-or-later)를 링크하므로 패키지 전체가 GPL-3.0-or-later로 배포됐고, 그 사실은 README와 THIRD_PARTY_NOTICES에 남긴다.
+
+**바꾼 이유:** Windows ML 런타임(`Microsoft.Windows.AI.MachineLearning`)은 MIT인 ORT 소스와 달리 Microsoft Software License Terms로 배포된다. 재배포는 허용하지만(3a), 배포자와 최종 사용자가 Microsoft를 이 약관만큼 보호하는 조건에 동의하게 해야 하고(3b), 소스 공개를 요구하는 라이선스가 이 코드에 적용되도록 배포하면 안 된다(3c-ii). 이는 예외 없는 GPL 배포와 충돌한다. 1.12.1이 함께 배포한 `DirectML.dll`도 같은 종류의 약관이었으므로, Windows GPU 가속을 하는 한 피할 수 없었다. GPL에 7조 추가 허가를 붙이는 방법도 있었지만, 단순하게 Apache-2.0으로 충돌 자체를 없앴다.
+
+**지켜야 할 것:**
+- 링크하는 의존성은 Apache-2.0과 호환되어야 한다. GPL·AGPL crate는 쓰지 않고 `cargo-deny`로 막는다. LGPL 네이티브 라이브러리는 동적 링크로만 쓴다.
+- FFmpeg는 별도 프로세스이므로 GPL 빌드를 번들해도 된다. nonfree 빌드는 금지하고, FFmpeg의 GPL 고지와 대응 소스 위치를 THIRD_PARTY_NOTICES에 둔다.
+- Microsoft 약관(Windows ML 런타임) 전문을 THIRD_PARTY_NOTICES와 정보 창에 넣는다. 3b에 따라 설치 시 동의 화면까지 필요한지는 M7 전에 정한다.
+- 레거시 코드를 Apache-2.0으로 바꾸는 것은 저작권자 전원의 결정이어야 한다. 커밋 작성자는 메인테이너의 계정들뿐이다.
+
+이 절은 법률 자문이 아니다.
+
 ## 11. 위험
 
 | 위험 | 확인 시점 | 대응 |
 | --- | --- | --- |
 | egui의 IME·접근성·그래픽 호환성 | M0, M6 | 필수 동작이 실패하면 iced·Slint를 같은 편집기 시나리오로 재평가. headless 우선이라 engine 작업은 버려지지 않음 |
-| `ort` RC와 Windows ML의 ORT 버전 짝 | M0, M3 | 확인한 정확한 짝으로 고정. 맞는 짝이 없으면 그 버전에 머묾 |
+| Windows ML이 ORT 버전을 정함(현재 1.27.1), DirectML은 유지보수 모드 | M0, M7 | Windows ML 패키지 버전을 manifest에 고정하고 세 OS의 `api-N`을 그 ORT에 맞춤. 맞는 짝이 없으면 그 버전에 머묾. DML 회귀는 실기기 게이트로 잡음 |
+| `ort` RC | M0, M3 | 확인한 정확한 버전으로 고정, 추론 어댑터 뒤에 숨김 |
+| 의존성 라이선스 호환 | 전 단계 | `cargo-deny`로 GPL·AGPL crate 차단, 네이티브는 manifest에 라이선스 기록(10.1) |
+| Microsoft 약관 3b의 동의 요건 | M7 | 설치 화면에 약관 동의가 필요한지 M7 전에 정함 |
+| ORT 텔레메트리 | M0, M8 | 3장의 두 가지 차단 + 네트워크 감시. 새 ORT 버전마다 다시 확인 |
 | 프로세스 내 추론의 GPU driver crash | M3, M8 | 측정되면 `Detector` trait 뒤에서 별도 프로세스로 분리 |
 | FFmpeg 파이프 처리량 | M0, M4 | 프로세스 내 미디어 모듈(`ffmpeg-next`) 검토 |
 | TIFF EXIF writer | M0 | 실패한 형식만 선택 보존을 빼고 `CHANGES_FROM_1.12.md`에 기록 |
@@ -368,6 +396,8 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받는다. 필수 시험에 필
 - [ ] 9.2 품질 기준과 9.3 성능 목표를 측정 원자료와 함께 충족한다.
 - [ ] 한국어·영어·일본어, 키보드, 스크린리더, HiDPI, 파일 대화상자가 실제 OS에서 통과한다.
 - [ ] 세 OS 패키지가 깨끗한 최소 지원 OS에서 설치·오프라인 실행·업데이트·제거를 통과하고, 1.12.1에서 업데이트로 넘어오는 경로와 설정·모델 이전이 확인됐다.
+- [ ] 패키지와 정보 창에 Apache-2.0 LICENSE, 새 의존성 기준의 THIRD_PARTY_NOTICES, Microsoft 약관 전문이 들어 있고, `cargo-deny` 라이선스 검사가 통과한다.
+- [ ] 세 OS에서 앱이 모델 다운로드와 업데이트 외에 네트워크 요청을 하지 않음을(ORT 텔레메트리 포함) 네트워크 감시로 확인했다.
 - [ ] 필수 시험의 건너뜀, 미해결 핵심 결함, 미구현 핵심 기능을 예외로 남기지 않는다.
 
 ## 참고 자료
@@ -376,6 +406,10 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받는다. 필수 시험에 필
 - ort: <https://github.com/pykeio/ort>, rc.14: <https://github.com/pykeio/ort/releases/tag/v2.0.0-rc.14>
 - ONNX Runtime EP: DirectML <https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html>, CoreML <https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html>
 - Windows ML 배포: <https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/distributing-your-app>, EP 카탈로그 비교: <https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/windows-ml-eps-vs-bring-your-own>
+- Windows ML 2.4.89 패키지(ORT 1.27.1, 최소 OS)·약관: <https://www.nuget.org/packages/Microsoft.Windows.AI.MachineLearning/2.4.89>, <https://www.nuget.org/packages/Microsoft.Windows.AI.MachineLearning/2.4.89/License>, 릴리스: <https://github.com/microsoft/WindowsML/releases/tag/v2.4.89>
+- ort 기능 플래그(`api-17`–`api-31`): <https://docs.rs/crate/ort/2.0.0-rc.14/features>, `with_telemetry`: <https://docs.rs/ort/2.0.0-rc.14/ort/environment/struct.EnvironmentBuilder.html>
+- ONNX Runtime 텔레메트리: <https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md>
+- Apache License 2.0: <https://www.apache.org/licenses/LICENSE-2.0>, cargo-deny: <https://github.com/EmbarkStudios/cargo-deny>
 - image: <https://github.com/image-rs/image>, moxcms: <https://docs.rs/moxcms/latest/moxcms/>, kamadak-exif: <https://docs.rs/kamadak-exif/latest/exif/>, fast_image_resize: <https://docs.rs/fast_image_resize/latest/fast_image_resize/>
 - FFmpeg: CLI <https://ffmpeg.org/ffmpeg.html>, 프로토콜 <https://ffmpeg.org/ffmpeg-protocols.html>, 라이선스 <https://ffmpeg.org/legal.html>, ffmpeg-next <https://github.com/zmwangx/rust-ffmpeg>
 - Velopack Rust: <https://docs.velopack.io/getting-started/rust>, Sparkle: <https://sparkle-project.org/documentation/>

@@ -4,7 +4,10 @@ CloakFrame — Third-Party Notices
 CloakFrame bundles or links the third-party components listed below. Each is
 distributed under its own license, reproduced in full in this file. These
 notices apply to the accompanying binary distribution of CloakFrame and are
-separate from CloakFrame's own license (GNU General Public License v3.0 or later).
+separate from the license of CloakFrame's source code (Apache License 2.0).
+The packages of CloakFrame 1.12.1 and earlier link Exiv2 and are therefore
+distributed as a whole under the GNU General Public License v3.0 or later, whose
+text is reproduced in the Qt section below.
 
 ================================================================================
 Detection models  (not bundled; downloaded on first use)
@@ -59,8 +62,7 @@ https://www.gyan.dev/ffmpeg/ on Windows. When no bundled copy is present, a
 system-installed FFmpeg found on PATH is used instead. The bundled builds are
 configured with --enable-gpl and --enable-version3 and enable libx264 and
 libx265, so they are covered by the GNU General Public License version 3 or
-later, the license of CloakFrame itself, whose text is in the LICENSE file
-distributed with it. None of them is configured with --enable-nonfree, and the
+later, whose text is reproduced in the Qt section of this file. None of them is configured with --enable-nonfree, and the
 release workflow refuses any build that is. Complete corresponding
 FFmpeg source code is available from https://ffmpeg.org/download.html, and
 the build configurations are published by the respective build providers at
@@ -1174,7 +1176,7 @@ Microsoft.AI.DirectML package, which ONNX Runtime uses for GPU-accelerated
 inference on DirectX 12 hardware. DirectML is proprietary software of
 Microsoft Corporation, distributed as a separate, dynamically loaded library
 under its own license terms, reproduced below; it is not covered by
-CloakFrame's GPL license. Redistribution in applications that run on Windows
+CloakFrame's license. Redistribution in applications that run on Windows
 is permitted by section 1(a) of these terms.
 ================================================================================
 
@@ -5694,8 +5696,9 @@ Exiv2  (GPL-2.0-or-later)
 --
 Exiv2 is used for reading and writing image metadata (EXIF, IPTC, XMP, and the
 ICC color profile) and is dynamically linked. Because Exiv2 is licensed under
-the GNU General Public License, CloakFrame as a whole is distributed under the
-GNU General Public License v3.0 or later. The complete corresponding source
+the GNU General Public License, the packages that bundle it, CloakFrame 1.12.1
+and earlier, are distributed as a whole under the GNU General Public License
+v3.0 or later. The complete corresponding source
 code for the bundled Exiv2 version is available from
 https://github.com/Exiv2/exiv2 and https://exiv2.org/.
 
