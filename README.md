@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/cloakframe-512.png" width="112" alt="CloakFrame icon">
+  <img src="assets/icons/cloakframe-512.png" width="112" alt="CloakFrame icon">
 </p>
 
 <h1 align="center">CloakFrame</h1>

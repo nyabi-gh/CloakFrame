@@ -1,16 +1,7 @@
-# CMake and packaging output
-build*/
-out/
-dist/
-cmake-build-*/
-CMakeUserPresets.json
-compile_commands.json
-CMakeCache.txt
-CMakeFiles/
-Testing/
+# Build output
+/target/
 
 # IDE and operating-system files
-*.user
 .DS_Store
 **/.DS_Store
 ._*

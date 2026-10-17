@@ -1,5 +1,10 @@
 # Releasing CloakFrame
 
+> This describes how 1.12.1 and earlier were released, with the CMake build and the
+> `release.yml` workflow that live on at the `v1.12.1` tag. The Rust release process
+> replaces it in M7 ([plan](RUST_PORT_PLAN.md) 8, 10); the update feeds and signing keys
+> below carry over.
+
 Maintainer notes for cutting a release, staging packages, and managing the
 update signing keys. Contributors do not need any of this; see
 [CONTRIBUTING.md](../CONTRIBUTING.md) to build and test.

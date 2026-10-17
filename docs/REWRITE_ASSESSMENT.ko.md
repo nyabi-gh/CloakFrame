@@ -107,7 +107,7 @@ cloakframe_core(정적 라이브러리): 탐지기 4종, 추적, 마스킹, Imag
 
 ### D1. 영상 출력 색 틀어짐 (실측)
 
-인코더에 BGR24 원시 프레임을 넘기면 FFmpeg가 기본값인 **BT.601 행렬**로 YUV 변환하고, 출력에 색 공간 태그를 붙이지 않습니다([VideoIo.cpp:1141-1223](../src/VideoIo.cpp#L1141)). HD 영상을 태그 없이 받으면 대부분의 재생기·브라우저는 BT.709로 해석하므로 색이 이동합니다.
+인코더에 BGR24 원시 프레임을 넘기면 FFmpeg가 기본값인 **BT.601 행렬**로 YUV 변환하고, 출력에 색 공간 태그를 붙이지 않습니다([VideoIo.cpp:1141-1223](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/VideoIo.cpp#L1141)). HD 영상을 태그 없이 받으면 대부분의 재생기·브라우저는 BT.709로 해석하므로 색이 이동합니다.
 
 앱과 똑같은 디코드·인코드 인자로 재현한 결과:
 
@@ -121,11 +121,11 @@ cloakframe_core(정적 라이브러리): 탐지기 4종, 추적, 마스킹, Imag
 
 ### D2. 사진 ICC 색 프로파일 소실 (코드 확인)
 
-`cv::imencode`는 ICC를 쓰지 않고, 메타데이터 보존 경로도 `dst->clearIccProfile()`을 명시적으로 호출합니다([ImageIo.cpp:2141](../src/ImageIo.cpp#L2141)). 픽셀 값은 원본 색 공간 그대로 저장되므로, Display P3(아이폰)나 Adobe RGB 사진은 sRGB로 해석되어 채도가 빠져 보입니다. ICC는 개인정보가 아니므로 지울 이유가 없습니다.
+`cv::imencode`는 ICC를 쓰지 않고, 메타데이터 보존 경로도 `dst->clearIccProfile()`을 명시적으로 호출합니다([ImageIo.cpp:2141](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ImageIo.cpp#L2141)). 픽셀 값은 원본 색 공간 그대로 저장되므로, Display P3(아이폰)나 Adobe RGB 사진은 sRGB로 해석되어 채도가 빠져 보입니다. ICC는 개인정보가 아니므로 지울 이유가 없습니다.
 
 ### D3. 모자이크 블록 크기 설정 무효 (실측)
 
-셀 수를 가로·세로 최대 12개로 묶어 둡니다(`kMaxMosaicCells`, [Mosaic.cpp:53-65](../src/Mosaic.cpp#L53)). 600px 얼굴에서:
+셀 수를 가로·세로 최대 12개로 묶어 둡니다(`kMaxMosaicCells`, [Mosaic.cpp:53-65](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/Mosaic.cpp#L53)). 600px 얼굴에서:
 
 | 블록 크기 | 결과 색 수 |
 | --- | --- |
@@ -136,44 +136,44 @@ cloakframe_core(정적 라이브러리): 탐지기 4종, 추적, 마스킹, Imag
 
 ### D4. 출력 권한 (실측 / 코드 확인)
 
-- POSIX: 임시 파일을 `0600`으로 만들고 그대로 이름만 바꿔 게시하며, 하위 폴더는 `mkdirat(..., 0700)`으로 만듭니다. 검증 결과 출력 파일 `600`, 하위 폴더 `700`([ImageIo.cpp:1104](../src/ImageIo.cpp#L1104), [1311](../src/ImageIo.cpp#L1311)). 영상은 게시 직전에 `fchmod(0600)`을 겁니다([1974](../src/ImageIo.cpp#L1974)).
-- Windows: 소유자·관리자·SYSTEM만 가진 **보호 DACL**(`D:P(...)`)로 파일을 만든 뒤 이름을 바꿉니다([ImageIo.cpp:845](../src/ImageIo.cpp#L845)). 같은 볼륨 안의 이름 변경은 보안 설명자를 유지하므로 출력 폴더의 권한을 상속하지 않습니다(확인 필요).
+- POSIX: 임시 파일을 `0600`으로 만들고 그대로 이름만 바꿔 게시하며, 하위 폴더는 `mkdirat(..., 0700)`으로 만듭니다. 검증 결과 출력 파일 `600`, 하위 폴더 `700`([ImageIo.cpp:1104](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ImageIo.cpp#L1104), [1311](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ImageIo.cpp#L1311)). 영상은 게시 직전에 `fchmod(0600)`을 겁니다([1974](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ImageIo.cpp#L1974)).
+- Windows: 소유자·관리자·SYSTEM만 가진 **보호 DACL**(`D:P(...)`)로 파일을 만든 뒤 이름을 바꿉니다([ImageIo.cpp:845](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ImageIo.cpp#L845)). 같은 볼륨 안의 이름 변경은 보안 설명자를 유지하므로 출력 폴더의 권한을 상속하지 않습니다(확인 필요).
 - 결과: 공유 폴더, NAS, 웹 서버 업로드, 다른 계정에서 결과물을 읽지 못하는 상황이 생깁니다. 익명화된 결과물은 "공유하려고 만드는 파일"이라 이 기본값은 목적과 반대입니다.
 
 ### D5. Linux 모델 다운로드 저장 거부 (실측, 영향 범위 확인 필요)
 
-`saveModelFile`이 `QDir::mkpath`로 umask대로 폴더를 만든 직후, 그룹 쓰기 비트가 있으면 "공유 폴더"로 판정해 저장을 거부합니다([ModelStore.cpp:299-305](../src/ModelStore.cpp#L299)). umask 002에서 재현했습니다(폴더 `775` → `FolderNotPrivate`). 사용자 전용 그룹(UPG)을 쓰는 배포판에서는 umask 002가 흔하므로 실제 사용자가 첫 실행부터 막힐 수 있습니다. 데스크톱 세션의 실제 umask는 Ubuntu·Fedora 실기에서 확인이 필요합니다.
+`saveModelFile`이 `QDir::mkpath`로 umask대로 폴더를 만든 직후, 그룹 쓰기 비트가 있으면 "공유 폴더"로 판정해 저장을 거부합니다([ModelStore.cpp:299-305](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ModelStore.cpp#L299)). umask 002에서 재현했습니다(폴더 `775` → `FolderNotPrivate`). 사용자 전용 그룹(UPG)을 쓰는 배포판에서는 umask 002가 흔하므로 실제 사용자가 첫 실행부터 막힐 수 있습니다. 데스크톱 세션의 실제 umask는 Ubuntu·Fedora 실기에서 확인이 필요합니다.
 
 더 근본적으로, 모델은 로드할 때마다 고정된 SHA-256으로 다시 검증되므로 이 검사는 보안상 얻는 것이 없습니다.
 
 ### D6. JPEG 출력 비대 (실측, 합성 이미지)
 
-JPEG을 품질 100 + 4:4:4로, WebP를 품질 101(무손실)로 저장합니다([ImageIo.cpp:2020-2034](../src/ImageIo.cpp#L2020)). 4000×3000 합성 이미지에서 일반 카메라 설정(q90, 4:2:0) 1.1MB 대비 앱 출력 8.3MB(7.3배)였습니다. 실사진은 이보다 덜하겠지만 원본보다 수 배 커지는 것은 확실합니다. 손실 원본을 무손실로 다시 저장해도 화질은 돌아오지 않습니다.
+JPEG을 품질 100 + 4:4:4로, WebP를 품질 101(무손실)로 저장합니다([ImageIo.cpp:2020-2034](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ImageIo.cpp#L2020)). 4000×3000 합성 이미지에서 일반 카메라 설정(q90, 4:2:0) 1.1MB 대비 앱 출력 8.3MB(7.3배)였습니다. 실사진은 이보다 덜하겠지만 원본보다 수 배 커지는 것은 확실합니다. 손실 원본을 무손실로 다시 저장해도 화질은 돌아오지 않습니다.
 
 ### D7. 모델 중복 로드 (코드 확인)
 
-- 영상이 섞인 실행에서 YOLO5Face·YuNet은 사진용과 영상용 입력 크기가 같은 640인데도 세션을 두 번 만들고 워밍업도 두 번 합니다([ProcessorWorker.cpp:1511-1515](../src/ProcessorWorker.cpp#L1511)). SCRFD(커스텀 전용)만 960으로 다릅니다.
-- 입력을 스캔하기 전에 모델부터 로드하므로, 지원 파일이 하나도 없어도 로드 시간을 기다립니다([ProcessorWorker.cpp:539](../src/ProcessorWorker.cpp#L539)).
+- 영상이 섞인 실행에서 YOLO5Face·YuNet은 사진용과 영상용 입력 크기가 같은 640인데도 세션을 두 번 만들고 워밍업도 두 번 합니다([ProcessorWorker.cpp:1511-1515](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L1511)). SCRFD(커스텀 전용)만 960으로 다릅니다.
+- 입력을 스캔하기 전에 모델부터 로드하므로, 지원 파일이 하나도 없어도 로드 시간을 기다립니다([ProcessorWorker.cpp:539](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L539)).
 
 ### D8. 데이터 경쟁 (코드 확인)
 
-병렬 사진 처리 중 `processItem`이 `detector_`·`plateDetector_`(`shared_ptr`)를 락 없이 읽는데([ProcessorWorker.cpp:1221](../src/ProcessorWorker.cpp#L1221), [1228](../src/ProcessorWorker.cpp#L1228)), 다른 스레드는 GPU 실패 시 락을 잡고 같은 객체를 교체합니다([502-519](../src/ProcessorWorker.cpp#L502)). 표준상 미정의 동작이며, 실행 도중 GPU가 실패할 때만 발생합니다.
+병렬 사진 처리 중 `processItem`이 `detector_`·`plateDetector_`(`shared_ptr`)를 락 없이 읽는데([ProcessorWorker.cpp:1221](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L1221), [1228](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L1228)), 다른 스레드는 GPU 실패 시 락을 잡고 같은 객체를 교체합니다([502-519](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L502)). 표준상 미정의 동작이며, 실행 도중 GPU가 실패할 때만 발생합니다.
 
 ### D9. 원본 복사 + 메타데이터 보존 (코드 확인)
 
-리뷰에서 "Copy Original"을 고르고 메타데이터 보존이 켜져 있으면 파일을 바이트 그대로 복사합니다([ProcessorWorker.cpp:1319-1323](../src/ProcessorWorker.cpp#L1319)). GPS·시리얼·소유자명이 모두 남습니다. 확인 창에 언급은 있지만 README의 "시리얼 번호와 소유자·작성자 이름은 절대 남기지 않는다"는 문장과 모순입니다.
+리뷰에서 "Copy Original"을 고르고 메타데이터 보존이 켜져 있으면 파일을 바이트 그대로 복사합니다([ProcessorWorker.cpp:1319-1323](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L1319)). GPS·시리얼·소유자명이 모두 남습니다. 확인 창에 언급은 있지만 README의 "시리얼 번호와 소유자·작성자 이름은 절대 남기지 않는다"는 문장과 모순입니다.
 
 ### D10. 대소문자 무시 비교 (코드 확인)
 
-입력 중복 제거와 "출력 폴더가 입력 안에 있는지" 검사가 파일시스템과 무관하게 대소문자를 무시합니다([MainWindow.cpp:1628](../src/MainWindow.cpp#L1628), [2716](../src/MainWindow.cpp#L2716)). Linux에서 `Photos`와 `photos`를 같은 폴더로 취급합니다. 반면 출력 충돌 검사는 파일시스템을 실제로 조사해서 판단하므로 같은 앱 안에서 기준이 다릅니다.
+입력 중복 제거와 "출력 폴더가 입력 안에 있는지" 검사가 파일시스템과 무관하게 대소문자를 무시합니다([MainWindow.cpp:1628](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/MainWindow.cpp#L1628), [2716](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/MainWindow.cpp#L2716)). Linux에서 `Photos`와 `photos`를 같은 폴더로 취급합니다. 반면 출력 충돌 검사는 파일시스템을 실제로 조사해서 판단하므로 같은 앱 안에서 기준이 다릅니다.
 
 ### D11. omitted 과대 보고 (코드 확인)
 
-YOLO5Face는 NMS 전 후보가 2,000개를 넘으면 초과분을 "안전 상한을 넘어 가리지 못한 영역"으로 셉니다([Yolo5FaceDetector.cpp:319-329](../src/Yolo5FaceDetector.cpp#L319)). 그런데 NMS 전 후보는 대부분 같은 얼굴의 중복 앵커라 실제보다 큰 숫자로 경고합니다. 영상은 점수 임계값 0.1로 탐지하므로 군중 장면에서 나올 수 있습니다.
+YOLO5Face는 NMS 전 후보가 2,000개를 넘으면 초과분을 "안전 상한을 넘어 가리지 못한 영역"으로 셉니다([Yolo5FaceDetector.cpp:319-329](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/Yolo5FaceDetector.cpp#L319)). 그런데 NMS 전 후보는 대부분 같은 얼굴의 중복 앵커라 실제보다 큰 숫자로 경고합니다. 영상은 점수 임계값 0.1로 탐지하므로 군중 장면에서 나올 수 있습니다.
 
 ### D12. 사진 원본 복사본 위치 (코드 확인)
 
-`StageCleanup.hpp`는 "원본 복사본은 시스템 임시 폴더가 아니라 사용자별 디스크 폴더에 둔다"고 적었지만, 사진은 `QDir::tempPath()`에 복사합니다([ProcessorWorker.cpp:1053](../src/ProcessorWorker.cpp#L1053)). 영상만 `privateStageRoot()`를 씁니다. 주석과 코드가 어긋나는 사례입니다.
+`StageCleanup.hpp`는 "원본 복사본은 시스템 임시 폴더가 아니라 사용자별 디스크 폴더에 둔다"고 적었지만, 사진은 `QDir::tempPath()`에 복사합니다([ProcessorWorker.cpp:1053](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L1053)). 영상만 `privateStageRoot()`를 씁니다. 주석과 코드가 어긋나는 사례입니다.
 
 ---
 
@@ -181,7 +181,7 @@ YOLO5Face는 NMS 전 후보가 2,000개를 넘으면 초과분을 "안전 상한
 
 ### 4.1 워커가 GUI를 동기 호출
 
-사진·영상 리뷰는 워커 스레드가 `QMetaObject::invokeMethod(..., Qt::BlockingQueuedConnection)`으로 `MainWindow::requestReview`를 부르고, 그 안에서 `QDialog::exec()`가 돕니다([ProcessorWorker.cpp:1254](../src/ProcessorWorker.cpp#L1254), [MainWindow.cpp:3016](../src/MainWindow.cpp#L3016)). 그 결과:
+사진·영상 리뷰는 워커 스레드가 `QMetaObject::invokeMethod(..., Qt::BlockingQueuedConnection)`으로 `MainWindow::requestReview`를 부르고, 그 안에서 `QDialog::exec()`가 돕니다([ProcessorWorker.cpp:1254](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ProcessorWorker.cpp#L1254), [MainWindow.cpp:3016](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/MainWindow.cpp#L3016)). 그 결과:
 
 - 사용자가 리뷰하는 동안 다음 파일을 미리 처리할 수 없습니다. 리뷰가 끝나야 다음 파일의 로드·탐지가 시작됩니다.
 - 리뷰 모드에서는 병렬 처리가 통째로 꺼지고 전부 직렬입니다. 그리고 **리뷰가 기본값으로 켜져 있습니다.**
@@ -258,7 +258,7 @@ SECURITY.md는 "같은 기기의 다른 계정"을 위협 모델 밖으로 둡�
 
 ### 6.4 숨은 결합
 
-`MainWindow`가 폴더 항목에 `Qt::UserRole + 10`을 세팅하면, `ThumbnailLoader`가 같은 역할 번호를 "썸네일 이미 요청됨"으로 해석해 폴더를 건너뜁니다([MainWindow.cpp:2726](../src/MainWindow.cpp#L2726), [ThumbnailLoader.cpp:17](../src/ThumbnailLoader.cpp#L17)).
+`MainWindow`가 폴더 항목에 `Qt::UserRole + 10`을 세팅하면, `ThumbnailLoader`가 같은 역할 번호를 "썸네일 이미 요청됨"으로 해석해 폴더를 건너뜁니다([MainWindow.cpp:2726](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/MainWindow.cpp#L2726), [ThumbnailLoader.cpp:17](https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/src/ThumbnailLoader.cpp#L17)).
 
 ### 6.5 주석
 
