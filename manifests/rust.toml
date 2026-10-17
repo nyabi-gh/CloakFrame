@@ -49,3 +49,10 @@ evidence = "docs/M0_EXIF_WRITER.md"
 [crates.kamadak-exif]
 version = "=0.6.1"
 evidence = "docs/M0_EXIF_WRITER.md"
+
+[crates.windows-sys]
+version = "=0.61.2"
+features = ["Win32_Storage_FileSystem"]
+targets = ["windows"]
+# 파일 identity(GetFileInformationByHandleEx FileIdInfo, NTFS·ReFS의 128비트 ID). 계획 3장의 파일시스템 항목.
+evidence = "crates/cloakframe-engine/src/identity.rs"

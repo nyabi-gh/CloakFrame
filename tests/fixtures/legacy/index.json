@@ -140,8 +140,9 @@
    "note": "manifest 해시"
   },
   "tests/testCaseFoldingFollowsTheFilesystem": {
-   "status": "normative",
-   "plan": "M1, D10"
+   "status": "changed",
+   "plan": "M1, D10",
+   "note": "대소문자 판정과 다르게 쓴 같은 파일의 중복 제거는 규범. 하드 링크를 별개 입력으로 두는 부분은 바뀜: 중복은 파일 identity로 정하므로 하드 링크도 한 입력(계획 4.3)"
   },
   "tests/testCustomImageCoversDetectedRegion": {
    "status": "intent",

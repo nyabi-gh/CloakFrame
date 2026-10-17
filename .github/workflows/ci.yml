@@ -7,6 +7,8 @@ on:
   pull_request:
     branches:
       - main
+  # 기준이 main이 아닌 쌓인 PR의 브랜치를 직접 돌릴 때.
+  workflow_dispatch:
 
 permissions:
   contents: read
