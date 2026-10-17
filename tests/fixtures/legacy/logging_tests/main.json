@@ -1,0 +1,87 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "dir.isValid()",
+            "failed": 0,
+            "line": 18,
+            "passed": 1
+        },
+        {
+            "expr": "file.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 22,
+            "passed": 6
+        },
+        {
+            "expr": "!contents().contains(\"person.jpg\") && contents().contains(\"total=1\")",
+            "failed": 0,
+            "line": 30,
+            "passed": 1
+        },
+        {
+            "expr": "console.str().find(\"person.jpg\") == std::string::npos",
+            "failed": 0,
+            "line": 31,
+            "passed": 1
+        },
+        {
+            "expr": "console.str().find(\"total=1\") != std::string::npos",
+            "failed": 0,
+            "line": 32,
+            "passed": 1
+        },
+        {
+            "expr": "contents().contains(\"detail.jpg\")",
+            "failed": 0,
+            "line": 35,
+            "passed": 1
+        },
+        {
+            "expr": "console.str().find(\"detail.jpg\") != std::string::npos",
+            "failed": 0,
+            "line": 36,
+            "passed": 1
+        },
+        {
+            "expr": "!contents().contains(\"hidden.jpg\")",
+            "failed": 0,
+            "line": 39,
+            "passed": 1
+        },
+        {
+            "expr": "console.str().find(\"hidden.jpg\") == std::string::npos",
+            "failed": 0,
+            "line": 40,
+            "passed": 1
+        },
+        {
+            "expr": "unrelated.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 42,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::clearLocalLogs()",
+            "failed": 0,
+            "line": 44,
+            "passed": 1
+        },
+        {
+            "expr": "contents().isEmpty() && unrelated.exists()",
+            "failed": 0,
+            "line": 45,
+            "passed": 1
+        },
+        {
+            "expr": "contents().contains(\"Diagnostics resumed\")",
+            "failed": 0,
+            "line": 47,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/logging_tests.cpp @ v1.12.1",
+    "suite": "logging_tests",
+    "test": "main"
+}

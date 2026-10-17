@@ -1,0 +1,75 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 324,
+            "passed": 1
+        },
+        {
+            "expr": "root.mkpath(\"a\")",
+            "failed": 0,
+            "line": 327,
+            "passed": 1
+        },
+        {
+            "expr": "found.size() == 1",
+            "failed": 0,
+            "line": 337,
+            "passed": 1
+        },
+        {
+            "expr": "issues.size() == 2",
+            "failed": 0,
+            "line": 338,
+            "passed": 1
+        },
+        {
+            "expr": "issue.error",
+            "failed": 0,
+            "line": 341,
+            "passed": 2
+        },
+        {
+            "expr": "reported.contains(\"gone.jpg\")",
+            "failed": 0,
+            "line": 349,
+            "passed": 1
+        },
+        {
+            "expr": "reported.contains(\"nowhere\")",
+            "failed": 0,
+            "line": 350,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::scanImages({root.filePath(\"a\")}, true, &clean).size() == 1",
+            "failed": 0,
+            "line": 355,
+            "passed": 1
+        },
+        {
+            "expr": "clean.empty()",
+            "failed": 0,
+            "line": 356,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testScanReportsInputsItCannotRead"
+}

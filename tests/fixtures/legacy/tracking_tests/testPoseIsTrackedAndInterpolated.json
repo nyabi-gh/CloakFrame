@@ -1,0 +1,217 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "tracks.size() == 1",
+            "failed": 0,
+            "line": 171,
+            "passed": 1
+        },
+        {
+            "expr": "tracks[0].boxAtFrame(0)->hasPose",
+            "failed": 0,
+            "line": 172,
+            "passed": 1
+        },
+        {
+            "expr": "std::abs(tracks[0].boxAtFrame(0)->rollRadians) < 0.001F",
+            "failed": 0,
+            "line": 173,
+            "passed": 1
+        },
+        {
+            "expr": "middle != nullptr",
+            "failed": 0,
+            "line": 177,
+            "passed": 1
+        },
+        {
+            "expr": "middle->interpolated",
+            "failed": 0,
+            "line": 178,
+            "passed": 1
+        },
+        {
+            "expr": "middle->hasPose",
+            "failed": 0,
+            "line": 179,
+            "passed": 1
+        },
+        {
+            "expr": "std::abs(middle->rollRadians - 0.2F) < 0.001F",
+            "failed": 0,
+            "line": 180,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "config": {
+                "coast_motion_threshold": 0.05000000074505806,
+                "high_score_threshold": 0.5,
+                "iou_threshold": 0.30000001192092896,
+                "low_score_threshold": 0.10000000149011612,
+                "max_frames_lost": 30,
+                "max_frames_since_high_score": 30,
+                "max_frames_since_high_score_moving": 45,
+                "velocity_blend": 0.30000001192092896
+            },
+            "fn": "buildTracks",
+            "frames": [
+                [
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": true,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                ],
+                [
+                    {
+                        "box": [
+                            60,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": true,
+                        "roll": 0.4000000059604645,
+                        "score": 0.8999999761581421
+                    }
+                ]
+            ],
+            "has_continue_guard": false,
+            "scene_cuts": [
+            ],
+            "tracks": [
+                {
+                    "boxes": [
+                        {
+                            "box": [
+                                50,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 0,
+                            "has_pose": true,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                60,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 2,
+                            "has_pose": true,
+                            "interpolated": false,
+                            "roll": 0.4000000059604645,
+                            "score": 0.8999999761581421
+                        }
+                    ],
+                    "id": 1,
+                    "low_confidence": false
+                }
+            ]
+        },
+        {
+            "fn": "interpolateGaps",
+            "has_continue_guard": false,
+            "max_gap": 3,
+            "scene_cuts": [
+            ],
+            "track_after": {
+                "boxes": [
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 0,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            55,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 1,
+                        "has_pose": true,
+                        "interpolated": true,
+                        "roll": 0.20000000298023224,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            60,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 2,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.4000000059604645,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                "id": 1,
+                "low_confidence": false
+            },
+            "track_before": {
+                "boxes": [
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 0,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            60,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 2,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.4000000059604645,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                "id": 1,
+                "low_confidence": false
+            },
+            "uncovered_spans": [
+            ]
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testPoseIsTrackedAndInterpolated"
+}

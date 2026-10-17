@@ -1,0 +1,102 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "kept.size() == 1",
+            "failed": 0,
+            "line": 2217,
+            "passed": 1
+        },
+        {
+            "expr": "cv::norm(image, before, cv::NORM_INF) == 0.0",
+            "failed": 0,
+            "line": 2226,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "detections": [
+                {
+                    "box": [
+                        "NaN",
+                        0,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                },
+                {
+                    "box": [
+                        0,
+                        0,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": "NaN"
+                },
+                {
+                    "box": [
+                        2,
+                        2,
+                        8,
+                        8
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.800000011920929
+                }
+            ],
+            "fn": "nonMaxSuppression",
+            "kept": [
+                {
+                    "box": [
+                        2,
+                        2,
+                        8,
+                        8
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.800000011920929
+                }
+            ],
+            "threshold": 0.4000000059604645
+        },
+        {
+            "block_size": 8,
+            "detections": [
+                {
+                    "box": [
+                        0,
+                        "NaN",
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 16,
+                "depth_bits": 8,
+                "rows": 16
+            },
+            "input_png": "testInvalidDetectionsAreIgnored/1-input.png",
+            "method": "fill",
+            "output_png": "testInvalidDetectionsAreIgnored/2-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testInvalidDetectionsAreIgnored"
+}

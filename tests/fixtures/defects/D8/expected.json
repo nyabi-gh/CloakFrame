@@ -1,0 +1,17 @@
+{
+  "id": "D8",
+  "requirement": "추론 세션의 소유자는 추론 스레드 하나다. 다른 스레드는 메시지로만 요청한다. GPU 실패 시 교체도 그 스레드 안에서 일어난다.",
+  "stage": "M3",
+  "expect": [
+    {
+      "check": "type_level",
+      "rule": "Session을 Send/Sync로 공유하지 않는다(컴파일 시 보장). Detector는 채널 handle만 노출"
+    },
+    {
+      "check": "fault_injection",
+      "scenario": "사진 8장 병렬 처리 중 3번째 추론에서 GPU 오류 주입",
+      "expect": "3번째 사진은 CPU로 한 번 재실행, 이후는 CPU, 8장 모두 처리, '가속 실패로 CPU 사용' 이유 1회 표시. ThreadSanitizer 또는 loom 없이도 구조상 경쟁 없음"
+    }
+  ],
+  "observed_1121": "코드 확인(ProcessorWorker.cpp:1221, 1228, 502-519). 재현은 GPU 실패 시점에만 일어나 fixture로 만들지 않음"
+}

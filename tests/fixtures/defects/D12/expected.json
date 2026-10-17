@@ -1,0 +1,16 @@
+{
+  "id": "D12",
+  "requirement": "사진 원본의 사본을 어디에도 만들지 않는다. 바이트를 한 번 읽어 메모리에서 끝까지 쓴다.",
+  "stage": "M1",
+  "expect": [
+    {
+      "check": "tmpdir_untouched",
+      "rule": "TMPDIR(Windows는 TEMP)을 전용 폴더로 바꾸고 처리하는 동안 그 폴더에 아무 항목도 생기지 않음"
+    },
+    {
+      "check": "output_folder",
+      "rule": "출력 폴더에는 .cloakframe-tmp-* 임시 파일 하나와 최종 파일만 보임"
+    }
+  ],
+  "observed_1121_summary": "36 MB PNG 처리 중 TMPDIR/.cloakframe-stage-*/source.png에 원본 전체 사본(36,066,805 B)이 생김"
+}

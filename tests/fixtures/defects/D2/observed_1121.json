@@ -1,0 +1,69 @@
+{
+  "pipeline": "ProcessorWorker, detection off, metadata not preserved",
+  "outcome": "completed_with_warnings",
+  "runs": [
+    {
+      "input": "chart-adobe-rgb.jpg",
+      "input_icc": "Adobe RGB (1998) compatible (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-adobe-rgb.png",
+      "input_icc": "Adobe RGB (1998) compatible (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-display-p3.jpg",
+      "input_icc": "Display P3 (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-display-p3.png",
+      "input_icc": "Display P3 (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-srgb.jpg",
+      "input_icc": "sRGB (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-srgb.png",
+      "input_icc": "sRGB (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-untagged.png",
+      "input_icc": null,
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-wide-gamma18.jpg",
+      "input_icc": "Wide gamut gamma 1.8 D50 (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "chart-wide-gamma18.png",
+      "input_icc": "Wide gamut gamma 1.8 D50 (CloakFrame fixture)",
+      "output_exists": true,
+      "output_icc": null,
+      "max_pixel_difference_vs_input": 0
+    }
+  ]
+}

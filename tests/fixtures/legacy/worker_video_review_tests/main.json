@@ -1,0 +1,159 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "request.initialFrame == 20",
+            "failed": 0,
+            "line": 45,
+            "passed": 4
+        },
+        {
+            "expr": "thread.wait()",
+            "failed": 0,
+            "line": 141,
+            "passed": 6
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 181,
+            "passed": 1
+        },
+        {
+            "expr": "generate.waitForFinished(30000) && generate.exitCode() == 0",
+            "failed": 0,
+            "line": 201,
+            "passed": 1
+        },
+        {
+            "expr": "run.files.size() == 1",
+            "failed": 0,
+            "line": 217,
+            "passed": 4
+        },
+        {
+            "expr": "std::is_sorted(run.progress.cbegin(), run.progress.cend())",
+            "failed": 0,
+            "line": 218,
+            "passed": 4
+        },
+        {
+            "expr": "std::any_of(run.progress.cbegin(), run.progress.cend(), [](double fraction) { return fraction > 0.0 && fraction < 1.0; })",
+            "failed": 0,
+            "line": 224,
+            "passed": 4
+        },
+        {
+            "expr": "!run.progress.isEmpty() && run.progress.back() == 1.0",
+            "failed": 0,
+            "line": 225,
+            "passed": 4
+        },
+        {
+            "expr": "reviewer.gaps.size() == 2",
+            "failed": 0,
+            "line": 227,
+            "passed": 4
+        },
+        {
+            "expr": "summary.trackingGapFrames > 0",
+            "failed": 0,
+            "line": 228,
+            "passed": 4
+        },
+        {
+            "expr": "summary.pendingTrackingGapFrames == expectedPending",
+            "failed": 0,
+            "line": 232,
+            "passed": 4
+        },
+        {
+            "expr": "summary.excludedTracks == (mode == 3 ? 1 : 0)",
+            "failed": 0,
+            "line": 233,
+            "passed": 4
+        },
+        {
+            "expr": "summary.videosWithAudio == (request.removeAudio ? 0 : 1)",
+            "failed": 0,
+            "line": 234,
+            "passed": 4
+        },
+        {
+            "expr": "run.outcome == (mode == 2 ? cloakframe::RunOutcome::Completed : cloakframe::RunOutcome::CompletedWithWarnings)",
+            "failed": 0,
+            "line": 237,
+            "passed": 4
+        },
+        {
+            "expr": "file.status == (mode == 2 ? cloakframe::FileResultStatus::Saved : cloakframe::FileResultStatus::NeedsReview)",
+            "failed": 0,
+            "line": 240,
+            "passed": 4
+        },
+        {
+            "expr": "QFileInfo::exists(output)",
+            "failed": 0,
+            "line": 241,
+            "passed": 4
+        },
+        {
+            "expr": "QFileInfo(file.outputPath).canonicalFilePath() == QFileInfo(output).canonicalFilePath()",
+            "failed": 0,
+            "line": 243,
+            "passed": 4
+        },
+        {
+            "expr": "acknowledged == std::min(mode, 2)",
+            "failed": 0,
+            "line": 248,
+            "passed": 4
+        },
+        {
+            "expr": "QFile::copy(source, secondSource)",
+            "failed": 0,
+            "line": 253,
+            "passed": 1
+        },
+        {
+            "expr": "run.files.size() == 2",
+            "failed": 0,
+            "line": 271,
+            "passed": 2
+        },
+        {
+            "expr": "file.status == firstStatus",
+            "failed": 0,
+            "line": 277,
+            "passed": 2
+        },
+        {
+            "expr": "file.outputPath.isEmpty()",
+            "failed": 0,
+            "line": 278,
+            "passed": 2
+        },
+        {
+            "expr": "!QFileInfo::exists( request.outputDirectory + \"/\" + QFileInfo(file.sourcePath).fileName())",
+            "failed": 0,
+            "line": 280,
+            "passed": 2
+        },
+        {
+            "expr": "file.status != cloakframe::FileResultStatus::Cancelled && file.status != firstStatus",
+            "failed": 0,
+            "line": 285,
+            "passed": 2
+        },
+        {
+            "expr": "QFileInfo::exists(file.outputPath)",
+            "failed": 0,
+            "line": 286,
+            "passed": 2
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/worker_video_review_tests.cpp @ v1.12.1",
+    "suite": "worker_video_review_tests",
+    "test": "main"
+}

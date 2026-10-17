@@ -1,0 +1,99 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2250,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(root)",
+            "failed": 0,
+            "line": 2254,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(outside)",
+            "failed": 0,
+            "line": 2255,
+            "passed": 1
+        },
+        {
+            "expr": "!ec",
+            "failed": 0,
+            "line": 2260,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::destinationIsSafe(link / \"leak.jpg\", root)",
+            "failed": 0,
+            "line": 2262,
+            "passed": 1
+        },
+        {
+            "expr": "!ec",
+            "failed": 0,
+            "line": 2267,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(danglingLink)",
+            "failed": 0,
+            "line": 2268,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::is_symlink(std::filesystem::symlink_status(danglingLink))",
+            "failed": 0,
+            "line": 2269,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::destinationIsSafe(danglingLink, root)",
+            "failed": 0,
+            "line": 2270,
+            "passed": 1
+        },
+        {
+            "expr": "conflicts.size() == 1",
+            "failed": 0,
+            "line": 2276,
+            "passed": 1
+        },
+        {
+            "expr": "conflicts.front().kind == cloakframe::OutputConflict::Kind::ExistingDestination",
+            "failed": 0,
+            "line": 2277,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(8, 8, CV_8UC3, cv::Scalar(1, 2, 3)))",
+            "failed": 0,
+            "line": 2280,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::copyFileNoReplace(source, danglingLink)",
+            "failed": 0,
+            "line": 2281,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::imwriteUnicodeNoReplace( danglingLink, cv::Mat(8, 8, CV_8UC3, cv::Scalar(4, 5, 6)))",
+            "failed": 0,
+            "line": 2283,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(danglingTarget)",
+            "failed": 0,
+            "line": 2284,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testDestinationRejectsSymlinkEscape"
+}

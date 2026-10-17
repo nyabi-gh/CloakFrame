@@ -1,0 +1,28 @@
+{
+    "input": "detect/inputs/crowd-280-faces.png (280 identical 32x44 faces)",
+    "limits_1121": {
+        "candidates_before_nms": 2000,
+        "detections_after_nms": 300
+    },
+    "model": "yolov5n_face.onnx (CPU)",
+    "runs": [
+        {
+            "detections_after_nms": 259,
+            "nms_threshold": 0.4,
+            "omitted": 4017,
+            "score_threshold": 0.10000000149011612
+        },
+        {
+            "detections_after_nms": 259,
+            "nms_threshold": 0.4,
+            "omitted": 3030,
+            "score_threshold": 0.25
+        },
+        {
+            "detections_after_nms": 259,
+            "nms_threshold": 0.4,
+            "omitted": 1656,
+            "score_threshold": 0.5
+        }
+    ]
+}

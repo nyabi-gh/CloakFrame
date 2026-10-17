@@ -1,0 +1,21 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "consumedCount == count",
+            "failed": 0,
+            "line": 74,
+            "passed": 1
+        },
+        {
+            "expr": "peakActive.load() <= static_cast<int>(maxInFlight)",
+            "failed": 0,
+            "line": 75,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/parallel_tests.cpp @ v1.12.1",
+    "suite": "parallel_tests",
+    "test": "testRespectsInFlightBound"
+}

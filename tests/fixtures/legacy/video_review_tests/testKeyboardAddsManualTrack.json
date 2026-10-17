@@ -1,0 +1,75 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 60,
+            "passed": 1
+        },
+        {
+            "expr": "generate.waitForFinished(60000) && generate.exitCode() == 0",
+            "failed": 0,
+            "line": 77,
+            "passed": 1
+        },
+        {
+            "expr": "QTest::qWaitFor( [&] { return dialog.property(\"lastViewedFrame\").toInt() == 5; }, 30000)",
+            "failed": 0,
+            "line": 194,
+            "passed": 1
+        },
+        {
+            "expr": "QApplication::focusWidget() == canvas",
+            "failed": 0,
+            "line": 198,
+            "passed": 1
+        },
+        {
+            "expr": "timeline->value() == 5",
+            "failed": 0,
+            "line": 201,
+            "passed": 1
+        },
+        {
+            "expr": "added.size() == 1 && added.front().keyframes.size() == 1",
+            "failed": 0,
+            "line": 204,
+            "passed": 1
+        },
+        {
+            "expr": "added.front().keyframes.front().frame == 5",
+            "failed": 0,
+            "line": 205,
+            "passed": 1
+        },
+        {
+            "expr": "added.front().keyframes.front().rect == QRectF(145.2, 102, 36, 39.2)",
+            "failed": 0,
+            "line": 206,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.isVisible()",
+            "failed": 0,
+            "line": 207,
+            "passed": 1
+        },
+        {
+            "expr": "updated.size() == 1 && updated.front().keyframes.size() == 1",
+            "failed": 0,
+            "line": 214,
+            "passed": 1
+        },
+        {
+            "expr": "updated.front().keyframes.front().rect == QRectF(142, 102, 36, 39.2)",
+            "failed": 0,
+            "line": 215,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/video_review_tests.cpp @ v1.12.1",
+    "suite": "video_review_tests",
+    "test": "testKeyboardAddsManualTrack"
+}

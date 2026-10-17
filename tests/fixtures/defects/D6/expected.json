@@ -1,0 +1,57 @@
+{
+  "id": "D6",
+  "requirement": "JPEG는 q92이고 원본 크로마 서브샘플링을 유지한다. 손실 WebP 원본은 손실 q90, 무손실 WebP·PNG·TIFF는 무손실로 저장한다.",
+  "stage": "M2",
+  "cases": [
+    {
+      "input": "q90-420.jpg",
+      "expect": {
+        "jpeg_quality": 92,
+        "sampling": "2x2,1x1,1x1"
+      }
+    },
+    {
+      "input": "q85-422.jpg",
+      "expect": {
+        "jpeg_quality": 92,
+        "sampling": "2x1,1x1,1x1"
+      }
+    },
+    {
+      "input": "q95-444.jpg",
+      "expect": {
+        "jpeg_quality": 92,
+        "sampling": "1x1,1x1,1x1"
+      }
+    },
+    {
+      "input": "lossy-q75.webp",
+      "expect": {
+        "webp": "lossy",
+        "quality": 90
+      }
+    },
+    {
+      "input": "lossless.webp",
+      "expect": {
+        "webp": "lossless",
+        "pixels": "unchanged"
+      }
+    },
+    {
+      "input": "lossless.png",
+      "expect": {
+        "pixels": "unchanged"
+      }
+    },
+    {
+      "input": "lossless.tif",
+      "expect": {
+        "pixels": "unchanged",
+        "compression": "lossless (deflate or LZW)"
+      }
+    }
+  ],
+  "measurement": "JPEG 품질은 IJG 표준 양자화 표를 q92로 배율한 표와 같은지로 판정(ImageMagick %Q 추정값 92). 인코더가 표준 표를 쓰지 않으면 이 fixture를 갱신한다",
+  "observed_1121_summary": "JPEG는 원본 품질·서브샘플링과 상관없이 q100 4:4:4(1.9–3.3배), 손실 WebP는 무손실(12.2배)"
+}

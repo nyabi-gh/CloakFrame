@@ -1,0 +1,90 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "kept.size() == 2",
+            "failed": 0,
+            "line": 2203,
+            "passed": 1
+        },
+        {
+            "expr": "kept[0].score == 0.9F",
+            "failed": 0,
+            "line": 2204,
+            "passed": 1
+        },
+        {
+            "expr": "kept[1].box.x == 100.0F",
+            "failed": 0,
+            "line": 2205,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "detections": [
+                {
+                    "box": [
+                        0,
+                        0,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                },
+                {
+                    "box": [
+                        1,
+                        1,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.800000011920929
+                },
+                {
+                    "box": [
+                        100,
+                        100,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.699999988079071
+                }
+            ],
+            "fn": "nonMaxSuppression",
+            "kept": [
+                {
+                    "box": [
+                        0,
+                        0,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                },
+                {
+                    "box": [
+                        100,
+                        100,
+                        10,
+                        10
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.699999988079071
+                }
+            ],
+            "threshold": 0.4000000059604645
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testNonMaxSuppression"
+}

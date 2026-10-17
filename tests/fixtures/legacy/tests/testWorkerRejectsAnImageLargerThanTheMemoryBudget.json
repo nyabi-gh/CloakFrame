@@ -1,0 +1,75 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "stream.is_open()",
+            "failed": 0,
+            "line": 1184,
+            "passed": 1
+        },
+        {
+            "expr": "!stream.fail()",
+            "failed": 0,
+            "line": 1188,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::estimatedImageMemoryBytes(4, 100) == 164",
+            "failed": 0,
+            "line": 1263,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::estimatedImageMemoryBytes(kUnsignedMaximum, 1) == kUnsignedMaximum",
+            "failed": 0,
+            "line": 1264,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::estimatedImageMemoryBytes(kUnsignedMaximum, kUnsignedMaximum) == kUnsignedMaximum",
+            "failed": 0,
+            "line": 1266,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 1292,
+            "passed": 1
+        },
+        {
+            "expr": "summary.skipped == 1",
+            "failed": 0,
+            "line": 1328,
+            "passed": 1
+        },
+        {
+            "expr": "summary.redacted == 0",
+            "failed": 0,
+            "line": 1329,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 1330,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(output / \"huge.png\")",
+            "failed": 0,
+            "line": 1331,
+            "passed": 1
+        },
+        {
+            "expr": "std::any_of(logs.cbegin(), logs.cend(), [](const QString &message) { return message.contains(\"MB limit\"); })",
+            "failed": 0,
+            "line": 1339,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerRejectsAnImageLargerThanTheMemoryBudget"
+}

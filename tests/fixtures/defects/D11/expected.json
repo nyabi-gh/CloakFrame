@@ -1,0 +1,26 @@
+{
+  "id": "D11",
+  "requirement": "NMS 후 상한을 넘은 것만 CoverageEvidence(상한으로 잘린 후보)로 센다. NMS 전 후보는 상한을 넉넉히 두고, 넘으면 타일로 나눠 다시 감지한다.",
+  "stage": "M3",
+  "input": "../../detect/inputs/crowd-280-faces.png",
+  "expect": [
+    {
+      "score_threshold": 0.1,
+      "capped_candidates": 0,
+      "rule": "NMS 후 감지 수가 상한(300) 미만이므로 0"
+    },
+    {
+      "score_threshold": 0.25,
+      "capped_candidates": 0
+    },
+    {
+      "score_threshold": 0.5,
+      "capped_candidates": 0
+    },
+    {
+      "check": "recall",
+      "rule": "YuNet은 280개 모두 찾음(detect/yunet/crowd-280-faces@0.25.json). YOLO5Face 결과는 1.12.1의 259개 이상"
+    }
+  ],
+  "observed_1121_summary": "NMS 후 259개(상한 300 미만)인데 omitted 4017(0.1)·3030(0.25)·1656(0.5)으로 보고, 사진은 경고와 함께 게시(P-1)"
+}

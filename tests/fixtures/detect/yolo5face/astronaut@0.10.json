@@ -1,0 +1,25 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        512,
+        512
+    ],
+    "detections": [
+        {
+            "box": [
+                175.54676818847656,
+                50.89350128173828,
+                99.67146301269531,
+                130.5394287109375
+            ],
+            "has_pose": true,
+            "roll": 0.062970831990242,
+            "score": 0.8916082978248596
+        }
+    ],
+    "image": "astronaut.png",
+    "model": "yolo5face",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.10000000149011612
+}

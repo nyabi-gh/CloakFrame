@@ -1,0 +1,47 @@
+{
+    "function": "applyMosaic(image, region, block, padding=0)",
+    "input": "noise-face-600.png",
+    "region": [
+        100,
+        100,
+        600,
+        600
+    ],
+    "runs": [
+        {
+            "block_size_px": 4,
+            "cells_across_middle_row": 12,
+            "unique_colors_in_box": 144
+        },
+        {
+            "block_size_px": 8,
+            "cells_across_middle_row": 12,
+            "unique_colors_in_box": 144
+        },
+        {
+            "block_size_px": 14,
+            "cells_across_middle_row": 12,
+            "unique_colors_in_box": 144
+        },
+        {
+            "block_size_px": 20,
+            "cells_across_middle_row": 12,
+            "unique_colors_in_box": 144
+        },
+        {
+            "block_size_px": 40,
+            "cells_across_middle_row": 12,
+            "unique_colors_in_box": 144
+        },
+        {
+            "block_size_px": 60,
+            "cells_across_middle_row": 10,
+            "unique_colors_in_box": 100
+        },
+        {
+            "block_size_px": 100,
+            "cells_across_middle_row": 6,
+            "unique_colors_in_box": 36
+        }
+    ]
+}

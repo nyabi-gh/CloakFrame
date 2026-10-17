@@ -1,0 +1,132 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "detector.finish().frames() == expected",
+            "failed": 0,
+            "line": 809,
+            "passed": 3
+        }
+    ],
+    "calls": [
+        {
+            "cuts": [
+                10,
+                12
+            ],
+            "fn": "SceneCutDetector",
+            "pushed": [
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 0,
+                        "width": 480
+                    },
+                    "repeat": 10
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 110,
+                        "width": 480
+                    },
+                    "repeat": 2
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 220,
+                        "width": 480
+                    },
+                    "repeat": 10
+                }
+            ]
+        },
+        {
+            "cuts": [
+                10,
+                13
+            ],
+            "fn": "SceneCutDetector",
+            "pushed": [
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 0,
+                        "width": 480
+                    },
+                    "repeat": 10
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 110,
+                        "width": 480
+                    },
+                    "repeat": 3
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 220,
+                        "width": 480
+                    },
+                    "repeat": 10
+                }
+            ]
+        },
+        {
+            "cuts": [
+                10,
+                14
+            ],
+            "fn": "SceneCutDetector",
+            "pushed": [
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 0,
+                        "width": 480
+                    },
+                    "repeat": 10
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 110,
+                        "width": 480
+                    },
+                    "repeat": 4
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "height": 270,
+                        "kind": "solid",
+                        "value": 220,
+                        "width": 480
+                    },
+                    "repeat": 10
+                }
+            ]
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testSceneCutDetectorFindsBothCutsAroundShortShot"
+}

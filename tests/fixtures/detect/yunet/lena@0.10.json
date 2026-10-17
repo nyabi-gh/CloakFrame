@@ -1,0 +1,25 @@
+{
+    "backend": "OpenCV CPU",
+    "decoded_size": [
+        512,
+        512
+    ],
+    "detections": [
+        {
+            "box": [
+                209.2776336669922,
+                181.7572784423828,
+                142.2591094970703,
+                205.6869659423828
+            ],
+            "has_pose": true,
+            "roll": 0.12559600174427032,
+            "score": 0.9135905504226685
+        }
+    ],
+    "image": "lena.jpg",
+    "model": "yunet",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.10000000149011612
+}

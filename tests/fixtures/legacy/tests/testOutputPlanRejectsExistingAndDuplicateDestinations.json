@@ -1,0 +1,69 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 544,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(output / \"nested\")",
+            "failed": 0,
+            "line": 547,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::findOutputConflicts(unique, output).empty()",
+            "failed": 0,
+            "line": 553,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::outputRelativePath(unique[1]) == std::filesystem::path(\"nested/two.mp4\")",
+            "failed": 0,
+            "line": 555,
+            "passed": 1
+        },
+        {
+            "expr": "existing.size() == 1",
+            "failed": 0,
+            "line": 559,
+            "passed": 1
+        },
+        {
+            "expr": "existing[0].kind == cloakframe::OutputConflict::Kind::ExistingDestination",
+            "failed": 0,
+            "line": 560,
+            "passed": 1
+        },
+        {
+            "expr": "collisions.size() == 1",
+            "failed": 0,
+            "line": 567,
+            "passed": 1
+        },
+        {
+            "expr": "collisions[0].kind == cloakframe::OutputConflict::Kind::DuplicateDestination",
+            "failed": 0,
+            "line": 568,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testOutputPlanRejectsExistingAndDuplicateDestinations"
+}

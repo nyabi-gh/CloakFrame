@@ -1,0 +1,178 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "fullHd.workerCount <= 8",
+            "failed": 0,
+            "line": 338,
+            "passed": 1
+        },
+        {
+            "expr": "fullHd.batchFrames <= 16",
+            "failed": 0,
+            "line": 339,
+            "passed": 1
+        },
+        {
+            "expr": "fullHd.prefetchFrames == fullHd.batchFrames",
+            "failed": 0,
+            "line": 340,
+            "passed": 1
+        },
+        {
+            "expr": "withinBudget(fullHd, constrainedBudget)",
+            "failed": 0,
+            "line": 341,
+            "passed": 1
+        },
+        {
+            "expr": "constrainedFourK.workerCount == 2",
+            "failed": 0,
+            "line": 345,
+            "passed": 1
+        },
+        {
+            "expr": "constrainedFourK.batchFrames == 2",
+            "failed": 0,
+            "line": 346,
+            "passed": 1
+        },
+        {
+            "expr": "constrainedFourK.prefetchFrames == 2",
+            "failed": 0,
+            "line": 347,
+            "passed": 1
+        },
+        {
+            "expr": "withinBudget(constrainedFourK, constrainedBudget)",
+            "failed": 0,
+            "line": 348,
+            "passed": 1
+        },
+        {
+            "expr": "performanceFourK.workerCount == 8",
+            "failed": 0,
+            "line": 352,
+            "passed": 1
+        },
+        {
+            "expr": "performanceFourK.batchFrames == 11",
+            "failed": 0,
+            "line": 353,
+            "passed": 1
+        },
+        {
+            "expr": "performanceFourK.prefetchFrames == 11",
+            "failed": 0,
+            "line": 354,
+            "passed": 1
+        },
+        {
+            "expr": "withinBudget(performanceFourK, performanceBudget)",
+            "failed": 0,
+            "line": 355,
+            "passed": 1
+        },
+        {
+            "expr": "eightK.workerCount == 2",
+            "failed": 0,
+            "line": 358,
+            "passed": 1
+        },
+        {
+            "expr": "eightK.batchFrames == 2",
+            "failed": 0,
+            "line": 359,
+            "passed": 1
+        },
+        {
+            "expr": "withinBudget(eightK, performanceBudget)",
+            "failed": 0,
+            "line": 360,
+            "passed": 1
+        },
+        {
+            "expr": "unknownCpuCount.workerCount == 1",
+            "failed": 0,
+            "line": 363,
+            "passed": 1
+        },
+        {
+            "expr": "unknownCpuCount.batchFrames == 2",
+            "failed": 0,
+            "line": 364,
+            "passed": 1
+        },
+        {
+            "expr": "tempDir.isValid()",
+            "failed": 0,
+            "line": 946,
+            "passed": 1
+        },
+        {
+            "expr": "privateStages.isValid()",
+            "failed": 0,
+            "line": 948,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "batch_frames": 9,
+            "fn": "videoMaskingPlan",
+            "frame_bytes": 16588800,
+            "hardware_threads": 64,
+            "height": 1080,
+            "memory_budget": 268435456,
+            "prefetch_frames": 9,
+            "width": 1920,
+            "worker_count": 8
+        },
+        {
+            "batch_frames": 2,
+            "fn": "videoMaskingPlan",
+            "frame_bytes": 66355200,
+            "hardware_threads": 64,
+            "height": 2160,
+            "memory_budget": 268435456,
+            "prefetch_frames": 2,
+            "width": 3840,
+            "worker_count": 2
+        },
+        {
+            "batch_frames": 11,
+            "fn": "videoMaskingPlan",
+            "frame_bytes": 66355200,
+            "hardware_threads": 64,
+            "height": 2160,
+            "memory_budget": 1073741824,
+            "prefetch_frames": 11,
+            "width": 3840,
+            "worker_count": 8
+        },
+        {
+            "batch_frames": 2,
+            "fn": "videoMaskingPlan",
+            "frame_bytes": 265420800,
+            "hardware_threads": 64,
+            "height": 4320,
+            "memory_budget": 1073741824,
+            "prefetch_frames": 2,
+            "width": 7680,
+            "worker_count": 2
+        },
+        {
+            "batch_frames": 2,
+            "fn": "videoMaskingPlan",
+            "frame_bytes": 614400,
+            "hardware_threads": 0,
+            "height": 240,
+            "memory_budget": 268435456,
+            "prefetch_frames": 2,
+            "width": 320,
+            "worker_count": 1
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testVideoMaskingPlanIsBoundedByWorkersAndBytes"
+}

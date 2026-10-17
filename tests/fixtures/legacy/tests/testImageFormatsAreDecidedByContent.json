@@ -1,0 +1,157 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 160,
+            "passed": 8
+        },
+        {
+            "expr": "file.write( reinterpret_cast<const char *>(bytes.data()), static_cast<qint64>(bytes.size())) == static_cast<qint64>(bytes.size())",
+            "failed": 0,
+            "line": 163,
+            "passed": 8
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 828,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imencode(extension, pixels, bytes)",
+            "failed": 0,
+            "line": 841,
+            "passed": 5
+        },
+        {
+            "expr": "cfrec::sniffImageFormat(path) == format",
+            "failed": 0,
+            "line": 845,
+            "passed": 5
+        },
+        {
+            "expr": "cv::imencode(\".ppm\", pixels, ppm)",
+            "failed": 0,
+            "line": 849,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::sniffImageFormat(root / \"netpbm.jpg\")",
+            "failed": 0,
+            "line": 851,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::sniffImageFormat(root / \"short.jpg\")",
+            "failed": 0,
+            "line": 853,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::sniffImageFormat(root / \"riff.webp\")",
+            "failed": 0,
+            "line": 856,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::sniffImageFormat(root / \"missing.png\")",
+            "failed": 0,
+            "line": 857,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file1-input.bin",
+                "name": "image.jpg.bin",
+                "sha256": "5bb38172cc68451d28b0a32ab9b6ce76253c9b2a933902917ffa56c389cee29a",
+                "size": 633
+            },
+            "fn": "sniffImageFormat",
+            "format": 0
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file2-input.bin",
+                "name": "image.png.bin",
+                "sha256": "5e448a1fb2128880420c27b7011e8267f1400db83328150f2fc45264715cffd3",
+                "size": 101
+            },
+            "fn": "sniffImageFormat",
+            "format": 1
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file3-input.bin",
+                "name": "image.bmp.bin",
+                "sha256": "25c9b515d2b2e0580db33ea3c6c38da371bc0ae2da43d488b539bd3fca290507",
+                "size": 246
+            },
+            "fn": "sniffImageFormat",
+            "format": 2
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file4-input.bin",
+                "name": "image.tiff.bin",
+                "sha256": "d23e93e11efc0b89fe9263753c97e389692821d8ba7199cf98c224c08ed819f4",
+                "size": 210
+            },
+            "fn": "sniffImageFormat",
+            "format": 3
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file5-input.bin",
+                "name": "image.webp.bin",
+                "sha256": "841778ca9d3b7b8b073bae44f7c3bac26d17792f96cf09f19311894f54e5a087",
+                "size": 38
+            },
+            "fn": "sniffImageFormat",
+            "format": 4
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file6-input.jpg",
+                "name": "netpbm.jpg",
+                "sha256": "3f937f342176c925a5b594517f068677f9f9da048cc2ab8f9ebb62f1c24323bf",
+                "size": 203
+            },
+            "fn": "sniffImageFormat",
+            "format": null
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file7-input.jpg",
+                "name": "short.jpg",
+                "sha256": "71563ad80061407ede9c6f316836284bd3710a520c5a792b5eda1cb703690815",
+                "size": 2
+            },
+            "fn": "sniffImageFormat",
+            "format": null
+        },
+        {
+            "file": {
+                "copy": "testImageFormatsAreDecidedByContent/file8-input.webp",
+                "name": "riff.webp",
+                "sha256": "56ddf20bae94693a26732a7629d110957d63d8afd31c95f098b32b0d9ec5b387",
+                "size": 12
+            },
+            "fn": "sniffImageFormat",
+            "format": null
+        },
+        {
+            "file": {
+                "exists": false,
+                "name": "missing.png"
+            },
+            "fn": "sniffImageFormat",
+            "format": null
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testImageFormatsAreDecidedByContent"
+}

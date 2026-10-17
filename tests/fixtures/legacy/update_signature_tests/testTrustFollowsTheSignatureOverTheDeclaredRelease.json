@@ -1,0 +1,64 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::evaluateUpdateTrust( signedRelease(), releaseSignature(), releasePublicKey(), &error) == cloakframe::UpdateTrust::Trusted",
+            "failed": 0,
+            "line": 172,
+            "passed": 1
+        },
+        {
+            "expr": "error == QStringLiteral(\"untouched\")",
+            "failed": 0,
+            "line": 173,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust(shouting, releaseSignature(), releasePublicKey()) == cloakframe::UpdateTrust::Trusted",
+            "failed": 0,
+            "line": 179,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::verifyUpdateSignature( abcDigest(), releaseLegacySignature(), releasePublicKey())",
+            "failed": 0,
+            "line": 183,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "trusted"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "  BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD  ",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "trusted"
+        },
+        {
+            "fn": "verifyUpdateSignature",
+            "payload_base64": "YmE3ODE2YmY4ZjAxY2ZlYTQxNDE0MGRlNWRhZTIyMjNiMDAzNjFhMzk2MTc3YTljYjQxMGZmNjFmMjAwMTVhZA==",
+            "public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "result": true,
+            "signature_base64": "LVwktqqR85Zaned4zCaMRCq1OuT5yOyELtqqFLdnqKpqV9Bd7v+yhsNsiKnL/zb16G94LGdeAmt/mnFYZHzyDA=="
+        }
+    ],
+    "source": "tests/update_signature_tests.cpp @ v1.12.1",
+    "suite": "update_signature_tests",
+    "test": "testTrustFollowsTheSignatureOverTheDeclaredRelease"
+}

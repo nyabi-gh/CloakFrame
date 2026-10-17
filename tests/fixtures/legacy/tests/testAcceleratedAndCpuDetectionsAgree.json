@@ -1,0 +1,27 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "!expected.empty()",
+            "failed": 0,
+            "line": 3078,
+            "passed": 1
+        },
+        {
+            "expr": "actual.size() == expected.size()",
+            "failed": 0,
+            "line": 3079,
+            "passed": 1
+        },
+        {
+            "expr": "std::ranges::any_of(actual, [&](const cloakframe::FaceDetection &got) { const float overlap = (want.box & got.box).area(); const float iou = overlap / (want.box.area() + got.box.area() - overlap); return iou >= 0.9F && std::abs(want.score - got.score) <= 0.05F; })",
+            "failed": 0,
+            "line": 3088,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testAcceleratedAndCpuDetectionsAgree"
+}

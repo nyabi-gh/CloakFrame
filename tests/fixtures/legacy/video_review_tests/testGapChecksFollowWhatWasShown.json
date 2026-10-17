@@ -1,0 +1,63 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 60,
+            "passed": 1
+        },
+        {
+            "expr": "generate.waitForFinished(60000) && generate.exitCode() == 0",
+            "failed": 0,
+            "line": 77,
+            "passed": 1
+        },
+        {
+            "expr": "QTest::qWaitFor( [&] { return dialog.property(\"lastViewedFrame\").toInt() == frame; }, 30000)",
+            "failed": 0,
+            "line": 117,
+            "passed": 5
+        },
+        {
+            "expr": "!userCheckable(gaps->item(0))",
+            "failed": 0,
+            "line": 123,
+            "passed": 1
+        },
+        {
+            "expr": "userCheckable(gaps->item(0))",
+            "failed": 0,
+            "line": 125,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().acknowledgedGapIndices == QVector<int>{0}",
+            "failed": 0,
+            "line": 127,
+            "passed": 1
+        },
+        {
+            "expr": "gaps->item(0)->checkState() == Qt::Unchecked",
+            "failed": 0,
+            "line": 131,
+            "passed": 1
+        },
+        {
+            "expr": "!userCheckable(gaps->item(0))",
+            "failed": 0,
+            "line": 132,
+            "passed": 1
+        },
+        {
+            "expr": "userCheckable(gaps->item(0))",
+            "failed": 0,
+            "line": 136,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/video_review_tests.cpp @ v1.12.1",
+    "suite": "video_review_tests",
+    "test": "testGapChecksFollowWhatWasShown"
+}

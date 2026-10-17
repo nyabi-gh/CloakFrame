@@ -1,0 +1,32 @@
+{
+  "id": "P-3",
+  "requirement": "분석·미리보기·내보내기가 하나의 TimelineSpec으로 같은 프레임 번호 n에 같은 원본 프레임을 쓴다.",
+  "stage": "M4",
+  "inputs": [
+    "cfr-2997-offset-bframes.mp4",
+    "cfr-23976.mp4",
+    "vfr-30-15.mp4",
+    "rotated-90.mp4",
+    "../P-5/audio-starts-early.mp4"
+  ],
+  "frame_index_encoding": "좌상단 16개 block에 원본 프레임 번호의 비트(tools/fixture-extract/gen_inputs.py)",
+  "expect": [
+    {
+      "check": "analysis_equals_preview",
+      "rule": "모든 n에서 preview(n) == analysis(n)"
+    },
+    {
+      "check": "analysis_equals_output",
+      "rule": "모든 n에서 output(n) == analysis(n)"
+    },
+    {
+      "check": "cfr_no_loss",
+      "rule": "CFR 입력은 analysis가 원본 프레임 0..N-1을 순서대로 하나씩 본다"
+    },
+    {
+      "check": "vfr",
+      "rule": "VFR 입력은 첫 stable에서 CFR로 내보낸다(1.3). 분석이 원본 프레임을 건너뛰면 그 프레임은 출력에도 없어야 한다"
+    }
+  ],
+  "observed_1121_summary": "다섯 입력 모두 preview·analysis·output이 일치(1.12.1의 실패는 재현하지 못함). 계획의 지적은 두 필터 경로(-copyts+select vs setpts+fps)에 기대는 구조적 위험이며, 이 fixture는 회귀 시험으로 쓴다. VFR 입력에서는 30→15 fps 구간을 600/29 fps로 바꾸며 원본 1,4,8,11… 프레임이 분석·출력 모두에서 빠짐"
+}

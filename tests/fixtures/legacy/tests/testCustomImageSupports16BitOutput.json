@@ -1,0 +1,57 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec3w>(8, 8) == cv::Vec3w(2570, 5140, 61680)",
+            "failed": 0,
+            "line": 1868,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3w>(0, 0) == cv::Vec3w(1000, 2000, 3000)",
+            "failed": 0,
+            "line": 1869,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "custom_image": {
+                "channels": 4,
+                "cols": 2,
+                "depth_bits": 8,
+                "rows": 2
+            },
+            "custom_image_png": "testCustomImageSupports16BitOutput/2-custom.png",
+            "detections": [
+                {
+                    "box": [
+                        4,
+                        4,
+                        8,
+                        8
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 16,
+                "depth_bits": 16,
+                "rows": 16
+            },
+            "input_png": "testCustomImageSupports16BitOutput/1-input.png",
+            "method": "custom_image",
+            "output_png": "testCustomImageSupports16BitOutput/3-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testCustomImageSupports16BitOutput"
+}

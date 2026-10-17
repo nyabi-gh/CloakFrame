@@ -1,0 +1,35 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "!cfrec::verifyUpdateSignature(abcDigest(), realSignature(), rfcPublicKey())",
+            "failed": 0,
+            "line": 83,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::verifyUpdateSignature(rfcMessage(), rfcSignature(), realPublicKey())",
+            "failed": 0,
+            "line": 84,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "verifyUpdateSignature",
+            "payload_base64": "YmE3ODE2YmY4ZjAxY2ZlYTQxNDE0MGRlNWRhZTIyMjNiMDAzNjFhMzk2MTc3YTljYjQxMGZmNjFmMjAwMTVhZA==",
+            "public_key_base64": "PUAXw+hDiVqStwqnTRt+vJyYLM8uxJaMwM1V8Sr0Zgw=",
+            "result": false,
+            "signature_base64": "z1TZzXjZnAH2z9T5z7Ul1wlN5SrLos/FjdN87mVX6Vc0hCI1V7q82NIdhNEBjaupJAsDVVN0bzgULbVZR5hNAQ=="
+        },
+        {
+            "fn": "verifyUpdateSignature",
+            "payload_base64": "cg==",
+            "public_key_base64": "b8LBqH0YWEKwE6iZJ+gqey5I13A/rT8srBWBUSrICPQ=",
+            "result": false,
+            "signature_base64": "kqAJqfDUyrhyDoILX2QlQKKye1QWUD+Ps3YiI+vbadoIWsHkPhWZbkWPNhPQ8R2MOHsurrQwKu6wDSkWErsMAA=="
+        }
+    ],
+    "source": "tests/update_signature_tests.cpp @ v1.12.1",
+    "suite": "update_signature_tests",
+    "test": "testOtherKeyFails"
+}

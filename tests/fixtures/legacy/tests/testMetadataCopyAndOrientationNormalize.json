@@ -1,0 +1,271 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2292,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(src.string(), img)",
+            "failed": 0,
+            "line": 2299,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(dst.string(), img)",
+            "failed": 0,
+            "line": 2300,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::readExifOrientation(src) == 6",
+            "failed": 0,
+            "line": 2321,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::copyMetadata(src, dst, true)",
+            "failed": 0,
+            "line": 2322,
+            "passed": 1
+        },
+        {
+            "expr": "make != exif.end()",
+            "failed": 0,
+            "line": 2330,
+            "passed": 1
+        },
+        {
+            "expr": "make->toString() == \"TestCamera\"",
+            "failed": 0,
+            "line": 2331,
+            "passed": 1
+        },
+        {
+            "expr": "lens != exif.end()",
+            "failed": 0,
+            "line": 2333,
+            "passed": 1
+        },
+        {
+            "expr": "lens->toString() == \"TestLens\"",
+            "failed": 0,
+            "line": 2334,
+            "passed": 1
+        },
+        {
+            "expr": "exif.findKey(Exiv2::ExifKey(key)) == exif.end()",
+            "failed": 0,
+            "line": 2342,
+            "passed": 6
+        },
+        {
+            "expr": "orientation != exif.end()",
+            "failed": 0,
+            "line": 2346,
+            "passed": 1
+        },
+        {
+            "expr": "orientation->toInt64() == 1",
+            "failed": 0,
+            "line": 2348,
+            "passed": 1
+        },
+        {
+            "expr": "image->xmpData().findKey(Exiv2::XmpKey(\"Xmp.tiff.Orientation\")) == image->xmpData().end()",
+            "failed": 0,
+            "line": 2353,
+            "passed": 1
+        },
+        {
+            "expr": "image->xmpData().empty()",
+            "failed": 0,
+            "line": 2354,
+            "passed": 1
+        },
+        {
+            "expr": "image->exifData().findKey(Exiv2::ExifKey(\"Exif.Photo.UserComment\")) == image->exifData().end()",
+            "failed": 0,
+            "line": 2356,
+            "passed": 1
+        },
+        {
+            "expr": "image->comment().empty()",
+            "failed": 0,
+            "line": 2357,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(located.string(), img)",
+            "failed": 0,
+            "line": 2361,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::copyMetadata(src, located, true, true)",
+            "failed": 0,
+            "line": 2362,
+            "passed": 1
+        },
+        {
+            "expr": "latitude != exif.end()",
+            "failed": 0,
+            "line": 2368,
+            "passed": 1
+        },
+        {
+            "expr": "latitude->toString() == \"N\"",
+            "failed": 0,
+            "line": 2369,
+            "passed": 1
+        },
+        {
+            "expr": "exif.findKey(Exiv2::ExifKey(\"Exif.Image.Artist\")) == exif.end()",
+            "failed": 0,
+            "line": 2370,
+            "passed": 1
+        },
+        {
+            "expr": "exif.findKey(Exiv2::ExifKey(\"Exif.Photo.BodySerialNumber\")) == exif.end()",
+            "failed": 0,
+            "line": 2371,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot( root, published.filename(), img, cfrec::encodeParamsForExtension(\"jpg\"), src) == cloakframe::ImageWriteResult::Saved",
+            "failed": 0,
+            "line": 2378,
+            "passed": 1
+        },
+        {
+            "expr": "make != publishedExif.end()",
+            "failed": 0,
+            "line": 2383,
+            "passed": 1
+        },
+        {
+            "expr": "make->toString() == \"TestCamera\"",
+            "failed": 0,
+            "line": 2384,
+            "passed": 1
+        },
+        {
+            "expr": "publishedExif.findKey(Exiv2::ExifKey(\"Exif.Image.Artist\")) == publishedExif.end()",
+            "failed": 0,
+            "line": 2385,
+            "passed": 1
+        },
+        {
+            "expr": "publishedExif.findKey(Exiv2::ExifKey(\"Exif.GPSInfo.GPSLatitude\")) == publishedExif.end()",
+            "failed": 0,
+            "line": 2387,
+            "passed": 1
+        },
+        {
+            "expr": "publishedMetadata->xmpData().findKey(Exiv2::XmpKey(\"Xmp.tiff.Orientation\")) == publishedMetadata->xmpData().end()",
+            "failed": 0,
+            "line": 2389,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, publishedWithLocation.filename(), img, cfrec::encodeParamsForExtension(\"jpg\"), src, {}, true) == cloakframe::ImageWriteResult::Saved",
+            "failed": 0,
+            "line": 2399,
+            "passed": 1
+        },
+        {
+            "expr": "locatedMetadata->exifData().findKey(Exiv2::ExifKey(\"Exif.GPSInfo.GPSLatitude\")) != locatedMetadata->exifData().end()",
+            "failed": 0,
+            "line": 2403,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file1-input.jpg",
+                "name": "src.jpg",
+                "sha256": "14d2dfed04443522547f659e36fde8e4b3e656f8c3472a71dd3bf4837251c9d8",
+                "size": 3651
+            },
+            "fn": "readExifOrientation",
+            "orientation": 6
+        },
+        {
+            "destination_after": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file4-destination-after.jpg",
+                "name": "dst.jpg",
+                "sha256": "7d74e0db392fe44df8800fc1345761b2a98140ac422b469c466aa93e275cd205",
+                "size": 730
+            },
+            "destination_before": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file3-destination-before.jpg",
+                "name": "dst.jpg",
+                "sha256": "e76c16f85dcd7d1ac4c30673e5df216cd7434b8eb159a58bbd52c76a7848a9f4",
+                "size": 630
+            },
+            "fn": "copyMetadata",
+            "preserve": true,
+            "preserve_location": false,
+            "result": true,
+            "source": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file2-source.jpg",
+                "name": "src.jpg",
+                "sha256": "14d2dfed04443522547f659e36fde8e4b3e656f8c3472a71dd3bf4837251c9d8",
+                "size": 3651
+            }
+        },
+        {
+            "destination_after": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file7-destination-after.jpg",
+                "name": "located.jpg",
+                "sha256": "280d6e93997997e29132c3dc6c1027a1c3858f11eb0b99e5c21beb6e23c1adf0",
+                "size": 796
+            },
+            "destination_before": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file6-destination-before.jpg",
+                "name": "located.jpg",
+                "sha256": "e76c16f85dcd7d1ac4c30673e5df216cd7434b8eb159a58bbd52c76a7848a9f4",
+                "size": 630
+            },
+            "fn": "copyMetadata",
+            "preserve": true,
+            "preserve_location": true,
+            "result": true,
+            "source": {
+                "copy": "testMetadataCopyAndOrientationNormalize/file5-source.jpg",
+                "name": "src.jpg",
+                "sha256": "14d2dfed04443522547f659e36fde8e4b3e656f8c3472a71dd3bf4837251c9d8",
+                "size": 3651
+            }
+        },
+        {
+            "extension": "jpg",
+            "fn": "encodeParamsForExtension",
+            "opencv_params": [
+                1,
+                100,
+                7,
+                1118481,
+                3,
+                1
+            ]
+        },
+        {
+            "extension": "jpg",
+            "fn": "encodeParamsForExtension",
+            "opencv_params": [
+                1,
+                100,
+                7,
+                1118481,
+                3,
+                1
+            ]
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testMetadataCopyAndOrientationNormalize"
+}

@@ -1,0 +1,9 @@
+{
+    "input": "folder with one .txt file and no media",
+    "log": [
+        "Loading face detection model...",
+        "Error: The face detection model could not be loaded: Could not read the model file."
+    ],
+    "model_path": "a model file that does not exist",
+    "outcome": "failed"
+}

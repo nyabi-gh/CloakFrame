@@ -1,0 +1,43 @@
+{
+  "id": "D3",
+  "requirement": "모자이크 설정은 픽셀 블록 크기가 아니라 '강도' s(영역 짧은 변에 들어가는 셀 수, 4–16, 기본 8)다. 범위 안의 모든 값이 결과를 바꾼다. 축소는 셀 영역 평균이다.",
+  "stage": "M2",
+  "input": "noise-face-600.png, 영역 (100,100,600,600), padding 0",
+  "expect": [
+    {
+      "check": "cells_along_short_side",
+      "for_each_strength": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "equals": "s"
+    },
+    {
+      "check": "distinct_outputs",
+      "rule": "s가 다르면 영역 안 pixel이 다르다"
+    },
+    {
+      "check": "cell_value_is_area_mean",
+      "rule": "각 셀 값은 그 셀이 덮는 원본 pixel의 평균과 채널당 1 이내",
+      "note": "영역이 셀 수로 나누어떨어지지 않으면 셀 경계는 floor(i*600/s)"
+    },
+    {
+      "check": "outside_region_unchanged"
+    }
+  ],
+  "observed_1121_summary": "블록 4·8·14·20·40px 모두 12×12 셀(색 144개)로 같은 결과. 60px부터만 달라짐",
+  "proposed": [
+    "셀 경계 floor(i*L/s)와 긴 변 셀 수 round(s*long/short)는 계획에 없는 세부 사항으로 M2에서 확정"
+  ]
+}

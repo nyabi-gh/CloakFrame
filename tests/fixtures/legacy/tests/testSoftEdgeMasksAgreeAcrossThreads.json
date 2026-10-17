@@ -1,0 +1,258 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "mismatches.load() == 0",
+            "failed": 0,
+            "line": 499,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 14,
+            "detections": [
+                {
+                    "box": [
+                        10,
+                        15,
+                        20,
+                        16
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                },
+                {
+                    "box": [
+                        150,
+                        100,
+                        60,
+                        70
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.800000011920929
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 320,
+                "depth_bits": 8,
+                "rows": 240
+            },
+            "input_png": "testSoftEdgeMasksAgreeAcrossThreads/1-input.png",
+            "method": "blur",
+            "output_png": "testSoftEdgeMasksAgreeAcrossThreads/2-output.png",
+            "padding_ratio": 0.18000000715255737,
+            "shape": "ellipse",
+            "soft_edges": true
+        },
+        {
+            "block_size": 14,
+            "detections": [
+                {
+                    "box": [
+                        17,
+                        15,
+                        29,
+                        23.200000762939453
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                },
+                {
+                    "box": [
+                        150,
+                        100,
+                        60,
+                        70
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.800000011920929
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 320,
+                "depth_bits": 8,
+                "rows": 240
+            },
+            "input_png": "testSoftEdgeMasksAgreeAcrossThreads/3-input.png",
+            "method": "blur",
+            "output_png": "testSoftEdgeMasksAgreeAcrossThreads/4-output.png",
+            "padding_ratio": 0.18000000715255737,
+            "shape": "ellipse",
+            "soft_edges": true
+        },
+        {
+            "block_size": 14,
+            "detections": [
+                {
+                    "box": [
+                        24,
+                        15,
+                        38,
+                        30.399999618530273
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.8999999761581421
+                },
+                {
+                    "box": [
+                        150,
+                        100,
+                        60,
+                        70
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 0.800000011920929
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 320,
+                "depth_bits": 8,
+                "rows": 240
+            },
+            "input_png": "testSoftEdgeMasksAgreeAcrossThreads/5-input.png",
+            "method": "blur",
+            "output_png": "testSoftEdgeMasksAgreeAcrossThreads/6-output.png",
+            "padding_ratio": 0.18000000715255737,
+            "shape": "ellipse",
+            "soft_edges": true
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        },
+        {
+        }
+    ],
+    "calls_not_recorded": 524,
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testSoftEdgeMasksAgreeAcrossThreads"
+}

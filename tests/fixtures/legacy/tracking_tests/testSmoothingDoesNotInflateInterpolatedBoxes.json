@@ -1,0 +1,109 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "track.boxes[1].box.area() <= maxArea + 0.001F",
+            "failed": 0,
+            "line": 940,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "smoothTrack",
+            "radius": 2,
+            "track_after": {
+                "boxes": [
+                    {
+                        "box": [
+                            0,
+                            0,
+                            200,
+                            200
+                        ],
+                        "frame": 0,
+                        "has_pose": false,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            75,
+                            75,
+                            50,
+                            50
+                        ],
+                        "frame": 1,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            0,
+                            0,
+                            200,
+                            200
+                        ],
+                        "frame": 2,
+                        "has_pose": false,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                "id": 0,
+                "low_confidence": false
+            },
+            "track_before": {
+                "boxes": [
+                    {
+                        "box": [
+                            0,
+                            0,
+                            200,
+                            200
+                        ],
+                        "frame": 0,
+                        "has_pose": false,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            75,
+                            75,
+                            50,
+                            50
+                        ],
+                        "frame": 1,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            0,
+                            0,
+                            200,
+                            200
+                        ],
+                        "frame": 2,
+                        "has_pose": false,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                "id": 0,
+                "low_confidence": false
+            }
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testSmoothingDoesNotInflateInterpolatedBoxes"
+}

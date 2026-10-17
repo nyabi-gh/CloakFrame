@@ -1,0 +1,419 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "beforeFirst && *beforeFirst == manual.keyframes.front().rect",
+            "failed": 0,
+            "line": 28,
+            "passed": 1
+        },
+        {
+            "expr": "middle && *middle == QRectF(20.0, 30.0, 40.0, 50.0)",
+            "failed": 0,
+            "line": 30,
+            "passed": 1
+        },
+        {
+            "expr": "afterLast && *afterLast == manual.keyframes.back().rect",
+            "failed": 0,
+            "line": 32,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::manualTrackRectAtFrame(manual, 1)",
+            "failed": 0,
+            "line": 33,
+            "passed": 1
+        },
+        {
+            "expr": "track && track->id == 12 && track->boxes.size() == 7",
+            "failed": 0,
+            "line": 36,
+            "passed": 1
+        },
+        {
+            "expr": "track->firstFrame() == 2 && track->lastFrame() == 8",
+            "failed": 0,
+            "line": 37,
+            "passed": 1
+        },
+        {
+            "expr": "track->boxAtFrame(3) && !track->boxAtFrame(3)->interpolated",
+            "failed": 0,
+            "line": 38,
+            "passed": 1
+        },
+        {
+            "expr": "track->boxAtFrame(5) && track->boxAtFrame(5)->interpolated",
+            "failed": 0,
+            "line": 39,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::materializeManualVideoTrack(invalid, 10, QSize(100, 100), 13)",
+            "failed": 0,
+            "line": 43,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::materializeManualVideoTrack(manual, 8, QSize(100, 100), 13)",
+            "failed": 0,
+            "line": 44,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "manualTrackRectAtFrame",
+            "frame": 2,
+            "rect": [
+                10,
+                20,
+                30,
+                40
+            ],
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    },
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        },
+        {
+            "fn": "manualTrackRectAtFrame",
+            "frame": 5,
+            "rect": [
+                20,
+                30,
+                40,
+                50
+            ],
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    },
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        },
+        {
+            "fn": "manualTrackRectAtFrame",
+            "frame": 8,
+            "rect": [
+                30,
+                40,
+                50,
+                60
+            ],
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    },
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        },
+        {
+            "fn": "manualTrackRectAtFrame",
+            "frame": 1,
+            "rect": null,
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    },
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        },
+        {
+            "assigned_id": 12,
+            "fn": "materializeManualVideoTrack",
+            "frame_count": 10,
+            "frame_size": [
+                100,
+                100
+            ],
+            "result": {
+                "boxes": [
+                    {
+                        "box": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ],
+                        "frame": 2,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 1
+                    },
+                    {
+                        "box": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ],
+                        "frame": 3,
+                        "has_pose": false,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 1
+                    },
+                    {
+                        "box": [
+                            15,
+                            25,
+                            35,
+                            45
+                        ],
+                        "frame": 4,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 1
+                    },
+                    {
+                        "box": [
+                            20,
+                            30,
+                            40,
+                            50
+                        ],
+                        "frame": 5,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 1
+                    },
+                    {
+                        "box": [
+                            25,
+                            35,
+                            45,
+                            55
+                        ],
+                        "frame": 6,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 1
+                    },
+                    {
+                        "box": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ],
+                        "frame": 7,
+                        "has_pose": false,
+                        "interpolated": false,
+                        "roll": 0,
+                        "score": 1
+                    },
+                    {
+                        "box": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ],
+                        "frame": 8,
+                        "has_pose": false,
+                        "interpolated": true,
+                        "roll": 0,
+                        "score": 1
+                    }
+                ],
+                "id": 12,
+                "low_confidence": false
+            },
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    },
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        },
+        {
+            "assigned_id": 13,
+            "fn": "materializeManualVideoTrack",
+            "frame_count": 10,
+            "frame_size": [
+                100,
+                100
+            ],
+            "result": null,
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    },
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        },
+        {
+            "assigned_id": 13,
+            "fn": "materializeManualVideoTrack",
+            "frame_count": 8,
+            "frame_size": [
+                100,
+                100
+            ],
+            "result": null,
+            "track": {
+                "end_frame": 8,
+                "id": 90,
+                "keyframes": [
+                    {
+                        "frame": 3,
+                        "interpolated": false,
+                        "rect": [
+                            10,
+                            20,
+                            30,
+                            40
+                        ]
+                    },
+                    {
+                        "frame": 7,
+                        "interpolated": false,
+                        "rect": [
+                            30,
+                            40,
+                            50,
+                            60
+                        ]
+                    }
+                ],
+                "start_frame": 2
+            }
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testManualVideoTrackInterpolationAndBounds"
+}

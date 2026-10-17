@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows M0 결과 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md), [M0 ORT 스파이크](M0_ORT_SPIKE.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -32,7 +32,7 @@
 
 - 로컬 처리, 원본 불변, 기존 파일 덮어쓰기 금지
 - **미해결 자동 감지 문제**(상한으로 잘린 후보, 끊긴 track, 확인되지 않은 gap)가 있는 결과는 정상 출력으로 내보내지 않는다. 1.12.1과 다른 의도적 변경이다.
-- 메타데이터는 기본 제거하고, 선택 보존은 기존 allowlist 31개 태그 + GPS 별도 동의
+- 메타데이터는 기본 제거하고, 선택 보존은 기존 allowlist 31개 키(태그 30개) + GPS 별도 동의
 - 사진 입력: JPG/PNG/BMP/TIFF/WebP, U8/U16, alpha, EXIF 방향 1–8. 다중 페이지·애니메이션은 거부
 - 영상 입력: MP4/MOV/M4V/WebM, H.264/HEVC/VP8/VP9 8비트 SDR. 출력: MP4 H.264/HEVC, CFR
 - 얼굴(YOLO5Face-n, YuNet), 번호판(YOLOv9-t), 채우기·모자이크·블러·사용자 이미지, 사각형·타원, padding, soft edge
@@ -83,10 +83,10 @@
 | 분야 | 선정 | 메모 |
 | --- | --- | --- |
 | 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.36.x 기준 1.95)가 결정 |
-| UI | egui/eframe 0.36.x(wgpu, glow 대체 경로는 M0 확인), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda` 연동을 M0에서 확인. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL). UI 시험은 `egui_kittest` |
-| 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 세 모델의 CPU·CoreML 결과가 1.12.1과 같음을 확인. RC이므로 정확한 버전으로 고정 |
+| UI | egui/eframe 0.36.x(wgpu 기본, glow 대체 경로), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda`로 macOS·Windows만(Windows는 winit 메시지 훅에서 `TranslateAcceleratorW`). muda는 GTK 창에만 붙어 Linux는 egui 메뉴 막대. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL, Regular 2개 4.1 MB, 이름 이체자 처리는 M6). UI 시험은 `egui_kittest`([M0 기록](M0_EGUI.md)) |
+| 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 `api-27`로 macOS 공식 1.30.0·Windows ML 1.27.1 모두 세 모델의 CPU 결과와 CoreML·DML 결과가 1.12.1과 같음을 확인. `ort`의 세션 빌더는 EP 자동 선택 정책 `MaxEfficiency`를 기본으로 걸어 ORT 1.31이 CPU 세션에도 CoreML을 붙이므로, 세션마다 `with_auto_device(PreferCPU)`로 덮고 EP를 명시한다. RC이므로 정확한 버전으로 고정 |
 | 이미지 | `image` 0.25(필요 codec만), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(M0에서 바이트 일치 확인). 정확히 2배 축소일 때 OpenCV가 쓰는 `INTER_AREA` 경로는 아직 옮기지 않았으므로 M2에서 이식한다. `fast_image_resize`는 화면 표시용에만 |
-| 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. 처리량이 부족하면 4.4의 대안(라이브러리로 링크하면 LGPL 빌드만 가능) |
+| 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
 | 동시성 | 작은 Tokio runtime(HTTP, 자식 프로세스 감독, 이벤트), Rayon pool(CPU 연산), 전용 추론 스레드 | CPU 연산을 async executor에서 돌리지 않는다 |
 | 설정·로그·오류 | serde + TOML + `directories`, `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
@@ -99,14 +99,14 @@
 | 플랫폼 | 가속 → 폴백 | 조건 |
 | --- | --- | --- |
 | Windows x64 | Windows ML self-contained 런타임의 DirectML → CPU | ORT를 따로 번들하지 않고 `Microsoft.Windows.AI.MachineLearning` 2.4.89의 `onnxruntime.dll`(ORT 1.27.1)·`DirectML.dll`을 넣는다. 이 패키지의 최소 OS가 Windows 10 1903(18362)이다(1809는 `Microsoft.WindowsAppSDK.ML`이 필요하므로 지원하지 않음). M0에서 `ort::init_from`으로 이 DLL을 `api-27`로 불러 DML EP가 붙는 것과, 네트워크 없는 Windows 11 Sandbox에서 실행되는 것을 확인했다([기록](M0_ORT_SPIKE.md#windows-ml--directml)). 세션 순차 실행, memory pattern 비활성화. 재배포 약관은 10.1 |
-| macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시 |
+| macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시. 번호판 end2end 모델은 감지 0건일 때 CoreML이 빈 동적 텐서를 거부하므로 CPU로 돌린다(M0, ORT 1.30·1.31) |
 | Linux x86_64 | CPU | CUDA는 1.3의 후보 |
 
 Windows ML의 **EP 카탈로그**(NVIDIA TensorRT-RTX, Intel OpenVINO, AMD MIGraphX·VitisAI, Qualcomm QNN)는 첫 stable에서 쓰지 않는다. Windows 11 24H2 이상이 필요하고, 첫 실행에 네트워크로 받고 Windows Update로 자동 갱신되어 오프라인 실행·고정 manifest 원칙과 맞지 않는다. 이 앱의 모델은 작아 DML로 충분하다. 필요가 측정되면 사용자가 켜는 opt-in 기능으로 따로 설계한다.
 
 GPU 실패(ORT 오류, GPU 메모리 부족) 시 현재 항목을 CPU 세션으로 한 번 다시 실행하고, 그 실행의 나머지는 CPU로 처리하며 이유를 표시한다. CPU 실패, shape 불일치, 모델 해시 오류는 폴백으로 숨기지 않는다.
 
-**ORT 텔레메트리:** Microsoft가 배포하는 ORT 빌드는 텔레메트리가 기본으로 켜져 있다. Windows 구성 요소(Windows ML)는 OS 진단 데이터 경로(TraceLogging)로, 그 밖의 공식 빌드는 1DS SDK로 앱 프로세스가 직접 HTTPS로 보낸다. 1.31부터는 네이티브 빌드의 기본이 1DS다. 그래서 환경 생성 시 `with_telemetry(false)`를 호출하고, ORT를 불러오기 전에 `ORT_DISABLE_TELEMETRY=1`을 설정한다. M0와 M8에서 네트워크 감시로 아무것도 나가지 않음을 확인한다. ORT 1.31 이상 공식 빌드는 이 확인 없이 채택하지 않는다.
+**ORT 텔레메트리:** Microsoft가 배포하는 ORT 빌드는 텔레메트리가 기본으로 켜져 있다. Windows 구성 요소(Windows ML)는 OS 진단 데이터 경로(TraceLogging)로, macOS·Linux 공식 빌드는 1.29부터 들어 있는 1DS SDK로 앱 프로세스가 직접 `mobile.events.data.microsoft.com`에 HTTPS로 보내고, 사용자 Library(또는 홈) 아래 SQLite 저장소에 이벤트를 쌓는다. M0에서 확인한 결과 **`ORT_DISABLE_TELEMETRY=1`만이 1DS 전송을 막고, `DisableTelemetryEvents`(`with_telemetry(false)`)만으로는 전송 시도가 계속된다**([기록](M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리)). 그래서 `main` 첫 줄에서 다른 스레드가 생기기 전에 환경 변수를 설정하고, `with_telemetry(false)`도 함께 호출한다. 네트워크 감시(`spikes/ort/netwatch`)를 M8 릴리스 시험과 ORT 갱신마다 돌린다. 1.12.1 macOS 패키지와 Linux AppImage(둘 다 공식 1.29.0, 텔레메트리 호출 없음)는 전송을 시도하는 상태였다(Linux는 에뮬레이션 사전 실행).
 
 ## 4. 아키텍처
 
@@ -162,7 +162,7 @@ crates/
 - **미리보기:** 가까운 keyframe에서 디코드하고 PTS를 같은 규칙으로 정규화해 목표 frame을 찾는다. 마스크는 core 렌더러로 그린다. 저해상도 연속 재생을 지원한다.
 - **2패스:** 원본 해상도 디코드 → 마스크(트랙별로 고정한 모자이크 격자) → 인코딩(하드웨어 우선, 실패 시 소프트웨어로 2패스만 재시도). 오디오는 1.12.1 정책 유지, D1 색 태그, P-5 pad.
 - **검증·게시:** P-4 검사 후 게시. 원본 identity는 1패스 전, 패스 사이, 게시 직전에 비교한다. 사본은 만들지 않는다.
-- **처리량:** 원시 프레임을 파이프로 주고받으므로 4K30에서 방향당 약 750 MB/s가 오간다. M0에서 1080p·4K 처리량을 재고, 목표에 못 미치면 `ffmpeg-next` 기반의 프로세스 내 미디어 모듈을 검토한다.
+- **처리량:** 원시 프레임을 파이프로 주고받으므로 4K30에서 방향당 약 750 MB/s가 오간다. M0 측정에서 파이프 상한은 약 9.5 GB/s였고 병목은 인코더였다(4K 2패스 VideoToolbox 58 fps, libx264 15 fps, 1.12.1 전체 44 fps와 같은 수준). 외부 프로세스 구조를 유지하고 하드웨어 인코더를 우선한다. yuv420p 파이프와 YUV 마스킹(4K 디코드 46% 빠름)은 M4의 선택적 최적화다([기록](M0_FFMPEG_PIPE.md)).
 
 ### 4.5 출력 게시
 
@@ -195,7 +195,7 @@ crates/
 
 | 유지 | 내용 |
 | --- | --- |
-| 메타데이터 | 기본 전부 제거. 선택 보존은 allowlist 31개(entry 128 B, 전체 64 KiB 제한), GPS는 별도 동의. orientation은 pixel 반영 후 1 |
+| 메타데이터 | 기본 전부 제거. 선택 보존은 allowlist 31개 키(entry 128 B, EXIF 블록 65,527 B 제한), GPS는 별도 동의. orientation은 pixel 반영 후 1, ColorSpace·크기 등 구조 태그는 출력에서 계산 |
 | 영상 부가 정보 | subtitle·data·attachment·chapter·위치·컨테이너 metadata 제거, 오디오 언어 코드만 재기록 |
 | FFmpeg | shell 없이 인자 배열, `-protocol_whitelist file`과 `file:` 입력, 앱 번들의 실행 파일만 사용(릴리스 빌드는 PATH 탐색 안 함) |
 | 모델 | 해시 고정, 해시한 바이트로 세션 생성, ONNX external data 거부 |
@@ -220,7 +220,7 @@ crates/
 
 **사진 검토**
 - 분석이 앞서 나가고, 사용자는 "검토 필요" 큐를 처리한다. 그리드는 미해결 문제 → 감지 0건 → 저신뢰 순으로 정렬한다.
-- 편집기: 원본 해상도까지 확대(필요한 타일만 디코드), 클릭으로 토글, 드래그로 추가, 키보드 이동·크기 조절, Space로 마스킹 미리보기, undo/redo. 단축키 안내는 `?` 오버레이로.
+- 편집기: 원본 해상도까지 확대(필요한 타일만 디코드하고 타일 텍스처로 그림. wgpu 기본 텍스처 한도 8192), 클릭으로 토글, 드래그로 추가, 키보드 이동·크기 조절, Space로 마스킹 미리보기, undo/redo. 단축키 안내는 `?` 오버레이로.
 - "익명화 없이 내보내기"는 보조 메뉴에 두고 확인을 받는다(메타데이터 제거 재인코딩).
 
 **영상 검토:** track 레인과 gap 표시가 있는 타임라인, 저해상도 연속 재생 + 마스킹 미리보기, 프레임 단위 이동, keyframe 편집, gap마다 "덮음/오탐" 결정.
@@ -240,30 +240,41 @@ crates/
   tests/{fixtures, golden, integration}/
   packaging/{windows, macos, linux}/
   tools/            fixture 추출, 번역 이전, 패키지 검사
+  spikes/           M0 spike(독립 Cargo 프로젝트, workspace 밖). M0 기록을 다시 돌리는 용도
 ```
 
 - M1 첫 커밋에서 레거시 C++ 소스·빌드 파일·CI를 지운다(`v1.12.1` 태그로 보존). 아이콘 등 재사용 자산만 `assets/`로 옮긴다. THIRD_PARTY_NOTICES도 이때 새 의존성 기준으로 다시 쓴다.
 - workspace의 모든 crate는 `license = "Apache-2.0"`이다. `cargo-deny`로 의존성 라이선스를 검사해 GPL·AGPL crate를 막는다. 네이티브 라이브러리는 manifest에 라이선스를 적고, LGPL은 동적 링크로만 쓴다.
-- M0의 기준 측정과 fixture 추출은 1.12.1 릴리스 패키지(또는 태그 빌드)로 한다.
+- M0의 기준 측정과 fixture 추출은 1.12.1 릴리스 패키지(또는 태그 빌드)로 한다. `tools/fixture-extract/run.sh`는 `v1.12.1` 태그를 작업 폴더로 내보내 빌드하므로 레거시 소스를 지운 뒤에도 fixture를 다시 만들 수 있다.
 - 1.12.1과 달라지는 동작은 `docs/CHANGES_FROM_1.12.md`에 한 줄씩 적는다(1.12.1 동작, 새 동작, 이유). 최종 CHANGELOG와 첫 실행 안내의 재료가 된다.
 
 ## 8. 로드맵
 
-각 단계는 이전 단계의 완료 기준을 통과해야 시작한다. 기간은 M0 끝에 정한다.
+각 단계는 이전 단계의 완료 기준을 통과해야 시작한다.
+
+**시간 예산(2026-10-16 결정):** 첫 stable(M8 완료)까지 전업 환산 **32주**, 투입은 전업(주 약 40시간)이라 달력 기간도 약 32주다. M0의 남은 실기기 확인이 끝난 주부터 센다(10월 19일에 시작하면 2027년 5월 말). M9는 이 예산 밖이다. 단계별 배분은 M0에서 확인한 작업량으로 추정한 값이다.
+
+| 단계 | M1 | M2 | M3 | M4 | M5 | M6 | M7 | M8 | 합계 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 예산(주) | 3 | 4 | 3 | 4 | 5 | 7 | 4 | 2 | 32 |
+
+**점검 규칙:** 단계가 끝날 때마다 실제 소요를 이 표 옆에 적는다. 어느 단계든 예산의 125%를 넘으면(예: 4주 예산이 5주를 넘음) 아래 범위 조정 순서에서 아직 미루지 않은 첫 항목을 첫 stable 뒤로 미룬다. M5 끝에는 누적 소요를 전체 예산과 비교해 한 번 더 점검하고, 남은 단계(M6–M8 13주)가 남은 예산에 들어가지 않으면 다음 항목도 미룬다.
 
 ### M0 — 위험 검증과 기준선 (진행 중)
 
 - **완료:**
   - Apple M4에서 `ort` rc.14 + ORT 1.30으로 세 모델의 CPU·CoreML MLProgram 결과가 1.12.1과 같음. YuNet 원시 출력 직접 해석. `INTER_LINEAR` 이식 resize 바이트 일치. ([기록](M0_ORT_SPIKE.md))
   - Windows ML 2.4.89(ORT 1.27.1)를 `ort::init_from`과 `api-27`로 불러 DML EP가 붙음. RTX 5080에서 세 모델의 CPU 결과가 1.12.1과 같고 DML 결과도 개수가 같음(IoU ≥ 0.999997). YOLO5Face-n·YuNet은 모든 노드가, 번호판은 NMS 하나만 빼고 DML에서 실행. 네트워크 없는 Windows 11 Sandbox에서 실행(정적 CRT 빌드 필요). x86에서 `INTER_LINEAR` 이식이 36개 크기 조합에서 바이트 일치. ([기록](M0_ORT_SPIKE.md#windows-ml--directml))
+  - macOS egui spike: 한글·일본어 표시, IME 조합 이벤트 처리, AccessKit 트리, 파일 드롭 이벤트, muda 메뉴(macOS 실행, Windows 타입 검사), 4K 확대·이동과 1080p 업로드(vsync 60 fps 유지) 통과. 실제 입력기·VoiceOver·Finder 드롭·메뉴 단축키는 사람 확인 대기. ([기록](M0_EGUI.md))
+  - 시간 예산(전업 환산 32주)과 단계별 배분, 점검 규칙, 범위 조정 순서를 정함(이 장 처음)
+  - macOS FFmpeg 파이프 처리량: 파이프 상한 약 9.5 GB/s, 4K 2패스는 인코더가 결정(VideoToolbox 58 fps). 1.12.1 기준선과 같은 수준. ([기록](M0_FFMPEG_PIPE.md))
+  - 기준 fixture: 1.12.1 시험 166개의 실제 입력·출력·assert를 기록하고 상태(규범·의도·변경·제거)를 붙임. D1–D12·P-1–P-7 전부 올바른 기대 결과를 쓰고 13개는 1.12.1에서 실패를 재현(P-3은 재현 안 됨, 회귀 시험으로 둠). 감지 기준 3모델 × 6장 × 3임계값, allowlist EXIF 기준. ([fixture](../tests/fixtures/README.md), 생성: `tools/fixture-extract/run.sh`)
+  - allowlist EXIF writer가 JPEG·PNG·WebP·TIFF 네 형식 모두에서 fixture 기대값과 같고, exiftool·Exiv2·Pillow·macOS ImageIO·libwebp·libtiff·ImageMagick이 모두 읽음. ([기록](M0_EXIF_WRITER.md))
+  - macOS를 `api-27`로 다시 빌드해 공식 ORT 1.30.0에서 54건(세 모델 × 6장 × 3임계값)이 1.12.1 fixture와 같음. 텔레메트리는 `ORT_DISABLE_TELEMETRY=1`일 때만 전송 시도 0회. `ort` 기본 EP 정책과 CoreML 번호판 문제를 찾아 EP 정책에 반영. ([기록](M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리))
 - **남은 작업:**
-  - 깨끗한 Windows 10 1903 VM에서 설치·오프라인 실행, 작업 중 DML 실패 시 같은 입력의 CPU 재실행, Intel·AMD GPU 실기기. Linux CPU 비교
-  - macOS·Linux도 `api-27`로 다시 빌드해 같은 결과인지 확인. 세 OS에서 ORT 텔레메트리를 끈 상태로 네트워크 감시
-  - egui spike: 한글·일본어 표시와 텍스트 입력(IME), VoiceOver·Narrator, OS 파일 드롭, 네이티브 메뉴(`muda`), 4K 텍스처 확대·이동, 1080p 프레임 30fps 업로드, GPU 없는 환경·원격 데스크톱
-  - EXIF writer spike: JPEG/PNG/WebP/TIFF에 allowlist 태그 새로 쓰기
-  - FFmpeg 파이프 처리량(1080p, 4K)
-  - 기준 fixture 추출: 기존 테스트의 의도와 1.12.1 출력, 2장 결함별 실패 fixture와 올바른 기대 결과
-  - 시간 예산과 범위 조정 순서 기록
+  - Linux 사전 실행(x86 에뮬레이션): `api-27` CPU 54건 일치, `INTER_LINEAR` 이식이 x86 OpenCV와 36쌍 바이트 일치, 텔레메트리 기본값 전송 시도와 환경 변수 차단 확인. 실기기 확인은 남음. ([기록](M0_ORT_SPIKE.md#linux-사전-실행-x86_64-에뮬레이션))
+  - Windows: 깨끗한 Windows 10 1903 VM에서 오프라인 실행, 작업 중 DML 실패(GPU 강제 리셋) 시 같은 입력의 CPU 재실행, Intel·AMD GPU, 프로세스 소켓 감시. Linux: `api-27` CPU 비교, 텔레메트리 감시(1.12.1 AppImage 포함), FFmpeg 하드웨어 경로. 스크립트와 절차 준비 완료([실행 절차](M0_PLATFORM_RUNBOOK.md))
+  - egui 사람 확인: macOS 실제 IME·VoiceOver·Finder 드롭·메뉴 단축키([절차](M0_EGUI.md#사람이-할-확인-macos)), Windows·Linux의 IME·Narrator·Orca·드롭·GPU 없는 환경·원격 데스크톱([실행 절차](M0_PLATFORM_RUNBOOK.md))
 - **완료 기준:** 버전·feature·네이티브 manifest, fixture 세트, 위 spike 결과와 결정 기록. 필수 항목(egui IME·접근성, DirectML)이 실패하면 대규모 구현 전에 대안을 재평가한다.
 
 ### M1 — headless 골격
@@ -311,7 +322,7 @@ crates/
 - **작업:** HEIC/HEIF 디코드(플랫폼 디코더와 libheif 중 spike로 결정, 출력은 JPEG 또는 HEIC), 10비트·HDR 영상 디코드 → SDR 톤매핑 → 8비트 출력(변환 사실을 결과에 표시)
 - **완료 기준:** 아이폰 기본 설정으로 촬영한 사진·영상 fixture 처리
 
-**범위 조정 순서**(예산을 넘으면 앞에서부터 첫 stable 뒤로 미룬다): ① 영상 마스킹 미리보기의 연속 재생(프레임 단위 미리보기는 유지) ② 앱 재시작을 넘는 검토 저장·재개 ③ 타일 모드(작은 얼굴 재현율에 영향이 있어 마지막). 2장의 결함 수정과 5장의 유지 항목은 조정 대상이 아니다.
+**범위 조정 순서**(2026-10-16 확인, 예산을 넘으면 앞에서부터 첫 stable 뒤로 미룬다): ① 영상 마스킹 미리보기의 연속 재생(프레임 단위 미리보기는 유지) ② 앱 재시작을 넘는 검토 저장·재개 ③ 타일 모드(작은 얼굴 재현율에 영향이 있어 마지막). 2장의 결함 수정과 5장의 유지 항목은 조정 대상이 아니다.
 
 ## 9. 시험 전략
 
@@ -380,12 +391,12 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 | `ort` RC | M0, M3 | 확인한 정확한 버전으로 고정, 추론 어댑터 뒤에 숨김 |
 | 의존성 라이선스 호환 | 전 단계 | `cargo-deny`로 GPL·AGPL crate 차단, 네이티브는 manifest에 라이선스 기록(10.1) |
 | Microsoft 약관 3b의 동의 요건 | M7 | 설치 화면에 약관 동의가 필요한지 M7 전에 정함 |
-| ORT 텔레메트리 | M0, M8 | 3장의 두 가지 차단 + 네트워크 감시. 새 ORT 버전마다 다시 확인 |
+| ORT 텔레메트리 | M0, M8 | `ORT_DISABLE_TELEMETRY=1`(실제 차단) + `with_telemetry(false)` + 네트워크 감시. 새 ORT 버전마다 다시 확인 |
 | 프로세스 내 추론의 GPU driver crash | M3, M8 | 측정되면 `Detector` trait 뒤에서 별도 프로세스로 분리 |
-| FFmpeg 파이프 처리량 | M0, M4 | 프로세스 내 미디어 모듈(`ffmpeg-next`) 검토 |
-| TIFF EXIF writer | M0 | 실패한 형식만 선택 보존을 빼고 `CHANGES_FROM_1.12.md`에 기록 |
+| FFmpeg 파이프 처리량 | M0(macOS 해소), M4 | 파이프 상한 9.5 GB/s, 병목은 인코더. Windows·Linux 하드웨어 인코더 경로는 같은 spike로 확인 |
+| TIFF EXIF writer | M0(해소) | 네 형식 모두 성공([기록](M0_EXIF_WRITER.md)). M2에서 ICC 부착과 함께 다시 확인 |
 | 모델 라이선스·배포처 | M3, M7 | 조건 표시, 허용되면 자체 미러, 상업용 대체 모델은 권리와 정확도 평가 후 |
-| 범위 팽창 | 전 단계 | 시간 예산, 8장의 조정 순서, 3개 crate와 headless 우선 유지 |
+| 범위 팽창 | 전 단계 | 8장의 시간 예산(32주)과 단계별 125% 점검, 조정 순서, 3개 crate와 headless 우선 유지 |
 
 ## 12. stable 전환 체크리스트
 

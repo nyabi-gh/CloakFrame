@@ -1,0 +1,39 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2166,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::ImageWriteResult::SavedWithoutMetadata",
+            "failed": 0,
+            "line": 2175,
+            "passed": 1
+        },
+        {
+            "expr": "!cv::imread((root / \"result.jpg\").string()).empty()",
+            "failed": 0,
+            "line": 2176,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "extension": "jpg",
+            "fn": "encodeParamsForExtension",
+            "opencv_params": [
+                1,
+                100,
+                7,
+                1118481,
+                3,
+                1
+            ]
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testMetadataFailurePublishesCleanImage"
+}

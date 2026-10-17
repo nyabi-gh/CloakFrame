@@ -1,0 +1,43 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cuts.frames() == std::vector<int>({10})",
+            "failed": 0,
+            "line": 740,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "cuts": [
+                10
+            ],
+            "fn": "SceneCutDetector",
+            "pushed": [
+                {
+                    "frame": {
+                        "channels": 1,
+                        "formula": "x * 255 / (width - 1)",
+                        "height": 270,
+                        "kind": "gradient_x",
+                        "width": 480
+                    },
+                    "repeat": 10
+                },
+                {
+                    "frame": {
+                        "channels": 1,
+                        "formula": "y * 255 / (height - 1)",
+                        "height": 270,
+                        "kind": "gradient_y",
+                        "width": 480
+                    },
+                    "repeat": 5
+                }
+            ]
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testSceneCutDetectorFindsHardCut"
+}

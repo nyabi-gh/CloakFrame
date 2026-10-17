@@ -1,0 +1,53 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "close(cfrec::videoStrongScoreThreshold(0.05F), 0.05F)",
+            "failed": 0,
+            "line": 317,
+            "passed": 1
+        },
+        {
+            "expr": "close(cfrec::videoStrongScoreThreshold(0.20F), 0.20F)",
+            "failed": 0,
+            "line": 318,
+            "passed": 1
+        },
+        {
+            "expr": "close(cfrec::videoStrongScoreThreshold(0.50F), 0.40F)",
+            "failed": 0,
+            "line": 319,
+            "passed": 1
+        },
+        {
+            "expr": "close(cfrec::videoStrongScoreThreshold(0.90F), 0.80F)",
+            "failed": 0,
+            "line": 320,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "videoStrongScoreThreshold",
+            "score_threshold": 0.05000000074505806,
+            "strong": 0.05000000074505806
+        },
+        {
+            "fn": "videoStrongScoreThreshold",
+            "score_threshold": 0.20000000298023224,
+            "strong": 0.20000000298023224
+        },
+        {
+            "fn": "videoStrongScoreThreshold",
+            "score_threshold": 0.5,
+            "strong": 0.4000000059604645
+        },
+        {
+            "fn": "videoStrongScoreThreshold",
+            "score_threshold": 0.8999999761581421,
+            "strong": 0.7999999523162842
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testVideoStrongThresholdNeverExceedsUserThreshold"
+}

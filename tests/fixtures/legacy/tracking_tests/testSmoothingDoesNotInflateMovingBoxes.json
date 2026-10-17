@@ -1,0 +1,1660 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "tracks.size() == 1",
+            "failed": 0,
+            "line": 417,
+            "passed": 1
+        },
+        {
+            "expr": "processed != nullptr",
+            "failed": 0,
+            "line": 422,
+            "passed": 30
+        },
+        {
+            "expr": "contains(processed->box, detected)",
+            "failed": 0,
+            "line": 428,
+            "passed": 30
+        },
+        {
+            "expr": "processed->box.area() <= detected.area() * 1.26F",
+            "failed": 0,
+            "line": 429,
+            "passed": 30
+        }
+    ],
+    "calls": [
+        {
+            "config": {
+                "coast_motion_threshold": 0.05000000074505806,
+                "high_score_threshold": 0.5,
+                "iou_threshold": 0.30000001192092896,
+                "low_score_threshold": 0.10000000149011612,
+                "max_frames_lost": 30,
+                "max_frames_since_high_score": 30,
+                "max_frames_since_high_score_moving": 45,
+                "velocity_blend": 0.30000001192092896
+            },
+            "fn": "buildBidirectionalTracks",
+            "frames": [
+                [
+                    {
+                        "box": [
+                            0,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            12,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            24,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            36,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            48,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            60,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            72,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            84,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            96,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            108,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            120,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            132,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            144,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            156,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            168,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            180,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            192,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            204,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            216,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            228,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            240,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            252,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            264,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            276,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            288,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            300,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            312,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            324,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            336,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                [
+                    {
+                        "box": [
+                            348,
+                            100,
+                            40,
+                            40
+                        ],
+                        "has_pose": false,
+                        "roll": 0,
+                        "score": 0.8999999761581421
+                    }
+                ]
+            ],
+            "has_continue_guard": false,
+            "merge_iou_threshold": 0.5,
+            "scene_cuts": [
+            ],
+            "tracks": [
+                {
+                    "boxes": [
+                        {
+                            "box": [
+                                0,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 0,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                12,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 1,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                24,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 2,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                36,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 3,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                48,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 4,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                60,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 5,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                72,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 6,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                84,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 7,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                96,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 8,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                108,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 9,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                120,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 10,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                132,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 11,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                144,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 12,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                156,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 13,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                168,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 14,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                180,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 15,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                192,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 16,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                204,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 17,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                216,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 18,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                228,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 19,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                240,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 20,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                252,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 21,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                264,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 22,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                276,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 23,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                288,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 24,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                300,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 25,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                312,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 26,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                324,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 27,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                336,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 28,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                348,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 29,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        }
+                    ],
+                    "id": 1,
+                    "low_confidence": false
+                }
+            ]
+        },
+        {
+            "config": {
+                "extension_frames": 3,
+                "max_cut_boundary_gap": 30,
+                "max_interpolation_gap": 20,
+                "min_strong_detections": 3,
+                "retain_tracks_without_strong_detection": false,
+                "short_track_min_strong": 1,
+                "short_track_strong_ratio": 0.5,
+                "smoothing_radius": 2,
+                "strong_score_threshold": 0.5
+            },
+            "fn": "postProcessTracks",
+            "frame_count": 30,
+            "has_continue_guard": false,
+            "report": {
+                "dropped_tracks": 0,
+                "uncovered_frames": 0,
+                "uncovered_spans": [
+                ]
+            },
+            "scene_cuts": [
+            ],
+            "tracks_after": [
+                {
+                    "boxes": [
+                        {
+                            "box": [
+                                0,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 0,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                12,
+                                100,
+                                46,
+                                40
+                            ],
+                            "frame": 1,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                24,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 2,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                36,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 3,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                48,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 4,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                60,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 5,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                72,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 6,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                84,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 7,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                96,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 8,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                108,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 9,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                120,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 10,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                132,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 11,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                144,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 12,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                156,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 13,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                168,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 14,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                180,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 15,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                192,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 16,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                204,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 17,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                216,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 18,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                228,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 19,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                240,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 20,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                252,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 21,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                264,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 22,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                276,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 23,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                288,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 24,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                300,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 25,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                312,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 26,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                324,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 27,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                330,
+                                100,
+                                46,
+                                40
+                            ],
+                            "frame": 28,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                348,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 29,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        }
+                    ],
+                    "id": 1,
+                    "low_confidence": false
+                }
+            ],
+            "tracks_before": [
+                {
+                    "boxes": [
+                        {
+                            "box": [
+                                0,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 0,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                12,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 1,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                24,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 2,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                36,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 3,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                48,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 4,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                60,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 5,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                72,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 6,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                84,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 7,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                96,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 8,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                108,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 9,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                120,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 10,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                132,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 11,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                144,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 12,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                156,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 13,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                168,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 14,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                180,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 15,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                192,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 16,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                204,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 17,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                216,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 18,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                228,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 19,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                240,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 20,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                252,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 21,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                264,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 22,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                276,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 23,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                288,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 24,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                300,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 25,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                312,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 26,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                324,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 27,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                336,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 28,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        },
+                        {
+                            "box": [
+                                348,
+                                100,
+                                40,
+                                40
+                            ],
+                            "frame": 29,
+                            "has_pose": false,
+                            "interpolated": false,
+                            "roll": 0,
+                            "score": 0.8999999761581421
+                        }
+                    ],
+                    "id": 1,
+                    "low_confidence": false
+                }
+            ]
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testSmoothingDoesNotInflateMovingBoxes"
+}

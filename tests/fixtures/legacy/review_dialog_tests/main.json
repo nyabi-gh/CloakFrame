@@ -1,0 +1,123 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "canvas != widgets.cend()",
+            "failed": 0,
+            "line": 31,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.isVisible() && dialog.result() == QDialog::Rejected",
+            "failed": 0,
+            "line": 40,
+            "passed": 4
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 1",
+            "failed": 0,
+            "line": 43,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.isEmpty()",
+            "failed": 0,
+            "line": 49,
+            "passed": 1
+        },
+        {
+            "expr": "undo != nullptr && undo->isEnabled()",
+            "failed": 0,
+            "line": 54,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 1",
+            "failed": 0,
+            "line": 57,
+            "passed": 1
+        },
+        {
+            "expr": "QApplication::focusWidget() == *canvas",
+            "failed": 0,
+            "line": 58,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 2",
+            "failed": 0,
+            "line": 61,
+            "passed": 1
+        },
+        {
+            "expr": "added == QRectF(142, 102, 36, 36)",
+            "failed": 0,
+            "line": 63,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.back() == QRectF(145.2, 102, 36, 39.2)",
+            "failed": 0,
+            "line": 66,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.back() == added",
+            "failed": 0,
+            "line": 68,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 1",
+            "failed": 0,
+            "line": 70,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 2",
+            "failed": 0,
+            "line": 74,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 1",
+            "failed": 0,
+            "line": 76,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.isEmpty()",
+            "failed": 0,
+            "line": 78,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 1",
+            "failed": 0,
+            "line": 80,
+            "passed": 1
+        },
+        {
+            "expr": "!dialog.isVisible() && dialog.result() == QDialog::Accepted",
+            "failed": 0,
+            "line": 86,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().decision == cloakframe::ReviewDecision::Save",
+            "failed": 0,
+            "line": 87,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().finalBoxes.size() == 1",
+            "failed": 0,
+            "line": 88,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/review_dialog_tests.cpp @ v1.12.1",
+    "suite": "review_dialog_tests",
+    "test": "main"
+}

@@ -1,0 +1,161 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cv::countNonZero(identity != base) == 0",
+            "failed": 0,
+            "line": 1985,
+            "passed": 1
+        },
+        {
+            "expr": "rotated.rows == 3 && rotated.cols == 2",
+            "failed": 0,
+            "line": 1989,
+            "passed": 1
+        },
+        {
+            "expr": "rotated.at<uchar>(0, 0) == base.at<uchar>(base.rows - 1, 0)",
+            "failed": 0,
+            "line": 1990,
+            "passed": 1
+        },
+        {
+            "expr": "mirrored.rows == 2 && mirrored.cols == 3",
+            "failed": 0,
+            "line": 1994,
+            "passed": 1
+        },
+        {
+            "expr": "mirrored.at<uchar>(0, 0) == base.at<uchar>(0, base.cols - 1)",
+            "failed": 0,
+            "line": 1995,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "applyOrientation",
+            "image": {
+                "channels": 1,
+                "cols": 3,
+                "depth_bits": 8,
+                "rows": 2
+            },
+            "input": [
+                [
+                    0,
+                    1,
+                    2
+                ],
+                [
+                    10,
+                    11,
+                    12
+                ]
+            ],
+            "orientation": 1,
+            "output": [
+                [
+                    0,
+                    1,
+                    2
+                ],
+                [
+                    10,
+                    11,
+                    12
+                ]
+            ],
+            "output_image": {
+                "channels": 1,
+                "cols": 3,
+                "depth_bits": 8,
+                "rows": 2
+            }
+        },
+        {
+            "fn": "applyOrientation",
+            "image": {
+                "channels": 1,
+                "cols": 3,
+                "depth_bits": 8,
+                "rows": 2
+            },
+            "input": [
+                [
+                    0,
+                    1,
+                    2
+                ],
+                [
+                    10,
+                    11,
+                    12
+                ]
+            ],
+            "orientation": 6,
+            "output": [
+                [
+                    10,
+                    0
+                ],
+                [
+                    11,
+                    1
+                ],
+                [
+                    12,
+                    2
+                ]
+            ],
+            "output_image": {
+                "channels": 1,
+                "cols": 2,
+                "depth_bits": 8,
+                "rows": 3
+            }
+        },
+        {
+            "fn": "applyOrientation",
+            "image": {
+                "channels": 1,
+                "cols": 3,
+                "depth_bits": 8,
+                "rows": 2
+            },
+            "input": [
+                [
+                    0,
+                    1,
+                    2
+                ],
+                [
+                    10,
+                    11,
+                    12
+                ]
+            ],
+            "orientation": 2,
+            "output": [
+                [
+                    2,
+                    1,
+                    0
+                ],
+                [
+                    12,
+                    11,
+                    10
+                ]
+            ],
+            "output_image": {
+                "channels": 1,
+                "cols": 3,
+                "depth_bits": 8,
+                "rows": 2
+            }
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testOrientationTransforms"
+}

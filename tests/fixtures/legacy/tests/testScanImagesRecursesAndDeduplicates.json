@@ -1,0 +1,63 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 3
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 3
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 239,
+            "passed": 1
+        },
+        {
+            "expr": "root.mkpath(\"a/nested\")",
+            "failed": 0,
+            "line": 242,
+            "passed": 1
+        },
+        {
+            "expr": "root.mkpath(\"b\")",
+            "failed": 0,
+            "line": 243,
+            "passed": 1
+        },
+        {
+            "expr": "nonRecursive.size() == 1",
+            "failed": 0,
+            "line": 253,
+            "passed": 1
+        },
+        {
+            "expr": "recursive.size() == 2",
+            "failed": 0,
+            "line": 256,
+            "passed": 1
+        },
+        {
+            "expr": "relativePaths.contains(\"one.JPG\")",
+            "failed": 0,
+            "line": 263,
+            "passed": 1
+        },
+        {
+            "expr": "relativePaths.contains(\"nested/two.png\")",
+            "failed": 0,
+            "line": 264,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testScanImagesRecursesAndDeduplicates"
+}

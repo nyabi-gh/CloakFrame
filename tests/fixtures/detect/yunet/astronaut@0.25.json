@@ -1,0 +1,25 @@
+{
+    "backend": "OpenCV CPU",
+    "decoded_size": [
+        512,
+        512
+    ],
+    "detections": [
+        {
+            "box": [
+                178.9105987548828,
+                63.23600387573242,
+                90.76609802246094,
+                110.89859008789062
+            ],
+            "has_pose": true,
+            "roll": -0.004226896446198225,
+            "score": 0.9435073137283325
+        }
+    ],
+    "image": "astronaut.png",
+    "model": "yunet",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.25
+}

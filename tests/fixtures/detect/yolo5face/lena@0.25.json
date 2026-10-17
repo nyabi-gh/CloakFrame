@@ -1,0 +1,25 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        512,
+        512
+    ],
+    "detections": [
+        {
+            "box": [
+                201.91429138183594,
+                183.18043518066406,
+                155.7873077392578,
+                211.7465057373047
+            ],
+            "has_pose": true,
+            "roll": 0.040879108011722565,
+            "score": 0.8442105054855347
+        }
+    ],
+    "image": "lena.jpg",
+    "model": "yolo5face",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.25
+}

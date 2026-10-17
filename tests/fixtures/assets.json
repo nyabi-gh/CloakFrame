@@ -1,0 +1,14 @@
+{
+  "comment": "External inputs fetched by hash, not stored in the repository. Models come from .github/scripts/fetch_test_models.sh.",
+  "models": [
+    {"name": "yolov5n_face.onnx", "sha256": "eb244a06e36999db732b317c2b30fa113cd6cfc1a397eaf738f2d6f33c01f640", "url": "https://github.com/yakhyo/yolov5-face-onnx-inference/releases/download/weights/yolov5n_face.onnx"},
+    {"name": "face_detection_yunet_2023mar.onnx", "sha256": "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4", "url": "https://github.com/opencv/opencv_zoo/raw/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"},
+    {"name": "yolo-v9-t-512-license-plates-end2end.onnx", "sha256": "746fdd358ec110418775d7c9d8d07910d48b1a21471f92bf4421f6510d6daade", "url": "https://github.com/ankandrew/open-image-models/releases/download/assets/yolo-v9-t-512-license-plates-end2end.onnx"}
+  ],
+  "images": [
+    {"name": "astronaut.png", "sha256": "88431cd9653ccd539741b555fb0a46b61558b301d4110412b5bc28b5e3ea6cb5", "url": "https://github.com/scikit-image/scikit-image/raw/v0.25.2/skimage/data/astronaut.png", "license": "public domain (NASA)"},
+    {"name": "messi5.jpg", "sha256": "1d570e49654e84c7a943918537bd9e5e1ef82920152e147c834006e235be97c9", "url": "https://raw.githubusercontent.com/opencv/opencv/4.10.0/samples/data/messi5.jpg", "license": "OpenCV sample data, not redistributed"},
+    {"name": "lena.jpg", "sha256": "7de7ed51a1594fff247f4cae2301eceacf5313d6011e37b4a4c8733f7bb72c07", "url": "https://raw.githubusercontent.com/opencv/opencv/4.10.0/samples/data/lena.jpg", "license": "OpenCV sample data, not redistributed"},
+    {"name": "car_image.webp", "sha256": "208d5ef154ca0c8e49b2fe4bae86ea796485162126fa0f976af7974fe1d364fc", "url": "https://raw.githubusercontent.com/ankandrew/open-image-models/main/test/assets/car_image.webp", "license": "open-image-models test asset, not redistributed"}
+  ]
+}

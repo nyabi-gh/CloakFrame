@@ -1,0 +1,51 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 3020,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::imread(faceImagePath.toStdString()))",
+            "failed": 0,
+            "line": 3023,
+            "passed": 1
+        },
+        {
+            "expr": "failing->calls == 1",
+            "failed": 0,
+            "line": 3051,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::Completed",
+            "failed": 0,
+            "line": 3052,
+            "passed": 1
+        },
+        {
+            "expr": "logs.join('\\n').contains(\"GPU acceleration failed while processing face.png\")",
+            "failed": 0,
+            "line": 3053,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::exists(root / \"out\" / \"face.png\")",
+            "failed": 0,
+            "line": 3054,
+            "passed": 1
+        },
+        {
+            "expr": "replacement && replacement != failing && !replacement->accelerated()",
+            "failed": 0,
+            "line": 3056,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testAnAcceleratorFailureMidRunFallsBackToTheCpu"
+}

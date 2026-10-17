@@ -1,0 +1,6 @@
+(version 1)
+(allow default)
+(deny network-outbound)
+(deny network-bind)
+(deny mach-lookup (global-name "com.apple.dnssd.service"))
+(deny mach-lookup (global-name "com.apple.nsurlsessiond"))

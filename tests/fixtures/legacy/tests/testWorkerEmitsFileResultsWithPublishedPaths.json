@@ -1,0 +1,129 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 628,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite((input / \"a.png\").string(), image)",
+            "failed": 0,
+            "line": 634,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite((input / \"b.png\").string(), image)",
+            "failed": 0,
+            "line": 635,
+            "passed": 1
+        },
+        {
+            "expr": "results.size() == 4",
+            "failed": 0,
+            "line": 657,
+            "passed": 1
+        },
+        {
+            "expr": "results[0].sourcePath == missing",
+            "failed": 0,
+            "line": 658,
+            "passed": 1
+        },
+        {
+            "expr": "results[0].status == cloakframe::FileResultStatus::UnreadableInput",
+            "failed": 0,
+            "line": 659,
+            "passed": 1
+        },
+        {
+            "expr": "results[0].outputPath.isEmpty()",
+            "failed": 0,
+            "line": 660,
+            "passed": 1
+        },
+        {
+            "expr": "results[i].status == cloakframe::FileResultStatus::NeedsReview",
+            "failed": 0,
+            "line": 663,
+            "passed": 2
+        },
+        {
+            "expr": "!results[i].messages.isEmpty()",
+            "failed": 0,
+            "line": 664,
+            "passed": 2
+        },
+        {
+            "expr": "destination.exists()",
+            "failed": 0,
+            "line": 667,
+            "passed": 2
+        },
+        {
+            "expr": "source.fileName() == destination.fileName()",
+            "failed": 0,
+            "line": 668,
+            "passed": 2
+        },
+        {
+            "expr": "source.absoluteFilePath() != destination.absoluteFilePath()",
+            "failed": 0,
+            "line": 669,
+            "passed": 2
+        },
+        {
+            "expr": "results[3].status == cloakframe::FileResultStatus::Skipped",
+            "failed": 0,
+            "line": 671,
+            "passed": 1
+        },
+        {
+            "expr": "results[3].sourcePath.endsWith(\"broken.png\")",
+            "failed": 0,
+            "line": 672,
+            "passed": 1
+        },
+        {
+            "expr": "results[3].outputPath.isEmpty()",
+            "failed": 0,
+            "line": 673,
+            "passed": 1
+        },
+        {
+            "expr": "conflicts.size() == 3",
+            "failed": 0,
+            "line": 684,
+            "passed": 1
+        },
+        {
+            "expr": "conflict.outputPath.isEmpty()",
+            "failed": 0,
+            "line": 687,
+            "passed": 3
+        },
+        {
+            "expr": "conflict.status == cloakframe::FileResultStatus::Failed || conflict.status == cloakframe::FileResultStatus::UnreadableInput",
+            "failed": 0,
+            "line": 689,
+            "passed": 3
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerEmitsFileResultsWithPublishedPaths"
+}

@@ -1,0 +1,81 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 1212,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, \"copy.png\", image) == cloakframe::ImageWriteResult::Saved",
+            "failed": 0,
+            "line": 1232,
+            "passed": 1
+        },
+        {
+            "expr": "!cv::imread((root / \"copy.png\").string(), cv::IMREAD_UNCHANGED).empty()",
+            "failed": 0,
+            "line": 1233,
+            "passed": 1
+        },
+        {
+            "expr": "noResidue()",
+            "failed": 0,
+            "line": 1234,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, \"taken.png\", image) == cloakframe::ImageWriteResult::Failed",
+            "failed": 0,
+            "line": 1240,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::file_size(root / \"taken.png\") == 1",
+            "failed": 0,
+            "line": 1241,
+            "passed": 1
+        },
+        {
+            "expr": "noResidue()",
+            "failed": 0,
+            "line": 1242,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, \"guarded.png\", image, {}, {}, [] { return false; }) == cloakframe::ImageWriteResult::Failed",
+            "failed": 0,
+            "line": 1254,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(root / \"guarded.png\")",
+            "failed": 0,
+            "line": 1255,
+            "passed": 1
+        },
+        {
+            "expr": "noResidue()",
+            "failed": 0,
+            "line": 1256,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testPublicationWithoutAtomicPrimitivesLeavesNoCompleteLookingPartial"
+}

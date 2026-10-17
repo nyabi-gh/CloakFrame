@@ -1,0 +1,27 @@
+{
+  "id": "D4",
+  "requirement": "출력 파일·폴더 권한은 umask와 폴더 ACL 상속을 따른다. 비공개 권한이나 보호 DACL을 붙이지 않는다.",
+  "stage": "M1",
+  "expect": {
+    "posix": [
+      {
+        "umask": "0022",
+        "file": "0644",
+        "folder": "0755"
+      },
+      {
+        "umask": "0002",
+        "file": "0664",
+        "folder": "0775"
+      },
+      {
+        "umask": "0077",
+        "file": "0600",
+        "folder": "0700"
+      }
+    ],
+    "posix_video": "영상 출력도 같은 규칙(1.12.1은 게시 직전 fchmod 0600)",
+    "windows": "출력 파일의 DACL이 상속 ACE만 갖고 SE_DACL_PROTECTED가 없다. 출력 폴더에 'Users 읽기' ACE를 둔 경우 결과 파일에서도 그 ACE가 보인다(icacls로 확인)"
+  },
+  "observed_1121_summary": "umask와 상관없이 파일 0600, 하위 폴더 0700. 영상 출력도 0600(D1·P-3 run의 output_mode)"
+}

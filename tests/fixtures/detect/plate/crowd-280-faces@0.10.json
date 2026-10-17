@@ -1,0 +1,14 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        640,
+        640
+    ],
+    "detections": [
+    ],
+    "image": "crowd-280-faces.png",
+    "model": "plate",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.10000000149011612
+}

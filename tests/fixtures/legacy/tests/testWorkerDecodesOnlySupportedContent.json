@@ -1,0 +1,73 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 160,
+            "passed": 2
+        },
+        {
+            "expr": "file.write( reinterpret_cast<const char *>(bytes.data()), static_cast<qint64>(bytes.size())) == static_cast<qint64>(bytes.size())",
+            "failed": 0,
+            "line": 163,
+            "passed": 2
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 865,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imencode(\".ppm\", pixels, ppm)",
+            "failed": 0,
+            "line": 871,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imencode(\".png\", pixels, png)",
+            "failed": 0,
+            "line": 872,
+            "passed": 1
+        },
+        {
+            "expr": "summary.total == 2 && summary.skipped == 1",
+            "failed": 0,
+            "line": 891,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(output / \"netpbm.jpg\")",
+            "failed": 0,
+            "line": 892,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::exists(output / \"renamed.jpg\")",
+            "failed": 0,
+            "line": 893,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::sniffImageFormat(output / \"renamed.jpg\") == cloakframe::ImageFormat::Jpeg",
+            "failed": 0,
+            "line": 895,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testWorkerDecodesOnlySupportedContent/file1-input.jpg",
+                "name": "renamed.jpg",
+                "sha256": "85dc01f4e83c0e36853e333e05e962e44adea7a54fdfaf91a2443c70ba27523f",
+                "size": 294
+            },
+            "fn": "sniffImageFormat",
+            "format": 0
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerDecodesOnlySupportedContent"
+}

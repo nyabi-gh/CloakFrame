@@ -1,0 +1,28 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::verifyUpdateSignature( rfcMessage(), rfcSignature(), rfcPublicKey(), &error)",
+            "failed": 0,
+            "line": 61,
+            "passed": 1
+        },
+        {
+            "expr": "error == QStringLiteral(\"untouched\")",
+            "failed": 0,
+            "line": 62,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "verifyUpdateSignature",
+            "payload_base64": "cg==",
+            "public_key_base64": "PUAXw+hDiVqStwqnTRt+vJyYLM8uxJaMwM1V8Sr0Zgw=",
+            "result": true,
+            "signature_base64": "kqAJqfDUyrhyDoILX2QlQKKye1QWUD+Ps3YiI+vbadoIWsHkPhWZbkWPNhPQ8R2MOHsurrQwKu6wDSkWErsMAA=="
+        }
+    ],
+    "source": "tests/update_signature_tests.cpp @ v1.12.1",
+    "suite": "update_signature_tests",
+    "test": "testRfcVectorVerifies"
+}

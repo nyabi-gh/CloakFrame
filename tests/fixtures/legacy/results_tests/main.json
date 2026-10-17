@@ -1,0 +1,123 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "table && filter && details && openOutput",
+            "failed": 0,
+            "line": 58,
+            "passed": 1
+        },
+        {
+            "expr": "table->rowCount() == 6",
+            "failed": 0,
+            "line": 59,
+            "passed": 1
+        },
+        {
+            "expr": "table->item(0, 0)->text() == \"/photos/a.jpg\"",
+            "failed": 0,
+            "line": 60,
+            "passed": 1
+        },
+        {
+            "expr": "details->toPlainText() == \"No regions redacted\"",
+            "failed": 0,
+            "line": 61,
+            "passed": 1
+        },
+        {
+            "expr": "openOutput->isEnabled()",
+            "failed": 0,
+            "line": 62,
+            "passed": 1
+        },
+        {
+            "expr": "visible == 2",
+            "failed": 0,
+            "line": 69,
+            "passed": 1
+        },
+        {
+            "expr": "details->toPlainText() == \"Existing output would be overwritten\"",
+            "failed": 0,
+            "line": 70,
+            "passed": 1
+        },
+        {
+            "expr": "!openOutput->isEnabled()",
+            "failed": 0,
+            "line": 71,
+            "passed": 1
+        },
+        {
+            "expr": "status == \"Failed\" || status == \"Unreadable input\"",
+            "failed": 0,
+            "line": 79,
+            "passed": 2
+        },
+        {
+            "expr": "visible == 2",
+            "failed": 0,
+            "line": 83,
+            "passed": 1
+        },
+        {
+            "expr": "visible == 5",
+            "failed": 0,
+            "line": 90,
+            "passed": 1
+        },
+        {
+            "expr": "details->toPlainText() == \"Saved z\"",
+            "failed": 0,
+            "line": 94,
+            "passed": 1
+        },
+        {
+            "expr": "openOutput->isEnabled()",
+            "failed": 0,
+            "line": 95,
+            "passed": 1
+        },
+        {
+            "expr": "savedOnly.findChild<QPlainTextEdit *>()->toPlainText().isEmpty()",
+            "failed": 0,
+            "line": 99,
+            "passed": 1
+        },
+        {
+            "expr": "!button->isEnabled()",
+            "failed": 0,
+            "line": 104,
+            "passed": 3
+        },
+        {
+            "expr": "empty.findChild<QTableWidget *>()->rowCount() == 0",
+            "failed": 0,
+            "line": 108,
+            "passed": 1
+        },
+        {
+            "expr": "issues->count() == 2 && issues->item(0)->text().contains(\"Frames 11–16\")",
+            "failed": 0,
+            "line": 142,
+            "passed": 1
+        },
+        {
+            "expr": "retryPath == \"/video.mp4\" && retryFrame == 10",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "opened.urls.isEmpty() && keyboard.isVisible()",
+            "failed": 0,
+            "line": 167,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/results_tests.cpp @ v1.12.1",
+    "suite": "results_tests",
+    "test": "main"
+}

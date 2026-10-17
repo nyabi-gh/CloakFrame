@@ -1,0 +1,51 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "!cloakframe::reviewClearedEveryDetection(0, 0)",
+            "failed": 0,
+            "line": 744,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::reviewClearedEveryDetection(0, 2)",
+            "failed": 0,
+            "line": 746,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::reviewClearedEveryDetection(3, 1)",
+            "failed": 0,
+            "line": 748,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::reviewClearedEveryDetection(3, 3)",
+            "failed": 0,
+            "line": 749,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::reviewClearedEveryDetection(3, 2)",
+            "failed": 0,
+            "line": 751,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::reviewClearedEveryDetection(1, 0)",
+            "failed": 0,
+            "line": 753,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::reviewClearedEveryDetection(64, 0)",
+            "failed": 0,
+            "line": 754,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testReviewConfirmsOnlyWhenDetectionsWereCleared"
+}

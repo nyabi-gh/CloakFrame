@@ -1,0 +1,24 @@
+{
+    "function": "imwriteUnicodeNoReplaceAtRoot(root, \"sub/out.png\", image)",
+    "platform": "macOS (POSIX path)",
+    "runs": [
+        {
+            "file_mode": "0600",
+            "result": "saved",
+            "subfolder_mode": "0700",
+            "umask": "0022"
+        },
+        {
+            "file_mode": "0600",
+            "result": "saved",
+            "subfolder_mode": "0700",
+            "umask": "0002"
+        },
+        {
+            "file_mode": "0600",
+            "result": "saved",
+            "subfolder_mode": "0700",
+            "umask": "0077"
+        }
+    ]
+}

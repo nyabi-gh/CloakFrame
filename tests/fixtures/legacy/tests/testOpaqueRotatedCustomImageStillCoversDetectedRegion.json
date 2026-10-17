@@ -1,0 +1,57 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec3b>(y, x) == cv::Vec3b(10, 40, 240)",
+            "failed": 0,
+            "line": 1966,
+            "passed": 1024
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(0, 0) == background",
+            "failed": 0,
+            "line": 1969,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "custom_image": {
+                "channels": 4,
+                "cols": 12,
+                "depth_bits": 8,
+                "rows": 8
+            },
+            "custom_image_png": "testOpaqueRotatedCustomImageStillCoversDetectedRegion/2-custom.png",
+            "detections": [
+                {
+                    "box": [
+                        16,
+                        16,
+                        32,
+                        32
+                    ],
+                    "has_pose": true,
+                    "roll": -0.6000000238418579,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 64,
+                "depth_bits": 8,
+                "rows": 64
+            },
+            "input_png": "testOpaqueRotatedCustomImageStillCoversDetectedRegion/1-input.png",
+            "method": "custom_image",
+            "output_png": "testOpaqueRotatedCustomImageStillCoversDetectedRegion/3-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testOpaqueRotatedCustomImageStillCoversDetectedRegion"
+}

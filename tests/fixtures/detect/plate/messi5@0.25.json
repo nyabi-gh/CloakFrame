@@ -1,0 +1,14 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        548,
+        342
+    ],
+    "detections": [
+    ],
+    "image": "messi5.jpg",
+    "model": "plate",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.25
+}

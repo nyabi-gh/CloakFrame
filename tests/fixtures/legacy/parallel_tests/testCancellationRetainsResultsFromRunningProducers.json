@@ -1,0 +1,21 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "index == value",
+            "failed": 0,
+            "line": 133,
+            "passed": 2
+        },
+        {
+            "expr": "(consumed == std::vector<std::size_t>{0, 1})",
+            "failed": 0,
+            "line": 136,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/parallel_tests.cpp @ v1.12.1",
+    "suite": "parallel_tests",
+    "test": "testCancellationRetainsResultsFromRunningProducers"
+}

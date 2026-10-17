@@ -1,0 +1,57 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "box != nullptr",
+            "failed": 0,
+            "line": 47,
+            "passed": 2
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 60,
+            "passed": 1
+        },
+        {
+            "expr": "generate.waitForFinished(60000) && generate.exitCode() == 0",
+            "failed": 0,
+            "line": 77,
+            "passed": 1
+        },
+        {
+            "expr": "QTest::qWaitFor( [&] { return dialog.property(\"lastViewedFrame\").toInt() == 5; }, 30000)",
+            "failed": 0,
+            "line": 157,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().addedTracks.size() == 1",
+            "failed": 0,
+            "line": 164,
+            "passed": 1
+        },
+        {
+            "expr": "remove->isEnabled()",
+            "failed": 0,
+            "line": 165,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 1 && dialog.reviewResult().addedTracks.size() == 1",
+            "failed": 0,
+            "line": 170,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 2 && dialog.reviewResult().addedTracks.isEmpty()",
+            "failed": 0,
+            "line": 173,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/video_review_tests.cpp @ v1.12.1",
+    "suite": "video_review_tests",
+    "test": "testManualTrackRemovalAsks"
+}

@@ -1,0 +1,45 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 933,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60)))",
+            "failed": 0,
+            "line": 937,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 966,
+            "passed": 1
+        },
+        {
+            "expr": "summary.total == 1 && summary.failed == 1",
+            "failed": 0,
+            "line": 967,
+            "passed": 1
+        },
+        {
+            "expr": "summary.redacted == 0 && summary.unredacted == 0 && summary.copied == 0",
+            "failed": 0,
+            "line": 968,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(output / \"input.png\")",
+            "failed": 0,
+            "line": 969,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerSavesNothingWhenTheReviewSlotIsMissing"
+}

@@ -1,0 +1,57 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2232,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(root)",
+            "failed": 0,
+            "line": 2234,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::destinationIsSafe(root / \"a.jpg\", root)",
+            "failed": 0,
+            "line": 2236,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::destinationIsSafe(root / \"sub\" / \"b.png\", root)",
+            "failed": 0,
+            "line": 2237,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::destinationIsSafe(root, root)",
+            "failed": 0,
+            "line": 2238,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::destinationIsSafe(root / \"..\" / \"escape.jpg\", root)",
+            "failed": 0,
+            "line": 2240,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::isWithinRoot(root / \"x.jpg\", root)",
+            "failed": 0,
+            "line": 2242,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::isWithinRoot(root.parent_path() / \"x.jpg\", root)",
+            "failed": 0,
+            "line": 2243,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testDestinationPathSafety"
+}

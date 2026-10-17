@@ -1,0 +1,36 @@
+{
+  "id": "D10",
+  "requirement": "대소문자 동일시 여부는 파일시스템을 조사해 한 곳에서 정한다. 입력 중복 제거, 출력 폴더의 입력 포함 검사, 출력 충돌 검사가 모두 그 결과를 쓴다.",
+  "stage": "M1",
+  "cases": [
+    {
+      "fs": "case-sensitive (Linux ext4, APFS case-sensitive 볼륨)",
+      "inputs": [
+        "Photos/a.jpg",
+        "photos/a.jpg"
+      ],
+      "expect": "서로 다른 두 입력"
+    },
+    {
+      "fs": "case-sensitive",
+      "input": "Photos",
+      "output": "photos/out",
+      "expect": "출력 폴더가 입력 안에 있지 않음"
+    },
+    {
+      "fs": "case-insensitive (APFS 기본, NTFS)",
+      "inputs": [
+        "Photos/a.jpg",
+        "photos/a.jpg"
+      ],
+      "expect": "같은 입력 하나"
+    },
+    {
+      "fs": "case-insensitive",
+      "input": "Photos",
+      "output": "photos/out",
+      "expect": "출력 폴더가 입력 안에 있음 → 스캔에서 제외"
+    }
+  ],
+  "observed_1121": "코드 확인(MainWindow.cpp:1628, 2716): 파일시스템과 무관하게 대소문자 무시. core의 pathKey/namesFoldCase는 올바름(legacy/tests/testCaseFoldingFollowsTheFilesystem)"
+}

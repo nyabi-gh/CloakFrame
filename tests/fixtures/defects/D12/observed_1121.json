@@ -1,0 +1,15 @@
+{
+    "input": "4000x3000 random PNG, detection off",
+    "input_bytes": 36066805,
+    "largest_tmpdir_file_bytes": -1,
+    "outcome": "completed_with_warnings",
+    "tmpdir_empty_after_run": true,
+    "tmpdir_entries_seen_during_run": [
+        "",
+        ".cloakframe-stage-AXBkJl",
+        ".cloakframe-stage-AXBkJl/.cloakframe-7817194904076310953-35.tmp",
+        ".cloakframe-stage-AXBkJl/.cloakframe-7817194904076310953-35.tmp/payload",
+        ".cloakframe-stage-AXBkJl/.lock",
+        ".cloakframe-stage-AXBkJl/source.png"
+    ]
+}

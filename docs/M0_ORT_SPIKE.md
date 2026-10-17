@@ -1,6 +1,6 @@
 # M0 spike: ort + ONNX Runtime 모델 3종
 
-실행일: 2026-10-16. 장치: Apple M4, macOS 27.0.1. [Rust 포팅 계획](RUST_PORT_PLAN.md) M0의 "ort/ORT/EP 쌍으로 세 모델 로드·추론" 항목의 첫 결과다. Windows ML DirectML은 [아래 절](#windows-ml--directml)에 있고, Linux는 아직 시험하지 않았다.
+실행일: 2026-10-16. 장치: Apple M4, macOS 27.0.1. [Rust 포팅 계획](RUST_PORT_PLAN.md) M0의 "ort/ORT/EP 쌍으로 세 모델 로드·추론" 항목의 첫 결과다. Windows ML DirectML은 [아래 절](#windows-ml--directml), macOS `api-27` 재확인과 텔레메트리 감시는 [그다음 절](#macos-api-27-재확인과-텔레메트리), Linux는 [에뮬레이션 사전 실행](#linux-사전-실행-x86_64-에뮬레이션)만 있고 실기기는 [실행 절차](M0_PLATFORM_RUNBOOK.md)에 있다. spike 코드는 [`spikes/ort`](../spikes/ort)에 있다.
 
 ## 결론
 
@@ -47,7 +47,7 @@ Rust 전처리(512→640 resize + letterbox + blob)는 아직 SIMD가 없는 단
 
 ## Windows ML · DirectML
 
-실행일: 2026-10-16. 장치: Windows 11 Pro 26300, NVIDIA GeForce RTX 5080(드라이버 617.14). spike 코드는 macOS 때와 마찬가지로 저장소에 넣지 않았다.
+실행일: 2026-10-16. 장치: Windows 11 Pro 26300, NVIDIA GeForce RTX 5080(드라이버 617.14). 이 실행에 쓴 Windows spike 코드는 저장소에 없다. 같은 세션 옵션의 DML 경로와 폴백 시험은 이후 [`spikes/ort`](../spikes/ort)에 다시 넣었고(`--dml`), Windows에서의 실행은 [실행 절차](M0_PLATFORM_RUNBOOK.md) 2장으로 확인한다.
 
 ### 결론
 
@@ -102,3 +102,77 @@ macOS에서 맞춘 구현을 다시 쓰면서 x86에서 처음엔 1 차이가 �
 - Windows 배포 실행 파일은 `+crt-static`으로 빌드한다.
 - Windows ML 런타임의 재배포 조건은 Apache-2.0 전환으로 해결했다(계획 10.1). Microsoft 약관 3(b)의 동의 요건은 M7 전에 정한다.
 - 남은 Windows 항목: 깨끗한 Windows 10 설치, 작업 중 DML 실패 시 같은 입력을 CPU로 다시 실행하는 폴백, 다른 GPU 공급사(Intel·AMD) 실기기.
+
+## macOS `api-27` 재확인과 텔레메트리
+
+실행일: 2026-10-16(같은 날 오후). 장치: Apple M4, macOS 27.0.1. 코드: [`spikes/ort`](../spikes/ort)(감시 도구는 [`spikes/ort/netwatch`](../spikes/ort/netwatch)).
+
+### 결론
+
+- `ort` 2.0.0-rc.14를 **`api-27`**로 빌드해 공식 ORT 1.30.0(배포 대상)과 Homebrew 1.31.0을 `ort::init_from`으로 불렀다. 세 모델 × [감지 fixture](../tests/fixtures/detect) 6장 × score 0.1·0.25·0.5(54건) 모두 1.12.1과 개수가 같고 IoU ≥ 0.99999, score 차 ≤ 8e-7, roll 차 ≤ 5.1e-6 rad였다. YOLO5Face-n은 CoreML(MLProgram, ALL)에서도 같다.
+- **공식 ORT macOS·Linux 빌드는 1.29.0부터 이미 1DS 텔레메트리 SDK를 담고 있다**(계획의 "1.31부터"보다 이르다). 1.29.0·1.30.0·1.31.0 macOS dylib에 `Microsoft::Applications::Events`, `NSURLSession`, collector `https://mobile.events.data.microsoft.com/OneCollector/1.0`, SQLite 이벤트 저장소가 있고 `CFNetwork`·`Network.framework`를 링크한다. Linux 1.29.0·1.30.0 `.so`도 같은 collector와 정적 libcurl을 담는다. Homebrew 빌드에는 없다.
+- **끄는 방법은 `ORT_DISABLE_TELEMETRY=1`이다.** `DisableTelemetryEvents`(`with_telemetry(false)`)만 호출하면 전송 시도가 그대로 일어났다. 환경 변수만 설정한 실행, 둘 다 적용한 실행은 시도 0회였다.
+- **1.12.1 macOS 패키지는 텔레메트리를 보내는 상태로 배포됐다.** 패키지의 `libonnxruntime.1.dylib`은 공식 1.29.0이고, 1.12.1 코드는 텔레메트리를 켜거나 끄는 호출을 하지 않는다. 그 방식대로 세션을 만들면 90초 동안 collector 이름 조회 5회와 연결 5회를 시도했다. 1.12.1 Linux AppImage의 ORT 1.29.0도 같았다([Linux 사전 실행](#linux-사전-실행-x86_64-에뮬레이션)).
+- 텔레메트리가 켜진 실행은 `~/Library/Application Support/Microsoft/DeveloperTools/.onnxruntime/onnxruntime.db`(SQLite)와 `deviceid`에 이벤트를 쌓는다. 이 Mac에는 9월 26일에 만들어진 저장소가 있었고 ORT 1.30.0 이벤트 697건(9/28–10/2, 출처 프로그램은 확인하지 않음)이 남아 있었다. 이벤트에는 기기 모델, OS 버전, 세션 생성 정보(모델 그래프 이름, opset, EP와 할당 노드 수, 하드웨어 ID), 실행 횟수·시간, CPU 시간·메모리, 오류 코드가 들어 있다.
+- **`ort`의 세션 빌더는 `api-22` 이상에서 EP 선택 정책 `MaxEfficiency`(NPU 우선)를 기본으로 건다.** Homebrew 1.31은 이 정책 때문에 CPU EP를 명시해도 CoreML 파티션을 만들었다(세션 생성 3.4 s, 아래 번호판 오류). 정책을 `PreferCPU`로 덮고 EP를 명시하면 CPU만 쓴다(56 ms). 공식 1.30.0은 자동 선택을 하지 않았지만 버전마다 달라지므로 엔진은 항상 정책을 덮고 EP를 명시한다.
+- **번호판 end2end 모델은 CoreML에서 감지 0건일 때 실패한다.** NMS 뒤의 `Gather`가 CoreML 파티션에 들어가 빈 동적 텐서(`{0}`)를 받으면 `has a dynamic shape … zero elements. This is not supported by the CoreML EP`로 멈춘다(1.30.0·1.31.0, `RequireStaticInputShapes`로도 안 풀림). 번호판은 macOS에서도 CPU로 돌린다(p50 15 ms). 1.12.1에서는 이 오류가 "가속 실패 → CPU 폴백"으로 가려졌을 것으로 본다.
+- **`INTER_LINEAR` 이식은 OpenCV 일반 경로와 바이트 일치하지만 KleidiCV HAL과는 ±1 다르다.** Homebrew OpenCV 5.0.0_11(KleidiCV 26.03)과 1.12.1 macOS 패키지의 OpenCV는 KleidiCV HAL을 포함하고, 축소(548×342→512×320, 640→512)에서 바이트의 21%·26%가 ±1 다르다. 확대·같은 크기는 일치한다. 감지 결과에는 영향이 없었다(위 54건). 같은 날 오전 Homebrew OpenCV가 다시 설치되기 전의 출력과는 바이트 일치했고, Windows의 36개 조합도 일반 경로다. 기준은 일반 경로로 두며, 1.12.1 자체가 macOS와 Windows·Linux에서 전처리가 ±1 다르다는 뜻이기도 하다. 이 판정을 위해 이식 코드에 Windows 절의 규칙(짝수 반올림 계수, 8 요소 이상 행 전체 SIMD 식)을 반영했다.
+
+### 감시 방법
+
+| 층 | 방법 | 검증 |
+| --- | --- | --- |
+| 정적 | dylib 문자열·링크 라이브러리 조사 | — |
+| 시도 기록 | `DYLD_INSERT_LIBRARIES`로 `socket`·`connect`·`sendto`·`getaddrinfo`·`DNSServiceGetAddrInfo`·`DNSServiceQueryRecord`·`nw_endpoint_create_host/url`·`nw_connection_create`를 가로채 기록(`netwatch.c`) | URLSession 시험 프로그램의 조회·연결을 잡음 |
+| 차단 | `sandbox-exec`로 outbound·bind·DNS-SD mach 서비스 거부. 텔레메트리가 켜진 실행은 이 안에서만 돌려 실제로는 아무것도 나가지 않게 함 | curl·URLSession이 이름 조회 단계에서 실패 |
+| 소켓 | 실행 중 0.2초마다 `lsof -i` | — |
+| 저장소 | 실행 후 `onnxruntime.db*` 변경 확인 | — |
+
+각 실행은 추론 뒤 환경을 90초 살려 두고 관찰했다.
+
+| ORT | 설정 | 이름 조회·연결 시도 | 비고 |
+| --- | --- | --- | --- |
+| 공식 1.30.0 | `ort` 기본(`EnableTelemetryEvents`) | 5·5 | sandbox 안 |
+| 공식 1.30.0 | 호출 없음(1.12.1 방식) | 5·5 | sandbox 안 |
+| 공식 1.30.0 | `DisableTelemetryEvents`만 | 5·5 | sandbox 안 |
+| 공식 1.30.0 | `ORT_DISABLE_TELEMETRY=1`만 | 0 | sandbox 안 |
+| 공식 1.30.0 | 둘 다 | 0 | sandbox 안·밖 모두, 소켓 0, 저장소 변경 없음 |
+| 공식 1.31.0 | `ort` 기본 / 둘 다 | 5·5 / 0 | sandbox 안 |
+| 공식 1.29.0(1.12.1 패키지) | 호출 없음 / 환경 변수만 | 5·5 / 0 | sandbox 안 |
+| Homebrew 1.31.0 | `ort` 기본 | 0 | 1DS 없음 |
+
+### 결과
+
+| 경로 | 결과(54건, 1.12.1 fixture 대비) | p50(512×512, 전처리 포함) |
+| --- | --- | --- |
+| 공식 1.30.0 CPU | 모두 개수 같음, IoU ≥ 0.99999 | YOLO5Face 21.9 ms, YuNet 8.7 ms, 번호판 14.3 ms |
+| 공식 1.30.0 CoreML(YOLO5Face), 번호판 CPU | 같음 | YOLO5Face 11.8 ms |
+| Homebrew 1.31.0 CPU(정책 재설정 후) | 같음(번호판 score 차 0) | YOLO5Face 36.4 ms, 번호판 27.2 ms |
+| Homebrew 1.31.0 CoreML(YOLO5Face), 번호판 CPU | 같음 | YOLO5Face 11.7 ms |
+
+공식 1.30.0 macOS arm64 아카이브 SHA-256: `6ebb5062a934537c352937821f9fe9718e7de1a2db1122a93dd363ffd53a7012`(1.31.0: `1031b36dd3bdaa8d976a6130d9cf2a05e9be320b93ae804f8427b91dc3432afc`).
+
+### 계획에 반영할 것
+
+- ORT 텔레메트리: 공식 빌드는 1.29부터 1DS를 담는다. 끄는 수단은 `ORT_DISABLE_TELEMETRY=1`이고, `with_telemetry(false)`는 보조로만 둔다. 환경 변수는 `main` 첫 줄, 다른 스레드가 생기기 전에 설정한다. 릴리스 시험에 netwatch 감시를 넣고, 새 ORT 버전마다 다시 돌린다.
+- EP: 세션마다 `with_auto_device(PreferCPU)`로 `ort`의 기본 정책을 덮은 뒤 EP를 명시한다. 번호판 모델은 모든 플랫폼에서 CPU로 시작하고, 가속 EP는 YOLO5Face에만 쓴다(Windows DML은 M0에서 번호판도 통과했으므로 M3에서 감지 0건 입력으로 다시 확인).
+- 1.12.1 패키지의 텔레메트리는 레거시 정책상 코드로 고치지 않는다. 사용자 안내(README·릴리스 노트)를 할지는 메인테이너가 정한다.
+
+## Linux 사전 실행 (x86_64 에뮬레이션)
+
+실행일: 2026-10-16. Apple M4의 Docker Desktop에서 `ubuntu:24.04`(linux/amd64, glibc 2.39)를 에뮬레이션으로 돌려 [Linux 스크립트](../spikes/platform-runs/linux/run_m0_linux.sh)를 `--no-gui`로 실행했다. 실기기가 아니므로 **결과 일치는 근거로 쓰되 시간·처리량은 쓰지 않는다.** 실기기 확인은 [실행 절차](M0_PLATFORM_RUNBOOK.md) 1장이다.
+
+- 공식 ORT 1.30.0 linux-x64 + `api-27` CPU: 54건 모두 1.12.1 fixture와 같음(개수 같음, IoU ≥ 0.99999, score 차 ≤ 4.5e-7).
+- `INTER_LINEAR` 이식: `opencv-python-headless` 5.0.0.93(x86, KleidiCV 없음)과 36쌍 모두 바이트 일치, IPP 켬·끔 둘 다. macOS의 차이는 KleidiCV 때문이라는 판단과 맞는다.
+- 텔레메트리(감시 라이브러리 `netwatch_linux.c` 기준, 90초):
+
+| ORT | 설정 | collector 이름 조회 | 저장소 |
+| --- | --- | --- | --- |
+| 공식 1.30.0 | `ORT_DISABLE_TELEMETRY=1` + `with_telemetry(false)`, 네트워크 허용 | 0 | 변경 없음 |
+| 공식 1.30.0 | `ort` 기본, 네트워크 namespace | 10(`mobile.events.data.microsoft.com:443`) | 기록함 |
+| 1.12.1 AppImage의 1.29.0 | 호출 없음(1.12.1 방식), 네트워크 namespace | 10 | 기록함 |
+| 1.12.1 AppImage의 1.29.0 | 환경 변수만, 네트워크 namespace | 0 | 변경 없음 |
+
+  에뮬레이션에서는 `strace`가 시스템 호출을 해석하지 못해 모든 경우 0으로 나왔다. 그래서 스크립트는 `LD_PRELOAD` 감시를 주 근거로, `strace`를 보조로 쓴다.
+- **1.12.1 Linux AppImage도 macOS 패키지처럼 텔레메트리 전송을 시도하는 상태였다.**
+- FFmpeg 파이프 spike는 Linux에서 실행 경로가 동작함을 확인하고 4K 인코드 중에 멈췄다(에뮬레이션 수치는 의미 없음).

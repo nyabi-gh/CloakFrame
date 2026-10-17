@@ -1,0 +1,51 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 8
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 8
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 295,
+            "passed": 1
+        },
+        {
+            "expr": "root.mkpath(\"photos/nested\")",
+            "failed": 0,
+            "line": 297,
+            "passed": 1
+        },
+        {
+            "expr": "media.size() == 1",
+            "failed": 0,
+            "line": 313,
+            "passed": 1
+        },
+        {
+            "expr": "(skipped == cloakframe::SkippedTypes{{\".heic\", 2}, {\".mkv\", 1}, {\"\", 1}})",
+            "failed": 0,
+            "line": 314,
+            "passed": 1
+        },
+        {
+            "expr": "imagesOnly.at(\".mkv\") == 1",
+            "failed": 0,
+            "line": 318,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testScanCountsUnsupportedFilesByType"
+}

@@ -1,0 +1,91 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec4b>(y, x) == cv::Vec4b(0, 0, 0, 255)",
+            "failed": 0,
+            "line": 1601,
+            "passed": 256
+        },
+        {
+            "expr": "image.at<cv::Vec4b>(0, 0) == cv::Vec4b(100, 110, 120, 200)",
+            "failed": 0,
+            "line": 1604,
+            "passed": 1
+        },
+        {
+            "expr": "deep.at<cv::Vec4w>(box.y + 1, box.x + 1) == cv::Vec4w(0, 0, 0, 65535)",
+            "failed": 0,
+            "line": 1615,
+            "passed": 1
+        },
+        {
+            "expr": "deep.at<cv::Vec4w>(0, 0) == cv::Vec4w(1000, 2000, 3000, 40000)",
+            "failed": 0,
+            "line": 1616,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "detections": [
+                {
+                    "box": [
+                        24,
+                        24,
+                        16,
+                        16
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 4,
+                "cols": 64,
+                "depth_bits": 8,
+                "rows": 64
+            },
+            "input_png": "testFillIsOpaqueOnAlphaImages/1-input.png",
+            "method": "fill",
+            "output_png": "testFillIsOpaqueOnAlphaImages/2-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        },
+        {
+            "block_size": 4,
+            "detections": [
+                {
+                    "box": [
+                        24,
+                        24,
+                        16,
+                        16
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 4,
+                "cols": 64,
+                "depth_bits": 16,
+                "rows": 64
+            },
+            "input_png": "testFillIsOpaqueOnAlphaImages/3-input.png",
+            "method": "fill",
+            "output_png": "testFillIsOpaqueOnAlphaImages/4-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testFillIsOpaqueOnAlphaImages"
+}

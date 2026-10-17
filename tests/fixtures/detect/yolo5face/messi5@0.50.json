@@ -1,0 +1,25 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        548,
+        342
+    ],
+    "detections": [
+        {
+            "box": [
+                223.6519775390625,
+                88.31249237060547,
+                34.485443115234375,
+                44.468788146972656
+            ],
+            "has_pose": true,
+            "roll": -0.09444955736398697,
+            "score": 0.8473266363143921
+        }
+    ],
+    "image": "messi5.jpg",
+    "model": "yolo5face",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.5
+}

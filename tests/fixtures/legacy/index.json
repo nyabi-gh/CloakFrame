@@ -1,0 +1,741 @@
+{
+ "status_values": {
+  "normative": "새 구현이 assert 의도를 지키고, 기록된 출력값과 같아야 한다(부동소수는 허용오차)",
+  "intent": "assert 의도는 지키되 기록된 출력값은 참고용(구현 방식이 의도적으로 다름)",
+  "changed": "계획이 동작을 바꿨다. 기록된 1.12.1 동작을 기대값으로 쓰지 않는다. note와 plan 항목을 따른다",
+  "dropped": "기능을 없앴다. 이식하지 않는다"
+ },
+ "excluded_suites": {
+  "custom_model_consent_tests": "사용자 ONNX 제거(1.2)",
+  "stage_cleanup_tests": "snapshot·stage 정리 제거(0.1)",
+  "update_cache_tests": "Linux 업데이트 캐시 권한 검사 제거(0.1, Velopack 사용)"
+ },
+ "tests": {
+  "logging_tests/main": {
+   "status": "intent",
+   "plan": "5장",
+   "note": "기본 로그에 경로·파일명 없음"
+  },
+  "model_download_tests/main": {
+   "status": "intent",
+   "plan": "M3"
+  },
+  "model_store_tests/testAFolderOthersCanWriteIsRefused": {
+   "status": "changed",
+   "plan": "D5",
+   "note": "폴더 권한 검사 없음"
+  },
+  "model_store_tests/testAReplacementTakesOverFromTheModelAlreadyThere": {
+   "status": "intent",
+   "plan": "M3"
+  },
+  "model_store_tests/testAVerifiedModelIsPublishedAndLeavesNothingBehind": {
+   "status": "intent",
+   "plan": "M3"
+  },
+  "model_store_tests/testAnExistingModelSurvivesAFailedPublication": {
+   "status": "intent",
+   "plan": "M3"
+  },
+  "model_store_tests/testBytesThatDoNotMatchTheDigestNeverTakeTheModelName": {
+   "status": "intent",
+   "plan": "M3"
+  },
+  "model_store_tests/testConcurrentDownloadsBothFinish": {
+   "status": "intent",
+   "plan": "M3"
+  },
+  "model_store_tests/testTheTemporaryNameIsNotTheOneAnAttackerWouldPrepare": {
+   "status": "dropped",
+   "plan": "0.1",
+   "note": "같은 사용자 공격자는 위협 모델 밖"
+  },
+  "model_store_tests/testTheWriteDoesNotFollowALinkLeftInItsPlace": {
+   "status": "dropped",
+   "plan": "0.1"
+  },
+  "parallel_tests/testCancellationRetainsResultsFromRunningProducers": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "parallel_tests/testConsumesInOrder": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "parallel_tests/testPropagatesConsumerException": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "parallel_tests/testPropagatesProducerException": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "parallel_tests/testRespectsInFlightBound": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "parallel_tests/testSingleThreadAndEmpty": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "parallel_tests/testStopsAfterCancellation": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "순서 보존·bounded·취소·예외 전파 의미만. 구현은 Rayon/채널"
+  },
+  "results_tests/main": {
+   "status": "intent",
+   "plan": "M6",
+   "note": "결과는 문장 요약으로 바뀜(6장)"
+  },
+  "review_dialog_tests/main": {
+   "status": "intent",
+   "plan": "M6"
+  },
+  "settings_tests/main": {
+   "status": "intent",
+   "plan": "M6"
+  },
+  "tests/testAModelThatFailsToLoadIsReportedInTheInterfaceLanguage": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testAcceleratedAndCpuDetectionsAgree": {
+   "status": "normative",
+   "plan": "M3",
+   "note": "허용오차 비교"
+  },
+  "tests/testAccelerationBackendNames": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testAnAcceleratorFailureMidRunFallsBackToTheCpu": {
+   "status": "intent",
+   "plan": "M3, D8",
+   "note": "3장의 GPU 실패 정책: 현재 항목을 CPU로 한 번 재실행, 나머지는 CPU"
+  },
+  "tests/testAnimatedImageContainersAreDetectedWithoutDecodingAllFrames": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testApplyMosaicTouchesOnlyDetectedRegion": {
+   "status": "intent",
+   "plan": "M2, D3",
+   "note": "영역 밖 불변은 규범. 셀 계산은 D3의 강도 방식으로 바뀜"
+  },
+  "tests/testBlurHidesARegionOnePixelThin": {
+   "status": "intent",
+   "plan": "M2",
+   "note": "블러는 커널을 자르지 않고 최소 강도를 둠(5장)"
+  },
+  "tests/testBuiltinModelDigests": {
+   "status": "normative",
+   "plan": "M3",
+   "note": "manifest 해시"
+  },
+  "tests/testCaseFoldingFollowsTheFilesystem": {
+   "status": "normative",
+   "plan": "M1, D10"
+  },
+  "tests/testCustomImageCoversDetectedRegion": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testCustomImageFollowsFaceRollWithoutDarkAlphaFringes": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testCustomImagePreservesAspectRatio": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testCustomImageSupports16BitOutput": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testDefaultOutputCarriesNoMetadata": {
+   "status": "changed",
+   "plan": "D2",
+   "note": "ICC는 이제 유지(ICC_PROFILE·acsp·iCCP 표식은 금지 목록에서 빠짐). 나머지 표식 금지는 규범"
+  },
+  "tests/testDestinationPathSafety": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testDestinationRejectsSymlinkEscape": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testDetectorsRejectUnexpectedModelHash": {
+   "status": "normative",
+   "plan": "M3"
+  },
+  "tests/testDroppedDetectionsKeepTheRunOutOfCleanCompletion": {
+   "status": "changed",
+   "plan": "P-1",
+   "note": "경고 완료 대신 게시 차단"
+  },
+  "tests/testDynamicScrfdModelRunsAtRequestedSize": {
+   "status": "dropped",
+   "plan": "1.2"
+  },
+  "tests/testEllipseMasksCoverTheDetectedBoxCorners": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testEncodeParams": {
+   "status": "changed",
+   "plan": "D6",
+   "note": "JPEG q92·원본 서브샘플링, 손실 WebP는 q90"
+  },
+  "tests/testExifOrientationFallback": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testFillIsOpaqueOnAlphaImages": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testFixedScrfdModelRunsAtRequestedSize": {
+   "status": "dropped",
+   "plan": "1.2",
+   "note": "SCRFD 제거(모델 없음으로 1.12.1에서도 건너뜀)"
+  },
+  "tests/testImageFormatsAreDecidedByContent": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testImageWritePublishesWithoutReplacing": {
+   "status": "normative",
+   "plan": "M1"
+  },
+  "tests/testIntersectionOverUnion": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testInvalidDetectionsAreIgnored": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testLargeSoftEdgeMaskUsesBoundedWorkingMemoryPath": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testMetadataCopyAndOrientationNormalize": {
+   "status": "normative",
+   "plan": "M2",
+   "note": "allowlist·GPS 별도 동의·orientation 1·XMP/주석 제거"
+  },
+  "tests/testMetadataCopyStripsEmbeddedThumbnail": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testMetadataFailurePublishesCleanImage": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testModelCacheTagIsContentDerived": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testNonMaxSuppression": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testOnnxPatchRefusesResizeTargetsItCannotDerive": {
+   "status": "dropped",
+   "plan": "1.2"
+  },
+  "tests/testOnnxPatchRejectsInvalidBytes": {
+   "status": "dropped",
+   "plan": "1.2",
+   "note": "ONNX graph patcher 제거"
+  },
+  "tests/testOnnxPatchScalesResizeTargetsByTheirExportedRatio": {
+   "status": "dropped",
+   "plan": "1.2"
+  },
+  "tests/testOpaqueRotatedCustomImageStillCoversDetectedRegion": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testOrientationTransforms": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testOutputPlanRejectsExistingAndDuplicateDestinations": {
+   "status": "changed",
+   "plan": "M1, 4.5",
+   "note": "덮어쓰지 않는 것은 유지. 기존 이름은 거부 대신 검토 화면에서 새 이름 제안"
+  },
+  "tests/testPlateModelRunsWhenProvided": {
+   "status": "normative",
+   "plan": "M3"
+  },
+  "tests/testPublicationWithoutAtomicPrimitivesLeavesNoCompleteLookingPartial": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testRecommendedFaceModels": {
+   "status": "intent",
+   "plan": "M3",
+   "note": "SCRFD 항목은 제외"
+  },
+  "tests/testReviewConfirmsOnlyWhenDetectionsWereCleared": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testRootedWritesRejectEscapesAndUsePrivateFiles": {
+   "status": "changed",
+   "plan": "D4",
+   "note": "0600 기대가 umask·ACL 상속으로 바뀜. '../' 탈출 거부와 덮어쓰기 금지는 유지"
+  },
+  "tests/testScanCountsUnsupportedFilesByType": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testScanImagesRecursesAndDeduplicates": {
+   "status": "intent",
+   "plan": "M1",
+   "note": "중복 제거는 파일 identity 기준으로 바뀜"
+  },
+  "tests/testScanReportsDeniedDirectoriesAndContinues": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testScanReportsInputsItCannotRead": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testSemitransparentCustomImageBlendsWithOriginal": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testSoftEdgeMasksAgreeAcrossThreads": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testSoftEdgesAtImageBorderStayInBounds": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testSoftEdgesEllipseKeepsCoreCovered": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testSoftEdgesKeepDetectedRegionFullyCovered": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testSoftEdgesUsePaddingForAGradualTransition": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testSupportedImageExtensions": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testTransparentCustomImageFallsBackToSafeMosaic": {
+   "status": "intent",
+   "plan": "M2, D3",
+   "note": "사용자 이미지 밑 불투명 바탕은 유지. 바탕 모자이크는 D3 방식"
+  },
+  "tests/testWorkerAcceptsThirtyMegabyteJpeg": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testWorkerDecodesOnlySupportedContent": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testWorkerEmitsFileResultsWithPublishedPaths": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun": {
+   "status": "intent",
+   "plan": "4.2",
+   "note": "위와 같음"
+  },
+  "tests/testWorkerFailsWhenTheReviewReceiverIsMissing": {
+   "status": "intent",
+   "plan": "4.2",
+   "note": "Qt 모달 검토 구조는 없어짐. '검토 응답이 없으면 아무것도 게시하지 않음'만 PublishPermit 규칙으로 남음"
+  },
+  "tests/testWorkerHonoursCancelRequestedBeforeProcess": {
+   "status": "intent",
+   "plan": ""
+  },
+  "tests/testWorkerRejectsAnImageLargerThanTheMemoryBudget": {
+   "status": "intent",
+   "plan": "M2",
+   "note": "상한은 512 MP와 메모리 permit"
+  },
+  "tests/testWorkerRejectsMultiFrameImages": {
+   "status": "normative",
+   "plan": "M2"
+  },
+  "tests/testWorkerReportsCopiedOriginalAsWarning": {
+   "status": "dropped",
+   "plan": "D9",
+   "note": "원본 바이트 복사 제거"
+  },
+  "tests/testWorkerReportsUnredactedOutputAsWarningAndPreservesIt": {
+   "status": "changed",
+   "plan": "P-1",
+   "note": "재실행이 기존 출력을 덮지 않는 부분은 규범. 감지 없이 만든 결과를 정상 출력처럼 게시하는 부분은 P-1로 바뀜"
+  },
+  "tests/testWorkerSavesNothingWhenTheReviewSlotIsMissing": {
+   "status": "intent",
+   "plan": "4.2",
+   "note": "위와 같음"
+  },
+  "tests/testWorkerUsesStableImageSnapshotDuringReview": {
+   "status": "changed",
+   "plan": "D12, 0.1",
+   "note": "snapshot 사본 없음. 한 번 읽은 바이트를 끝까지 쓰고 게시 직전 identity 비교, 바뀌었으면 그 항목 실패"
+  },
+  "thumbnail_tests/main": {
+   "status": "intent",
+   "plan": "M6"
+  },
+  "tracking_tests/testAConfirmedWeakTrackIsMaskedWhole": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testBackwardPassRecoversLowConfidenceStart": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testBidirectionalMergeProducesSingleTrack": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testBidirectionalTracksRespectConsecutiveSceneCuts": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testBidirectionalTracksRespectSceneCuts": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testConstantVelocitySingleTrack": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testCoveredCutGapStaysWithEachSideOfTheCut": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testCrossingObjectsKeepTwoTracks": {
+   "status": "intent",
+   "plan": "M5",
+   "note": "새 구현은 Hungarian 할당. 결과 track 수와 교차 후 분리 의도만 규범"
+  },
+  "tracking_tests/testExtendTrackEndsClampsToVideoBounds": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testExtendTrackEndsStopsAtSceneCut": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testGapAcrossSceneCutIsBoundedInTime": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testGapAcrossSceneCutIsNotReportedForAnotherPlace": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testGapInterpolationFillsMissedFrames": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testGapLargerThanLimitIsReportedAsUncovered": {
+   "status": "normative",
+   "plan": "M5",
+   "note": "보간 한도를 넘는 gap은 CoverageEvidence(미해결 gap)"
+  },
+  "tracking_tests/testGapsSharedByTracksAreReportedOnce": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testGradualGrowthKeepsOneTrack": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testGuardRejectedGapIsCoveredConservatively": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testHighConfidenceSingletonIsKept": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testInterpolationCoversSizeJumpConservatively": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testLongGapAcrossSceneCutIsReportedWhenTracksMeet": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testLowConfidenceCoastingExpires": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testLowConfidenceDetectionsExtendButNeverStartTracks": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testManualVideoTrackInterpolationAndBounds": {
+   "status": "normative",
+   "plan": "M5",
+   "note": "수동 keyframe 보간"
+  },
+  "tracking_tests/testMovingCoastingSurvivesLongerThanStatic": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testNoInterpolationAcrossSceneCut": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testPoseIsTrackedAndInterpolated": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testPoseSmoothingReducesAngleJitter": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testRegionsForFrameCollectsAllTracks": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testRetainedLowConfidenceTracksAreMarkedNotDropped": {
+   "status": "intent",
+   "plan": "M5, P-1",
+   "note": "약한 track은 CoverageEvidence의 '약한 후보'로 남아 게시를 막는다"
+  },
+  "tracking_tests/testSceneCutDetectorCommitsCandidateRaisedWhileConfirming": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testSceneCutDetectorCommitsTrailingCandidate": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testSceneCutDetectorFindsBothCutsAroundShortShot": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testSceneCutDetectorFindsHardCut": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testSceneCutDetectorIgnoresFlash": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testSceneCutDetectorIgnoresStaticScene": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testSceneCutDetectorReportsSingleFrameShotAsOneBoundary": {
+   "status": "changed",
+   "plan": "P-6",
+   "note": "새 기대값 [10, 11]: 확인 대기 중에도 새 spike를 평가한다. defects/P-6"
+  },
+  "tracking_tests/testSceneCutsContainer": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testShortGapAcrossSceneCutIsCoveredWhenTracksMeet": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testShortStrongBurstIsKept": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testSizeJumpStartsNewTrackInsteadOfAssociating": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testSmoothingDoesNotInflateInterpolatedBoxes": {
+   "status": "intent",
+   "plan": "M5, P-6",
+   "note": "부풀리지 않는 것은 유지하되 P-6에 따라 보간 box도 줄이지 않는다. defects/P-6 참고"
+  },
+  "tracking_tests/testSmoothingDoesNotInflateMovingBoxes": {
+   "status": "intent",
+   "plan": "M5"
+  },
+  "tracking_tests/testSmoothingNeverUncoversDetections": {
+   "status": "normative",
+   "plan": "M5, P-6",
+   "note": "관측 box를 줄이지 않음"
+  },
+  "tracking_tests/testTrackerSplitsTracksAtSceneCut": {
+   "status": "normative",
+   "plan": "M5"
+  },
+  "tracking_tests/testTrackingCancellationGuard": {
+   "status": "intent",
+   "plan": "M5",
+   "note": "취소 토큰 의미만"
+  },
+  "tracking_tests/testTrackingSafetyLimitsRejectExcessiveData": {
+   "status": "dropped",
+   "plan": "0.1 상한",
+   "note": "내부 데이터 상한 제거. 입력 경계 상한만 둔다"
+  },
+  "tracking_tests/testTrackingWindowsFollowTheFrameRate": {
+   "status": "normative",
+   "plan": "M5",
+   "note": "새 구현은 유리수 FPS. 23.976·29.97에서 같은 프레임 수가 나와야 함"
+  },
+  "update_signature_tests/testAnUnpinnedBuildSaysSoInsteadOfPassing": {
+   "status": "changed",
+   "plan": "P-7",
+   "note": "키 없는 빌드는 업데이트를 거부"
+  },
+  "update_signature_tests/testFileDigestMatchesTheSignedValue": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testMalformedInputIsRejected": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testMissingFileReportsInsteadOfDigesting": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testOtherKeyFails": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testRfcVectorVerifies": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testTamperedPayloadFails": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testTamperedSignatureFails": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testTrustFollowsTheSignatureOverTheDeclaredRelease": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testTrustIsRefusedForAnythingUnproven": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "update_signature_tests/testWorkflowShapeVerifies": {
+   "status": "normative",
+   "plan": "M7",
+   "note": "Velopack v2 Ed25519 payload 유지"
+  },
+  "video_io_tests/testAnamorphicOutputKeepsDisplayAspect": {
+   "status": "normative",
+   "plan": "M4"
+  },
+  "video_io_tests/testCrfPresets": {
+   "status": "intent",
+   "plan": "M4"
+  },
+  "video_io_tests/testEveryAudioStreamSurvives": {
+   "status": "normative",
+   "plan": "M4"
+  },
+  "video_io_tests/testHardwareEncodeFailureRetriesInSoftware": {
+   "status": "normative",
+   "plan": "M4"
+  },
+  "video_io_tests/testOnlyPictureAndSoundReachTheOutput": {
+   "status": "normative",
+   "plan": "M4"
+  },
+  "video_io_tests/testPrefetchingReaderMatchesDirectReader": {
+   "status": "intent",
+   "plan": "M4"
+  },
+  "video_io_tests/testPreviewAndReaderAgreeOnFrameIndex": {
+   "status": "normative",
+   "plan": "M4, P-3"
+  },
+  "video_io_tests/testRecoveredDecodeErrorsDoNotPublish": {
+   "status": "normative",
+   "plan": "M4, P-4"
+  },
+  "video_io_tests/testSupportedExtensions": {
+   "status": "normative",
+   "plan": "M4"
+  },
+  "video_io_tests/testUnsupportedReasons": {
+   "status": "normative",
+   "plan": "M4, M9",
+   "note": "10비트·HDR 거부는 M9에서 바뀜"
+  },
+  "video_io_tests/testVideoMaskingPlanIsBoundedByWorkersAndBytes": {
+   "status": "intent",
+   "plan": "M4"
+  },
+  "video_io_tests/testVideoStrongThresholdNeverExceedsUserThreshold": {
+   "status": "intent",
+   "plan": "M5, P-2",
+   "note": "종류별 임계값으로 바뀜"
+  },
+  "video_review_tests/testEncodeAsksToPlaceThePendingBox": {
+   "status": "intent",
+   "plan": "M6",
+   "note": "UI 구조는 6장으로 바뀜. 사용자 의도만"
+  },
+  "video_review_tests/testExitsKeepTheBatch": {
+   "status": "intent",
+   "plan": "M6",
+   "note": "UI 구조는 6장으로 바뀜. 사용자 의도만"
+  },
+  "video_review_tests/testGapChecksFollowWhatWasShown": {
+   "status": "changed",
+   "plan": "4.2",
+   "note": "프레임을 본 것만으로 gap이 해결되지 않음. 덮음/오탐 결정이 필요"
+  },
+  "video_review_tests/testKeyboardAddsManualTrack": {
+   "status": "intent",
+   "plan": "M6",
+   "note": "UI 구조는 6장으로 바뀜. 사용자 의도만"
+  },
+  "video_review_tests/testManualTrackRemovalAsks": {
+   "status": "intent",
+   "plan": "M6",
+   "note": "UI 구조는 6장으로 바뀜. 사용자 의도만"
+  },
+  "worker_video_review_tests/main": {
+   "status": "intent",
+   "plan": "M5, M6"
+  }
+ }
+}

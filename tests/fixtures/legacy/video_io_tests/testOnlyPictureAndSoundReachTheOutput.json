@@ -1,0 +1,162 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 229,
+            "passed": 2
+        },
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 649,
+            "passed": 1
+        },
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 654,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(cover.toStdString(), cv::Mat(32, 32, CV_8UC3, cv::Scalar(10, 200, 30)))",
+            "failed": 0,
+            "line": 658,
+            "passed": 1
+        },
+        {
+            "expr": "runFfmpeg(tools, {\"-v\", \"error\", \"-y\", \"-f\", \"lavfi\", \"-i\", \"testsrc=size=128x96:rate=10:duration=2\", \"-f\", \"lavfi\", \"-i\", \"sine=frequency=440:duration=2\", \"-i\", subtitles, \"-i\", cover, \"-f\", \"ffmetadata\", \"-i\", chapters, \"-map\", \"0:v:0\", \"-map\", \"1:a:0\", \"-map\", \"2:s:0\", \"-map\", \"3:v:0\", \"-map_chapters\", \"4\", \"-c:v:0\", \"libx264\", \"-pix_fmt\", \"yuv420p\", \"-c:v:1\", \"png\", \"-disposition:v:1\", \"attached_pic\", \"-c:a\", \"aac\", \"-c:s\", \"mov_text\", \"-metadata:s:v:0\", \"title=PrivateVideoTitle\", \"-metadata:s:a:0\", \"title=PrivateAudioTitle\", \"-metadata:s:s:0\", \"title=PrivateSubtitleTitle\", \"-metadata\", \"artist=PrivateArtist\", \"-t\", \"2\", source})",
+            "failed": 0,
+            "line": 713,
+            "passed": 1
+        },
+        {
+            "expr": "sourceBytes.contains(marker.toLatin1())",
+            "failed": 0,
+            "line": 725,
+            "passed": 6
+        },
+        {
+            "expr": "rawProbeOutput(tools, source).contains(\"\\\"subtitle\\\"\")",
+            "failed": 0,
+            "line": 727,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 730,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(*info).isEmpty()",
+            "failed": 0,
+            "line": 731,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 748,
+            "passed": 1
+        },
+        {
+            "expr": "probe.waitForFinished(60000)",
+            "failed": 0,
+            "line": 760,
+            "passed": 1
+        },
+        {
+            "expr": "!fileBytes(output).contains(\"Private\")",
+            "failed": 0,
+            "line": 761,
+            "passed": 1
+        },
+        {
+            "expr": "streams.size() == 2",
+            "failed": 0,
+            "line": 765,
+            "passed": 1
+        },
+        {
+            "expr": "streams.at(0).toObject().value(\"codec_type\").toString() == \"video\"",
+            "failed": 0,
+            "line": 766,
+            "passed": 1
+        },
+        {
+            "expr": "streams.at(1).toObject().value(\"codec_type\").toString() == \"audio\"",
+            "failed": 0,
+            "line": 767,
+            "passed": 1
+        },
+        {
+            "expr": "report.value(\"chapters\").toArray().isEmpty()",
+            "failed": 0,
+            "line": 768,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testOnlyPictureAndSoundReachTheOutput/file1-input.mp4",
+                "name": "side-streams.mp4",
+                "sha256": "117040dde5b768d3137f28113139e966926fb9e89920bef8aa7d2c21889f0a05",
+                "size": 25724
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 20,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            }
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 20,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            },
+            "reason_en": ""
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testOnlyPictureAndSoundReachTheOutput"
+}

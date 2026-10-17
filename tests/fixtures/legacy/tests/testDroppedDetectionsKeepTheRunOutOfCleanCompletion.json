@@ -1,0 +1,57 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 1015,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(32, 32, CV_8UC3, cv::Scalar(20, 40, 60)))",
+            "failed": 0,
+            "line": 1019,
+            "passed": 1
+        },
+        {
+            "expr": "summary.redacted == 1",
+            "failed": 0,
+            "line": 1046,
+            "passed": 1
+        },
+        {
+            "expr": "summary.omittedRegions == 3",
+            "failed": 0,
+            "line": 1047,
+            "passed": 1
+        },
+        {
+            "expr": "summary.trackingGapFrames == 0",
+            "failed": 0,
+            "line": 1048,
+            "passed": 1
+        },
+        {
+            "expr": "summary.droppedTracks == 0",
+            "failed": 0,
+            "line": 1049,
+            "passed": 1
+        },
+        {
+            "expr": "summary.coverageWarningFiles == 1",
+            "failed": 0,
+            "line": 1050,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 1051,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testDroppedDetectionsKeepTheRunOutOfCleanCompletion"
+}

@@ -1,0 +1,189 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 160,
+            "passed": 5
+        },
+        {
+            "expr": "file.write( reinterpret_cast<const char *>(bytes.data()), static_cast<qint64>(bytes.size())) == static_cast<qint64>(bytes.size())",
+            "failed": 0,
+            "line": 163,
+            "passed": 5
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2070,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(root)",
+            "failed": 0,
+            "line": 2075,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(outside)",
+            "failed": 0,
+            "line": 2076,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, \"nested/result.png\", image) == cloakframe::ImageWriteResult::Saved",
+            "failed": 0,
+            "line": 2080,
+            "passed": 1
+        },
+        {
+            "expr": "!cv::imread((root / \"nested/result.png\").string()).empty()",
+            "failed": 0,
+            "line": 2081,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, \"../outside/escaped.png\", image) == cloakframe::ImageWriteResult::Failed",
+            "failed": 0,
+            "line": 2083,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(outside / \"escaped.png\")",
+            "failed": 0,
+            "line": 2084,
+            "passed": 1
+        },
+        {
+            "expr": "::chmod(source.c_str(), 0600) == 0",
+            "failed": 0,
+            "line": 2090,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::copyFileNoReplaceAtRoot(source, root, \"copies/original.bin\")",
+            "failed": 0,
+            "line": 2092,
+            "passed": 1
+        },
+        {
+            "expr": "copiedBytes == sourceBytes",
+            "failed": 0,
+            "line": 2097,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::moveFileNoReplaceAtRoot(moveSource, root, \"moves/moved.bin\") == cloakframe::FileMoveResult::Moved",
+            "failed": 0,
+            "line": 2102,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(moveSource)",
+            "failed": 0,
+            "line": 2103,
+            "passed": 1
+        },
+        {
+            "expr": "movedBytes == sourceBytes",
+            "failed": 0,
+            "line": 2108,
+            "passed": 1
+        },
+        {
+            "expr": "::chmod(blockedSource.c_str(), 0640) == 0",
+            "failed": 0,
+            "line": 2116,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::moveFileNoReplaceAtRoot(blockedSource, root, \"moves/existing.bin\") == cloakframe::FileMoveResult::Failed",
+            "failed": 0,
+            "line": 2119,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::exists(blockedSource)",
+            "failed": 0,
+            "line": 2120,
+            "passed": 1
+        },
+        {
+            "expr": "preservedBytes == existingBytes",
+            "failed": 0,
+            "line": 2125,
+            "passed": 1
+        },
+        {
+            "expr": "::stat(blockedSource.c_str(), &blockedStatus) == 0",
+            "failed": 0,
+            "line": 2128,
+            "passed": 1
+        },
+        {
+            "expr": "(blockedStatus.st_mode & 0777) == 0640",
+            "failed": 0,
+            "line": 2129,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::moveFileNoReplaceAtRoot(guardedSource, root, \"moves/guarded.bin\", [] { return false; }) == cloakframe::FileMoveResult::Failed",
+            "failed": 0,
+            "line": 2141,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::exists(guardedSource)",
+            "failed": 0,
+            "line": 2142,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(root / \"moves/guarded.bin\")",
+            "failed": 0,
+            "line": 2143,
+            "passed": 1
+        },
+        {
+            "expr": "::stat((root / \"copies/original.bin\").c_str(), &copiedStatus) == 0",
+            "failed": 0,
+            "line": 2146,
+            "passed": 1
+        },
+        {
+            "expr": "(copiedStatus.st_mode & 0777) == 0600",
+            "failed": 0,
+            "line": 2147,
+            "passed": 1
+        },
+        {
+            "expr": "!ec",
+            "failed": 0,
+            "line": 2151,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::imwriteUnicodeNoReplaceAtRoot(root, \"linked/escaped.png\", image) == cloakframe::ImageWriteResult::Failed",
+            "failed": 0,
+            "line": 2153,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(outside / \"escaped.png\")",
+            "failed": 0,
+            "line": 2154,
+            "passed": 1
+        },
+        {
+            "expr": "!entry.path().filename().string().starts_with(\".cloakframe-\")",
+            "failed": 0,
+            "line": 2159,
+            "passed": 8
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testRootedWritesRejectEscapesAndUsePrivateFiles"
+}

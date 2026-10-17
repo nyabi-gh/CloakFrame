@@ -1,0 +1,63 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2032,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::imwriteUnicodeNoReplace(destination, first)",
+            "failed": 0,
+            "line": 2038,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::file_size(destination) == 1",
+            "failed": 0,
+            "line": 2039,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::remove(destination)",
+            "failed": 0,
+            "line": 2040,
+            "passed": 1
+        },
+        {
+            "expr": "successes.load(std::memory_order_relaxed) == 1",
+            "failed": 0,
+            "line": 2059,
+            "passed": 1
+        },
+        {
+            "expr": "!cv::imread(destination.string(), cv::IMREAD_UNCHANGED).empty()",
+            "failed": 0,
+            "line": 2060,
+            "passed": 1
+        },
+        {
+            "expr": "entry.path().filename().string().find(\".cloakframe-\") == std::string::npos",
+            "failed": 0,
+            "line": 2063,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testImageWritePublishesWithoutReplacing"
+}

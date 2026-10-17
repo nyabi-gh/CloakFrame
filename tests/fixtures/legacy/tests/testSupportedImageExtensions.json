@@ -1,0 +1,33 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cloakframe::isSupportedImage(\"photo.jpg\")",
+            "failed": 0,
+            "line": 230,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::isSupportedImage(\"photo.JPEG\")",
+            "failed": 0,
+            "line": 231,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::isSupportedImage(\"photo.webp\")",
+            "failed": 0,
+            "line": 232,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::isSupportedImage(\"photo.txt\")",
+            "failed": 0,
+            "line": 233,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testSupportedImageExtensions"
+}

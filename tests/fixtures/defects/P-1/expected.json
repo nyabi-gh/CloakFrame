@@ -1,0 +1,43 @@
+{
+  "id": "P-1",
+  "requirement": "미해결 자동 감지 문제(상한으로 잘린 후보, 끊긴 track, 확인되지 않은 gap)가 있으면 PublishPermit을 발급하지 않는다. 그 항목은 '검토 필요'로 남고 출력 폴더에 아무것도 쓰지 않는다.",
+  "stage": "M1, M2, M5",
+  "cases": [
+    {
+      "scenario": "영상: 얼굴 감지가 30–54프레임에서 끊김, 검토 끔",
+      "expect": {
+        "published": false,
+        "state": "NeedsReview",
+        "coverage_evidence": [
+          {
+            "kind": "unresolved_gap",
+            "frames": [
+              30,
+              54
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "사진: NMS 후 감지 수가 상한을 넘음(상한을 테스트용으로 100으로 낮춰 crowd-280-faces.png에 적용)",
+      "expect": {
+        "published": false,
+        "state": "NeedsReview",
+        "coverage_evidence": [
+          {
+            "kind": "capped_candidates"
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "위 두 항목을 검토 화면에서 '경고 포함 내보내기'로 명시 선택",
+      "expect": {
+        "published": true,
+        "counted_as_normal_completion": false
+      }
+    }
+  ],
+  "observed_1121_summary": "영상: gap 30–54가 보고됐지만 상태 completed, 출력 게시, 그 구간 얼굴 영역 비마스킹(원본과 평균 차 2.7, 마스킹 프레임은 128). 사진: 경고와 함께 게시"
+}

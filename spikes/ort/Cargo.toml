@@ -1,0 +1,21 @@
+[package]
+name = "ort-spike"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+[dependencies]
+ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "load-dynamic", "api-27", "coreml"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+
+[target.'cfg(target_os = "windows")'.dependencies]
+ort = { version = "=2.0.0-rc.14", default-features = false, features = ["directml"] }
+
+[profile.release]
+debug = 1
+
+[workspace]

@@ -1,0 +1,130 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "generateSample(tools, source)",
+            "failed": 0,
+            "line": 432,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 434,
+            "passed": 1
+        },
+        {
+            "expr": "reader.open(tools, source, *info)",
+            "failed": 0,
+            "line": 447,
+            "passed": 1
+        },
+        {
+            "expr": "reader.errorString().isEmpty()",
+            "failed": 0,
+            "line": 453,
+            "passed": 1
+        },
+        {
+            "expr": "!directFrames.empty()",
+            "failed": 0,
+            "line": 455,
+            "passed": 1
+        },
+        {
+            "expr": "reader.waitForOpen()",
+            "failed": 0,
+            "line": 459,
+            "passed": 1
+        },
+        {
+            "expr": "reader.frameWidth() == info->displayWidth()",
+            "failed": 0,
+            "line": 460,
+            "passed": 1
+        },
+        {
+            "expr": "reader.frameHeight() == info->displayHeight()",
+            "failed": 0,
+            "line": 461,
+            "passed": 1
+        },
+        {
+            "expr": "reader.errorString().isEmpty()",
+            "failed": 0,
+            "line": 473,
+            "passed": 1
+        },
+        {
+            "expr": "prefetchedFrames == directFrames",
+            "failed": 0,
+            "line": 474,
+            "passed": 1
+        },
+        {
+            "expr": "reader.waitForOpen()",
+            "failed": 0,
+            "line": 480,
+            "passed": 1
+        },
+        {
+            "expr": "reader.next(frame)",
+            "failed": 0,
+            "line": 482,
+            "passed": 1
+        },
+        {
+            "expr": "reader.waitForOpen()",
+            "failed": 0,
+            "line": 496,
+            "passed": 1
+        },
+        {
+            "expr": "!reader.next(frame)",
+            "failed": 0,
+            "line": 498,
+            "passed": 1
+        },
+        {
+            "expr": "reader.errorString().isEmpty()",
+            "failed": 0,
+            "line": 499,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testPrefetchingReaderMatchesDirectReader/file1-input.mp4",
+                "name": "prefetch.mp4",
+                "sha256": "2e8edb52605de46937c8aff52dbab3582462949a16db22aed0465c42d1007f14",
+                "size": 93287
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testPrefetchingReaderMatchesDirectReader"
+}

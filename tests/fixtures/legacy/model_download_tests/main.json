@@ -1,0 +1,81 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "server.listen(QHostAddress::LocalHost)",
+            "failed": 0,
+            "line": 17,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::Success && result.data == bytes && result.attempts == 1",
+            "failed": 0,
+            "line": 99,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::Success && result.attempts == 2",
+            "failed": 0,
+            "line": 101,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::TimedOut && result.data.isEmpty()",
+            "failed": 0,
+            "line": 103,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::TimedOut",
+            "failed": 0,
+            "line": 105,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::TooLarge && result.attempts == 1",
+            "failed": 0,
+            "line": 107,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::IntegrityError && result.data.isEmpty() && result.attempts == 1",
+            "failed": 0,
+            "line": 110,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::NetworkError && result.attempts == 1",
+            "failed": 0,
+            "line": 112,
+            "passed": 1
+        },
+        {
+            "expr": "result.errorDetail.startsWith(\"HTTP 404 · \")",
+            "failed": 0,
+            "line": 113,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::Cancelled && result.attempts == 0",
+            "failed": 0,
+            "line": 115,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::Cancelled && result.attempts == 1",
+            "failed": 0,
+            "line": 133,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == ModelDownloadStatus::Cancelled && result.attempts == 1",
+            "failed": 0,
+            "line": 152,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/model_download_tests.cpp @ v1.12.1",
+    "suite": "model_download_tests",
+    "test": "main"
+}

@@ -1,0 +1,42 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::crfForQuality(cloakframe::VideoQuality::HighQuality) == 18",
+            "failed": 0,
+            "line": 306,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::crfForQuality(cloakframe::VideoQuality::Balanced) == 21",
+            "failed": 0,
+            "line": 307,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::crfForQuality(cloakframe::VideoQuality::SpaceSaver) == 24",
+            "failed": 0,
+            "line": 308,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "crf": 18,
+            "fn": "crfForQuality",
+            "quality": 0
+        },
+        {
+            "crf": 21,
+            "fn": "crfForQuality",
+            "quality": 1
+        },
+        {
+            "crf": 24,
+            "fn": "crfForQuality",
+            "quality": 2
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testCrfPresets"
+}

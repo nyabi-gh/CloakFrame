@@ -1,0 +1,42 @@
+{
+  "id": "P-5",
+  "requirement": "홀수 크기는 crop하지 않고 짝수로 pad한다(오른쪽·아래 1px, 가장자리 복제). 오디오는 영상 구간에 맞춰 정확히 trim한다.",
+  "stage": "M4",
+  "cases": [
+    {
+      "input": "odd-641x361-audio-longer.mp4",
+      "expect": {
+        "size": [
+          642,
+          362
+        ],
+        "source_pixels_at_same_coordinates": true,
+        "pad": "오른쪽 열·아래 행이 가장자리 복제",
+        "result_flag": "padded",
+        "audio_duration_minus_video_duration_seconds": {
+          "max_abs": 0.001
+        },
+        "clicks": "원본 클릭 0.0, 0.5, 1.0, 1.5 유지, 2.0 이후 없음"
+      }
+    },
+    {
+      "input": "audio-starts-early.mp4",
+      "expect": {
+        "video_start": 0.0,
+        "audio_start": 0.0,
+        "output_click_times": [
+          0.1,
+          0.6,
+          1.1,
+          1.6
+        ],
+        "av_offset_tolerance_seconds": 0.02
+      }
+    }
+  ],
+  "observed_1121_summary": "641×361 → 640×360으로 crop(오른쪽 열·아래 행 손실), 오디오 2.005 s(영상 2.0 s). 오디오가 먼저 시작하는 입력은 동기가 맞음(클릭 0.1, 0.6, 1.1, 1.6)",
+  "proposed": [
+    "4:2:0의 H.264 crop 단위는 2px라 641폭을 표시 영역으로 기록할 수 없으므로 642×362를 그대로 출력하고 결과에 표시한다",
+    "오디오 trim 허용오차 1 ms는 MP4 edit list로 맞춘다는 전제"
+  ]
+}

@@ -1,0 +1,69 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "QFile::remove(source_)",
+            "failed": 0,
+            "line": 90,
+            "passed": 1
+        },
+        {
+            "expr": "QFile::rename(replacement_, source_)",
+            "failed": 0,
+            "line": 91,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 1057,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(32, 32, CV_8UC3, cv::Scalar(10, 20, 30)))",
+            "failed": 0,
+            "line": 1062,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(replacement.string(), cv::Mat(32, 32, CV_8UC3, cv::Scalar(200, 210, 220)))",
+            "failed": 0,
+            "line": 1064,
+            "passed": 1
+        },
+        {
+            "expr": "originalFile.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 1066,
+            "passed": 1
+        },
+        {
+            "expr": "reviewThread.wait()",
+            "failed": 0,
+            "line": 1096,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 1097,
+            "passed": 1
+        },
+        {
+            "expr": "outputFile.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 1099,
+            "passed": 1
+        },
+        {
+            "expr": "outputFile.readAll() == originalBytes",
+            "failed": 0,
+            "line": 1100,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerUsesStableImageSnapshotDuringReview"
+}

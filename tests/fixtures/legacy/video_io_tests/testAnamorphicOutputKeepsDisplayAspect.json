@@ -1,0 +1,123 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "runFfmpeg(tools, {\"-v\", \"error\", \"-y\", \"-f\", \"lavfi\", \"-i\", \"testsrc=size=720x576:rate=25:duration=1\", \"-vf\", \"setsar=16/15\", \"-c:v\", \"libx264\", \"-pix_fmt\", \"yuv420p\", source})",
+            "failed": 0,
+            "line": 522,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 525,
+            "passed": 1
+        },
+        {
+            "expr": "info->sarNum == 16 && info->sarDen == 15",
+            "failed": 0,
+            "line": 526,
+            "passed": 1
+        },
+        {
+            "expr": "writer.open(tools, output, source, *info, 23, false, cloakframe::VideoCodec::H264)",
+            "failed": 0,
+            "line": 530,
+            "passed": 1
+        },
+        {
+            "expr": "reader.open(tools, source, *info)",
+            "failed": 0,
+            "line": 532,
+            "passed": 1
+        },
+        {
+            "expr": "writer.writeFrame(frame)",
+            "failed": 0,
+            "line": 536,
+            "passed": 25
+        },
+        {
+            "expr": "writer.finish()",
+            "failed": 0,
+            "line": 538,
+            "passed": 1
+        },
+        {
+            "expr": "written",
+            "failed": 0,
+            "line": 541,
+            "passed": 1
+        },
+        {
+            "expr": "written->width == 720 && written->height == 576",
+            "failed": 0,
+            "line": 542,
+            "passed": 1
+        },
+        {
+            "expr": "written->sarNum == 16 && written->sarDen == 15",
+            "failed": 0,
+            "line": 543,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testAnamorphicOutputKeepsDisplayAspect/file1-input.mp4",
+                "name": "anamorphic.mp4",
+                "sha256": "266d10170fdd057490457448b6721db5b9d27bc8536466e0c636b94363bbc316",
+                "size": 14372
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 1,
+                "estimated_frame_count": 25,
+                "fps_den": 1,
+                "fps_num": 25,
+                "height": 576,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 15,
+                "sar_num": 16,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 720
+            }
+        },
+        {
+            "file": {
+                "copy": "testAnamorphicOutputKeepsDisplayAspect/file2-input.mp4",
+                "name": "anamorphic-out.mp4",
+                "sha256": "c02d82ec93c4a9ff05953b5325ed5532976d724643d4b391013191bb47d3e81b",
+                "size": 14340
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 1,
+                "estimated_frame_count": 25,
+                "fps_den": 1,
+                "fps_num": 25,
+                "height": 576,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 15,
+                "sar_num": 16,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 720
+            }
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testAnamorphicOutputKeepsDisplayAspect"
+}

@@ -1,0 +1,425 @@
+{
+    "a_smoothing_shrinks_interpolated_boxes": {
+        "calls": "interpolateGaps(track, 20); smoothTrack(track, 2)",
+        "frames": [
+            {
+                "box_after_interpolation": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "box_after_smoothing": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 8,
+                "interpolated": false,
+                "smoothed_contains_interpolated": true
+            },
+            {
+                "box_after_interpolation": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "box_after_smoothing": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 9,
+                "interpolated": false,
+                "smoothed_contains_interpolated": true
+            },
+            {
+                "box_after_interpolation": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "box_after_smoothing": [
+                    88,
+                    88,
+                    64,
+                    64
+                ],
+                "frame": 10,
+                "interpolated": true,
+                "smoothed_contains_interpolated": false
+            },
+            {
+                "box_after_interpolation": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "box_after_smoothing": [
+                    84,
+                    84,
+                    72,
+                    72
+                ],
+                "frame": 11,
+                "interpolated": true,
+                "smoothed_contains_interpolated": false
+            },
+            {
+                "box_after_interpolation": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "box_after_smoothing": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 12,
+                "interpolated": true,
+                "smoothed_contains_interpolated": true
+            },
+            {
+                "box_after_interpolation": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "box_after_smoothing": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 13,
+                "interpolated": false,
+                "smoothed_contains_interpolated": true
+            },
+            {
+                "box_after_interpolation": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "box_after_smoothing": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 14,
+                "interpolated": false,
+                "smoothed_contains_interpolated": true
+            },
+            {
+                "box_after_interpolation": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "box_after_smoothing": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 15,
+                "interpolated": false,
+                "smoothed_contains_interpolated": true
+            }
+        ],
+        "input_boxes": [
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 0,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 1,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 2,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 3,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 4,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 5,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 6,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 7,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 8,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    100,
+                    100,
+                    40,
+                    40
+                ],
+                "frame": 9,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 13,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 14,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 15,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 16,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 17,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 18,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 19,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 20,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 21,
+                "score": 0.8999999761581421
+            },
+            {
+                "box": [
+                    80,
+                    80,
+                    80,
+                    80
+                ],
+                "frame": 22,
+                "score": 0.8999999761581421
+            }
+        ]
+    },
+    "b_scene_cut_during_confirmation": [
+        {
+            "cuts": [
+                10
+            ],
+            "frame_size": [
+                480,
+                270
+            ],
+            "label": "A x10, B x1, C x10",
+            "pushed": [
+                {
+                    "repeat": 10,
+                    "solid_value": 0
+                },
+                {
+                    "repeat": 1,
+                    "solid_value": 255
+                },
+                {
+                    "repeat": 10,
+                    "solid_value": 110
+                }
+            ]
+        },
+        {
+            "cuts": [
+                10,
+                12
+            ],
+            "frame_size": [
+                480,
+                270
+            ],
+            "label": "A x10, B x1, C x1, D x10",
+            "pushed": [
+                {
+                    "repeat": 10,
+                    "solid_value": 0
+                },
+                {
+                    "repeat": 1,
+                    "solid_value": 255
+                },
+                {
+                    "repeat": 1,
+                    "solid_value": 110
+                },
+                {
+                    "repeat": 10,
+                    "solid_value": 200
+                }
+            ]
+        },
+        {
+            "cuts": [
+                10,
+                12
+            ],
+            "frame_size": [
+                480,
+                270
+            ],
+            "label": "A x10, B x2, C x10",
+            "pushed": [
+                {
+                    "repeat": 10,
+                    "solid_value": 0
+                },
+                {
+                    "repeat": 2,
+                    "solid_value": 255
+                },
+                {
+                    "repeat": 10,
+                    "solid_value": 110
+                }
+            ]
+        }
+    ]
+}

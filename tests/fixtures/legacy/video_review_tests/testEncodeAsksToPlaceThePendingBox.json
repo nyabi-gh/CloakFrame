@@ -1,0 +1,63 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "box != nullptr",
+            "failed": 0,
+            "line": 47,
+            "passed": 2
+        },
+        {
+            "expr": "shown == 1 && dialog.isVisible()",
+            "failed": 0,
+            "line": 231,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().addedTracks.isEmpty()",
+            "failed": 0,
+            "line": 232,
+            "passed": 1
+        },
+        {
+            "expr": "QTest::qWaitForWindowActive(&dialog)",
+            "failed": 0,
+            "line": 236,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 2 && !dialog.isVisible()",
+            "failed": 0,
+            "line": 239,
+            "passed": 1
+        },
+        {
+            "expr": "result.decision == cloakframe::VideoReviewDecision::Encode",
+            "failed": 0,
+            "line": 241,
+            "passed": 1
+        },
+        {
+            "expr": "result.addedTracks.size() == 1",
+            "failed": 0,
+            "line": 242,
+            "passed": 1
+        },
+        {
+            "expr": "result.addedTracks.front().keyframes.size() == 1",
+            "failed": 0,
+            "line": 243,
+            "passed": 1
+        },
+        {
+            "expr": "result.addedTracks.front().keyframes.front().rect == QRectF(142, 102, 36, 36)",
+            "failed": 0,
+            "line": 244,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/video_review_tests.cpp @ v1.12.1",
+    "suite": "video_review_tests",
+    "test": "testEncodeAsksToPlaceThePendingBox"
+}

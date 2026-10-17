@@ -1,0 +1,51 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 41,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(bytes) == bytes.size()",
+            "failed": 0,
+            "line": 42,
+            "passed": 1
+        },
+        {
+            "expr": "root_.isValid()",
+            "failed": 0,
+            "line": 58,
+            "passed": 1
+        },
+        {
+            "expr": "QDir().mkpath(path_)",
+            "failed": 0,
+            "line": 60,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::saveModelFile( folder.modelPath(), kModelBytes, digestOf(QByteArrayLiteral(\"a different model\"))) == cloakframe::ModelSaveResult::ContentMismatch",
+            "failed": 0,
+            "line": 129,
+            "passed": 1
+        },
+        {
+            "expr": "readAll(folder.modelPath()) == previous",
+            "failed": 0,
+            "line": 130,
+            "passed": 1
+        },
+        {
+            "expr": "noResidue(folder.path())",
+            "failed": 0,
+            "line": 131,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/model_store_tests.cpp @ v1.12.1",
+    "suite": "model_store_tests",
+    "test": "testBytesThatDoNotMatchTheDigestNeverTakeTheModelName"
+}

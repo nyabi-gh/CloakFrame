@@ -1,0 +1,63 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 153,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(\"x\") == 1",
+            "failed": 0,
+            "line": 154,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 505,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::create_directories(output)",
+            "failed": 0,
+            "line": 508,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::namesFoldCase(output) == folds",
+            "failed": 0,
+            "line": 512,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::namesFoldCase(output / \"not\" / \"created\") == folds",
+            "failed": 0,
+            "line": 513,
+            "passed": 1
+        },
+        {
+            "expr": "conflicts.size() == (folds ? 1U : 0U)",
+            "failed": 0,
+            "line": 520,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(photo.string(), cv::Mat(8, 8, CV_8UC3, cv::Scalar(1, 2, 3)))",
+            "failed": 0,
+            "line": 525,
+            "passed": 1
+        },
+        {
+            "expr": "scanned.size() == (linkError ? 1U : 2U)",
+            "failed": 0,
+            "line": 538,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testCaseFoldingFollowsTheFilesystem"
+}

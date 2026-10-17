@@ -1,0 +1,33 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "predicate()",
+            "failed": 0,
+            "line": 39,
+            "passed": 3
+        },
+        {
+            "expr": "list.count() == 100",
+            "failed": 0,
+            "line": 48,
+            "passed": 1
+        },
+        {
+            "expr": "list.item(0)->icon().isNull()",
+            "failed": 0,
+            "line": 57,
+            "passed": 1
+        },
+        {
+            "expr": "started == 3",
+            "failed": 0,
+            "line": 64,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/thumbnail_tests.cpp @ v1.12.1",
+    "suite": "thumbnail_tests",
+    "test": "main"
+}

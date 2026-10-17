@@ -1,0 +1,373 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 242,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 247,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 253,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 256,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 259,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 262,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 266,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 270,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 274,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 278,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 282,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 286,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::videoUnsupportedReason(info).isEmpty()",
+            "failed": 0,
+            "line": 290,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": ""
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 60,
+                "height": 2160,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 3840
+            },
+            "reason_en": ""
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "hevc",
+                "width": 1920
+            },
+            "reason_en": ""
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "vp8",
+                "width": 1920
+            },
+            "reason_en": ""
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "vp9",
+                "width": 1920
+            },
+            "reason_en": ""
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "av1",
+                "width": 1920
+            },
+            "reason_en": "unsupported video codec 'av1' (H.264, HEVC, VP8 and VP9 only)"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p10le",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": "10-bit or higher bit depth is not supported yet"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "smpte2084",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": "HDR video is not supported yet"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 0,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": "the video stream could not be read"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 16385
+            },
+            "reason_en": "the video resolution exceeds the safety limit"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 241,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": "the video frame rate exceeds the safety limit"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 86401,
+                "estimated_frame_count": 0,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": "the video duration exceeds the safety limit"
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0,
+                "estimated_frame_count": 3000001,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 1080,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 1920
+            },
+            "reason_en": "the video frame count exceeds the safety limit"
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testUnsupportedReasons"
+}

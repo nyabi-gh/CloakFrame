@@ -1,0 +1,51 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 574,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60)))",
+            "failed": 0,
+            "line": 578,
+            "passed": 1
+        },
+        {
+            "expr": "firstOutcome == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 606,
+            "passed": 1
+        },
+        {
+            "expr": "firstSummary.total == 1 && firstSummary.redacted == 0 && firstSummary.unredacted == 1",
+            "failed": 0,
+            "line": 608,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::exists(output / \"input.png\")",
+            "failed": 0,
+            "line": 609,
+            "passed": 1
+        },
+        {
+            "expr": "secondOutcome == cloakframe::RunOutcome::Failed",
+            "failed": 0,
+            "line": 621,
+            "passed": 1
+        },
+        {
+            "expr": "std::filesystem::file_size(output / \"input.png\") == savedSize",
+            "failed": 0,
+            "line": 622,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerReportsUnredactedOutputAsWarningAndPreservesIt"
+}

@@ -1,0 +1,51 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "root_.isValid()",
+            "failed": 0,
+            "line": 58,
+            "passed": 1
+        },
+        {
+            "expr": "QDir().mkpath(path_)",
+            "failed": 0,
+            "line": 60,
+            "passed": 1
+        },
+        {
+            "expr": "::chmod(QFile::encodeName(folder.path()).constData(), 0777) == 0",
+            "failed": 0,
+            "line": 206,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::saveModelFile(folder.modelPath(), kModelBytes, digestOf(kModelBytes)) == cloakframe::ModelSaveResult::FolderNotPrivate",
+            "failed": 0,
+            "line": 209,
+            "passed": 1
+        },
+        {
+            "expr": "!QFile::exists(folder.modelPath())",
+            "failed": 0,
+            "line": 210,
+            "passed": 1
+        },
+        {
+            "expr": "noResidue(folder.path())",
+            "failed": 0,
+            "line": 211,
+            "passed": 1
+        },
+        {
+            "expr": "::chmod(QFile::encodeName(folder.path()).constData(), 0700) == 0",
+            "failed": 0,
+            "line": 213,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/model_store_tests.cpp @ v1.12.1",
+    "suite": "model_store_tests",
+    "test": "testAFolderOthersCanWriteIsRefused"
+}

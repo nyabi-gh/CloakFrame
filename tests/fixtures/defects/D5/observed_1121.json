@@ -1,0 +1,17 @@
+{
+    "function": "saveModelFile(<new folder>/model.onnx, bytes, sha256)",
+    "runs": [
+        {
+            "file_exists": true,
+            "folder_mode": "0755",
+            "result": "saved",
+            "umask": "0022"
+        },
+        {
+            "file_exists": false,
+            "folder_mode": "0775",
+            "result": "folder_not_private",
+            "umask": "0002"
+        }
+    ]
+}

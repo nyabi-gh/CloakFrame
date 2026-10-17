@@ -1,0 +1,25 @@
+{
+    "backend": "OpenCV CPU",
+    "decoded_size": [
+        548,
+        342
+    ],
+    "detections": [
+        {
+            "box": [
+                226.9778289794922,
+                92.2464370727539,
+                30.578506469726562,
+                39.454627990722656
+            ],
+            "has_pose": true,
+            "roll": 0.041164617985486984,
+            "score": 0.9183680415153503
+        }
+    ],
+    "image": "messi5.jpg",
+    "model": "yunet",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.5
+}

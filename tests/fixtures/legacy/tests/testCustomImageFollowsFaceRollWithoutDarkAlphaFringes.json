@@ -1,0 +1,105 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cv::norm(upright, tilted, cv::NORM_L1) > 1000.0",
+            "failed": 0,
+            "line": 1926,
+            "passed": 1
+        },
+        {
+            "expr": "pixel[2] >= background[2]",
+            "failed": 0,
+            "line": 1936,
+            "passed": 1020
+        },
+        {
+            "expr": "foundBlendedEdge",
+            "failed": 0,
+            "line": 1940,
+            "passed": 1
+        },
+        {
+            "expr": "tilted.at<cv::Vec3b>(0, 0) == background",
+            "failed": 0,
+            "line": 1941,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "custom_image": {
+                "channels": 4,
+                "cols": 16,
+                "depth_bits": 8,
+                "rows": 8
+            },
+            "custom_image_png": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes/2-custom.png",
+            "detections": [
+                {
+                    "box": [
+                        16,
+                        16,
+                        32,
+                        32
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 64,
+                "depth_bits": 8,
+                "rows": 64
+            },
+            "input_png": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes/1-input.png",
+            "method": "custom_image",
+            "output_png": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes/3-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        },
+        {
+            "block_size": 4,
+            "custom_image": {
+                "channels": 4,
+                "cols": 16,
+                "depth_bits": 8,
+                "rows": 8
+            },
+            "custom_image_png": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes/5-custom.png",
+            "detections": [
+                {
+                    "box": [
+                        16,
+                        16,
+                        32,
+                        32
+                    ],
+                    "has_pose": true,
+                    "roll": 0.44999998807907104,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 64,
+                "depth_bits": 8,
+                "rows": 64
+            },
+            "input_png": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes/4-input.png",
+            "method": "custom_image",
+            "output_png": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes/6-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testCustomImageFollowsFaceRollWithoutDarkAlphaFringes"
+}

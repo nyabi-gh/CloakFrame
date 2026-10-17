@@ -1,0 +1,191 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::evaluateUpdateTrust(release, releaseSignature(), releasePublicKey()) == cloakframe::UpdateTrust::Rejected",
+            "failed": 0,
+            "line": 212,
+            "passed": 4
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust( signedRelease(), releaseLegacySignature(), releasePublicKey()) == cloakframe::UpdateTrust::Rejected",
+            "failed": 0,
+            "line": 218,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust( malformed, releaseSignature(), releasePublicKey(), &error) == cloakframe::UpdateTrust::Rejected",
+            "failed": 0,
+            "line": 225,
+            "passed": 1
+        },
+        {
+            "expr": "!error.isEmpty()",
+            "failed": 0,
+            "line": 226,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust(malformed, releaseSignature(), releasePublicKey()) == cloakframe::UpdateTrust::Rejected",
+            "failed": 0,
+            "line": 229,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::updateSignaturePayload(injected)",
+            "failed": 0,
+            "line": 234,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::updateSignaturePayload(injected)",
+            "failed": 0,
+            "line": 237,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust(signedRelease(), QString(), releasePublicKey()) == cloakframe::UpdateTrust::Rejected",
+            "failed": 0,
+            "line": 240,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust(signedRelease(), releaseSignature(), rfcPublicKey()) == cloakframe::UpdateTrust::Rejected",
+            "failed": 0,
+            "line": 242,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.13.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "linux",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.13.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ca7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "LVwktqqR85Zaned4zCaMRCq1OuT5yOyELtqqFLdnqKpqV9Bd7v+yhsNsiKnL/zb16G94LGdeAmt/mnFYZHzyDA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "not-a-digest",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        },
+        {
+            "fn": "updateSignaturePayload",
+            "payload_base64": null,
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0\nchannel: win"
+            }
+        },
+        {
+            "fn": "updateSignaturePayload",
+            "payload_base64": null,
+            "release": {
+                "channel": "win",
+                "file_name": "",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            }
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "pj5PD2/aCU//cagRcHnlYKJAdW9xSr9q1b2Gm2pzs24=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "",
+            "trust": "rejected"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "PUAXw+hDiVqStwqnTRt+vJyYLM8uxJaMwM1V8Sr0Zgw=",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "rejected"
+        }
+    ],
+    "source": "tests/update_signature_tests.cpp @ v1.12.1",
+    "suite": "update_signature_tests",
+    "test": "testTrustIsRefusedForAnythingUnproven"
+}

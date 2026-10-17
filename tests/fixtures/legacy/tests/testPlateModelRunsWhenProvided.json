@@ -1,0 +1,21 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "detector.detect(blank, 0.99F, 0.4F).detections.empty()",
+            "failed": 0,
+            "line": 3105,
+            "passed": 1
+        },
+        {
+            "expr": "detector.detect(tall, 0.99F, 0.4F).detections.empty()",
+            "failed": 0,
+            "line": 3107,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testPlateModelRunsWhenProvided"
+}

@@ -1,0 +1,202 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "runFfmpeg(tools, {\"-v\", \"error\", \"-y\", \"-f\", \"lavfi\", \"-i\", \"testsrc=size=128x96:rate=10:duration=2\", \"-f\", \"lavfi\", \"-i\", \"sine=frequency=440:duration=2\", \"-f\", \"lavfi\", \"-i\", \"sine=frequency=880:duration=2\", \"-map\", \"0:v:0\", \"-map\", \"1:a:0\", \"-map\", \"2:a:0\", \"-c:v\", \"libx264\", \"-pix_fmt\", \"yuv420p\", \"-c:a:0\", \"aac\", \"-c:a:1\", \"flac\", \"-metadata:s:a:1\", \"language=jpn\", source})",
+            "failed": 0,
+            "line": 584,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 587,
+            "passed": 1
+        },
+        {
+            "expr": "info->audioStreams.size() == 2",
+            "failed": 0,
+            "line": 588,
+            "passed": 1
+        },
+        {
+            "expr": "info->audioStreams.at(0).codec == \"aac\"",
+            "failed": 0,
+            "line": 589,
+            "passed": 1
+        },
+        {
+            "expr": "info->audioStreams.at(1).codec == \"flac\"",
+            "failed": 0,
+            "line": 590,
+            "passed": 1
+        },
+        {
+            "expr": "info->audioStreams.at(1).language == \"jpn\"",
+            "failed": 0,
+            "line": 591,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 608,
+            "passed": 1
+        },
+        {
+            "expr": "written",
+            "failed": 0,
+            "line": 611,
+            "passed": 1
+        },
+        {
+            "expr": "written->audioStreams.size() == 2",
+            "failed": 0,
+            "line": 612,
+            "passed": 1
+        },
+        {
+            "expr": "written->audioStreams.at(0).codec == \"aac\"",
+            "failed": 0,
+            "line": 614,
+            "passed": 1
+        },
+        {
+            "expr": "written->audioStreams.at(1).codec == \"aac\"",
+            "failed": 0,
+            "line": 615,
+            "passed": 1
+        },
+        {
+            "expr": "written->audioStreams.at(1).language == \"jpn\"",
+            "failed": 0,
+            "line": 616,
+            "passed": 1
+        },
+        {
+            "expr": "removed.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 631,
+            "passed": 1
+        },
+        {
+            "expr": "withoutAudio",
+            "failed": 0,
+            "line": 633,
+            "passed": 1
+        },
+        {
+            "expr": "withoutAudio->audioStreams.empty()",
+            "failed": 0,
+            "line": 634,
+            "passed": 1
+        },
+        {
+            "expr": "removed.frameCount == result.frameCount",
+            "failed": 0,
+            "line": 635,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testEveryAudioStreamSurvives/file1-input.mp4",
+                "name": "two-audio.mp4",
+                "sha256": "ea9188fa55265368c53bd83543292cfab1cb3d2ef9a7f95330deaa6c2d16fe4e",
+                "size": 58701
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    },
+                    {
+                        "codec": "flac",
+                        "language": "jpn"
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 20,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            }
+        },
+        {
+            "file": {
+                "copy": "testEveryAudioStreamSurvives/file2-input.mp4",
+                "name": "two-audio-out.mp4",
+                "sha256": "d3f0e8e7ed05907c79232efda75ebb2599de5f65a2044f79428ddc0adb230e2f",
+                "size": 60654
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    },
+                    {
+                        "codec": "aac",
+                        "language": "jpn"
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 20,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            }
+        },
+        {
+            "file": {
+                "copy": "testEveryAudioStreamSurvives/file3-input.mp4",
+                "name": "two-audio-removed.mp4",
+                "sha256": "853b040e193bd6481e48f5252758d968fc9c84d52610e309cb638c01db9286d5",
+                "size": 6874
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 20,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            }
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testEveryAudioStreamSurvives"
+}

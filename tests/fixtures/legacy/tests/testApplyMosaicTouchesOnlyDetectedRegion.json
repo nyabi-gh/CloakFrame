@@ -1,0 +1,47 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec3b>(0, 0) == outsideBefore",
+            "failed": 0,
+            "line": 1547,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(3, 3) != insideBefore",
+            "failed": 0,
+            "line": 1548,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "detections": [
+                {
+                    "box": [
+                        2,
+                        2,
+                        4,
+                        4
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyMosaic",
+            "image": {
+                "channels": 3,
+                "cols": 8,
+                "depth_bits": 8,
+                "rows": 8
+            },
+            "input_png": "testApplyMosaicTouchesOnlyDetectedRegion/1-input.png",
+            "output_png": "testApplyMosaicTouchesOnlyDetectedRegion/2-output.png",
+            "padding_ratio": 0
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testApplyMosaicTouchesOnlyDetectedRegion"
+}

@@ -1,0 +1,39 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cloakframe::builtinModels()[0].faceKind == cloakframe::FaceModelKind::Yolo5Face",
+            "failed": 0,
+            "line": 136,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::builtinModels()[1].faceKind == cloakframe::FaceModelKind::YuNet",
+            "failed": 0,
+            "line": 137,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::modelDigestMatches(model, digest)",
+            "failed": 0,
+            "line": 141,
+            "passed": 2
+        },
+        {
+            "expr": "!cloakframe::modelDigestMatches(model, changed)",
+            "failed": 0,
+            "line": 144,
+            "passed": 2
+        },
+        {
+            "expr": "cloakframe::modelDigestMatches(plate, QByteArray::fromHex(plate.sha256.toLatin1()))",
+            "failed": 0,
+            "line": 147,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testBuiltinModelDigests"
+}

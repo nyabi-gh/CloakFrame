@@ -1,0 +1,63 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 169,
+            "passed": 6
+        },
+        {
+            "expr": "cv::imencode(\".png\", pixels, encoded)",
+            "failed": 0,
+            "line": 2441,
+            "passed": 1
+        },
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 2453,
+            "passed": 1
+        },
+        {
+            "expr": "file.write(png) == png.size()",
+            "failed": 0,
+            "line": 2454,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(path.string(), pixels)",
+            "failed": 0,
+            "line": 2461,
+            "passed": 2
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2496,
+            "passed": 1
+        },
+        {
+            "expr": "fileBytes(root / name).contains(\"Private\")",
+            "failed": 0,
+            "line": 2519,
+            "passed": 3
+        },
+        {
+            "expr": "!cv::imread((output / name).string()).empty()",
+            "failed": 0,
+            "line": 2533,
+            "passed": 3
+        },
+        {
+            "expr": "!bytes.contains(marker)",
+            "failed": 0,
+            "line": 2548,
+            "passed": 39
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testDefaultOutputCarriesNoMetadata"
+}

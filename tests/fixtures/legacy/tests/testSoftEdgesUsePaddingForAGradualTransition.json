@@ -1,0 +1,74 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec3b>(y, x) == cv::Vec3b(0, 0, 0)",
+            "failed": 0,
+            "line": 1729,
+            "passed": 1024
+        },
+        {
+            "expr": "innerBlend != cv::Vec3b(0, 0, 0)",
+            "failed": 0,
+            "line": 1734,
+            "passed": 1
+        },
+        {
+            "expr": "innerBlend != cv::Vec3b(100, 100, 100)",
+            "failed": 0,
+            "line": 1735,
+            "passed": 1
+        },
+        {
+            "expr": "outerBlend != cv::Vec3b(0, 0, 0)",
+            "failed": 0,
+            "line": 1738,
+            "passed": 1
+        },
+        {
+            "expr": "outerBlend != cv::Vec3b(100, 100, 100)",
+            "failed": 0,
+            "line": 1739,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(48, 16) == cv::Vec3b(100, 100, 100)",
+            "failed": 0,
+            "line": 1740,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "detections": [
+                {
+                    "box": [
+                        32,
+                        32,
+                        32,
+                        32
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 96,
+                "depth_bits": 8,
+                "rows": 96
+            },
+            "input_png": "testSoftEdgesUsePaddingForAGradualTransition/1-input.png",
+            "method": "fill",
+            "output_png": "testSoftEdgesUsePaddingForAGradualTransition/2-output.png",
+            "padding_ratio": 0.25,
+            "shape": "rectangle",
+            "soft_edges": true
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testSoftEdgesUsePaddingForAGradualTransition"
+}

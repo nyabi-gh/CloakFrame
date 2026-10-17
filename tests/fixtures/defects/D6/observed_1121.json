@@ -1,0 +1,101 @@
+{
+  "pipeline": "ProcessorWorker, detection off, metadata not preserved",
+  "measurement": "JPEG quality is ImageMagick's quantization-table estimate",
+  "runs": [
+    {
+      "input": "lossless.png",
+      "source": {
+        "bytes": 427141
+      },
+      "output": {
+        "bytes": 446008
+      },
+      "size_ratio_output_to_input": 1.044,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "lossless.tif",
+      "source": {
+        "bytes": 635270,
+        "tiff_compression": "Zip"
+      },
+      "output": {
+        "bytes": 544076,
+        "tiff_compression": "LZW"
+      },
+      "size_ratio_output_to_input": 0.856,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "lossless.webp",
+      "source": {
+        "bytes": 340954,
+        "webp": "lossless"
+      },
+      "output": {
+        "bytes": 340874,
+        "webp": "lossless"
+      },
+      "size_ratio_output_to_input": 1.0,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "lossy-q75.webp",
+      "source": {
+        "bytes": 54042,
+        "webp": "lossy"
+      },
+      "output": {
+        "bytes": 657524,
+        "webp": "lossless"
+      },
+      "size_ratio_output_to_input": 12.167,
+      "max_pixel_difference_vs_input": 0
+    },
+    {
+      "input": "q85-422.jpg",
+      "source": {
+        "bytes": 162477,
+        "jpeg_quality_estimate": 85,
+        "jpeg_sampling_factor": "2x1,1x1,1x1"
+      },
+      "output": {
+        "bytes": 530710,
+        "jpeg_quality_estimate": 100,
+        "jpeg_sampling_factor": "1x1,1x1,1x1"
+      },
+      "size_ratio_output_to_input": 3.266,
+      "max_pixel_difference_vs_input": 4
+    },
+    {
+      "input": "q90-420.jpg",
+      "source": {
+        "bytes": 183584,
+        "jpeg_quality_estimate": 90,
+        "jpeg_sampling_factor": "2x2,1x1,1x1"
+      },
+      "output": {
+        "bytes": 576436,
+        "jpeg_quality_estimate": 100,
+        "jpeg_sampling_factor": "1x1,1x1,1x1"
+      },
+      "size_ratio_output_to_input": 3.14,
+      "max_pixel_difference_vs_input": 4
+    },
+    {
+      "input": "q95-444.jpg",
+      "source": {
+        "bytes": 357262,
+        "jpeg_quality_estimate": 95,
+        "jpeg_sampling_factor": "1x1,1x1,1x1"
+      },
+      "output": {
+        "bytes": 672719,
+        "jpeg_quality_estimate": 100,
+        "jpeg_sampling_factor": "1x1,1x1,1x1"
+      },
+      "size_ratio_output_to_input": 1.883,
+      "max_pixel_difference_vs_input": 3
+    }
+  ]
+}

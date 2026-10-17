@@ -1,0 +1,45 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::None)) == \"CPU\"",
+            "failed": 0,
+            "line": 105,
+            "passed": 1
+        },
+        {
+            "expr": "std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::CoreML)) == \"CoreML\"",
+            "failed": 0,
+            "line": 107,
+            "passed": 1
+        },
+        {
+            "expr": "std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::DirectML)) == \"DirectML\"",
+            "failed": 0,
+            "line": 109,
+            "passed": 1
+        },
+        {
+            "expr": "std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::CUDA)) == \"CUDA\"",
+            "failed": 0,
+            "line": 111,
+            "passed": 1
+        },
+        {
+            "expr": "std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::MIGraphX)) == \"MIGraphX\"",
+            "failed": 0,
+            "line": 113,
+            "passed": 1
+        },
+        {
+            "expr": "std::string(cloakframe::ortAcceleratorName(cloakframe::OrtAccelerator::ROCm)) == \"ROCm\"",
+            "failed": 0,
+            "line": 115,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testAccelerationBackendNames"
+}

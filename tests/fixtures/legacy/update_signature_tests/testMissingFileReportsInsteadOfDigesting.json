@@ -1,0 +1,27 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "dir.isValid()",
+            "failed": 0,
+            "line": 258,
+            "passed": 1
+        },
+        {
+            "expr": "!digest.has_value()",
+            "failed": 0,
+            "line": 262,
+            "passed": 1
+        },
+        {
+            "expr": "!error.isEmpty()",
+            "failed": 0,
+            "line": 263,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/update_signature_tests.cpp @ v1.12.1",
+    "suite": "update_signature_tests",
+    "test": "testMissingFileReportsInsteadOfDigesting"
+}

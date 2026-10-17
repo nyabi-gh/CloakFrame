@@ -1,0 +1,97 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "std::abs(cfrec::intersectionOverUnion(a, a) - 1.0F) < 1e-5F",
+            "failed": 0,
+            "line": 2182,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::intersectionOverUnion(a, disjoint) == 0.0F",
+            "failed": 0,
+            "line": 2185,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::intersectionOverUnion(a, empty) == 0.0F",
+            "failed": 0,
+            "line": 2188,
+            "passed": 1
+        },
+        {
+            "expr": "std::abs(cfrec::intersectionOverUnion(a, halfShifted) - (50.0F / 150.0F)) < 1e-5F",
+            "failed": 0,
+            "line": 2192,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "a": [
+                0,
+                0,
+                10,
+                10
+            ],
+            "b": [
+                0,
+                0,
+                10,
+                10
+            ],
+            "fn": "intersectionOverUnion",
+            "iou": 1
+        },
+        {
+            "a": [
+                0,
+                0,
+                10,
+                10
+            ],
+            "b": [
+                100,
+                100,
+                10,
+                10
+            ],
+            "fn": "intersectionOverUnion",
+            "iou": 0
+        },
+        {
+            "a": [
+                0,
+                0,
+                10,
+                10
+            ],
+            "b": [
+                0,
+                0,
+                0,
+                0
+            ],
+            "fn": "intersectionOverUnion",
+            "iou": 0
+        },
+        {
+            "a": [
+                0,
+                0,
+                10,
+                10
+            ],
+            "b": [
+                5,
+                0,
+                10,
+                10
+            ],
+            "fn": "intersectionOverUnion",
+            "iou": 0.3333333432674408
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testIntersectionOverUnion"
+}

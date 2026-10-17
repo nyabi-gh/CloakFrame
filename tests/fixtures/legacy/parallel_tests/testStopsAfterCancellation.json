@@ -1,0 +1,21 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "consumedCount >= 20",
+            "failed": 0,
+            "line": 103,
+            "passed": 1
+        },
+        {
+            "expr": "consumedCount < count",
+            "failed": 0,
+            "line": 104,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/parallel_tests.cpp @ v1.12.1",
+    "suite": "parallel_tests",
+    "test": "testStopsAfterCancellation"
+}

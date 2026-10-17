@@ -1,0 +1,1404 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 210,
+            "passed": 2
+        },
+        {
+            "expr": "hash.addData(&file)",
+            "failed": 0,
+            "line": 212,
+            "passed": 2
+        },
+        {
+            "expr": "runFfmpeg(tools, {\"-v\", \"error\", \"-y\", \"-f\", \"lavfi\", \"-i\", \"testsrc=size=96x72:rate=10:duration=1\", \"-c:v\", \"libx264\", \"-pix_fmt\", \"yuv420p\", source})",
+            "failed": 0,
+            "line": 863,
+            "passed": 1
+        },
+        {
+            "expr": "writeHardwareFailingFfmpeg(tools, scriptPath, logPath)",
+            "failed": 0,
+            "line": 867,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 870,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 891,
+            "passed": 1
+        },
+        {
+            "expr": "result.encoderName == \"libx264\"",
+            "failed": 0,
+            "line": 892,
+            "passed": 1
+        },
+        {
+            "expr": "attempts.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 895,
+            "passed": 1
+        },
+        {
+            "expr": "std::any_of(encoders.cbegin(), encoders.cend(), [](const QString &encoder) { return encoder != \"libx264\"; })",
+            "failed": 0,
+            "line": 905,
+            "passed": 1
+        },
+        {
+            "expr": "encoders.contains(\"libx264\")",
+            "failed": 0,
+            "line": 906,
+            "passed": 1
+        },
+        {
+            "expr": "written",
+            "failed": 0,
+            "line": 909,
+            "passed": 1
+        },
+        {
+            "expr": "written->width == 96 && written->height == 72",
+            "failed": 0,
+            "line": 910,
+            "passed": 1
+        },
+        {
+            "expr": "generateSample(*tools, samplePath)",
+            "failed": 0,
+            "line": 987,
+            "passed": 1
+        },
+        {
+            "expr": "server.listen(QHostAddress::LocalHost)",
+            "failed": 0,
+            "line": 993,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::probeVideo(*tools, url, &probeError)",
+            "failed": 0,
+            "line": 995,
+            "passed": 1
+        },
+        {
+            "expr": "!reader.readFrame(frame)",
+            "failed": 0,
+            "line": 1003,
+            "passed": 1
+        },
+        {
+            "expr": "!server.waitForNewConnection(200)",
+            "failed": 0,
+            "line": 1004,
+            "passed": 1
+        },
+        {
+            "expr": "info.has_value()",
+            "failed": 0,
+            "line": 1008,
+            "passed": 1
+        },
+        {
+            "expr": "info->width == 320",
+            "failed": 0,
+            "line": 1009,
+            "passed": 1
+        },
+        {
+            "expr": "info->height == 240",
+            "failed": 0,
+            "line": 1010,
+            "passed": 1
+        },
+        {
+            "expr": "info->fpsNum == 30 && info->fpsDen == 1",
+            "failed": 0,
+            "line": 1011,
+            "passed": 1
+        },
+        {
+            "expr": "info->videoCodec == \"h264\"",
+            "failed": 0,
+            "line": 1012,
+            "passed": 1
+        },
+        {
+            "expr": "info->audioStreams.size() == 1",
+            "failed": 0,
+            "line": 1013,
+            "passed": 1
+        },
+        {
+            "expr": "info->audioStreams.at(0).codec == \"aac\"",
+            "failed": 0,
+            "line": 1014,
+            "passed": 1
+        },
+        {
+            "expr": "!info->isVfr",
+            "failed": 0,
+            "line": 1015,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(*info).isEmpty()",
+            "failed": 0,
+            "line": 1016,
+            "passed": 1
+        },
+        {
+            "expr": "info->estimatedFrameCount >= 55 && info->estimatedFrameCount <= 65",
+            "failed": 0,
+            "line": 1017,
+            "passed": 1
+        },
+        {
+            "expr": "reader.open(*tools, samplePath, *info)",
+            "failed": 0,
+            "line": 1021,
+            "passed": 1
+        },
+        {
+            "expr": "writer.open(*tools, outputPath, samplePath, *info, cfrec::crfForQuality(cloakframe::VideoQuality::HighQuality))",
+            "failed": 0,
+            "line": 1028,
+            "passed": 1
+        },
+        {
+            "expr": "writer.writeFrame(frame)",
+            "failed": 0,
+            "line": 1035,
+            "passed": 60
+        },
+        {
+            "expr": "reader.errorString().isEmpty()",
+            "failed": 0,
+            "line": 1038,
+            "passed": 1
+        },
+        {
+            "expr": "frameCount >= 55 && frameCount <= 65",
+            "failed": 0,
+            "line": 1039,
+            "passed": 1
+        },
+        {
+            "expr": "writer.finish()",
+            "failed": 0,
+            "line": 1040,
+            "passed": 1
+        },
+        {
+            "expr": "stagingLeftovers(tempDir.filePath(\"out\")) == 0",
+            "failed": 0,
+            "line": 1041,
+            "passed": 1
+        },
+        {
+            "expr": "guardedWriter.open(*tools, guardedPath, samplePath, *info, cfrec::crfForQuality(cloakframe::VideoQuality::SpaceSaver), false)",
+            "failed": 0,
+            "line": 1052,
+            "passed": 1
+        },
+        {
+            "expr": "guardedReader.open(*tools, samplePath, *info)",
+            "failed": 0,
+            "line": 1054,
+            "passed": 1
+        },
+        {
+            "expr": "guardedReader.readFrame(guardedFrame)",
+            "failed": 0,
+            "line": 1056,
+            "passed": 1
+        },
+        {
+            "expr": "guardedWriter.writeFrame(guardedFrame)",
+            "failed": 0,
+            "line": 1057,
+            "passed": 1
+        },
+        {
+            "expr": "!guardedWriter.finish( [] { return false; })",
+            "failed": 0,
+            "line": 1062,
+            "passed": 1
+        },
+        {
+            "expr": "!QFile::exists(guardedPath)",
+            "failed": 0,
+            "line": 1063,
+            "passed": 1
+        },
+        {
+            "expr": "stagingLeftovers(tempDir.filePath(\"out\")) == 0",
+            "failed": 0,
+            "line": 1064,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo.has_value()",
+            "failed": 0,
+            "line": 1069,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo->width == 320",
+            "failed": 0,
+            "line": 1070,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo->height == 240",
+            "failed": 0,
+            "line": 1071,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo->videoCodec == \"h264\"",
+            "failed": 0,
+            "line": 1072,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo->audioStreams.size() == 1",
+            "failed": 0,
+            "line": 1073,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo->audioStreams.at(0).codec == \"aac\"",
+            "failed": 0,
+            "line": 1074,
+            "passed": 1
+        },
+        {
+            "expr": "outInfo->durationSeconds > 1.5 && outInfo->durationSeconds < 2.5",
+            "failed": 0,
+            "line": 1075,
+            "passed": 1
+        },
+        {
+            "expr": "!rawOutput.contains(\"CloakFrameTestTitle\")",
+            "failed": 0,
+            "line": 1078,
+            "passed": 1
+        },
+        {
+            "expr": "!rawOutput.contains(\"37.5665\")",
+            "failed": 0,
+            "line": 1079,
+            "passed": 1
+        },
+        {
+            "expr": "fourKWriter.open(*tools, fourKPath, samplePath, fourKInfo, cfrec::crfForQuality(cloakframe::VideoQuality::SpaceSaver), false)",
+            "failed": 0,
+            "line": 1099,
+            "passed": 1
+        },
+        {
+            "expr": "fourKWriter.writeFrame(fourKFrame)",
+            "failed": 0,
+            "line": 1105,
+            "passed": 3
+        },
+        {
+            "expr": "fourKWriter.finish()",
+            "failed": 0,
+            "line": 1107,
+            "passed": 1
+        },
+        {
+            "expr": "fourKProbe.has_value()",
+            "failed": 0,
+            "line": 1110,
+            "passed": 1
+        },
+        {
+            "expr": "fourKProbe->displayWidth() == 3840",
+            "failed": 0,
+            "line": 1111,
+            "passed": 1
+        },
+        {
+            "expr": "fourKProbe->displayHeight() == 2160",
+            "failed": 0,
+            "line": 1112,
+            "passed": 1
+        },
+        {
+            "expr": "fourKProbe->fpsNum == 60 && fourKProbe->fpsDen == 1",
+            "failed": 0,
+            "line": 1113,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(*fourKProbe).isEmpty()",
+            "failed": 0,
+            "line": 1114,
+            "passed": 1
+        },
+        {
+            "expr": "fourKResult.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 1122,
+            "passed": 1
+        },
+        {
+            "expr": "fourKResult.frameCount == 3",
+            "failed": 0,
+            "line": 1123,
+            "passed": 1
+        },
+        {
+            "expr": "processedFourK.has_value()",
+            "failed": 0,
+            "line": 1125,
+            "passed": 1
+        },
+        {
+            "expr": "processedFourK->displayWidth() == 3840",
+            "failed": 0,
+            "line": 1126,
+            "passed": 1
+        },
+        {
+            "expr": "processedFourK->displayHeight() == 2160",
+            "failed": 0,
+            "line": 1127,
+            "passed": 1
+        },
+        {
+            "expr": "processedFourK->fpsNum == 60 && processedFourK->fpsDen == 1",
+            "failed": 0,
+            "line": 1128,
+            "passed": 1
+        },
+        {
+            "expr": "hevcReader.open(*tools, samplePath, *info)",
+            "failed": 0,
+            "line": 1142,
+            "passed": 1
+        },
+        {
+            "expr": "hevcWriter.open(*tools, hevcPath, samplePath, *info, cfrec::crfForQuality(cloakframe::VideoQuality::Balanced), false, cloakframe::VideoCodec::Hevc)",
+            "failed": 0,
+            "line": 1150,
+            "passed": 1
+        },
+        {
+            "expr": "hevcWriter.encoderName() == \"libx265\"",
+            "failed": 0,
+            "line": 1151,
+            "passed": 1
+        },
+        {
+            "expr": "hevcWriter.writeFrame(hevcFrame)",
+            "failed": 0,
+            "line": 1155,
+            "passed": 60
+        },
+        {
+            "expr": "hevcWriter.finish()",
+            "failed": 0,
+            "line": 1157,
+            "passed": 1
+        },
+        {
+            "expr": "hevcInfo.has_value()",
+            "failed": 0,
+            "line": 1160,
+            "passed": 1
+        },
+        {
+            "expr": "hevcInfo->videoCodec == \"hevc\"",
+            "failed": 0,
+            "line": 1161,
+            "passed": 1
+        },
+        {
+            "expr": "!hevcInfo->audioStreams.empty()",
+            "failed": 0,
+            "line": 1162,
+            "passed": 1
+        },
+        {
+            "expr": "rawProbeOutput(*tools, hevcPath).contains(\"hvc1\")",
+            "failed": 0,
+            "line": 1163,
+            "passed": 1
+        },
+        {
+            "expr": "existing.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 1175,
+            "passed": 1
+        },
+        {
+            "expr": "existing.write(\"keep-existing-output\") == 20",
+            "failed": 0,
+            "line": 1176,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Failed",
+            "failed": 0,
+            "line": 1182,
+            "passed": 1
+        },
+        {
+            "expr": "result.error.contains(\"already exists\")",
+            "failed": 0,
+            "line": 1183,
+            "passed": 1
+        },
+        {
+            "expr": "existing.open(QIODevice::ReadOnly)",
+            "failed": 0,
+            "line": 1184,
+            "passed": 1
+        },
+        {
+            "expr": "existing.readAll() == \"keep-existing-output\"",
+            "failed": 0,
+            "line": 1185,
+            "passed": 1
+        },
+        {
+            "expr": "bogus.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 1192,
+            "passed": 1
+        },
+        {
+            "expr": "bogus.write(\"this is not a video file\") > 0",
+            "failed": 0,
+            "line": 1193,
+            "passed": 1
+        },
+        {
+            "expr": "!corruptInfo.has_value()",
+            "failed": 0,
+            "line": 1197,
+            "passed": 1
+        },
+        {
+            "expr": "!corruptError.isEmpty()",
+            "failed": 0,
+            "line": 1198,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedInfo.has_value()",
+            "failed": 0,
+            "line": 1219,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedInfo->rotation == 90 || rotatedInfo->rotation == 270",
+            "failed": 0,
+            "line": 1220,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedInfo->displayWidth() == 240",
+            "failed": 0,
+            "line": 1221,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedInfo->displayHeight() == 320",
+            "failed": 0,
+            "line": 1222,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedReader.open(*tools, rotatedPath, *rotatedInfo)",
+            "failed": 0,
+            "line": 1225,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedReader.readFrame(rotatedFrame)",
+            "failed": 0,
+            "line": 1227,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedFrame.cols == 240",
+            "failed": 0,
+            "line": 1228,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedFrame.rows == 320",
+            "failed": 0,
+            "line": 1229,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedWriter.open(*tools, tempDir.filePath(\"rotated-out.mp4\"), rotatedPath, *rotatedInfo, cfrec::crfForQuality(cloakframe::VideoQuality::SpaceSaver))",
+            "failed": 0,
+            "line": 1237,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedWriter.writeFrame(rotatedFrame)",
+            "failed": 0,
+            "line": 1238,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedWriter.finish()",
+            "failed": 0,
+            "line": 1239,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedOut.has_value()",
+            "failed": 0,
+            "line": 1243,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedOut->rotation == 0",
+            "failed": 0,
+            "line": 1244,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedOut->width == 240",
+            "failed": 0,
+            "line": 1245,
+            "passed": 1
+        },
+        {
+            "expr": "rotatedOut->height == 320",
+            "failed": 0,
+            "line": 1246,
+            "passed": 1
+        },
+        {
+            "expr": "smallReader.open(*tools, samplePath, *info, 160)",
+            "failed": 0,
+            "line": 1256,
+            "passed": 1
+        },
+        {
+            "expr": "smallReader.frameWidth() == 160",
+            "failed": 0,
+            "line": 1257,
+            "passed": 1
+        },
+        {
+            "expr": "smallReader.frameHeight() == 120",
+            "failed": 0,
+            "line": 1258,
+            "passed": 1
+        },
+        {
+            "expr": "smallReader.readFrame(smallFrame)",
+            "failed": 0,
+            "line": 1260,
+            "passed": 1
+        },
+        {
+            "expr": "smallFrame.cols == 160 && smallFrame.rows == 120",
+            "failed": 0,
+            "line": 1261,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 1283,
+            "passed": 1
+        },
+        {
+            "expr": "result.trackCount == 0",
+            "failed": 0,
+            "line": 1284,
+            "passed": 1
+        },
+        {
+            "expr": "result.frameCount >= 55 && result.frameCount <= 65",
+            "failed": 0,
+            "line": 1285,
+            "passed": 1
+        },
+        {
+            "expr": "lastPass2Frame == result.frameCount",
+            "failed": 0,
+            "line": 1286,
+            "passed": 1
+        },
+        {
+            "expr": "processedInfo.has_value()",
+            "failed": 0,
+            "line": 1289,
+            "passed": 1
+        },
+        {
+            "expr": "processedInfo->videoCodec == \"h264\"",
+            "failed": 0,
+            "line": 1290,
+            "passed": 1
+        },
+        {
+            "expr": "!processedInfo->audioStreams.empty()",
+            "failed": 0,
+            "line": 1291,
+            "passed": 1
+        },
+        {
+            "expr": "frame.cols == 160 && frame.rows == 120",
+            "failed": 0,
+            "line": 1312,
+            "passed": 60
+        },
+        {
+            "expr": "frameCount >= 55 && frameCount <= 65",
+            "failed": 0,
+            "line": 1326,
+            "passed": 1
+        },
+        {
+            "expr": "tracks.size() == 1",
+            "failed": 0,
+            "line": 1327,
+            "passed": 1
+        },
+        {
+            "expr": "uncoveredSpans.empty()",
+            "failed": 0,
+            "line": 1328,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 1331,
+            "passed": 1
+        },
+        {
+            "expr": "result.trackCount == 1",
+            "failed": 0,
+            "line": 1332,
+            "passed": 1
+        },
+        {
+            "expr": "reviewCalled",
+            "failed": 0,
+            "line": 1333,
+            "passed": 1
+        },
+        {
+            "expr": "scaledInfo.has_value()",
+            "failed": 0,
+            "line": 1336,
+            "passed": 1
+        },
+        {
+            "expr": "outputReader.open(*tools, scaledPath, *scaledInfo)",
+            "failed": 0,
+            "line": 1338,
+            "passed": 1
+        },
+        {
+            "expr": "outputReader.readFrame(outputFrame)",
+            "failed": 0,
+            "line": 1340,
+            "passed": 1
+        },
+        {
+            "expr": "inside[2] > 150.0",
+            "failed": 0,
+            "line": 1343,
+            "passed": 1
+        },
+        {
+            "expr": "inside[2] > inside[0] * 4.0",
+            "failed": 0,
+            "line": 1344,
+            "passed": 1
+        },
+        {
+            "expr": "inside[2] > inside[1] * 4.0",
+            "failed": 0,
+            "line": 1345,
+            "passed": 1
+        },
+        {
+            "expr": "outside[0] + outside[1] + outside[2] > 45.0",
+            "failed": 0,
+            "line": 1346,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 1401,
+            "passed": 2
+        },
+        {
+            "expr": "reviewSawSpan",
+            "failed": 0,
+            "line": 1402,
+            "passed": 2
+        },
+        {
+            "expr": "result.uncoveredFrames == 6",
+            "failed": 0,
+            "line": 1403,
+            "passed": 2
+        },
+        {
+            "expr": "result.uncoveredSpans.size() == 1",
+            "failed": 0,
+            "line": 1404,
+            "passed": 2
+        },
+        {
+            "expr": "result.uncoveredSpans[0].firstFrame == 10",
+            "failed": 0,
+            "line": 1405,
+            "passed": 2
+        },
+        {
+            "expr": "result.uncoveredSpans[0].lastFrame == 15",
+            "failed": 0,
+            "line": 1406,
+            "passed": 2
+        },
+        {
+            "expr": "result.uncoveredSpans[0].frameCount() == result.uncoveredFrames",
+            "failed": 0,
+            "line": 1407,
+            "passed": 2
+        },
+        {
+            "expr": "result.trackCount == (addUnrelatedMask ? 2 : 1)",
+            "failed": 0,
+            "line": 1408,
+            "passed": 2
+        },
+        {
+            "expr": "reviewCalled",
+            "failed": 0,
+            "line": 1443,
+            "passed": 3
+        },
+        {
+            "expr": "result.status == status",
+            "failed": 0,
+            "line": 1444,
+            "passed": 3
+        },
+        {
+            "expr": "result.error == (status == cloakframe::VideoProcessStatus::Failed ? QStringLiteral(\"rejected\") : QString())",
+            "failed": 0,
+            "line": 1447,
+            "passed": 3
+        },
+        {
+            "expr": "!QFile::exists(reviewEndedPath)",
+            "failed": 0,
+            "line": 1448,
+            "passed": 3
+        },
+        {
+            "expr": "stagingLeftovers(tempDir.path()) == 0",
+            "failed": 0,
+            "line": 1449,
+            "passed": 3
+        },
+        {
+            "expr": "stagingLeftovers(privateStages.path()) == 0",
+            "failed": 0,
+            "line": 1450,
+            "passed": 3
+        },
+        {
+            "expr": "QFile::copy(samplePath, replaceableSource)",
+            "failed": 0,
+            "line": 1458,
+            "passed": 1
+        },
+        {
+            "expr": "generateSample(*tools, replacement, 1)",
+            "failed": 0,
+            "line": 1459,
+            "passed": 1
+        },
+        {
+            "expr": "replaceableInfo.has_value()",
+            "failed": 0,
+            "line": 1461,
+            "passed": 1
+        },
+        {
+            "expr": "stagingLeftovers(tempDir.path()) == 0",
+            "failed": 0,
+            "line": 1481,
+            "passed": 1
+        },
+        {
+            "expr": "stages.size() == 1",
+            "failed": 0,
+            "line": 1485,
+            "passed": 1
+        },
+        {
+            "expr": "fileSha256(QDir(privateStages.filePath(stages.front())) .filePath(QStringLiteral(\"source.mp4\"))) == fileSha256(replaceableSource)",
+            "failed": 0,
+            "line": 1488,
+            "passed": 1
+        },
+        {
+            "expr": "QFile::remove(replaceableSource)",
+            "failed": 0,
+            "line": 1489,
+            "passed": 1
+        },
+        {
+            "expr": "QFile::rename(replacement, replaceableSource)",
+            "failed": 0,
+            "line": 1490,
+            "passed": 1
+        },
+        {
+            "expr": "reviewCalled",
+            "failed": 0,
+            "line": 1493,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Completed",
+            "failed": 0,
+            "line": 1494,
+            "passed": 1
+        },
+        {
+            "expr": "result.frameCount >= 55 && result.frameCount <= 65",
+            "failed": 0,
+            "line": 1495,
+            "passed": 1
+        },
+        {
+            "expr": "QFile::exists(changedSourceOutput)",
+            "failed": 0,
+            "line": 1496,
+            "passed": 1
+        },
+        {
+            "expr": "stagingLeftovers(tempDir.path()) == 0",
+            "failed": 0,
+            "line": 1497,
+            "passed": 1
+        },
+        {
+            "expr": "stagingLeftovers(privateStages.path()) == 0",
+            "failed": 0,
+            "line": 1498,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Cancelled",
+            "failed": 0,
+            "line": 1506,
+            "passed": 1
+        },
+        {
+            "expr": "!QFile::exists(tempDir.filePath(\"cancelled.mp4\"))",
+            "failed": 0,
+            "line": 1507,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Cancelled",
+            "failed": 0,
+            "line": 1528,
+            "passed": 1
+        },
+        {
+            "expr": "!QFile::exists(pass2CancelledPath)",
+            "failed": 0,
+            "line": 1529,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file1-input.mp4",
+                "name": "hardware-retry.mp4",
+                "sha256": "6ac8834df0c1e1e203f925d87307d7dc8cb30d92677c2ed1dea3222c4e951a8b",
+                "size": 3557
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 1,
+                "estimated_frame_count": 10,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 72,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 96
+            }
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file2-input.mp4",
+                "name": "hardware-retry-out.mp4",
+                "sha256": "fca5d5801bfdfca2f1ef5894eabddb6efc83ad09f629893edc723a2086ab544d",
+                "size": 4091
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 1,
+                "estimated_frame_count": 10,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 72,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 96
+            }
+        },
+        {
+            "file": {
+                "exists": false,
+                "name": "clip.mp4"
+            },
+            "fn": "probeVideo",
+            "info": null
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file3-input.mp4",
+                "name": "sample.mp4",
+                "sha256": "2e8edb52605de46937c8aff52dbab3582462949a16db22aed0465c42d1007f14",
+                "size": 93287
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            },
+            "reason_en": ""
+        },
+        {
+            "crf": 18,
+            "fn": "crfForQuality",
+            "quality": 0
+        },
+        {
+            "crf": 24,
+            "fn": "crfForQuality",
+            "quality": 2
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file4-input.mp4",
+                "name": "redacted.mp4",
+                "sha256": "cc244b3c76933821f7d0c872b5c24036b57f122fc2322d8b8e7254045b261766",
+                "size": 127398
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        },
+        {
+            "crf": 24,
+            "fn": "crfForQuality",
+            "quality": 2
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file5-input.mp4",
+                "name": "4k60-source.mp4",
+                "sha256": "cf3fdb369750481fdb0bc46db28253ac331d657650f994ac0166c98070a09079",
+                "size": 5090
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0.05,
+                "estimated_frame_count": 3,
+                "fps_den": 1,
+                "fps_num": 60,
+                "height": 2160,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 3840
+            }
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0.05,
+                "estimated_frame_count": 3,
+                "fps_den": 1,
+                "fps_num": 60,
+                "height": 2160,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 3840
+            },
+            "reason_en": ""
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file6-input.mp4",
+                "name": "4k60-processed.mp4",
+                "sha256": "2b90b882995498007014697f534561c9d6f0bfbdbfb8b28e19dc37abc841906d",
+                "size": 19078
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0.05,
+                "estimated_frame_count": 3,
+                "fps_den": 1,
+                "fps_num": 60,
+                "height": 2160,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 3840
+            }
+        },
+        {
+            "crf": 21,
+            "fn": "crfForQuality",
+            "quality": 1
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file7-input.mp4",
+                "name": "hevc.mp4",
+                "sha256": "f084884934315846f4470fdec2b517421d6a36d8a144473f67b7f690b615c3e2",
+                "size": 77163
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "hevc",
+                "width": 320
+            }
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file8-input.mp4",
+                "name": "bogus.mp4",
+                "sha256": "e472d1240f65e8e78acd4d46d11ac29b6ed57e8203062fd80bb51cd3ede952c8",
+                "size": 24
+            },
+            "fn": "probeVideo",
+            "info": null
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file9-input.mp4",
+                "name": "rotated.mp4",
+                "sha256": "6b70f7f2e845c61e1e7f0c77f69546f6de040735d9aa561f0edbb98a311d77b6",
+                "size": 93287
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 90,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        },
+        {
+            "crf": 24,
+            "fn": "crfForQuality",
+            "quality": 2
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file10-input.mp4",
+                "name": "rotated-out.mp4",
+                "sha256": "bc2591bda365b26a53581bfa816d280ab86987e675fe57cc85fc3e176ba2dcb8",
+                "size": 22811
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 0.033333,
+                "estimated_frame_count": 1,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 320,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 240
+            }
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file11-input.mp4",
+                "name": "processed.mp4",
+                "sha256": "2b58efb4539b31f726c4c42c0112634118defba505af38f8b737f444115d50f7",
+                "size": 127169
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file12-input.mp4",
+                "name": "scaled.mp4",
+                "sha256": "8a53e7267c1d11c683d5f7c13e3ad6f08a05ebc176cc1af68b79cef1a58e299c",
+                "size": 104601
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        },
+        {
+            "file": {
+                "copy": "testHardwareEncodeFailureRetriesInSoftware/file13-input.mp4",
+                "name": "replaceable-source.mp4",
+                "sha256": "2e8edb52605de46937c8aff52dbab3582462949a16db22aed0465c42d1007f14",
+                "size": 93287
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 2,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 30,
+                "height": 240,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 320
+            }
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testHardwareEncodeFailureRetriesInSoftware"
+}

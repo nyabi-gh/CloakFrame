@@ -1,0 +1,87 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2566,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(src.string(), img)",
+            "failed": 0,
+            "line": 2573,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(dst.string(), img)",
+            "failed": 0,
+            "line": 2574,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(thumbFile.string(), img)",
+            "failed": 0,
+            "line": 2575,
+            "passed": 1
+        },
+        {
+            "expr": "exifThumbnailBytes(image->exifData()) > 0",
+            "failed": 0,
+            "line": 2589,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::copyMetadata(src, dst, true)",
+            "failed": 0,
+            "line": 2592,
+            "passed": 1
+        },
+        {
+            "expr": "exifThumbnailBytes(image->exifData()) == 0",
+            "failed": 0,
+            "line": 2597,
+            "passed": 1
+        },
+        {
+            "expr": "make != exif.end()",
+            "failed": 0,
+            "line": 2601,
+            "passed": 1
+        },
+        {
+            "expr": "make->toString() == \"TestCamera\"",
+            "failed": 0,
+            "line": 2602,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "destination_after": {
+                "copy": "testMetadataCopyStripsEmbeddedThumbnail/file3-destination-after.jpg",
+                "name": "dst.jpg",
+                "sha256": "345a7b0e677e5bcc15ad931e3ef09a712dbe4074f9fd533807a015b3ba3b2696",
+                "size": 690
+            },
+            "destination_before": {
+                "copy": "testMetadataCopyStripsEmbeddedThumbnail/file2-destination-before.jpg",
+                "name": "dst.jpg",
+                "sha256": "e76c16f85dcd7d1ac4c30673e5df216cd7434b8eb159a58bbd52c76a7848a9f4",
+                "size": 630
+            },
+            "fn": "copyMetadata",
+            "preserve": true,
+            "preserve_location": false,
+            "result": true,
+            "source": {
+                "copy": "testMetadataCopyStripsEmbeddedThumbnail/file1-source.jpg",
+                "name": "src.jpg",
+                "sha256": "e7b46935aea1a8624001b3f07cc7905ab689f56fe2abffae255625c17bfd0fb3",
+                "size": 1350
+            }
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testMetadataCopyStripsEmbeddedThumbnail"
+}

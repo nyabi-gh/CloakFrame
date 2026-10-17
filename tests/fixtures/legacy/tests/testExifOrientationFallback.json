@@ -1,0 +1,163 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cv::imencode(\".jpg\", pixels, jpeg)",
+            "failed": 0,
+            "line": 178,
+            "passed": 8
+        },
+        {
+            "expr": "jpeg.size() >= 2 && jpeg[0] == 0xFF && jpeg[1] == 0xD8",
+            "failed": 0,
+            "line": 179,
+            "passed": 8
+        },
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 222,
+            "passed": 8
+        },
+        {
+            "expr": "file.write( reinterpret_cast<const char *>(jpeg.data()), static_cast<qint64>(jpeg.size())) == static_cast<qint64>(jpeg.size())",
+            "failed": 0,
+            "line": 225,
+            "passed": 8
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 2001,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::readExifOrientation(path) == orientation",
+            "failed": 0,
+            "line": 2007,
+            "passed": 8
+        },
+        {
+            "expr": "image.rows == 2 && image.cols == 3",
+            "failed": 0,
+            "line": 2012,
+            "passed": 1
+        },
+        {
+            "expr": "image.rows == 3 && image.cols == 2",
+            "failed": 0,
+            "line": 2014,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file1-input.jpg",
+                "name": "orientation-1.jpg",
+                "sha256": "6ca069022844231fc89eaae49e609fb3b5e988a3ade3e2c768d83c77e109c73c",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 1
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file2-input.jpg",
+                "name": "orientation-2.jpg",
+                "sha256": "a5cfc1cb7f8b8681ddb95a273c1f6854acf5eb18e6092a8e0900b50c68db37f4",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 2
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file3-input.jpg",
+                "name": "orientation-3.jpg",
+                "sha256": "104f1e7065a193252a832130bb24049134b52384e791f2576db1636d006aabd3",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 3
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file4-input.jpg",
+                "name": "orientation-4.jpg",
+                "sha256": "0cc8d350f2f4541b11d692feecb66fa39e79d79b520ba6dd8418f654fb58f38b",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 4
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file5-input.jpg",
+                "name": "orientation-5.jpg",
+                "sha256": "cdab2cc67e741d65e8502ab45eeeb29b7afa67ec0fdcbdd205b3975d34f32fe7",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 5
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file6-input.jpg",
+                "name": "orientation-6.jpg",
+                "sha256": "3b4157f96e286c10428a3bd7adf73b59b135d7107c98270e229ba231cf67a5e7",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 6
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file7-input.jpg",
+                "name": "orientation-7.jpg",
+                "sha256": "432476af4906a410c26099f3b996552dad56e43095db961e1046a40aca3e9307",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 7
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file8-input.jpg",
+                "name": "orientation-8.jpg",
+                "sha256": "eb0672bd25bfe4fef4d0b3d8c768a8b40dbc2bcaa31b6ba4151e4d31ef5a3f6b",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 8
+        },
+        {
+            "file": {
+                "copy": "testExifOrientationFallback/file9-input.jpg",
+                "name": "orientation-6.jpg",
+                "sha256": "3b4157f96e286c10428a3bd7adf73b59b135d7107c98270e229ba231cf67a5e7",
+                "size": 670
+            },
+            "fn": "readExifOrientation",
+            "orientation": 6
+        },
+        {
+            "fn": "applyOrientation",
+            "image": {
+                "channels": 3,
+                "cols": 3,
+                "depth_bits": 8,
+                "rows": 2
+            },
+            "orientation": 6,
+            "output_image": {
+                "channels": 3,
+                "cols": 2,
+                "depth_bits": 8,
+                "rows": 3
+            }
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testExifOrientationFallback"
+}

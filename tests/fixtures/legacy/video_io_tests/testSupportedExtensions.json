@@ -1,0 +1,86 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::isSupportedVideo(\"clip.mp4\")",
+            "failed": 0,
+            "line": 295,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::isSupportedVideo(\"CLIP.MOV\")",
+            "failed": 0,
+            "line": 296,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::isSupportedVideo(\"clip.m4v\")",
+            "failed": 0,
+            "line": 297,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::isSupportedVideo(\"clip.webm\")",
+            "failed": 0,
+            "line": 298,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::isSupportedVideo(\"CLIP.WEBM\")",
+            "failed": 0,
+            "line": 299,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::isSupportedVideo(\"clip.mkv\")",
+            "failed": 0,
+            "line": 300,
+            "passed": 1
+        },
+        {
+            "expr": "!cfrec::isSupportedVideo(\"clip.jpg\")",
+            "failed": 0,
+            "line": 301,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "isSupportedVideo",
+            "name": "clip.mp4",
+            "result": true
+        },
+        {
+            "fn": "isSupportedVideo",
+            "name": "CLIP.MOV",
+            "result": true
+        },
+        {
+            "fn": "isSupportedVideo",
+            "name": "clip.m4v",
+            "result": true
+        },
+        {
+            "fn": "isSupportedVideo",
+            "name": "clip.webm",
+            "result": true
+        },
+        {
+            "fn": "isSupportedVideo",
+            "name": "CLIP.WEBM",
+            "result": true
+        },
+        {
+            "fn": "isSupportedVideo",
+            "name": "clip.mkv",
+            "result": false
+        },
+        {
+            "fn": "isSupportedVideo",
+            "name": "clip.jpg",
+            "result": false
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testSupportedExtensions"
+}

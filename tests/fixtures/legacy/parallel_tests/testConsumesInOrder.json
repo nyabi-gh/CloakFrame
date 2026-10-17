@@ -1,0 +1,27 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "value == index * 2",
+            "failed": 0,
+            "line": 33,
+            "passed": 200
+        },
+        {
+            "expr": "consumed.size() == count",
+            "failed": 0,
+            "line": 37,
+            "passed": 1
+        },
+        {
+            "expr": "consumed[i] == i",
+            "failed": 0,
+            "line": 40,
+            "passed": 200
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/parallel_tests.cpp @ v1.12.1",
+    "suite": "parallel_tests",
+    "test": "testConsumesInOrder"
+}

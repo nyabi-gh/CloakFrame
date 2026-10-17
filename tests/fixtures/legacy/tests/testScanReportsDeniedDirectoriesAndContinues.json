@@ -1,0 +1,99 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 363,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite((denied / \"private.png\").string(), image)",
+            "failed": 0,
+            "line": 371,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite((readable / \"visible.png\").string(), image)",
+            "failed": 0,
+            "line": 372,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite((input / \"top.png\").string(), image)",
+            "failed": 0,
+            "line": 373,
+            "passed": 1
+        },
+        {
+            "expr": "permissionError == std::errc::permission_denied",
+            "failed": 0,
+            "line": 418,
+            "passed": 1
+        },
+        {
+            "expr": "recursive.size() == 2",
+            "failed": 0,
+            "line": 419,
+            "passed": 1
+        },
+        {
+            "expr": "recursiveIssues.size() == 1",
+            "failed": 0,
+            "line": 420,
+            "passed": 1
+        },
+        {
+            "expr": "recursiveIssues.front().path == denied",
+            "failed": 0,
+            "line": 421,
+            "passed": 1
+        },
+        {
+            "expr": "recursiveIssues.front().error == std::errc::permission_denied",
+            "failed": 0,
+            "line": 422,
+            "passed": 1
+        },
+        {
+            "expr": "direct.empty() && directIssues.size() == 1",
+            "failed": 0,
+            "line": 423,
+            "passed": 1
+        },
+        {
+            "expr": "directIssues.front().path == denied",
+            "failed": 0,
+            "line": 424,
+            "passed": 1
+        },
+        {
+            "expr": "shallow.size() == 1 && shallowIssues.empty()",
+            "failed": 0,
+            "line": 425,
+            "passed": 1
+        },
+        {
+            "expr": "summary.total == 2 && summary.unreadableInputs == 1",
+            "failed": 0,
+            "line": 426,
+            "passed": 1
+        },
+        {
+            "expr": "summary.coverageWarningFiles == 0 && summary.warningFiles == 0",
+            "failed": 0,
+            "line": 427,
+            "passed": 1
+        },
+        {
+            "expr": "outcome == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 428,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testScanReportsDeniedDirectoriesAndContinues"
+}

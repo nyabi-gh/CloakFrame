@@ -1,0 +1,21 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "logging && !logging->isChecked()",
+            "failed": 0,
+            "line": 32,
+            "passed": 1
+        },
+        {
+            "expr": "changes == 2",
+            "failed": 0,
+            "line": 35,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/settings_tests.cpp @ v1.12.1",
+    "suite": "settings_tests",
+    "test": "main"
+}

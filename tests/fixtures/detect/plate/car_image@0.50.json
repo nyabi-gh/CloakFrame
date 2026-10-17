@@ -1,0 +1,25 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        512,
+        512
+    ],
+    "detections": [
+        {
+            "box": [
+                15.726226806640625,
+                324.82318115234375,
+                166.43746948242188,
+                65.7508544921875
+            ],
+            "has_pose": false,
+            "roll": 0,
+            "score": 0.8202961683273315
+        }
+    ],
+    "image": "car_image.webp",
+    "model": "plate",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.5
+}

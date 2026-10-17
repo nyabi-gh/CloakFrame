@@ -1,0 +1,15 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "caught",
+            "failed": 0,
+            "line": 238,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/parallel_tests.cpp @ v1.12.1",
+    "suite": "parallel_tests",
+    "test": "testPropagatesConsumerException"
+}

@@ -1,0 +1,17 @@
+{
+  "id": "D5",
+  "requirement": "모델 폴더 권한을 검사하지 않는다. 모델은 로드할 때 해시로 검증한다.",
+  "stage": "M3",
+  "expect": [
+    {
+      "umask": "0022",
+      "result": "saved"
+    },
+    {
+      "umask": "0002",
+      "result": "saved",
+      "folder": "0775"
+    }
+  ],
+  "observed_1121_summary": "umask 0002에서 folder_not_private로 저장 거부"
+}

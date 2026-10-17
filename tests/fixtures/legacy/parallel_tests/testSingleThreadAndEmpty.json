@@ -1,0 +1,27 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "consumedCount == 0",
+            "failed": 0,
+            "line": 157,
+            "passed": 1
+        },
+        {
+            "expr": "static_cast<std::size_t>(value) == index",
+            "failed": 0,
+            "line": 170,
+            "passed": 5
+        },
+        {
+            "expr": "consumedCount == 5",
+            "failed": 0,
+            "line": 173,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/parallel_tests.cpp @ v1.12.1",
+    "suite": "parallel_tests",
+    "test": "testSingleThreadAndEmpty"
+}

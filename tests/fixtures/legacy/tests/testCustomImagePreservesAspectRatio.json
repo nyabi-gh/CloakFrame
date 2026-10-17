@@ -1,0 +1,69 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec3b>(20, 20) == cv::Vec3b(10, 200, 20)",
+            "failed": 0,
+            "line": 1890,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(9, 12) == cv::Vec3b(10, 200, 20)",
+            "failed": 0,
+            "line": 1891,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(30, 28) == cv::Vec3b(10, 200, 20)",
+            "failed": 0,
+            "line": 1892,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(0, 0) == cv::Vec3b(100, 100, 100)",
+            "failed": 0,
+            "line": 1893,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "custom_image": {
+                "channels": 4,
+                "cols": 40,
+                "depth_bits": 8,
+                "rows": 20
+            },
+            "custom_image_png": "testCustomImagePreservesAspectRatio/2-custom.png",
+            "detections": [
+                {
+                    "box": [
+                        8,
+                        8,
+                        24,
+                        24
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 40,
+                "depth_bits": 8,
+                "rows": 40
+            },
+            "input_png": "testCustomImagePreservesAspectRatio/1-input.png",
+            "method": "custom_image",
+            "output_png": "testCustomImagePreservesAspectRatio/3-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testCustomImagePreservesAspectRatio"
+}

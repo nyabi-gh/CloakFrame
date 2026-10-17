@@ -1,0 +1,45 @@
+{
+  "id": "P-6",
+  "requirement": "관측·보간 box 모두 평활화 후 보호 영역이 평활화 전보다 작아지지 않는다. 장면 전환 확인 대기 중에 들어온 새 spike도 평가한다.",
+  "stage": "M5",
+  "cases": [
+    {
+      "part": "a",
+      "input": "observed_1121.json의 a_smoothing_shrinks_interpolated_boxes.input_boxes",
+      "calls": "보간(최대 gap 20) 후 평활화(반경 2)",
+      "expect": "모든 프레임에서 평활화 후 box ⊇ 평활화 전 box(관측·보간 모두)"
+    },
+    {
+      "part": "b",
+      "sequence": "A×10, B×1, C×10 (solid 0, 255, 110; 480×270)",
+      "expect_cuts": [
+        10,
+        11
+      ]
+    },
+    {
+      "part": "b",
+      "sequence": "A×10, B×1, C×1, D×10 (solid 0, 255, 110, 200)",
+      "expect_cuts": [
+        10,
+        11,
+        12
+      ]
+    },
+    {
+      "part": "b",
+      "sequence": "A×10, B×2, C×10",
+      "expect_cuts": [
+        10,
+        12
+      ]
+    },
+    {
+      "part": "b",
+      "sequence": "A×10, 섬광 255 ×1, A×10",
+      "expect_cuts": [],
+      "note": "같은 장면으로 돌아오는 섬광은 여전히 무시(legacy testSceneCutDetectorIgnoresFlash)"
+    }
+  ],
+  "observed_1121_summary": "a: 보간 box (80,80,80,80)이 평활화 후 (88,88,64,64)·(84,84,72,72)로 줄어듦. b: 1프레임 장면 뒤의 전환을 놓침([10], [10,12])"
+}

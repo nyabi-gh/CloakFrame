@@ -1,0 +1,75 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cuts.frames() == std::vector<int>({5, 15})",
+            "failed": 0,
+            "line": 474,
+            "passed": 1
+        },
+        {
+            "expr": "cuts.isCut(5)",
+            "failed": 0,
+            "line": 475,
+            "passed": 1
+        },
+        {
+            "expr": "!cuts.isCut(6)",
+            "failed": 0,
+            "line": 476,
+            "passed": 1
+        },
+        {
+            "expr": "cuts.spansCut(4, 5)",
+            "failed": 0,
+            "line": 477,
+            "passed": 1
+        },
+        {
+            "expr": "cuts.spansCut(0, 19)",
+            "failed": 0,
+            "line": 478,
+            "passed": 1
+        },
+        {
+            "expr": "cuts.spansCut(14, 16)",
+            "failed": 0,
+            "line": 479,
+            "passed": 1
+        },
+        {
+            "expr": "!cuts.spansCut(5, 14)",
+            "failed": 0,
+            "line": 480,
+            "passed": 1
+        },
+        {
+            "expr": "!cuts.spansCut(15, 19)",
+            "failed": 0,
+            "line": 481,
+            "passed": 1
+        },
+        {
+            "expr": "!cloakframe::SceneCuts{}.spansCut(0, 1000)",
+            "failed": 0,
+            "line": 482,
+            "passed": 1
+        },
+        {
+            "expr": "reversed.frames() == std::vector<int>({5, 15})",
+            "failed": 0,
+            "line": 485,
+            "passed": 1
+        },
+        {
+            "expr": "asymmetric.frames() == std::vector<int>({13})",
+            "failed": 0,
+            "line": 487,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testSceneCutsContainer"
+}

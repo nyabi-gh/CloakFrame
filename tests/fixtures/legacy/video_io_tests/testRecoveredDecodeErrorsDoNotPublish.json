@@ -1,0 +1,94 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "generateRecoverablyCorruptSample(tools, directory, source)",
+            "failed": 0,
+            "line": 775,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 780,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::videoUnsupportedReason(*info).isEmpty()",
+            "failed": 0,
+            "line": 781,
+            "passed": 1
+        },
+        {
+            "expr": "result.status == cloakframe::VideoProcessStatus::Failed",
+            "failed": 0,
+            "line": 799,
+            "passed": 1
+        },
+        {
+            "expr": "!result.error.isEmpty()",
+            "failed": 0,
+            "line": 800,
+            "passed": 1
+        },
+        {
+            "expr": "!QFile::exists(output)",
+            "failed": 0,
+            "line": 801,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testRecoveredDecodeErrorsDoNotPublish/file1-input.mp4",
+                "name": "decode-errors.mp4",
+                "sha256": "da0047798d289a28db86b47f2189fd4b069f4d6738ec71045c3a31452d058947",
+                "size": 17068
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 6,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            }
+        },
+        {
+            "fn": "videoUnsupportedReason",
+            "info": {
+                "audio_streams": [
+                ],
+                "color_transfer": "",
+                "duration_seconds": 6,
+                "estimated_frame_count": 60,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 96,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 0,
+                "video_codec": "h264",
+                "width": 128
+            },
+            "reason_en": ""
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testRecoveredDecodeErrorsDoNotPublish"
+}

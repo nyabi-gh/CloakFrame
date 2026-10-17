@@ -1,0 +1,99 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "box != nullptr",
+            "failed": 0,
+            "line": 47,
+            "passed": 4
+        },
+        {
+            "expr": "!add->isEnabled()",
+            "failed": 0,
+            "line": 259,
+            "passed": 1
+        },
+        {
+            "expr": "add->isEnabled() && dialog.isVisible() && shown == 0",
+            "failed": 0,
+            "line": 261,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 1 && dialog.isVisible()",
+            "failed": 0,
+            "line": 265,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 2 && !dialog.isVisible()",
+            "failed": 0,
+            "line": 268,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().decision == VideoReviewDecision::Skip",
+            "failed": 0,
+            "line": 269,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 2 && !dialog.isVisible()",
+            "failed": 0,
+            "line": 276,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().decision == VideoReviewDecision::Skip",
+            "failed": 0,
+            "line": 277,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 3 && dialog.isVisible()",
+            "failed": 0,
+            "line": 286,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().decision == VideoReviewDecision::Encode",
+            "failed": 0,
+            "line": 287,
+            "passed": 1
+        },
+        {
+            "expr": "shown == 4 && !dialog.isVisible()",
+            "failed": 0,
+            "line": 290,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().decision == VideoReviewDecision::CancelAll",
+            "failed": 0,
+            "line": 291,
+            "passed": 1
+        },
+        {
+            "expr": "jumped.findChild<QSlider *>(\"videoTimeline\")->value() == 45",
+            "failed": 0,
+            "line": 461,
+            "passed": 1
+        },
+        {
+            "expr": "!dialog.isVisible() && dialog.result() == QDialog::Accepted",
+            "failed": 0,
+            "line": 468,
+            "passed": 1
+        },
+        {
+            "expr": "dialog.reviewResult().decision == cloakframe::VideoReviewDecision::Encode",
+            "failed": 0,
+            "line": 469,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/video_review_tests.cpp @ v1.12.1",
+    "suite": "video_review_tests",
+    "test": "testExitsKeepTheBatch"
+}

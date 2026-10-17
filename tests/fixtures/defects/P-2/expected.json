@@ -1,0 +1,20 @@
+{
+  "id": "P-2",
+  "requirement": "Detection은 종류(Face/Plate)를 보존한다. 종류별 점수 임계값·NMS·추적 연관을 쓴다. 다른 종류끼리는 같은 track이 되지 않는다.",
+  "stage": "M2, M5",
+  "cases": [
+    {
+      "scenario": "같은 프레임에서 얼굴 box와 번호판 box가 IoU 0.6으로 겹침",
+      "expect": "NMS가 서로를 지우지 않음, track 2개"
+    },
+    {
+      "scenario": "얼굴 임계값 0.5, 번호판 임계값 0.3",
+      "expect": "번호판 score 0.4 후보는 남고 얼굴 score 0.4 후보는 버림"
+    },
+    {
+      "scenario": "결과 JSON",
+      "expect": "모든 Detection·TrackedBox에 kind 필드"
+    }
+  ],
+  "observed_1121": "코드 확인: 번호판도 FaceDetection 타입, 임계값 하나 공유(보고서 6.3, 7장)"
+}

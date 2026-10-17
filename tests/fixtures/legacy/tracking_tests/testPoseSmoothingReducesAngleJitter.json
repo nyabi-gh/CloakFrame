@@ -1,0 +1,167 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "track.boxes[2].hasPose",
+            "failed": 0,
+            "line": 194,
+            "passed": 1
+        },
+        {
+            "expr": "std::abs(track.boxes[2].rollRadians) < 0.1F",
+            "failed": 0,
+            "line": 195,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "smoothTrack",
+            "radius": 2,
+            "track_after": {
+                "boxes": [
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 0,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": -0.059991005808115005,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 1,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.00832943245768547,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 2,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.04843535274267197,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 3,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.008329428732395172,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 4,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": -0.0599910132586956,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                "id": 0,
+                "low_confidence": false
+            },
+            "track_before": {
+                "boxes": [
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 0,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.20000000298023224,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 1,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.20000000298023224,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 2,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": -0.6000000238418579,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 3,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.20000000298023224,
+                        "score": 0.8999999761581421
+                    },
+                    {
+                        "box": [
+                            50,
+                            100,
+                            40,
+                            40
+                        ],
+                        "frame": 4,
+                        "has_pose": true,
+                        "interpolated": false,
+                        "roll": 0.20000000298023224,
+                        "score": 0.8999999761581421
+                    }
+                ],
+                "id": 0,
+                "low_confidence": false
+            }
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testPoseSmoothingReducesAngleJitter"
+}

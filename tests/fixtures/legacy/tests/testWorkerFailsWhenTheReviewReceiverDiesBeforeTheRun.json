@@ -1,0 +1,33 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 901,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60)))",
+            "failed": 0,
+            "line": 905,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::Failed",
+            "failed": 0,
+            "line": 926,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(output / \"input.png\")",
+            "failed": 0,
+            "line": 927,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerFailsWhenTheReviewReceiverDiesBeforeTheRun"
+}

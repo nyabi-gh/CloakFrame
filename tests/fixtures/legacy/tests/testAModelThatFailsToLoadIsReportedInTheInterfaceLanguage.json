@@ -1,0 +1,45 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 160,
+            "passed": 1
+        },
+        {
+            "expr": "file.write( reinterpret_cast<const char *>(bytes.data()), static_cast<qint64>(bytes.size())) == static_cast<qint64>(bytes.size())",
+            "failed": 0,
+            "line": 163,
+            "passed": 1
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 789,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwrite(source.string(), cv::Mat(24, 24, CV_8UC3, cv::Scalar(20, 40, 60)))",
+            "failed": 0,
+            "line": 793,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::Failed",
+            "failed": 0,
+            "line": 821,
+            "passed": 1
+        },
+        {
+            "expr": "log.filter(\"The face detection model could not be loaded: \").size() == 1",
+            "failed": 0,
+            "line": 822,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testAModelThatFailsToLoadIsReportedInTheInterfaceLanguage"
+}

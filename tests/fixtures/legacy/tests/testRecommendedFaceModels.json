@@ -1,0 +1,69 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "detector.inputSize() == 640",
+            "failed": 0,
+            "line": 2956,
+            "passed": 1
+        },
+        {
+            "expr": "detector.detect(blank, 0.99F, 0.4F).detections.empty()",
+            "failed": 0,
+            "line": 2957,
+            "passed": 1
+        },
+        {
+            "expr": "!result.detections.empty()",
+            "failed": 0,
+            "line": 2961,
+            "passed": 1
+        },
+        {
+            "expr": "result.omitted == 0",
+            "failed": 0,
+            "line": 2962,
+            "passed": 1
+        },
+        {
+            "expr": "std::ranges::any_of(result.detections, &cloakframe::FaceDetection::hasPose)",
+            "failed": 0,
+            "line": 2963,
+            "passed": 1
+        },
+        {
+            "expr": "detector.inputSize() == 640",
+            "failed": 0,
+            "line": 2976,
+            "passed": 1
+        },
+        {
+            "expr": "detector.detect(blank, 0.99F, 0.4F).detections.empty()",
+            "failed": 0,
+            "line": 2977,
+            "passed": 1
+        },
+        {
+            "expr": "!result.detections.empty()",
+            "failed": 0,
+            "line": 2981,
+            "passed": 1
+        },
+        {
+            "expr": "result.omitted == 0",
+            "failed": 0,
+            "line": 2982,
+            "passed": 1
+        },
+        {
+            "expr": "std::ranges::any_of(result.detections, &cloakframe::FaceDetection::hasPose)",
+            "failed": 0,
+            "line": 2983,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testRecommendedFaceModels"
+}

@@ -1,0 +1,29 @@
+{
+  "id": "D7",
+  "requirement": "입력을 먼저 스캔하고, 필요한 모델만 로드한다. (모델, 입력 크기, EP)마다 세션은 하나다.",
+  "stage": "M3",
+  "cases": [
+    {
+      "scenario": "지원 media가 없는 폴더 + 존재하지 않는 모델 경로",
+      "expect": {
+        "outcome": "completed",
+        "model_loaded": false,
+        "report": "지원 파일 0개, 미지원 1개(.txt)"
+      }
+    },
+    {
+      "scenario": "사진 1장 + 영상 1개, 얼굴만",
+      "expect": {
+        "sessions_created": 1,
+        "note": "사진·영상 모두 YOLO5Face 640 CPU 세션 하나를 공유. 엔진의 세션 생성 이벤트 수로 확인"
+      }
+    },
+    {
+      "scenario": "사진만, 번호판 끔",
+      "expect": {
+        "plate_model_loaded": false
+      }
+    }
+  ],
+  "observed_1121": "observed_1121.json (첫 경우: 모델 로드 실패로 run 전체 failed). 두 번째 경우는 코드 확인(ProcessorWorker.cpp:1511-1515)"
+}

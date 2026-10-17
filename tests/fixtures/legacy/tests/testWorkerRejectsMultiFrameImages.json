@@ -1,0 +1,61 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 1345,
+            "passed": 1
+        },
+        {
+            "expr": "cv::imwritemulti(source.string(), pages)",
+            "failed": 0,
+            "line": 1354,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::imageFrameCount(source) == 2",
+            "failed": 0,
+            "line": 1355,
+            "passed": 1
+        },
+        {
+            "expr": "result == cloakframe::RunOutcome::CompletedWithWarnings",
+            "failed": 0,
+            "line": 1386,
+            "passed": 1
+        },
+        {
+            "expr": "summary.total == 1 && summary.skipped == 1",
+            "failed": 0,
+            "line": 1387,
+            "passed": 1
+        },
+        {
+            "expr": "!std::filesystem::exists(output / \"pages.tiff\")",
+            "failed": 0,
+            "line": 1388,
+            "passed": 1
+        },
+        {
+            "expr": "std::ranges::any_of(messages, [](const QString &message) { return message.contains(\"multi-page\", Qt::CaseInsensitive); })",
+            "failed": 0,
+            "line": 1393,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testWorkerRejectsMultiFrameImages/file1-input.tiff",
+                "name": "pages.tiff",
+                "sha256": "6a2f4be5fbb92935dd9096dbd4a31362e63b94ce072fabbf88410e7cb7b8b6da",
+                "size": 508
+            },
+            "fn": "imageFrameCount",
+            "frames": 2
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testWorkerRejectsMultiFrameImages"
+}

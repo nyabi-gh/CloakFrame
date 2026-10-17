@@ -1,0 +1,25 @@
+{
+  "id": "P-7",
+  "requirement": "업데이트 공개 키가 없는 빌드는 업데이트를 거부한다. 공식 릴리스 빌드는 키 없이 빌드되지 않는다(빌드 스크립트가 실패). macOS Sparkle은 서명된 feed가 필수.",
+  "stage": "M7",
+  "cases": [
+    {
+      "scenario": "키 없이 빌드, 서명 없는 업데이트",
+      "expect": "rejected"
+    },
+    {
+      "scenario": "키 없이 빌드, 아무 서명",
+      "expect": "rejected"
+    },
+    {
+      "scenario": "release 프로필에서 키 환경변수 없음",
+      "expect": "빌드 실패"
+    },
+    {
+      "scenario": "Sparkle feed 서명 없음",
+      "expect": "업데이트 안 함(SURequireSignedFeed)"
+    }
+  ],
+  "vectors": "legacy/update_signature_tests의 payload·서명·키는 키가 있는 빌드의 기대값으로 그대로 쓴다",
+  "observed_1121": "UpdateTrust::Unpinned를 SelfUpdaterVelopack.cpp:221에서 수락(legacy/update_signature_tests/testAnUnpinnedBuildSaysSoInsteadOfPassing)"
+}

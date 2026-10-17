@@ -1,0 +1,112 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "generateOffsetStartSample(tools, directory, source)",
+            "failed": 0,
+            "line": 373,
+            "passed": 1
+        },
+        {
+            "expr": "info",
+            "failed": 0,
+            "line": 376,
+            "passed": 1
+        },
+        {
+            "expr": "std::abs(info->startTimeSeconds - 2.0) < 0.001",
+            "failed": 0,
+            "line": 377,
+            "passed": 1
+        },
+        {
+            "expr": "reader.open(tools, source, *info)",
+            "failed": 0,
+            "line": 380,
+            "passed": 1
+        },
+        {
+            "expr": "frame.isContinuous()",
+            "failed": 0,
+            "line": 385,
+            "passed": 40
+        },
+        {
+            "expr": "readerFrames.size() == 40",
+            "failed": 0,
+            "line": 392,
+            "passed": 1
+        },
+        {
+            "expr": "readerFrames.front() != readerFrames[10]",
+            "failed": 0,
+            "line": 393,
+            "passed": 1
+        },
+        {
+            "expr": "!arguments.isEmpty()",
+            "failed": 0,
+            "line": 409,
+            "passed": 6
+        },
+        {
+            "expr": "process.waitForStarted(15000) && process.waitForFinished(60000)",
+            "failed": 0,
+            "line": 412,
+            "passed": 6
+        },
+        {
+            "expr": "!png.isEmpty()",
+            "failed": 0,
+            "line": 414,
+            "passed": 6
+        },
+        {
+            "expr": "!decoded.empty()",
+            "failed": 0,
+            "line": 419,
+            "passed": 6
+        },
+        {
+            "expr": "previewHash == readerFrames[static_cast<std::size_t>(index)]",
+            "failed": 0,
+            "line": 424,
+            "passed": 6
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testPreviewAndReaderAgreeOnFrameIndex/file1-input.mp4",
+                "name": "offset-start.mp4",
+                "sha256": "f72a81af00426c2edc2fe8d6f32bf35440f9ec837e4403b5e7ff2f60032967ca",
+                "size": 66843
+            },
+            "fn": "probeVideo",
+            "info": {
+                "audio_streams": [
+                    {
+                        "codec": "aac",
+                        "language": ""
+                    }
+                ],
+                "color_transfer": "",
+                "duration_seconds": 4,
+                "estimated_frame_count": 40,
+                "fps_den": 1,
+                "fps_num": 10,
+                "height": 120,
+                "is_vfr": false,
+                "pixel_format": "yuv420p",
+                "rotation": 0,
+                "sar_den": 1,
+                "sar_num": 1,
+                "start_time_seconds": 2,
+                "video_codec": "h264",
+                "width": 160
+            }
+        }
+    ],
+    "source": "tests/video_io_tests.cpp @ v1.12.1",
+    "suite": "video_io_tests",
+    "test": "testPreviewAndReaderAgreeOnFrameIndex"
+}

@@ -1,0 +1,86 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cv::norm(image, expected, cv::NORM_INF) == 0.0",
+            "failed": 0,
+            "line": 1826,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(0, 0) == original.at<cv::Vec3b>(0, 0)",
+            "failed": 0,
+            "line": 1827,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 4,
+            "detections": [
+                {
+                    "box": [
+                        8,
+                        8,
+                        16,
+                        16
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 32,
+                "depth_bits": 8,
+                "rows": 32
+            },
+            "input_png": "testTransparentCustomImageFallsBackToSafeMosaic/1-input.png",
+            "method": "mosaic",
+            "output_png": "testTransparentCustomImageFallsBackToSafeMosaic/2-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        },
+        {
+            "block_size": 4,
+            "custom_image": {
+                "channels": 4,
+                "cols": 2,
+                "depth_bits": 8,
+                "rows": 2
+            },
+            "custom_image_png": "testTransparentCustomImageFallsBackToSafeMosaic/4-custom.png",
+            "detections": [
+                {
+                    "box": [
+                        8,
+                        8,
+                        16,
+                        16
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 32,
+                "depth_bits": 8,
+                "rows": 32
+            },
+            "input_png": "testTransparentCustomImageFallsBackToSafeMosaic/3-input.png",
+            "method": "custom_image",
+            "output_png": "testTransparentCustomImageFallsBackToSafeMosaic/5-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": false
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testTransparentCustomImageFallsBackToSafeMosaic"
+}

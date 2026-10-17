@@ -1,0 +1,75 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "file.open(QIODevice::WriteOnly)",
+            "failed": 0,
+            "line": 160,
+            "passed": 3
+        },
+        {
+            "expr": "file.write( reinterpret_cast<const char *>(bytes.data()), static_cast<qint64>(bytes.size())) == static_cast<qint64>(bytes.size())",
+            "failed": 0,
+            "line": 163,
+            "passed": 3
+        },
+        {
+            "expr": "temp.isValid()",
+            "failed": 0,
+            "line": 1399,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::imageFrameCount(apng) > 1",
+            "failed": 0,
+            "line": 1434,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::imageFrameCount(webp) > 1",
+            "failed": 0,
+            "line": 1470,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::imageFrameCount(bigTiff) > 1",
+            "failed": 0,
+            "line": 1524,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "file": {
+                "copy": "testAnimatedImageContainersAreDetectedWithoutDecodingAllFrames/file1-input.png",
+                "name": "animated.png",
+                "sha256": "0f96595644478bc5216100f359dfde95940856aa43f72109b09c4e79e645f816",
+                "size": 28
+            },
+            "fn": "imageFrameCount",
+            "frames": 2
+        },
+        {
+            "file": {
+                "copy": "testAnimatedImageContainersAreDetectedWithoutDecodingAllFrames/file2-input.webp",
+                "name": "animated.webp",
+                "sha256": "066307d2062c280445a5f55c7bcbc98431afd3ef6f1eaff651f73a7b9c7d1970",
+                "size": 30
+            },
+            "fn": "imageFrameCount",
+            "frames": 2
+        },
+        {
+            "file": {
+                "copy": "testAnimatedImageContainersAreDetectedWithoutDecodingAllFrames/file3-input.tiff",
+                "name": "pages-bigtiff.tiff",
+                "sha256": "48de8c7a7d7e6c98ec714322b05f2ab644402a7437efd29398fb7cab3f3e429f",
+                "size": 48
+            },
+            "fn": "imageFrameCount",
+            "frames": 2
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testAnimatedImageContainersAreDetectedWithoutDecodingAllFrames"
+}

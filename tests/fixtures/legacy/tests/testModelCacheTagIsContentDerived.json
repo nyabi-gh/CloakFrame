@@ -1,0 +1,27 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cloakframe::ortModelCacheTag(bytes, digest) == QString::fromLatin1(digest.toHex())",
+            "failed": 0,
+            "line": 126,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::ortModelCacheTag(bytes, {}) == QString::fromLatin1(digest.toHex())",
+            "failed": 0,
+            "line": 127,
+            "passed": 1
+        },
+        {
+            "expr": "cloakframe::ortModelCacheTag(otherBytes, {}) != cloakframe::ortModelCacheTag(bytes, {})",
+            "failed": 0,
+            "line": 131,
+            "passed": 1
+        }
+    ],
+    "calls": [
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testModelCacheTagIsContentDerived"
+}

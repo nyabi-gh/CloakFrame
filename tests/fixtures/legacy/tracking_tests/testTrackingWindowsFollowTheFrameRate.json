@@ -1,0 +1,195 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "tracker.maxFramesLost == defaultTracker.maxFramesLost",
+            "failed": 0,
+            "line": 572,
+            "passed": 1
+        },
+        {
+            "expr": "tracker.maxFramesSinceHighScore == defaultTracker.maxFramesSinceHighScore",
+            "failed": 0,
+            "line": 573,
+            "passed": 1
+        },
+        {
+            "expr": "tracker.maxFramesSinceHighScoreMoving == defaultTracker.maxFramesSinceHighScoreMoving",
+            "failed": 0,
+            "line": 575,
+            "passed": 1
+        },
+        {
+            "expr": "postProcess.maxInterpolationGap == defaultPostProcess.maxInterpolationGap",
+            "failed": 0,
+            "line": 576,
+            "passed": 1
+        },
+        {
+            "expr": "postProcess.extensionFrames == defaultPostProcess.extensionFrames",
+            "failed": 0,
+            "line": 577,
+            "passed": 1
+        },
+        {
+            "expr": "postProcess.maxCutBoundaryGap == defaultPostProcess.maxCutBoundaryGap",
+            "failed": 0,
+            "line": 578,
+            "passed": 1
+        },
+        {
+            "expr": "postProcess.maxInterpolationGap == 40 && tracker.maxFramesLost == 60",
+            "failed": 0,
+            "line": 581,
+            "passed": 1
+        },
+        {
+            "expr": "postProcess.maxInterpolationGap == 16 && tracker.maxFramesLost == 24",
+            "failed": 0,
+            "line": 583,
+            "passed": 1
+        },
+        {
+            "expr": "postProcess.maxInterpolationGap == 20",
+            "failed": 0,
+            "line": 585,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "applyTrackingWindows",
+            "fps": 30,
+            "post_process": {
+                "extension_frames": 3,
+                "max_cut_boundary_gap": 30,
+                "max_interpolation_gap": 20,
+                "min_strong_detections": 3,
+                "retain_tracks_without_strong_detection": false,
+                "short_track_min_strong": 1,
+                "short_track_strong_ratio": 0.5,
+                "smoothing_radius": 2,
+                "strong_score_threshold": 0.5
+            },
+            "tracker": {
+                "coast_motion_threshold": 0.05000000074505806,
+                "high_score_threshold": 0.5,
+                "iou_threshold": 0.30000001192092896,
+                "low_score_threshold": 0.10000000149011612,
+                "max_frames_lost": 30,
+                "max_frames_since_high_score": 30,
+                "max_frames_since_high_score_moving": 45,
+                "velocity_blend": 0.30000001192092896
+            },
+            "windows": {
+                "extension_seconds": 0.1,
+                "max_cut_boundary_seconds": 1,
+                "max_interpolation_seconds": 0.6666666666666666,
+                "max_lost_seconds": 1,
+                "max_since_high_score_moving_seconds": 1.5,
+                "max_since_high_score_seconds": 1
+            }
+        },
+        {
+            "fn": "applyTrackingWindows",
+            "fps": 60,
+            "post_process": {
+                "extension_frames": 6,
+                "max_cut_boundary_gap": 60,
+                "max_interpolation_gap": 40,
+                "min_strong_detections": 3,
+                "retain_tracks_without_strong_detection": false,
+                "short_track_min_strong": 1,
+                "short_track_strong_ratio": 0.5,
+                "smoothing_radius": 2,
+                "strong_score_threshold": 0.5
+            },
+            "tracker": {
+                "coast_motion_threshold": 0.05000000074505806,
+                "high_score_threshold": 0.5,
+                "iou_threshold": 0.30000001192092896,
+                "low_score_threshold": 0.10000000149011612,
+                "max_frames_lost": 60,
+                "max_frames_since_high_score": 60,
+                "max_frames_since_high_score_moving": 90,
+                "velocity_blend": 0.30000001192092896
+            },
+            "windows": {
+                "extension_seconds": 0.1,
+                "max_cut_boundary_seconds": 1,
+                "max_interpolation_seconds": 0.6666666666666666,
+                "max_lost_seconds": 1,
+                "max_since_high_score_moving_seconds": 1.5,
+                "max_since_high_score_seconds": 1
+            }
+        },
+        {
+            "fn": "applyTrackingWindows",
+            "fps": 24,
+            "post_process": {
+                "extension_frames": 2,
+                "max_cut_boundary_gap": 24,
+                "max_interpolation_gap": 16,
+                "min_strong_detections": 3,
+                "retain_tracks_without_strong_detection": false,
+                "short_track_min_strong": 1,
+                "short_track_strong_ratio": 0.5,
+                "smoothing_radius": 2,
+                "strong_score_threshold": 0.5
+            },
+            "tracker": {
+                "coast_motion_threshold": 0.05000000074505806,
+                "high_score_threshold": 0.5,
+                "iou_threshold": 0.30000001192092896,
+                "low_score_threshold": 0.10000000149011612,
+                "max_frames_lost": 24,
+                "max_frames_since_high_score": 24,
+                "max_frames_since_high_score_moving": 36,
+                "velocity_blend": 0.30000001192092896
+            },
+            "windows": {
+                "extension_seconds": 0.1,
+                "max_cut_boundary_seconds": 1,
+                "max_interpolation_seconds": 0.6666666666666666,
+                "max_lost_seconds": 1,
+                "max_since_high_score_moving_seconds": 1.5,
+                "max_since_high_score_seconds": 1
+            }
+        },
+        {
+            "fn": "applyTrackingWindows",
+            "fps": 0,
+            "post_process": {
+                "extension_frames": 3,
+                "max_cut_boundary_gap": 30,
+                "max_interpolation_gap": 20,
+                "min_strong_detections": 3,
+                "retain_tracks_without_strong_detection": false,
+                "short_track_min_strong": 1,
+                "short_track_strong_ratio": 0.5,
+                "smoothing_radius": 2,
+                "strong_score_threshold": 0.5
+            },
+            "tracker": {
+                "coast_motion_threshold": 0.05000000074505806,
+                "high_score_threshold": 0.5,
+                "iou_threshold": 0.30000001192092896,
+                "low_score_threshold": 0.10000000149011612,
+                "max_frames_lost": 30,
+                "max_frames_since_high_score": 30,
+                "max_frames_since_high_score_moving": 45,
+                "velocity_blend": 0.30000001192092896
+            },
+            "windows": {
+                "extension_seconds": 0.1,
+                "max_cut_boundary_seconds": 1,
+                "max_interpolation_seconds": 0.6666666666666666,
+                "max_lost_seconds": 1,
+                "max_since_high_score_moving_seconds": 1.5,
+                "max_since_high_score_seconds": 1
+            }
+        }
+    ],
+    "source": "tests/tracking_tests.cpp @ v1.12.1",
+    "suite": "tracking_tests",
+    "test": "testTrackingWindowsFollowTheFrameRate"
+}

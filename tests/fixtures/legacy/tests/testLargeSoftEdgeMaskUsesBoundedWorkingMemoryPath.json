@@ -1,0 +1,62 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "image.at<cv::Vec3b>(750, 750) == cv::Vec3b(0, 0, 0)",
+            "failed": 0,
+            "line": 1757,
+            "passed": 1
+        },
+        {
+            "expr": "image.at<cv::Vec3b>(0, 0) == cv::Vec3b(100, 100, 100)",
+            "failed": 0,
+            "line": 1758,
+            "passed": 1
+        },
+        {
+            "expr": "feathered != cv::Vec3b(0, 0, 0)",
+            "failed": 0,
+            "line": 1760,
+            "passed": 1
+        },
+        {
+            "expr": "feathered != cv::Vec3b(100, 100, 100)",
+            "failed": 0,
+            "line": 1761,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "block_size": 8,
+            "detections": [
+                {
+                    "box": [
+                        100,
+                        100,
+                        1300,
+                        1300
+                    ],
+                    "has_pose": false,
+                    "roll": 0,
+                    "score": 1
+                }
+            ],
+            "fn": "applyAnonymization",
+            "image": {
+                "channels": 3,
+                "cols": 1500,
+                "depth_bits": 8,
+                "rows": 1500
+            },
+            "input_png": "testLargeSoftEdgeMaskUsesBoundedWorkingMemoryPath/1-input.png",
+            "method": "fill",
+            "output_png": "testLargeSoftEdgeMaskUsesBoundedWorkingMemoryPath/2-output.png",
+            "padding_ratio": 0,
+            "shape": "rectangle",
+            "soft_edges": true
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testLargeSoftEdgeMaskUsesBoundedWorkingMemoryPath"
+}

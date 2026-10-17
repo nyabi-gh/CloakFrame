@@ -1,0 +1,14 @@
+{
+    "backend": "CPU",
+    "decoded_size": [
+        512,
+        512
+    ],
+    "detections": [
+    ],
+    "image": "astronaut.png",
+    "model": "plate",
+    "nms_threshold": 0.4,
+    "omitted": 0,
+    "score_threshold": 0.25
+}

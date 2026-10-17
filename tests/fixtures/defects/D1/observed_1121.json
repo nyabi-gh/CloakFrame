@@ -1,0 +1,104 @@
+{
+  "pipeline": "processVideo, no detections, software encoder (libx264), defaults",
+  "runs": [
+    {
+      "input": "bt709-tv-1080p.mp4",
+      "source_tags": {
+        "color_space": "bt709",
+        "color_primaries": "bt709",
+        "color_transfer": "bt709",
+        "color_range": "tv"
+      },
+      "output_tags": {
+        "color_space": "unknown",
+        "color_primaries": "unknown",
+        "color_transfer": "unknown",
+        "color_range": "unknown"
+      },
+      "source_center_rgb_decoded_with_its_tags": [
+        201,
+        59,
+        39
+      ],
+      "output_center_rgb_as_bt709_tv": [
+        211,
+        71,
+        35
+      ],
+      "output_center_rgb_as_bt601_tv": [
+        199,
+        59,
+        38
+      ],
+      "source_center_y": 92,
+      "output_center_y": 101,
+      "output_mode": "0600"
+    },
+    {
+      "input": "bt709-pc-1080p.mp4",
+      "source_tags": {
+        "color_space": "bt709",
+        "color_primaries": "bt709",
+        "color_transfer": "bt709",
+        "color_range": "pc"
+      },
+      "output_tags": {
+        "color_space": "unknown",
+        "color_primaries": "unknown",
+        "color_transfer": "unknown",
+        "color_range": "unknown"
+      },
+      "source_center_rgb_decoded_with_its_tags": [
+        200,
+        60,
+        38
+      ],
+      "output_center_rgb_as_bt709_tv": [
+        211,
+        71,
+        33
+      ],
+      "output_center_rgb_as_bt601_tv": [
+        199,
+        59,
+        36
+      ],
+      "source_center_y": 88,
+      "output_center_y": 101,
+      "output_mode": "0600"
+    },
+    {
+      "input": "bt601-tv-480p.mp4",
+      "source_tags": {
+        "color_space": "smpte170m",
+        "color_primaries": "smpte170m",
+        "color_transfer": "smpte170m",
+        "color_range": "tv"
+      },
+      "output_tags": {
+        "color_space": "unknown",
+        "color_primaries": "unknown",
+        "color_transfer": "unknown",
+        "color_range": "unknown"
+      },
+      "source_center_rgb_decoded_with_its_tags": [
+        201,
+        60,
+        39
+      ],
+      "output_center_rgb_as_bt709_tv": [
+        211,
+        71,
+        33
+      ],
+      "output_center_rgb_as_bt601_tv": [
+        199,
+        59,
+        36
+      ],
+      "source_center_y": 102,
+      "output_center_y": 101,
+      "output_mode": "0600"
+    }
+  ]
+}

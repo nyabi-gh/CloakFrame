@@ -1,0 +1,59 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "std::find(jpeg.begin(), jpeg.end(), cv::IMWRITE_JPEG_QUALITY) != jpeg.end()",
+            "failed": 0,
+            "line": 2020,
+            "passed": 1
+        },
+        {
+            "expr": "std::find(jpeg.begin(), jpeg.end(), 100) != jpeg.end()",
+            "failed": 0,
+            "line": 2021,
+            "passed": 1
+        },
+        {
+            "expr": "std::find(png.begin(), png.end(), cv::IMWRITE_PNG_COMPRESSION) != png.end()",
+            "failed": 0,
+            "line": 2024,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::encodeParamsForExtension(\".bmp\").empty()",
+            "failed": 0,
+            "line": 2026,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "extension": ".JPG",
+            "fn": "encodeParamsForExtension",
+            "opencv_params": [
+                1,
+                100,
+                7,
+                1118481,
+                3,
+                1
+            ]
+        },
+        {
+            "extension": "png",
+            "fn": "encodeParamsForExtension",
+            "opencv_params": [
+                16,
+                6
+            ]
+        },
+        {
+            "extension": ".bmp",
+            "fn": "encodeParamsForExtension",
+            "opencv_params": [
+            ]
+        }
+    ],
+    "source": "tests/tests.cpp @ v1.12.1",
+    "suite": "tests",
+    "test": "testEncodeParams"
+}

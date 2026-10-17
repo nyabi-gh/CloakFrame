@@ -1,0 +1,45 @@
+{
+    "asserts_cpp": [
+        {
+            "expr": "cfrec::evaluateUpdateTrust(signedRelease(), releaseSignature(), QString()) == cloakframe::UpdateTrust::Unpinned",
+            "failed": 0,
+            "line": 250,
+            "passed": 1
+        },
+        {
+            "expr": "cfrec::evaluateUpdateTrust({}, QString(), QString()) == cloakframe::UpdateTrust::Unpinned",
+            "failed": 0,
+            "line": 252,
+            "passed": 1
+        }
+    ],
+    "calls": [
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "",
+            "release": {
+                "channel": "win",
+                "file_name": "CloakFrame-1.12.0-full.nupkg",
+                "sha256_hex": "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+                "version": "1.12.0"
+            },
+            "signature_base64": "ODzLa/zVr09xJ6rG8Sbn5AoWLSAAolzKuSn0PZsRJYLMma88Xm0gOUXdilSU9aLw8ItUxlRHRxlW2fH+5u8+DA==",
+            "trust": "unpinned"
+        },
+        {
+            "fn": "evaluateUpdateTrust",
+            "pinned_public_key_base64": "",
+            "release": {
+                "channel": "",
+                "file_name": "",
+                "sha256_hex": "",
+                "version": ""
+            },
+            "signature_base64": "",
+            "trust": "unpinned"
+        }
+    ],
+    "source": "tests/update_signature_tests.cpp @ v1.12.1",
+    "suite": "update_signature_tests",
+    "test": "testAnUnpinnedBuildSaysSoInsteadOfPassing"
+}

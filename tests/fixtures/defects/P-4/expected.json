@@ -1,0 +1,20 @@
+{
+  "id": "P-4",
+  "requirement": "mux 후 게시 전에 출력을 검사한다: stream 구성(영상 1, 오디오 원본 수 또는 0), duration, frame 수, 금지 metadata 없음, 전체 decode 오류 없음. 하나라도 실패하면 게시하지 않는다.",
+  "stage": "M4",
+  "cases": [
+    {
+      "scenario": "인코더가 프레임을 하나 덜 씀(실패 주입)",
+      "expect": "frame 수 불일치로 게시 안 함"
+    },
+    {
+      "scenario": "mux 직후 출력 파일 끝 4 KiB를 잘라냄(실패 주입)",
+      "expect": "decode 오류로 게시 안 함"
+    },
+    {
+      "scenario": "정상",
+      "expect": "frame 수 == TimelineSpec 프레임 수, |duration 차| ≤ 1 frame"
+    }
+  ],
+  "observed_1121": "코드 확인: processVideo는 인코더 종료 코드만 보고 게시. 단 디코드 중 복구된 오류는 게시하지 않음(legacy/video_io_tests/testRecoveredDecodeErrorsDoNotPublish, 유지)"
+}

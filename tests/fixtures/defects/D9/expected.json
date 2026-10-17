@@ -1,0 +1,32 @@
+{
+  "id": "D9",
+  "requirement": "원본 바이트 복사를 제공하지 않는다. '익명화 없이 내보내기'는 메타데이터를 제거한 재인코딩이다.",
+  "stage": "M2",
+  "input": "../../legacy/tests/testMetadataCopyAndOrientationNormalize/file2-source.jpg (Make·LensModel·Artist·CameraOwnerName·BodySerialNumber·LensSerialNumber·GPS·UserComment·XMP·comment)",
+  "expect": [
+    {
+      "mode": "익명화 없이 내보내기, 메타데이터 보존 끔",
+      "forbidden": "EXIF·XMP·IPTC·comment 전부 없음(ICC는 D2 규칙대로)"
+    },
+    {
+      "mode": "익명화 없이 내보내기, 메타데이터 보존 켬, GPS 동의 없음",
+      "allowed": "allowlist 31개만(Make·LensModel 남음)",
+      "forbidden": [
+        "Artist",
+        "CameraOwnerName",
+        "BodySerialNumber",
+        "LensSerialNumber",
+        "GPS*",
+        "UserComment",
+        "XMP",
+        "comment",
+        "thumbnail"
+      ]
+    },
+    {
+      "mode": "위 + GPS 동의",
+      "allowed": "allowlist + GPS"
+    }
+  ],
+  "observed_1121": "코드 확인(ProcessorWorker.cpp:1319-1323): '원본 복사' + 메타데이터 보존이면 파일을 바이트 그대로 복사. legacy/tests/testWorkerReportsCopiedOriginalAsWarning"
+}
