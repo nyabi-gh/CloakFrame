@@ -56,3 +56,11 @@ features = ["Win32_Storage_FileSystem"]
 targets = ["windows"]
 # 파일 identity(GetFileInformationByHandleEx FileIdInfo, NTFS·ReFS의 128비트 ID). 계획 3장의 파일시스템 항목.
 evidence = "crates/cloakframe-engine/src/identity.rs"
+
+[crates.rustix]
+version = "=1.1.5"
+features = ["fs"]
+dev-features = ["process"]
+targets = ["linux", "macos"]
+# no-replace rename(Linux renameat2 NOREPLACE, macOS renameatx_np RENAME_EXCL). 계획 3장의 파일시스템 항목.
+evidence = "crates/cloakframe-engine/src/publish.rs"

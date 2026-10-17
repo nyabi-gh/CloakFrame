@@ -15,6 +15,12 @@ path = "src/bin/cloakframe-cli.rs"
 [dependencies]
 cloakframe-core.workspace = true
 
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "=1.1.5", features = ["fs"] }
+
+[target.'cfg(unix)'.dev-dependencies]
+rustix = { version = "=1.1.5", features = ["fs", "process"] }
+
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem"] }
 

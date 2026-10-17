@@ -6,6 +6,8 @@ pub mod events;
 pub mod fs_case;
 pub mod identity;
 pub mod ordered;
+pub mod output_plan;
+pub mod publish;
 pub mod run;
 pub mod scan;
 
