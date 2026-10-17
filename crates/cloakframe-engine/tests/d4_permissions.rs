@@ -82,13 +82,26 @@ fn outputs_inherit_the_folder_acl() {
                 "-Command",
                 &format!("& {{ {script} }} '{}'", path.display()),
             ])
-            .status()
+            .output()
             .unwrap();
-        assert!(
-            checked.success(),
-            "{} does not inherit the folder ACL",
-            path.display()
-        );
+        if !checked.status.success() {
+            let listing = |p: &Path| {
+                let out = std::process::Command::new("icacls")
+                    .arg(p)
+                    .output()
+                    .unwrap();
+                String::from_utf8_lossy(&out.stdout).into_owned()
+            };
+            panic!(
+                "{} does not inherit the folder ACL\npowershell: {}{}\nicacls {}:\n{}\nicacls root:\n{}",
+                path.display(),
+                String::from_utf8_lossy(&checked.stdout),
+                String::from_utf8_lossy(&checked.stderr),
+                path.display(),
+                listing(path),
+                listing(&root),
+            );
+        }
     }
     std::fs::remove_dir_all(root).unwrap();
 }
