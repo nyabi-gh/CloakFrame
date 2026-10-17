@@ -87,7 +87,7 @@
 | 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 `api-27`로 macOS 공식 1.30.0·Windows ML 1.27.1 모두 세 모델의 CPU 결과와 CoreML·DML 결과가 1.12.1과 같음을 확인. `ort`의 세션 빌더는 EP 자동 선택 정책 `MaxEfficiency`를 기본으로 걸어 ORT 1.31이 CPU 세션에도 CoreML을 붙이므로, 세션마다 `with_auto_device(PreferCPU)`로 덮고 EP를 명시한다. RC이므로 정확한 버전으로 고정 |
 | 이미지 | `image` 0.25(필요 codec만), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(M0에서 바이트 일치 확인). 정확히 2배 축소일 때 OpenCV가 쓰는 `INTER_AREA` 경로는 아직 옮기지 않았으므로 M2에서 이식한다. `fast_image_resize`는 화면 표시용에만 |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
-| 동시성 | 작은 Tokio runtime(HTTP, 자식 프로세스 감독, 이벤트), Rayon pool(CPU 연산), 전용 추론 스레드 | CPU 연산을 async executor에서 돌리지 않는다 |
+| 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), Rayon pool(CPU 연산), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 HTTP(M3)와 자식 프로세스 감독(M4)이 들어올 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았다 |
 | 설정·로그·오류 | serde + TOML + `directories`, `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
 | 네트워크·무결성 | `reqwest` + rustls, `sha2`, `ed25519-dalek` | 모델·업데이트 URL allowlist |
