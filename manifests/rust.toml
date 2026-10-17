@@ -64,3 +64,13 @@ dev-features = ["process"]
 targets = ["linux", "macos"]
 # no-replace rename(Linux renameat2 NOREPLACE, macOS renameatx_np RENAME_EXCL). 계획 3장의 파일시스템 항목.
 evidence = "crates/cloakframe-engine/src/publish.rs"
+
+[crates.serde]
+version = "=1.0.229"
+features = ["derive"]
+# core가 쓰는 유일한 외부 crate. 세션 형식은 crates/cloakframe-core/tests/serde_forms.rs가 고정한다.
+evidence = "crates/cloakframe-engine/src/session.rs"
+
+[crates.serde_json]
+version = "=1.0.154"
+evidence = "crates/cloakframe-engine/src/session.rs"

@@ -1,8 +1,11 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::coverage::{CoverageEvidence, has_unresolved};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(transparent)]
 pub struct ItemId(pub u64);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

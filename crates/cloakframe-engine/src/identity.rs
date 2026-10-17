@@ -1,12 +1,34 @@
 use std::io;
 use std::path::Path;
 
+use serde::{Deserialize, Serialize};
+
 /// Which file a path names, independent of how the path is spelled (case, `..`, links to the
 /// same file). Two paths with the same identity are the same file.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct FileIdentity {
     device: u64,
     file: u128,
+}
+
+/// Identity plus size and modification time: a stored source is reused only while all three
+/// still match (plan 4.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SourceStamp {
+    pub identity: FileIdentity,
+    pub size: u64,
+    pub modified: std::time::SystemTime,
+}
+
+impl SourceStamp {
+    pub fn of(path: &Path) -> io::Result<Self> {
+        let metadata = std::fs::metadata(path)?;
+        Ok(Self {
+            identity: identity(path)?,
+            size: metadata.len(),
+            modified: metadata.modified()?,
+        })
+    }
 }
 
 /// Follows symbolic links, like `std::fs::metadata`.

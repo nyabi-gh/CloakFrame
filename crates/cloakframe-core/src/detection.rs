@@ -1,16 +1,20 @@
 use std::fmt;
 
+use serde::{Deserialize, Serialize};
+
 use crate::geometry::{Point, Rect};
 
 pub type FrameIndex = u64;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum DetectionKind {
     Face,
     Plate,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum ModelId {
     Yolo5FaceN,
     YuNet,
@@ -45,13 +49,45 @@ impl std::error::Error for DetectionError {}
 
 /// One detector output in source display coordinates. The kind comes from the model, so face and
 /// plate results keep separate thresholds and tracks (P-2).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(try_from = "DetectionFields", into = "DetectionFields")]
 pub struct Detection {
     model: ModelId,
     score: f32,
     bbox: Rect,
     landmarks: Option<[Point; 5]>,
     frame: Option<FrameIndex>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct DetectionFields {
+    model: ModelId,
+    score: f32,
+    bbox: Rect,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    landmarks: Option<[Point; 5]>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    frame: Option<FrameIndex>,
+}
+
+impl TryFrom<DetectionFields> for Detection {
+    type Error = DetectionError;
+
+    fn try_from(f: DetectionFields) -> Result<Self, Self::Error> {
+        Self::new(f.model, f.score, f.bbox, f.landmarks, f.frame)
+    }
+}
+
+impl From<Detection> for DetectionFields {
+    fn from(d: Detection) -> Self {
+        Self {
+            model: d.model,
+            score: d.score,
+            bbox: d.bbox,
+            landmarks: d.landmarks,
+            frame: d.frame,
+        }
+    }
 }
 
 impl Detection {

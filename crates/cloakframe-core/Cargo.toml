@@ -10,6 +10,10 @@ publish.workspace = true
 
 # std + serde만 쓴다. 파일·네트워크·GUI·ORT 의존성을 넣지 않는다(계획 4.1).
 [dependencies]
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

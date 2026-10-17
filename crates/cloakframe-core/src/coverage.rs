@@ -1,10 +1,13 @@
+use serde::{Deserialize, Serialize};
+
 use crate::detection::{FrameIndex, ModelId};
 use crate::geometry::Rect;
 
 pub type TrackId = u32;
 
 /// An automatic-detection problem that leaves part of the item possibly unmasked.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Problem {
     /// The model returned more candidates after NMS than the per-frame limit kept (D11).
     CappedCandidates {
@@ -31,7 +34,8 @@ pub enum Problem {
     },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Resolution {
     Unresolved,
     CoveredByManualMask,
@@ -41,8 +45,9 @@ pub enum Resolution {
 
 /// Opening or viewing the affected frames does not resolve a problem; only a manual mask or an
 /// explicit dismissal does (1.12.1 treated "shown" as checked).
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CoverageEvidence {
+    #[serde(flatten)]
     pub problem: Problem,
     pub resolution: Resolution,
 }

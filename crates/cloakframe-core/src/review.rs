@@ -1,9 +1,57 @@
-/// SHA-256 of an input, model set, settings or timeline, computed by the engine.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+use std::fmt;
+
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+/// SHA-256 of an input, model set, settings or timeline, computed by the engine. Stored as
+/// lowercase hex.
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Digest(pub [u8; 32]);
 
+impl fmt::Display for Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.iter().try_for_each(|b| write!(f, "{b:02x}"))
+    }
+}
+
+impl fmt::Debug for Digest {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Digest({self})")
+    }
+}
+
+impl std::str::FromStr for Digest {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        const INVALID: &str = "expected 64 hex digits";
+        if s.len() != 64 || !s.is_ascii() {
+            return Err(INVALID);
+        }
+        let mut bytes = [0; 32];
+        for (byte, pair) in bytes.iter_mut().zip(s.as_bytes().chunks(2)) {
+            let pair = std::str::from_utf8(pair).map_err(|_| INVALID)?;
+            *byte = u8::from_str_radix(pair, 16).map_err(|_| INVALID)?;
+        }
+        Ok(Self(bytes))
+    }
+}
+
+impl Serialize for Digest {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_str(self)
+    }
+}
+
+impl<'de> Deserialize<'de> for Digest {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        String::deserialize(deserializer)?
+            .parse()
+            .map_err(serde::de::Error::custom)
+    }
+}
+
 /// What a review was made against. Changing any part invalidates earlier review responses.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ReviewKey {
     pub input: Digest,
     pub models: Digest,
@@ -11,7 +59,7 @@ pub struct ReviewKey {
     pub timeline: Digest,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ReviewRevision {
     key: ReviewKey,
     number: u64,

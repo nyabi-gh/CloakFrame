@@ -1,13 +1,16 @@
 use std::fmt;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
 }
 
 /// Axis-aligned box in source display pixels, after EXIF orientation and video rotation.
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(try_from = "RectFields", into = "RectFields")]
 pub struct Rect {
     x: f32,
     y: f32,
@@ -31,6 +34,33 @@ impl fmt::Display for GeometryError {
 }
 
 impl std::error::Error for GeometryError {}
+
+#[derive(Serialize, Deserialize)]
+struct RectFields {
+    x: f32,
+    y: f32,
+    width: f32,
+    height: f32,
+}
+
+impl TryFrom<RectFields> for Rect {
+    type Error = GeometryError;
+
+    fn try_from(f: RectFields) -> Result<Self, Self::Error> {
+        Self::new(f.x, f.y, f.width, f.height)
+    }
+}
+
+impl From<Rect> for RectFields {
+    fn from(r: Rect) -> Self {
+        Self {
+            x: r.x,
+            y: r.y,
+            width: r.width,
+            height: r.height,
+        }
+    }
+}
 
 impl Rect {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Result<Self, GeometryError> {

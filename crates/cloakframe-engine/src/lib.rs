@@ -10,6 +10,7 @@ pub mod output_plan;
 pub mod publish;
 pub mod run;
 pub mod scan;
+pub mod session;
 
 #[cfg(test)]
 mod testdir;
