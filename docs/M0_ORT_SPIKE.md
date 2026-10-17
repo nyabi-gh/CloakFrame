@@ -1,6 +1,6 @@
 # M0 spike: ort + ONNX Runtime 모델 3종
 
-실행일: 2026-10-16. 장치: Apple M4, macOS 27.0.1. [Rust 포팅 계획](RUST_PORT_PLAN.md) M0의 "ort/ORT/EP 쌍으로 세 모델 로드·추론" 항목의 첫 결과다. Windows ML DirectML은 [아래 절](#windows-ml--directml), macOS `api-27` 재확인과 텔레메트리 감시는 [그다음 절](#macos-api-27-재확인과-텔레메트리), Linux는 [에뮬레이션 사전 실행](#linux-사전-실행-x86_64-에뮬레이션)만 있고 실기기는 [실행 절차](M0_PLATFORM_RUNBOOK.md)에 있다. spike 코드는 [`spikes/ort`](../spikes/ort)에 있다.
+실행일: 2026-10-16. 장치: Apple M4, macOS 27.0.1. [Rust 포팅 계획](RUST_PORT_PLAN.md) M0의 "ort/ORT/EP 쌍으로 세 모델 로드·추론" 항목의 첫 결과다. Windows ML DirectML은 [아래 절](#windows-ml--directml), macOS `api-27` 재확인과 텔레메트리 감시는 [그다음 절](#macos-api-27-재확인과-텔레메트리), Linux는 [에뮬레이션 사전 실행](#linux-사전-실행-x86_64-에뮬레이션)과 [GitHub Actions x86_64 실행](#linux-x86_64-실행-github-actions)에 있다. spike 코드는 [`spikes/ort`](../spikes/ort)에 있다.
 
 ## 결론
 
@@ -156,7 +156,7 @@ macOS에서 맞춘 구현을 다시 쓰면서 x86에서 처음엔 1 차이가 �
 
 - ORT 텔레메트리: 공식 빌드는 1.29부터 1DS를 담는다. 끄는 수단은 `ORT_DISABLE_TELEMETRY=1`이고, `with_telemetry(false)`는 보조로만 둔다. 환경 변수는 `main` 첫 줄, 다른 스레드가 생기기 전에 설정한다. 릴리스 시험에 netwatch 감시를 넣고, 새 ORT 버전마다 다시 돌린다.
 - EP: 세션마다 `with_auto_device(PreferCPU)`로 `ort`의 기본 정책을 덮은 뒤 EP를 명시한다. 번호판 모델은 모든 플랫폼에서 CPU로 시작하고, 가속 EP는 YOLO5Face에만 쓴다(Windows DML은 M0에서 번호판도 통과했으므로 M3에서 감지 0건 입력으로 다시 확인).
-- 1.12.1 패키지의 텔레메트리는 레거시 정책상 코드로 고치지 않는다. 사용자 안내(README·릴리스 노트)를 할지는 메인테이너가 정한다.
+- 1.12.1 패키지의 텔레메트리는 레거시 정책상 코드로 고치지 않고, README·릴리스 노트로 따로 안내하지도 않는다(2026-10-17 메인테이너 결정).
 
 ## Linux 사전 실행 (x86_64 에뮬레이션)
 
@@ -176,3 +176,20 @@ macOS에서 맞춘 구현을 다시 쓰면서 x86에서 처음엔 1 차이가 �
   에뮬레이션에서는 `strace`가 시스템 호출을 해석하지 못해 모든 경우 0으로 나왔다. 그래서 스크립트는 `LD_PRELOAD` 감시를 주 근거로, `strace`를 보조로 쓴다.
 - **1.12.1 Linux AppImage도 macOS 패키지처럼 텔레메트리 전송을 시도하는 상태였다.**
 - FFmpeg 파이프 spike는 Linux에서 실행 경로가 동작함을 확인하고 4K 인코드 중에 멈췄다(에뮬레이션 수치는 의미 없음).
+
+## Linux x86_64 실행 (GitHub Actions)
+
+실행일: 2026-10-17. 실기기를 쓸 수 없어 GitHub Actions `ubuntu-24.04` 러너(AMD EPYC 7763 4 vCPU, 16 GB, Ubuntu 24.04.5, glibc 2.39, 커널 6.17 azure)에서 같은 스크립트를 `--no-gui`로 돌렸다(`.github/workflows/m0-linux.yml`, run 39015269891). 에뮬레이션이 아닌 x86_64라 `strace`도 동작한다.
+
+- 공식 ORT 1.30.0 linux-x64 + `api-27` CPU: 54건 모두 1.12.1 fixture와 같음(개수 같음, IoU ≥ 0.999990, score 차 ≤ 4.5e-7, roll 차 ≤ 5.0e-6 rad). 시뮬레이션한 가속 실패 뒤 CPU 재실행 결과도 fixture와 같음. 지연 p50(512×512, 전처리 포함): YOLO5Face 58 ms, YuNet 19 ms, 번호판 39 ms.
+- `INTER_LINEAR` 이식: `opencv-python-headless` 5.0.0.93과 36쌍 모두 바이트 일치(IPP 켬·끔).
+- 텔레메트리(90초):
+
+| ORT | 설정 | collector 이름 조회(libnetwatch) | 시스템 호출(strace) | 저장소 |
+| --- | --- | --- | --- | --- |
+| 공식 1.30.0 | `ORT_DISABLE_TELEMETRY=1` + `with_telemetry(false)`, 네트워크 허용 | 0 | 0 | 변경 없음 |
+| 공식 1.30.0 | `ort` 기본, 네트워크 namespace | 10(`mobile.events.data.microsoft.com:443`) | 40 | `~/.cache/Microsoft/DeveloperTools/.onnxruntime/onnxruntime.db` |
+| 1.12.1 AppImage의 1.29.0 | 호출 없음(1.12.1 방식), 네트워크 namespace | 8 | 32 | 같은 저장소 |
+| 1.12.1 AppImage의 1.29.0 | 환경 변수만, 네트워크 namespace | 0 | 0 | 변경 없음 |
+
+  strace 수는 이름 조회 한 번에 DNS 질의 패킷 여러 개가 함께 잡혀 libnetwatch보다 크다. 두 감시가 같은 경우에서만 0이 아니다. 에뮬레이션 사전 실행의 결론이 실제 x86_64에서 그대로 확인됐다.

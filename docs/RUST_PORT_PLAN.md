@@ -260,7 +260,7 @@ crates/
 
 **점검 규칙:** 단계가 끝날 때마다 실제 소요를 이 표 옆에 적는다. 어느 단계든 예산의 125%를 넘으면(예: 4주 예산이 5주를 넘음) 아래 범위 조정 순서에서 아직 미루지 않은 첫 항목을 첫 stable 뒤로 미룬다. M5 끝에는 누적 소요를 전체 예산과 비교해 한 번 더 점검하고, 남은 단계(M6–M8 13주)가 남은 예산에 들어가지 않으면 다음 항목도 미룬다.
 
-### M0 — 위험 검증과 기준선 (진행 중)
+### M0 — 위험 검증과 기준선 (2026-10-17 완료)
 
 - **완료:**
   - Apple M4에서 `ort` rc.14 + ORT 1.30으로 세 모델의 CPU·CoreML MLProgram 결과가 1.12.1과 같음. YuNet 원시 출력 직접 해석. `INTER_LINEAR` 이식 resize 바이트 일치. ([기록](M0_ORT_SPIKE.md))
@@ -272,8 +272,7 @@ crates/
   - allowlist EXIF writer가 JPEG·PNG·WebP·TIFF 네 형식 모두에서 fixture 기대값과 같고, exiftool·Exiv2·Pillow·macOS ImageIO·libwebp·libtiff·ImageMagick이 모두 읽음. ([기록](M0_EXIF_WRITER.md))
   - macOS를 `api-27`로 다시 빌드해 공식 ORT 1.30.0에서 54건(세 모델 × 6장 × 3임계값)이 1.12.1 fixture와 같음. 텔레메트리는 `ORT_DISABLE_TELEMETRY=1`일 때만 전송 시도 0회. `ort` 기본 EP 정책과 CoreML 번호판 문제를 찾아 EP 정책에 반영. ([기록](M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리))
   - 버전·feature·네이티브 manifest: Rust 툴체인과 M0에서 정한 crate 버전·feature, ORT·Windows ML·FFmpeg·Sparkle·Velopack·글꼴·모델의 플랫폼별 버전·URL·SHA-256·라이선스·소스 위치. 모든 URL을 내려받아 해시 일치 확인. FFmpeg·Sparkle·Velopack은 1.12.1 고정값을 이어받아 M4·M7에서 다시 정함. ([manifests](../manifests/README.md))
-- **남은 작업:**
-  - Linux: 에뮬레이션 사전 실행에서 `api-27` CPU 54건 일치, `INTER_LINEAR` 36쌍 바이트 일치, 텔레메트리 기본값 전송 시도와 환경 변수 차단을 확인했다([기록](M0_ORT_SPIKE.md#linux-사전-실행-x86_64-에뮬레이션)). 실기기 대신 GitHub Actions `ubuntu-24.04` x86_64 러너에서 같은 스크립트를 GUI 없이 돌린다(`.github/workflows/m0-linux.yml`). 데스크톱 확인은 M6, 하드웨어 인코더는 M4로 옮김
+  - Linux x86_64(GitHub Actions `ubuntu-24.04`, 실기기 대신): `api-27` CPU 54건과 폴백 CPU 재실행이 1.12.1 fixture와 같음, `INTER_LINEAR` 36쌍 바이트 일치(IPP 켬·끔), 텔레메트리는 `ORT_DISABLE_TELEMETRY=1`일 때만 시도 0회(libnetwatch·strace 모두), 1.12.1 AppImage는 전송 시도. FFmpeg 2패스는 파이프 없는 구성과 같은 처리량. 데스크톱 확인은 M6, 하드웨어 인코더는 M4로 옮김. ([ORT 기록](M0_ORT_SPIKE.md#linux-x86_64-실행-github-actions), [FFmpeg 기록](M0_FFMPEG_PIPE.md#linux-x86_64-github-actions-소프트웨어만))
 - **뒤 단계로 옮긴 Windows 확인**(2026-10-17, Windows 10·Intel·AMD 장치를 지금 쓸 수 없음. 스크립트와 절차는 [실행 절차](M0_PLATFORM_RUNBOOK.md) 그대로 씀):
   - 작업 중 DML 실패(GPU 강제 리셋) 시 같은 입력의 CPU 재실행 → M3 완료 기준. 프로세스가 죽으면 0.1의 "driver crash → 프로세스 분리"를 그때 판단한다
   - 깨끗한 Windows 10 1903 VM에서 오프라인 실행 → M7 완료 기준(최소 지원 OS 설치·오프라인 실행). 실패하면 최소 OS 표기를 올린다. 오프라인 실행 자체는 Windows 11 Sandbox에서 확인함
