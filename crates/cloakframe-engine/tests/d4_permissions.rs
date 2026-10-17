@@ -76,7 +76,10 @@ fn outputs_inherit_the_folder_acl() {
         $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value -eq 'S-1-5-32-545' }; \
         if ($acl.AreAccessRulesProtected -or -not $users) { exit 1 }";
     for path in [&destination, &destination.parent().unwrap().to_path_buf()] {
+        // Windows PowerShell 5.1 cannot load its own Get-Acl module through a PSModulePath set up
+        // for PowerShell 7 (as on GitHub's runners); without it, 5.1 uses its default path.
         let checked = std::process::Command::new("powershell")
+            .env_remove("PSModulePath")
             .args([
                 "-NoProfile",
                 "-Command",
