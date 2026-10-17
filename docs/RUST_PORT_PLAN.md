@@ -265,16 +265,19 @@ crates/
 - **완료:**
   - Apple M4에서 `ort` rc.14 + ORT 1.30으로 세 모델의 CPU·CoreML MLProgram 결과가 1.12.1과 같음. YuNet 원시 출력 직접 해석. `INTER_LINEAR` 이식 resize 바이트 일치. ([기록](M0_ORT_SPIKE.md))
   - Windows ML 2.4.89(ORT 1.27.1)를 `ort::init_from`과 `api-27`로 불러 DML EP가 붙음. RTX 5080에서 세 모델의 CPU 결과가 1.12.1과 같고 DML 결과도 개수가 같음(IoU ≥ 0.999997). YOLO5Face-n·YuNet은 모든 노드가, 번호판은 NMS 하나만 빼고 DML에서 실행. 네트워크 없는 Windows 11 Sandbox에서 실행(정적 CRT 빌드 필요). x86에서 `INTER_LINEAR` 이식이 36개 크기 조합에서 바이트 일치. ([기록](M0_ORT_SPIKE.md#windows-ml--directml))
-  - macOS egui spike: 한글·일본어 표시, IME 조합 이벤트 처리, AccessKit 트리, 파일 드롭 이벤트, muda 메뉴(macOS 실행, Windows 타입 검사), 4K 확대·이동과 1080p 업로드(vsync 60 fps 유지) 통과. 실제 입력기·VoiceOver·Finder 드롭·메뉴 단축키는 사람 확인 대기. ([기록](M0_EGUI.md))
+  - macOS egui spike: 한글·일본어 표시, IME 조합 이벤트 처리, AccessKit 트리, 파일 드롭 이벤트, muda 메뉴(macOS 실행, Windows 타입 검사), 4K 확대·이동과 1080p 업로드(vsync 60 fps 유지) 통과. egui·winit 공개 이슈 조사에서 한국어·일본어 IME와 AccessKit에 대안 재평가가 필요한 결함이 없어 **egui 유지 확정**(2026-10-17). 남은 이슈(macOS 입력 소스 전환 직후 첫 자모 분리, X11 Fcitx5 조합 표시 없음 등)와 사람 확인 절차는 M6 점검으로 옮김. ([기록](M0_EGUI.md#공개-이슈-조사-2026-10-17))
   - 시간 예산(전업 환산 32주)과 단계별 배분, 점검 규칙, 범위 조정 순서를 정함(이 장 처음)
   - macOS FFmpeg 파이프 처리량: 파이프 상한 약 9.5 GB/s, 4K 2패스는 인코더가 결정(VideoToolbox 58 fps). 1.12.1 기준선과 같은 수준. ([기록](M0_FFMPEG_PIPE.md))
   - 기준 fixture: 1.12.1 시험 166개의 실제 입력·출력·assert를 기록하고 상태(규범·의도·변경·제거)를 붙임. D1–D12·P-1–P-7 전부 올바른 기대 결과를 쓰고 13개는 1.12.1에서 실패를 재현(P-3은 재현 안 됨, 회귀 시험으로 둠). 감지 기준 3모델 × 6장 × 3임계값, allowlist EXIF 기준. ([fixture](../tests/fixtures/README.md), 생성: `tools/fixture-extract/run.sh`)
   - allowlist EXIF writer가 JPEG·PNG·WebP·TIFF 네 형식 모두에서 fixture 기대값과 같고, exiftool·Exiv2·Pillow·macOS ImageIO·libwebp·libtiff·ImageMagick이 모두 읽음. ([기록](M0_EXIF_WRITER.md))
   - macOS를 `api-27`로 다시 빌드해 공식 ORT 1.30.0에서 54건(세 모델 × 6장 × 3임계값)이 1.12.1 fixture와 같음. 텔레메트리는 `ORT_DISABLE_TELEMETRY=1`일 때만 전송 시도 0회. `ort` 기본 EP 정책과 CoreML 번호판 문제를 찾아 EP 정책에 반영. ([기록](M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리))
+  - 버전·feature·네이티브 manifest: Rust 툴체인과 M0에서 정한 crate 버전·feature, ORT·Windows ML·FFmpeg·Sparkle·Velopack·글꼴·모델의 플랫폼별 버전·URL·SHA-256·라이선스·소스 위치. 모든 URL을 내려받아 해시 일치 확인. FFmpeg·Sparkle·Velopack은 1.12.1 고정값을 이어받아 M4·M7에서 다시 정함. ([manifests](../manifests/README.md))
 - **남은 작업:**
-  - Linux 사전 실행(x86 에뮬레이션): `api-27` CPU 54건 일치, `INTER_LINEAR` 이식이 x86 OpenCV와 36쌍 바이트 일치, 텔레메트리 기본값 전송 시도와 환경 변수 차단 확인. 실기기 확인은 남음. ([기록](M0_ORT_SPIKE.md#linux-사전-실행-x86_64-에뮬레이션))
-  - Windows: 깨끗한 Windows 10 1903 VM에서 오프라인 실행, 작업 중 DML 실패(GPU 강제 리셋) 시 같은 입력의 CPU 재실행, Intel·AMD GPU, 프로세스 소켓 감시. Linux: `api-27` CPU 비교, 텔레메트리 감시(1.12.1 AppImage 포함), FFmpeg 하드웨어 경로. 스크립트와 절차 준비 완료([실행 절차](M0_PLATFORM_RUNBOOK.md))
-  - egui 사람 확인: macOS 실제 IME·VoiceOver·Finder 드롭·메뉴 단축키([절차](M0_EGUI.md#사람이-할-확인-macos)), Windows·Linux의 IME·Narrator·Orca·드롭·GPU 없는 환경·원격 데스크톱([실행 절차](M0_PLATFORM_RUNBOOK.md))
+  - Linux: 에뮬레이션 사전 실행에서 `api-27` CPU 54건 일치, `INTER_LINEAR` 36쌍 바이트 일치, 텔레메트리 기본값 전송 시도와 환경 변수 차단을 확인했다([기록](M0_ORT_SPIKE.md#linux-사전-실행-x86_64-에뮬레이션)). 실기기 대신 GitHub Actions `ubuntu-24.04` x86_64 러너에서 같은 스크립트를 GUI 없이 돌린다(`.github/workflows/m0-linux.yml`). 데스크톱 확인은 M6, 하드웨어 인코더는 M4로 옮김
+- **뒤 단계로 옮긴 Windows 확인**(2026-10-17, Windows 10·Intel·AMD 장치를 지금 쓸 수 없음. 스크립트와 절차는 [실행 절차](M0_PLATFORM_RUNBOOK.md) 그대로 씀):
+  - 작업 중 DML 실패(GPU 강제 리셋) 시 같은 입력의 CPU 재실행 → M3 완료 기준. 프로세스가 죽으면 0.1의 "driver crash → 프로세스 분리"를 그때 판단한다
+  - 깨끗한 Windows 10 1903 VM에서 오프라인 실행 → M7 완료 기준(최소 지원 OS 설치·오프라인 실행). 실패하면 최소 OS 표기를 올린다. 오프라인 실행 자체는 Windows 11 Sandbox에서 확인함
+  - Intel·AMD GPU의 DML 결과, 프로세스 소켓 감시 → M8(12장 실제 장치·네트워크 감시 항목)
 - **완료 기준:** 버전·feature·네이티브 manifest, fixture 세트, 위 spike 결과와 결정 기록. 필수 항목(egui IME·접근성, DirectML)이 실패하면 대규모 구현 전에 대안을 재평가한다.
 
 ### M1 — headless 골격
@@ -290,7 +293,7 @@ crates/
 ### M3 — 모델·GPU·다운로드·타일
 
 - **작업:** YuNet·번호판 어댑터, 3장 EP 정책과 CPU 폴백, 모델 다운로드·캐시, 타일 모드, 종류별 임계값
-- **완료 기준:** 1.12.1 대비 허용오차 내 결과, 소규모 벤치마크 재현율, GPU 없을 때 CPU로 동작. D5·D7·D8·D11 시험 통과
+- **완료 기준:** 1.12.1 대비 허용오차 내 결과, 소규모 벤치마크 재현율, GPU 없을 때 CPU로 동작, Windows 실기기에서 GPU 강제 리셋 시 같은 입력을 CPU로 다시 실행(M0에서 옮김). D5·D7·D8·D11 시험 통과
 
 ### M4 — 영상 시간축·인코딩
 
@@ -305,17 +308,17 @@ crates/
 ### M6 — desktop 앱
 
 - **작업:** 6장 UX 전체, 사진·영상 검토 화면, 설정, 3개 언어·테마, 정보 창
-- **완료 기준:** 모든 흐름을 UI로 수행, `egui_kittest` 상호작용 시험, 실제 OS의 IME·파일 대화상자·스크린리더 점검. preview 릴리스 가능
+- **완료 기준:** 모든 흐름을 UI로 수행, `egui_kittest` 상호작용 시험, 실제 OS의 IME·파일 대화상자·스크린리더·드롭·메뉴 단축키·GPU 없는 환경·원격 데스크톱 점검([M0 egui 절차와 공개 이슈 목록](M0_EGUI.md), [Windows·Linux 절차](M0_PLATFORM_RUNBOOK.md)). preview 릴리스 가능
 
 ### M7 — 배포·업데이트·이전
 
 - **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 기존 feed로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, CloakFrame 설정(QSettings 읽기 어댑터 → TOML)과 모델 캐시 이전
-- **완료 기준:** 깨끗한 최소 지원 OS에서 설치·오프라인 실행·업데이트·제거, 1.12.1 → Rust 업데이트 경로 확인, 이전 실패 시 기존 데이터 불변. P-7 통과
+- **완료 기준:** 깨끗한 최소 지원 OS(Windows 10 1903 VM 포함, M0에서 옮김)에서 설치·오프라인 실행·업데이트·제거, 1.12.1 → Rust 업데이트 경로 확인, 이전 실패 시 기존 데이터 불변. P-7 통과
 
 ### M8 — 검증과 stable 전환
 
 - **작업:** 1.12.1 대비 품질·성능 비교, 장시간 안정성, 번역·접근성 점검, `CHANGES_FROM_1.12.md` 정리, 릴리스 문서
-- **완료 기준:** 12장 체크리스트 전부 충족
+- **완료 기준:** 12장 체크리스트 전부 충족. Windows는 NVIDIA·Intel·AMD 각각에서 DML 결과와 프로세스 소켓 감시를 포함(M0에서 옮김)
 
 ### M9 — HEIC·HDR 입력 (stable 직후)
 
@@ -386,7 +389,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 
 | 위험 | 확인 시점 | 대응 |
 | --- | --- | --- |
-| egui의 IME·접근성·그래픽 호환성 | M0, M6 | 필수 동작이 실패하면 iced·Slint를 같은 편집기 시나리오로 재평가. headless 우선이라 engine 작업은 버려지지 않음 |
+| egui의 IME·접근성·그래픽 호환성 | M6 (M0 공개 이슈 조사로 유지 확정) | 필수 동작이 실패하면 iced·Slint를 같은 편집기 시나리오로 재평가. headless 우선이라 engine 작업은 버려지지 않음 |
 | Windows ML이 ORT 버전을 정함(현재 1.27.1), DirectML은 유지보수 모드 | M0, M7 | Windows ML 패키지 버전을 manifest에 고정하고 세 OS의 `api-N`을 그 ORT에 맞춤. 맞는 짝이 없으면 그 버전에 머묾. DML 회귀는 실기기 게이트로 잡음 |
 | `ort` RC | M0, M3 | 확인한 정확한 버전으로 고정, 추론 어댑터 뒤에 숨김 |
 | 의존성 라이선스 호환 | 전 단계 | `cargo-deny`로 GPL·AGPL crate 차단, 네이티브는 manifest에 라이선스 기록(10.1) |

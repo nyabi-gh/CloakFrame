@@ -17,7 +17,20 @@
 | 4K 텍스처 확대·이동 | 통과 | 3840×2160 텍스처를 UV 자르기로 1–16배 확대하며 이동해도 vsync 60 fps 유지(아래 표) |
 | 1080p 30 fps 업로드 | 통과(여유 2배 이상) | 매 프레임 1920×1080 RGB → `ColorImage` → `TextureHandle::set`. vsync에서 60 fps 유지, 프레임 CPU p50 5.3 ms |
 
-필수 항목(IME·접근성)은 자동 시험 범위에서 실패가 없다. 실제 입력기와 VoiceOver 결과가 나오기 전까지 "egui 유지"를 확정하지 않는다.
+필수 항목(IME·접근성)은 자동 시험 범위에서 실패가 없고, 공개 이슈 조사(아래)에서도 대안 재평가가 필요한 결함이 없다. **egui 유지로 확정한다(2026-10-17).** 아래 사람 확인 절차는 M0에서 돌리지 않고 M6의 실제 OS 점검에서 쓴다.
+
+## 공개 이슈 조사 (2026-10-17)
+
+실제 입력기·스크린리더 확인 대신 egui·winit 이슈 트래커를 한국어·일본어 IME와 AccessKit 기준으로 조사했다. CJK IME는 0.34–0.35에서 크게 고쳐졌다(조합 확정 Enter의 줄바꿈 [#7876](https://github.com/emilk/egui/issues/7876), 조합 중 Backspace가 확정 글자를 지움 [#7908](https://github.com/emilk/egui/issues/7908), 일본어 확정 뒤 포커스 해제 [#7809](https://github.com/emilk/egui/issues/7809), 합자 조합 중복 [#8087](https://github.com/emilk/egui/issues/8087)이 모두 닫힘). 0.36.2에 남은 것은 아래와 같고, 모두 우회 가능하거나 이 앱의 입력 범위(설정·짧은 이름 칸)에서 영향이 작다.
+
+| 이슈 | 영향 | M6에서 할 일 |
+| --- | --- | --- |
+| winit [#3095](https://github.com/rust-windowing/winit/issues/3095): macOS에서 입력 소스를 한국어로 바꾼 직후 첫 자모가 조합 없이 확정됨 | 바꾼 직후 첫 글자만 "ㅇ안" 식으로 갈라짐 | 실제 2벌식으로 재현 확인, winit 갱신 추적 |
+| egui [#7974](https://github.com/emilk/egui/issues/7974) / winit [#4524](https://github.com/rust-windowing/winit/issues/4524): macOS 2벌식 Option+Return 한자 변환 창이 안 열림 | 한자 입력 불가(이 앱에서는 드묾) | 추적만 |
+| egui [#7975](https://github.com/emilk/egui/issues/7975): Linux X11 + Fcitx5에서 조합 중 글자가 입력란에 보이지 않음 | 확정은 되지만 조합 표시 없음. Wayland + IBus는 정상 | X11·Wayland 각각 확인, 알려진 제한으로 문서화 |
+| winit [#4508](https://github.com/rust-windowing/winit/issues/4508): Windows에서 조합 중에도 `KeyboardInput`이 옴 | 단축키가 조합 중 키와 겹칠 수 있음 | 앱 단축키를 조합 중에는 무시하는지 시험 |
+| egui [#8671](https://github.com/emilk/egui/issues/8671): 가려지거나 최소화된 창은 AccessKit 요청에 답하지 않음 | 창을 보이기 전까지 스크린리더가 트리를 못 받음 | 추적만 |
+| egui [#8700](https://github.com/emilk/egui/issues/8700): `egui_extras::Table`에 표·행·셀 역할 없음 | 결과 목록을 표로 만들면 스크린리더가 구조를 못 읽음 | 목록은 역할을 직접 붙이거나 Table 대신 리스트로 |
 
 ## 측정
 
@@ -139,3 +152,4 @@ cd spikes/egui
 - 6장 사진 검토: 원본 해상도 확대는 타일 텍스처(wgpu 기본 한도 8192).
 - 글꼴: 부분 집합 기준(한글 전체·JIS X 0208)과 이름 이체자 처리 방식을 M6에서 정한다. 번들 크기는 현재 Regular 두 개 4.1 MB.
 - 렌더러: wgpu를 기본으로 두고 glow를 대체 경로로 유지. GPU 없는 환경·원격 데스크톱에서 어느 쪽이 뜨는지는 Windows·Linux 절차로 확인한다.
+- 11장 위험: egui 유지 확정. 공개 이슈 표의 항목은 M6 실제 OS 점검 목록으로 옮긴다.

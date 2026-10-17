@@ -11,9 +11,11 @@
 | 1.12.1 패키지의 ORT가 텔레메트리를 보내는지 | 스크립트(AppImage 안 ORT) | — (DirectML 1.24.4는 ETW 경로) |
 | FFmpeg 파이프 처리량, 하드웨어 인코더 | 스크립트(VAAPI·NVENC 자동 감지) | 스크립트(NVENC·QSV·AMF 자동 감지) |
 | egui 성능 | 스크립트 | 스크립트 |
-| egui IME·스크린리더·드롭·메뉴·GPU 없음·원격 | 사람(아래) | 사람(아래) |
+| egui IME·스크린리더·드롭·메뉴·GPU 없음·원격(M6 점검으로 옮김, M0에서는 하지 않음) | 사람(아래) | 사람(아래) |
 | 깨끗한 최소 OS에서 오프라인 실행 | — | Windows 10 1903 VM(아래) |
 | Intel·AMD GPU | — | 해당 PC에서 같은 스크립트 |
+
+2026-10-17 기준 Linux는 GitHub Actions(`.github/workflows/m0-linux.yml`, `--no-gui`)로 돌리고, Windows 항목은 계획 8장의 M3·M7·M8 완료 기준으로 옮겼다. 이 절차는 그 단계에서 그대로 쓴다.
 
 결과는 각 스크립트가 만드는 폴더(또는 zip)의 `summary.txt`와 JSON·텍스트 파일을 그대로 넘겨 주면 된다. 기록 문서 반영은 그다음에 한다.
 

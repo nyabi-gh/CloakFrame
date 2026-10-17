@@ -1,0 +1,51 @@
+# M0에서 정한 Rust 툴체인과 crate 버전·feature. M1 workspace의 rust-toolchain.toml과
+# Cargo.toml은 이 값을 그대로 쓴다. 여기 없는 crate는 처음 들이는 단계에서 정하고 추가한다.
+# 근거는 각 항목의 evidence 문서에 있다.
+
+schema = 1
+
+[toolchain]
+channel = "1.98.1"
+# eframe 0.36의 MSRV. channel을 이 아래로 내리지 않는다.
+msrv = "1.95"
+evidence = "docs/RUST_PORT_PLAN.md#3-기술-스택"
+
+[crates.ort]
+version = "=2.0.0-rc.14"
+default-features = false
+features = ["std", "load-dynamic", "api-27"]
+features-macos = ["coreml"]
+features-windows = ["directml"]
+# api-N은 세 OS 중 가장 낮은 ORT(Windows ML 2.4.89 안의 1.27.1)가 정한다. api-30이면 Windows에서 BadVersion.
+# 세션마다 with_auto_device(PreferCPU)로 기본 EP 자동 선택(MaxEfficiency)을 덮는다.
+evidence = "docs/M0_ORT_SPIKE.md"
+
+[crates.eframe]
+version = "=0.36.2"
+default-features = false
+features = ["accesskit", "default_fonts", "wgpu", "glow", "wayland", "x11"]
+evidence = "docs/M0_EGUI.md"
+
+[crates.egui_kittest]
+version = "=0.36.2"
+features = ["wgpu", "snapshot"]
+dev = true
+evidence = "docs/M0_EGUI.md"
+
+[crates.muda]
+version = "=0.20.0"
+default-features = false
+# GTK 창에만 붙으므로 Linux에서는 쓰지 않는다. Windows는 winit with_msg_hook에서 TranslateAcceleratorW가 필요하다.
+targets = ["macos", "windows"]
+evidence = "docs/M0_EGUI.md"
+
+[crates.image]
+version = "=0.25.10"
+default-features = false
+features = ["jpeg", "png", "webp", "tiff"]
+# 손실 WebP 인코더가 없다(D6). M2에서 libwebp 바인딩을 정해 이 파일과 native.toml에 추가한다.
+evidence = "docs/M0_EXIF_WRITER.md"
+
+[crates.kamadak-exif]
+version = "=0.6.1"
+evidence = "docs/M0_EXIF_WRITER.md"

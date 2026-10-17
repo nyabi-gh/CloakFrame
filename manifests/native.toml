@@ -1,0 +1,200 @@
+# 앱과 함께 배포하거나 실행 중 내려받는 네이티브 구성 요소(계획 10장). 빌드와 앱은 여기 적힌
+# URL·해시만 쓰고 임의의 최신 판을 받지 않는다.
+#
+# status
+#   m0      M0에서 이 정확한 파일로 결과를 확인했다
+#   carried 1.12.1 릴리스의 고정값을 이어받았다. stage 단계에서 다시 정한다
+#
+# use
+#   bundle    패키지에 넣는다
+#   download  앱이 처음 쓸 때 내려받고 해시로 확인한다(저장소·패키지에 넣지 않음)
+
+schema = 1
+
+[[artifact]]
+id = "onnxruntime"
+platform = "macos-arm64"
+version = "1.30.0"
+url = "https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-osx-arm64-1.30.0.tgz"
+sha256 = "6ebb5062a934537c352937821f9fe9718e7de1a2db1122a93dd363ffd53a7012"
+license = "MIT"
+source = "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
+use = "bundle"
+status = "m0"
+# 1DS 텔레메트리를 담은 빌드. ORT_DISABLE_TELEMETRY=1을 main 첫 줄에서 설정해야 전송 시도가 없다.
+evidence = "docs/M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리"
+
+[[artifact]]
+id = "onnxruntime"
+platform = "linux-x86_64"
+version = "1.30.0"
+url = "https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-linux-x64-1.30.0.tgz"
+sha256 = "a5ed5a3cac51fbb2e90da632ae43d19212faaa20e76484e62bcb7c23ddb3b3fd"
+license = "MIT"
+source = "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
+use = "bundle"
+status = "m0"
+evidence = "docs/M0_ORT_SPIKE.md#linux-사전-실행-x86_64-에뮬레이션"
+
+[[artifact]]
+id = "windows-ml"
+platform = "windows-x64"
+version = "2.4.89"
+url = "https://api.nuget.org/v3-flatcontainer/microsoft.windows.ai.machinelearning/2.4.89/microsoft.windows.ai.machinelearning.2.4.89.nupkg"
+sha256 = "5c68ecfb947223267abf159a023f5192ad42725e4e9cc995e7c1470dd54dff63"
+# runtimes/win-x64/native의 onnxruntime.dll(ORT 1.27.1)과 DirectML.dll(1.15.4)만 쓴다.
+files = ["runtimes/win-x64/native/onnxruntime.dll", "runtimes/win-x64/native/DirectML.dll"]
+contains = { onnxruntime = "1.27.1", directml = "1.15.4" }
+license = "Microsoft Software License Terms"
+license_url = "https://www.nuget.org/packages/Microsoft.Windows.AI.MachineLearning/2.4.89/License"
+source = "none (proprietary; ORT 1.27.1 source is MIT at https://github.com/microsoft/onnxruntime/tree/v1.27.1)"
+use = "bundle"
+status = "m0"
+# 패키지가 정한 최소 OS가 Windows 10 1903(18362)이다. 약관 3b의 설치 시 동의 필요 여부는 M7 전에 정한다.
+evidence = "docs/M0_ORT_SPIKE.md#windows-ml--directml"
+
+[[artifact]]
+id = "ffmpeg"
+platform = "macos-arm64"
+version = "8.1.2"
+url = "https://ffmpeg.martin-riedl.de/download/macos/arm64/1783011502_8.1.2/ffmpeg.zip"
+sha256 = "ef1aa60006c7b77ce170c1608c08d8e4ba1c30c5746f2ac986ded932d0ac2c3c"
+license = "GPL-3.0-or-later"
+source = "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz"
+use = "bundle"
+status = "carried"
+stage = "M4"
+
+[[artifact]]
+id = "ffprobe"
+platform = "macos-arm64"
+version = "8.1.2"
+url = "https://ffmpeg.martin-riedl.de/download/macos/arm64/1783011502_8.1.2/ffprobe.zip"
+sha256 = "c39787f4af7a3932502d2d48db6f6feaaa836b48a73ef78c32cc3285df61dfaf"
+license = "GPL-3.0-or-later"
+source = "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz"
+use = "bundle"
+status = "carried"
+stage = "M4"
+
+[[artifact]]
+id = "ffmpeg"
+platform = "windows-x64"
+version = "8.1.2"
+url = "https://www.gyan.dev/ffmpeg/builds/packages/ffmpeg-8.1.2-essentials_build.zip"
+sha256 = "db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec"
+files = ["*/bin/ffmpeg.exe", "*/bin/ffprobe.exe"]
+license = "GPL-3.0-or-later"
+source = "https://ffmpeg.org/releases/ffmpeg-8.1.2.tar.xz"
+use = "bundle"
+status = "carried"
+# essentials와 full 중 무엇을 쓸지는 Windows M0의 NVENC·QSV·AMF 결과를 보고 M4에서 정한다.
+stage = "M4"
+
+[[artifact]]
+id = "ffmpeg"
+platform = "linux-x86_64"
+version = "n8.1.3-9-g29e619e767"
+url = "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-30-13-08/ffmpeg-n8.1.3-9-g29e619e767-linux64-gpl-8.1.tar.xz"
+sha256 = "97ce978979194b5cf7e06a5e68020dbdaa7a4f3294c5452b6a1bc347100dbb79"
+files = ["*/bin/ffmpeg", "*/bin/ffprobe"]
+license = "GPL-3.0-or-later"
+source = "https://github.com/FFmpeg/FFmpeg/tree/29e619e767"
+use = "bundle"
+status = "carried"
+stage = "M4"
+
+[[artifact]]
+id = "sparkle"
+platform = "macos-arm64"
+version = "2.9.4"
+url = "https://github.com/sparkle-project/Sparkle/releases/download/2.9.4/Sparkle-2.9.4.tar.xz"
+sha256 = "ce89daf967db1e1893ed3ebd67575ed82d3902563e3191ca92aaec9164fbdef9"
+license = "MIT"
+source = "https://github.com/sparkle-project/Sparkle/tree/2.9.4"
+use = "bundle"
+status = "carried"
+stage = "M7"
+
+[[artifact]]
+id = "velopack"
+platform = "windows-x64, linux-x86_64"
+version = "1.2.0"
+# 1.12.1의 C 라이브러리 고정값. Rust SDK(crate)와 vpk 도구 버전은 이 버전에 맞춰 M7에서 rust.toml에 적는다.
+url = "https://github.com/velopack/velopack/releases/download/1.2.0/velopack_libc_1.2.0.zip"
+sha256 = "547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835"
+license = "MIT"
+source = "https://github.com/velopack/velopack/tree/1.2.0"
+use = "bundle"
+status = "carried"
+stage = "M7"
+
+[[artifact]]
+id = "noto-sans-kr"
+platform = "all"
+version = "Sans2.004"
+url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/Sans/SubsetOTF/KR/NotoSansKR-Regular.otf"
+sha256 = "69975a0ac8472717870aefeab0a4d52739308d90856b9955313b2ad5e0148d68"
+license = "OFL-1.1"
+license_url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/LICENSE"
+license_sha256 = "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+source = "https://github.com/notofonts/noto-cjk/tree/Sans2.004"
+# 원본을 pyftsubset으로 잘라 번들한다(spikes/egui/fetch_fonts.sh). 이름 이체자 범위는 M6에서 정한다.
+use = "bundle"
+status = "m0"
+evidence = "docs/M0_EGUI.md"
+
+[[artifact]]
+id = "noto-sans-jp"
+platform = "all"
+version = "Sans2.004"
+url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/Sans/SubsetOTF/JP/NotoSansJP-Regular.otf"
+sha256 = "dff723ba59d57d136764a04b9b2d03205544f7cd785a711442d6d2d085ac5073"
+license = "OFL-1.1"
+license_url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/LICENSE"
+license_sha256 = "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+source = "https://github.com/notofonts/noto-cjk/tree/Sans2.004"
+use = "bundle"
+status = "m0"
+evidence = "docs/M0_EGUI.md"
+
+[[artifact]]
+id = "model-yolo5face-n"
+platform = "all"
+version = "yolov5n_face"
+url = "https://github.com/yakhyo/yolov5-face-onnx-inference/releases/download/weights/yolov5n_face.onnx"
+sha256 = "eb244a06e36999db732b317c2b30fa113cd6cfc1a397eaf738f2d6f33c01f640"
+size = 11021477
+# 코드 GPL-3.0(YOLO5Face), 학습 데이터 WIDER FACE는 비상업 연구용. 재배포하지 않고 사용자가 받는다.
+license = "non-commercial (upstream terms)"
+source = "https://github.com/deepcam-cn/yolov5-face"
+use = "download"
+status = "m0"
+evidence = "docs/M0_ORT_SPIKE.md"
+
+[[artifact]]
+id = "model-yunet"
+platform = "all"
+version = "2023mar"
+url = "https://github.com/opencv/opencv_zoo/raw/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet/face_detection_yunet_2023mar.onnx"
+sha256 = "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4"
+size = 232589
+license = "MIT"
+source = "https://github.com/opencv/opencv_zoo/tree/47534e27c9851bb1128ccc0102f1145e27f23f98/models/face_detection_yunet"
+use = "download"
+status = "m0"
+evidence = "docs/M0_ORT_SPIKE.md"
+
+[[artifact]]
+id = "model-plate-yolov9-t"
+platform = "all"
+version = "yolo-v9-t-512-end2end"
+url = "https://github.com/ankandrew/open-image-models/releases/download/assets/yolo-v9-t-512-license-plates-end2end.onnx"
+sha256 = "746fdd358ec110418775d7c9d8d07910d48b1a21471f92bf4421f6510d6daade"
+size = 7799480
+license = "MIT (open-image-models; YOLOv9 upstream terms apply)"
+source = "https://github.com/ankandrew/open-image-models"
+use = "download"
+status = "m0"
+# macOS에서도 CPU로 돌린다. 감지 0건일 때 CoreML EP가 빈 동적 텐서를 거부한다.
+evidence = "docs/M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리"
