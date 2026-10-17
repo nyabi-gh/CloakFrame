@@ -35,7 +35,9 @@ jobs:
         run: cargo fmt --all --check
 
       - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+        run: |
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          cargo clippy --workspace --all-targets --locked --all-features -- -D warnings
 
       - name: Check dependency licenses, sources and advisories
         uses: EmbarkStudios/cargo-deny-action@3c6349835b2b7b196a839186cb8b78e02f7b5f25 # v2.1.1
@@ -58,4 +60,5 @@ jobs:
         run: rustup toolchain install
 
       - name: Test
-        run: cargo test --workspace --locked
+        # `synthetic` adds the end-to-end CLI tests; release builds leave it off.
+        run: cargo test --workspace --locked --all-features

@@ -36,6 +36,15 @@ pub trait Detector: Send {
     fn detect(&mut self, image: &Rgb8Image) -> Result<Vec<Detection>, DetectError>;
 }
 
+/// Finds nothing. For runs that do not detect, and for tests.
+pub struct NoDetections;
+
+impl Detector for NoDetections {
+    fn detect(&mut self, _: &Rgb8Image) -> Result<Vec<Detection>, DetectError> {
+        Ok(Vec::new())
+    }
+}
+
 type Request = (
     Rgb8Image,
     mpsc::SyncSender<Result<Vec<Detection>, DetectError>>,

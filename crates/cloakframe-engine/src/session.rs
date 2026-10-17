@@ -12,6 +12,7 @@ use cloakframe_core::review::ReviewRevision;
 use serde::{Deserialize, Serialize};
 
 use crate::identity::SourceStamp;
+use crate::output_plan::Conflict;
 use crate::publish::TEMP_PREFIX;
 
 pub const FORMAT_VERSION: u32 = 1;
@@ -28,6 +29,12 @@ pub struct Session {
 pub struct SessionItem {
     pub item: ItemId,
     pub input: PathBuf,
+    /// Relative to the session's output folder.
+    pub destination: PathBuf,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conflict: Option<Conflict>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub suggestion: Option<PathBuf>,
     pub source: SourceStamp,
     pub revision: ReviewRevision,
     pub detections: Vec<Detection>,
@@ -200,6 +207,9 @@ mod tests {
             output: dir.path().join("out"),
             items: vec![SessionItem {
                 item: ItemId(0),
+                destination: PathBuf::from("photo.jpg"),
+                conflict: None,
+                suggestion: None,
                 source: SourceStamp::of(&input).unwrap(),
                 input,
                 revision: ReviewRevision::first(key),

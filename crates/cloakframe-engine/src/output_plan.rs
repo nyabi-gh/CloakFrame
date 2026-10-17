@@ -2,10 +2,13 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
+use serde::{Deserialize, Serialize};
+
 use crate::fs_case::NameCase;
 use crate::scan::{MediaKind, ScannedFile};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Conflict {
     /// A file or folder already has this name. It is never replaced.
     Existing,
@@ -80,7 +83,7 @@ pub fn plan_outputs(files: &[ScannedFile], output: &Path) -> Vec<PlannedOutput> 
 }
 
 /// `photo.jpg` → `photo (2).jpg`, `photo (3).jpg`, … until `is_free` accepts one.
-fn free_name(name: &str, is_free: impl Fn(&str) -> bool) -> String {
+pub fn free_name(name: &str, is_free: impl Fn(&str) -> bool) -> String {
     let (stem, extension) = match name.rfind('.') {
         Some(dot) if dot > 0 => name.split_at(dot),
         _ => (name, ""),

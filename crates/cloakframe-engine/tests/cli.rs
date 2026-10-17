@@ -1,0 +1,298 @@
+//! The M1 exit criteria end to end through `cloakframe-cli` with the synthetic processor: normal,
+//! failing and review paths, sources and existing outputs left unchanged, no temp file under a
+//! final name, and P-1 (nothing with an unresolved problem is published unless explicitly
+//! exported with warnings).
+#![cfg(feature = "synthetic")]
+
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::atomic::{AtomicU32, Ordering};
+
+struct Fixture {
+    root: PathBuf,
+}
+
+impl Fixture {
+    fn new() -> Self {
+        static NEXT: AtomicU32 = AtomicU32::new(0);
+        let root = std::env::temp_dir().join(format!(
+            "cloakframe-cli-{}-{}",
+            std::process::id(),
+            NEXT.fetch_add(1, Ordering::Relaxed)
+        ));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("in")).unwrap();
+        Self { root }
+    }
+
+    fn input(&self, name: &str, bytes: &[u8]) -> PathBuf {
+        let path = self.root.join("in").join(name);
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, bytes).unwrap();
+        path
+    }
+
+    fn out(&self) -> PathBuf {
+        self.root.join("out")
+    }
+
+    fn cli(&self, args: &[&str]) -> (i32, String) {
+        let output = Command::new(env!("CARGO_BIN_EXE_cloakframe-cli"))
+            .args(args)
+            .arg("--sessions")
+            .arg(self.root.join("sessions"))
+            .arg("--synthetic")
+            .output()
+            .unwrap();
+        (
+            output.status.code().unwrap(),
+            String::from_utf8(output.stdout).unwrap(),
+        )
+    }
+
+    fn run(&self, review: &str) -> (i32, String) {
+        let input = self.root.join("in");
+        let out = self.out();
+        self.cli(&[
+            "run",
+            "--output",
+            out.to_str().unwrap(),
+            "--review",
+            review,
+            "--recursive",
+            input.to_str().unwrap(),
+        ])
+    }
+
+    fn review(&self, session: &str, decisions: &str) -> (i32, String) {
+        let path = self.root.join("decisions.json");
+        std::fs::write(&path, decisions).unwrap();
+        self.cli(&[
+            "review",
+            "--session",
+            session,
+            "--decisions",
+            path.to_str().unwrap(),
+        ])
+    }
+
+    fn sessions(&self) -> usize {
+        std::fs::read_dir(self.root.join("sessions")).map_or(0, |d| d.count())
+    }
+}
+
+impl Drop for Fixture {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.root);
+    }
+}
+
+fn session_id(stdout: &str) -> String {
+    stdout
+        .lines()
+        .find_map(|l| l.strip_prefix("session\t"))
+        .expect("a session was saved")
+        .to_owned()
+}
+
+fn files(dir: &Path) -> Vec<String> {
+    let mut found = Vec::new();
+    let mut pending = vec![dir.to_path_buf()];
+    while let Some(d) = pending.pop() {
+        for e in std::fs::read_dir(&d).into_iter().flatten() {
+            let e = e.unwrap();
+            if e.file_type().unwrap().is_dir() {
+                pending.push(e.path());
+            } else {
+                let relative = e.path().strip_prefix(dir).unwrap().to_owned();
+                found.push(relative.to_string_lossy().replace('\\', "/"));
+            }
+        }
+    }
+    found.sort();
+    found
+}
+
+fn reversed(bytes: &[u8]) -> Vec<u8> {
+    bytes.iter().rev().copied().collect()
+}
+
+#[test]
+fn automatic_run_publishes_every_clean_item_and_leaves_sources_alone() {
+    let f = Fixture::new();
+    let a = f.input("a.jpg", b"first image");
+    let b = f.input("nested/b.png", b"second image");
+    let (code, stdout) = f.run("off");
+    assert_eq!(code, 0, "{stdout}");
+    assert_eq!(files(&f.out()), ["a.jpg", "nested/b.png"]);
+    assert_eq!(
+        std::fs::read(f.out().join("a.jpg")).unwrap(),
+        reversed(b"first image")
+    );
+    assert_eq!(std::fs::read(&a).unwrap(), b"first image");
+    assert_eq!(std::fs::read(&b).unwrap(), b"second image");
+    assert_eq!(f.sessions(), 0);
+    assert!(stdout.contains("published (automatic, unreviewed)"));
+}
+
+#[test]
+fn a_failing_item_fails_alone() {
+    let f = Fixture::new();
+    f.input("ok.jpg", b"ok");
+    f.input("fail.jpg", b"broken");
+    let (code, stdout) = f.run("off");
+    assert_eq!(code, 1, "{stdout}");
+    assert_eq!(files(&f.out()), ["ok.jpg"]);
+    assert!(stdout.contains("failed") && stdout.contains("synthetic decode failure"));
+}
+
+#[test]
+fn an_existing_output_is_kept_and_the_item_waits_for_a_new_name() {
+    let f = Fixture::new();
+    f.input("a.jpg", b"new");
+    std::fs::create_dir_all(f.out()).unwrap();
+    std::fs::write(f.out().join("a.jpg"), b"user's file").unwrap();
+
+    let (code, stdout) = f.run("off");
+    assert_eq!(code, 3, "{stdout}");
+    assert_eq!(
+        std::fs::read(f.out().join("a.jpg")).unwrap(),
+        b"user's file"
+    );
+    assert_eq!(files(&f.out()), ["a.jpg"]);
+    let session = session_id(&stdout);
+
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [{"item": 0, "revision": 0, "action": "approve"}]}"#,
+    );
+    assert_eq!(code, 1, "{stdout}");
+    assert!(stdout.contains("a (2).jpg"), "{stdout}");
+
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [{"item": 0, "revision": 0, "action": "approve", "rename_to": "a (2).jpg"}]}"#,
+    );
+    assert_eq!(code, 0, "{stdout}");
+    assert_eq!(files(&f.out()), ["a (2).jpg", "a.jpg"]);
+    assert_eq!(
+        std::fs::read(f.out().join("a.jpg")).unwrap(),
+        b"user's file"
+    );
+    assert_eq!(f.sessions(), 0);
+}
+
+// P-1: unresolved problems hold the item back even with review off.
+#[test]
+fn unresolved_problems_publish_nothing_until_resolved_or_explicitly_exported() {
+    let f = Fixture::new();
+    f.input("clip-gap.jpg", b"gap");
+    f.input("crowd-capped.jpg", b"capped");
+    f.input("clean.jpg", b"clean");
+
+    let (code, stdout) = f.run("off");
+    assert_eq!(code, 3, "{stdout}");
+    assert_eq!(files(&f.out()), ["clean.jpg"]);
+    let session = session_id(&stdout);
+    let stored =
+        std::fs::read_to_string(f.root.join("sessions").join(format!("{session}.json"))).unwrap();
+    assert!(stored.contains("\"unresolved_gap\"") && stored.contains("\"capped_candidates\""));
+
+    // Approving without resolving is refused, and nothing is written.
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [{"item": 1, "revision": 0, "action": "approve"}]}"#,
+    );
+    assert_eq!(code, 1, "{stdout}");
+    assert!(stdout.contains("unresolved detection problems remain"));
+    assert_eq!(files(&f.out()), ["clean.jpg"]);
+
+    // Dismissing the gap publishes that item as reviewed; the capped one is exported with
+    // warnings, which is published but not a normal completion.
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [
+            {"item": 1, "revision": 0, "action": "approve",
+             "resolutions": [{"evidence": 0, "resolution": "dismissed"}]},
+            {"item": 2, "revision": 0, "action": "export_with_warnings"}
+        ]}"#,
+    );
+    assert_eq!(code, 0, "{stdout}");
+    assert!(stdout.contains("published (reviewed)"));
+    assert!(stdout.contains("exported with warnings"));
+    assert_eq!(
+        files(&f.out()),
+        ["clean.jpg", "clip-gap.jpg", "crowd-capped.jpg"]
+    );
+    assert_eq!(f.sessions(), 0);
+}
+
+#[test]
+fn review_required_publishes_nothing_before_review() {
+    let f = Fixture::new();
+    f.input("a.jpg", b"a");
+    let (code, stdout) = f.run("required");
+    assert_eq!(code, 3, "{stdout}");
+    assert!(files(&f.out()).is_empty());
+    assert_eq!(f.sessions(), 1);
+}
+
+#[test]
+fn stale_or_changed_reviews_are_refused() {
+    let f = Fixture::new();
+    let a = f.input("a.jpg", b"a");
+    f.input("b.jpg", b"b");
+    let (_, stdout) = f.run("required");
+    let session = session_id(&stdout);
+
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [{"item": 0, "revision": 3, "action": "approve"}]}"#,
+    );
+    assert_eq!(code, 1);
+    assert!(stdout.contains("older revision"), "{stdout}");
+
+    std::fs::write(&a, b"edited after analysis").unwrap();
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [{"item": 0, "revision": 0, "action": "approve"}]}"#,
+    );
+    assert_eq!(code, 1);
+    assert!(stdout.contains("source file changed"), "{stdout}");
+
+    let (code, stdout) = f.review(
+        &session,
+        r#"{"items": [{"item": 1, "revision": 0, "action": "approve"}]}"#,
+    );
+    assert_eq!(code, 3, "{stdout}");
+    assert_eq!(files(&f.out()), ["b.jpg"]);
+    assert_eq!(f.sessions(), 1);
+}
+
+#[test]
+fn the_output_folder_inside_the_input_is_not_scanned() {
+    let f = Fixture::new();
+    f.input("a.jpg", b"a");
+    let out = f.root.join("in/out");
+    let input = f.root.join("in");
+    for _ in 0..2 {
+        let (code, stdout) = f.cli(&[
+            "run",
+            "--output",
+            out.to_str().unwrap(),
+            "--review",
+            "off",
+            input.to_str().unwrap(),
+        ]);
+        assert!(code == 0 || code == 3, "{stdout}");
+    }
+    assert_eq!(files(&out), ["a.jpg"]);
+}
+
+#[test]
+fn usage_errors_exit_with_two() {
+    let f = Fixture::new();
+    assert_eq!(f.cli(&["run"]).0, 2);
+    assert_eq!(f.cli(&["frobnicate"]).0, 2);
+    assert_eq!(f.cli(&["review", "--session", "../x"]).0, 2);
+}

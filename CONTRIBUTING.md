@@ -40,7 +40,8 @@ measurements; see their records in `docs/M0_*.md`.
    ```bash
    cargo fmt --all --check
    cargo clippy --workspace --all-targets --locked -- -D warnings
-   cargo test --workspace --locked
+   cargo clippy --workspace --all-targets --locked --all-features -- -D warnings
+   cargo test --workspace --locked --all-features
    cargo deny check
    node --test .github/scripts/update-download-badge.test.js
    ```

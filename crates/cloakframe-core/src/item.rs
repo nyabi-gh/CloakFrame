@@ -88,6 +88,15 @@ impl Item {
         }
     }
 
+    /// An item whose analysis was stored in a review session and is being resumed. It still has to
+    /// go through review approval or an explicit export with warnings before it can render.
+    pub fn awaiting_review(id: ItemId) -> Self {
+        Self {
+            id,
+            state: ItemState::NeedsReview,
+        }
+    }
+
     pub fn id(&self) -> ItemId {
         self.id
     }
@@ -344,6 +353,21 @@ mod tests {
         let permit = PublishPermit::issue(&item, &evidence).unwrap();
         item.publish(permit).unwrap();
         assert_eq!(item.state(), ItemState::Published(PublishBasis::Reviewed));
+    }
+
+    #[test]
+    fn a_resumed_item_still_needs_approval_or_an_explicit_export() {
+        let mut item = Item::awaiting_review(ItemId(4));
+        assert!(item.start_render().is_err());
+        assert_eq!(
+            item.approve_review(&[gap()]),
+            Err(TransitionError::UnresolvedProblems)
+        );
+        item.export_with_warnings().unwrap();
+        assert_eq!(
+            item.state(),
+            ItemState::ReadyForRender(PublishBasis::ExportedWithWarnings)
+        );
     }
 
     #[test]

@@ -5,7 +5,9 @@ use std::sync::{Arc, mpsc};
 use std::thread;
 
 use cloakframe_core::coverage::CoverageEvidence;
+use cloakframe_core::detection::Detection;
 use cloakframe_core::item::{Item, ItemId, ItemState, PublishBasis, PublishPermit, ReviewMode};
+use cloakframe_core::review::Digest;
 
 use crate::cancel::CancelToken;
 use crate::detect::DetectorHandle;
@@ -34,6 +36,8 @@ impl std::error::Error for StepError {}
 pub struct ItemContext<'a> {
     pub item: ItemId,
     pub input: &'a Path,
+    /// Where the output is published. Its folder holds the temp output while rendering.
+    pub destination: &'a Path,
     pub cancel: &'a CancelToken,
     pub detector: &'a DetectorHandle,
     pub progress: ProgressReporter,
@@ -42,15 +46,56 @@ pub struct ItemContext<'a> {
 /// The media-specific steps of one item. The runner owns the state machine and the publish
 /// permit; a processor only does the work and reports what it could not cover.
 pub trait ItemProcessor: Send + Sync + 'static {
-    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Vec<CoverageEvidence>, StepError>;
-    /// Renders the output to a temporary file and verifies it.
-    fn render(&self, ctx: &ItemContext<'_>) -> Result<(), StepError>;
+    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Analysis, StepError>;
+    /// Renders the output to a temporary file next to `ctx.destination` and verifies it.
+    fn render(&self, ctx: &ItemContext<'_>, analysis: &Analysis) -> Result<(), StepError>;
     fn publish(&self, ctx: &ItemContext<'_>, permit: &PublishPermit) -> Result<(), StepError>;
+    /// What besides the input decides the results. A stored review is bound to it, so changing
+    /// models or settings invalidates earlier review decisions.
+    fn fingerprint(&self) -> Fingerprint;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Fingerprint {
+    pub models: Digest,
+    pub settings: Digest,
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Analysis {
+    pub detections: Vec<Detection>,
+    pub evidence: Vec<CoverageEvidence>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Decision {
+    Approve,
+    ExportWithWarnings,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Start {
+    /// `needs_review` holds the item for review even in automatic mode, for example because its
+    /// output name is taken.
+    Fresh { needs_review: bool },
+    /// Resumes a stored analysis with the reviewer's decision; evidence carries the resolutions.
+    Reviewed {
+        decision: Decision,
+        analysis: Analysis,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct JobItem {
+    pub id: ItemId,
+    pub input: PathBuf,
+    pub destination: PathBuf,
+    pub start: Start,
 }
 
 #[derive(Debug, Clone)]
 pub struct Job {
-    pub inputs: Vec<PathBuf>,
+    pub items: Vec<JobItem>,
     pub review: ReviewMode,
     pub workers: usize,
 }
@@ -59,8 +104,9 @@ pub struct Job {
 pub struct ItemOutcome {
     pub item: ItemId,
     pub input: PathBuf,
+    pub destination: PathBuf,
     pub state: ItemState,
-    pub evidence: Vec<CoverageEvidence>,
+    pub analysis: Analysis,
     pub failure: Option<String>,
 }
 
@@ -127,16 +173,16 @@ impl RunHandle {
     }
 }
 
-pub fn start<P: ItemProcessor>(
+pub fn start(
     job: Job,
-    processor: Arc<P>,
+    processor: Arc<dyn ItemProcessor>,
     detector: DetectorHandle,
 ) -> std::io::Result<RunHandle> {
     let (sender, events) = mpsc::sync_channel(EVENT_CAPACITY);
     let progress = ProgressBoard::default();
     let cancel = CancelToken::new();
-    let ids: Vec<ItemId> = (0..job.inputs.len() as u64).map(ItemId).collect();
-    let items: BTreeMap<ItemId, CancelToken> = ids.iter().map(|&id| (id, cancel.child())).collect();
+    let items: BTreeMap<ItemId, CancelToken> =
+        job.items.iter().map(|i| (i.id, cancel.child())).collect();
 
     let run = Runner {
         job,
@@ -149,7 +195,7 @@ pub fn start<P: ItemProcessor>(
     };
     let thread = thread::Builder::new()
         .name("cloakframe-run".into())
-        .spawn(move || run.run(ids))?;
+        .spawn(move || run.run())?;
     Ok(RunHandle {
         events,
         progress,
@@ -159,9 +205,9 @@ pub fn start<P: ItemProcessor>(
     })
 }
 
-struct Runner<P> {
+struct Runner {
     job: Job,
-    processor: Arc<P>,
+    processor: Arc<dyn ItemProcessor>,
     detector: DetectorHandle,
     events: mpsc::SyncSender<Event>,
     progress: ProgressBoard,
@@ -169,26 +215,26 @@ struct Runner<P> {
     items: BTreeMap<ItemId, CancelToken>,
 }
 
-impl<P: ItemProcessor> Runner<P> {
+impl Runner {
     fn emit(&self, event: Event) {
         // A dropped receiver means nobody is listening; the run still finishes its items.
         let _ = self.events.send(event);
     }
 
-    fn run(self, ids: Vec<ItemId>) {
-        for &item in &ids {
+    fn run(self) {
+        for job_item in &self.job.items {
             self.emit(Event::ItemState {
-                item,
-                state: ItemState::Queued,
+                item: job_item.id,
+                state: initial(job_item).state(),
             });
         }
-        let mut outcomes: Vec<Option<ItemOutcome>> = vec![None; ids.len()];
+        let mut outcomes: Vec<Option<ItemOutcome>> = vec![None; self.job.items.len()];
         let result = process_ordered(
-            ids.len(),
+            self.job.items.len(),
             self.job.workers,
             self.job.workers.max(1) * 2,
             &self.cancel,
-            |i| Ok::<_, std::convert::Infallible>(self.process(ids[i], &self.job.inputs[i])),
+            |i| Ok::<_, std::convert::Infallible>(self.process(&self.job.items[i])),
             |i, outcome| {
                 outcomes[i] = Some(outcome);
                 Ok(())
@@ -198,23 +244,29 @@ impl<P: ItemProcessor> Runner<P> {
             Ok(()) => {}
             Err(never) => match never {},
         }
-        let items = ids
+        let items = self
+            .job
+            .items
             .iter()
             .zip(outcomes)
-            .map(|(&item, outcome)| {
+            .map(|(job_item, outcome)| {
                 outcome.unwrap_or_else(|| {
                     // Never started because the run was cancelled.
-                    let mut queued = Item::new(item);
-                    queued.cancel().expect("queued items can be cancelled");
+                    let mut item = initial(job_item);
+                    item.cancel().expect("unstarted items can be cancelled");
                     self.emit(Event::ItemState {
-                        item,
-                        state: queued.state(),
+                        item: job_item.id,
+                        state: item.state(),
                     });
                     ItemOutcome {
-                        item,
-                        input: self.job.inputs[item.0 as usize].clone(),
-                        state: queued.state(),
-                        evidence: Vec::new(),
+                        item: job_item.id,
+                        input: job_item.input.clone(),
+                        destination: job_item.destination.clone(),
+                        state: item.state(),
+                        analysis: match &job_item.start {
+                            Start::Fresh { .. } => Analysis::default(),
+                            Start::Reviewed { analysis, .. } => analysis.clone(),
+                        },
                         failure: None,
                     }
                 })
@@ -223,18 +275,22 @@ impl<P: ItemProcessor> Runner<P> {
         self.emit(Event::RunFinished(RunReport { items }));
     }
 
-    fn process(&self, id: ItemId, input: &Path) -> ItemOutcome {
-        let cancel = &self.items[&id];
+    fn process(&self, job_item: &JobItem) -> ItemOutcome {
+        let id = job_item.id;
         let ctx = ItemContext {
             item: id,
-            input,
-            cancel,
+            input: &job_item.input,
+            destination: &job_item.destination,
+            cancel: &self.items[&id],
             detector: &self.detector,
             progress: self.progress.reporter(id),
         };
-        let mut item = Item::new(id);
-        let mut evidence = Vec::new();
-        let result = self.drive(&ctx, &mut item, &mut evidence);
+        let mut item = initial(job_item);
+        let mut analysis = match &job_item.start {
+            Start::Fresh { .. } => Analysis::default(),
+            Start::Reviewed { analysis, .. } => analysis.clone(),
+        };
+        let result = self.drive(&ctx, &job_item.start, &mut item, &mut analysis);
         let failure = match result {
             Ok(()) => None,
             Err(StepError::Cancelled) => {
@@ -254,9 +310,10 @@ impl<P: ItemProcessor> Runner<P> {
         }
         ItemOutcome {
             item: id,
-            input: input.to_path_buf(),
+            input: job_item.input.clone(),
+            destination: job_item.destination.clone(),
             state: item.state(),
-            evidence,
+            analysis,
             failure,
         }
     }
@@ -264,8 +321,9 @@ impl<P: ItemProcessor> Runner<P> {
     fn drive(
         &self,
         ctx: &ItemContext<'_>,
+        start: &Start,
         item: &mut Item,
-        evidence: &mut Vec<CoverageEvidence>,
+        analysis: &mut Analysis,
     ) -> Result<(), StepError> {
         let checkpoint = || {
             if ctx.cancel.is_cancelled() {
@@ -282,30 +340,60 @@ impl<P: ItemProcessor> Runner<P> {
         };
 
         checkpoint()?;
-        *evidence = self.processor.analyze(ctx)?;
-        item.finish_analysis().expect("queued item");
-        moved(item);
-        item.route(self.job.review, evidence)
-            .expect("analyzed item");
-        moved(item);
-        if item.state() == ItemState::NeedsReview {
-            return Ok(());
+        match start {
+            Start::Fresh { needs_review } => {
+                *analysis = self.processor.analyze(ctx)?;
+                item.finish_analysis().expect("queued item");
+                moved(item);
+                let mode = if *needs_review {
+                    ReviewMode::Required
+                } else {
+                    self.job.review
+                };
+                item.route(mode, &analysis.evidence).expect("analyzed item");
+                moved(item);
+                if item.state() == ItemState::NeedsReview {
+                    return Ok(());
+                }
+            }
+            Start::Reviewed {
+                decision: Decision::Approve,
+                ..
+            } => {
+                item.approve_review(&analysis.evidence)
+                    .map_err(|e| StepError::Failed(e.into()))?;
+                moved(item);
+            }
+            Start::Reviewed {
+                decision: Decision::ExportWithWarnings,
+                ..
+            } => {
+                item.export_with_warnings().expect("item awaiting review");
+                moved(item);
+            }
         }
 
         checkpoint()?;
         item.start_render().expect("item ready for render");
         moved(item);
-        self.processor.render(ctx)?;
+        self.processor.render(ctx, analysis)?;
         item.mark_verified().expect("rendering item");
         moved(item);
 
         checkpoint()?;
-        let permit = PublishPermit::issue(item, evidence)
+        let permit = PublishPermit::issue(item, &analysis.evidence)
             .map_err(|refusal| StepError::Failed(refusal.into()))?;
         self.processor.publish(ctx, &permit)?;
         item.publish(permit).expect("permit issued for this item");
         moved(item);
         Ok(())
+    }
+}
+
+fn initial(job_item: &JobItem) -> Item {
+    match job_item.start {
+        Start::Fresh { .. } => Item::new(job_item.id),
+        Start::Reviewed { .. } => Item::awaiting_review(job_item.id),
     }
 }
 
@@ -349,7 +437,7 @@ mod tests {
     }
 
     impl ItemProcessor for Scripted {
-        fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Vec<CoverageEvidence>, StepError> {
+        fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Analysis, StepError> {
             ctx.detector
                 .detect(Rgb8Image {
                     width: 1,
@@ -359,11 +447,10 @@ mod tests {
                 .map_err(|e| StepError::Failed(e.into()))?;
             match name(ctx) {
                 "fail-analyze" => Err(StepError::Failed(Box::new(Broken("decode failed")))),
-                "gap" => Ok(vec![CoverageEvidence::unresolved(Problem::UnresolvedGap {
-                    track: 1,
-                    first: 30,
-                    last: 54,
-                })]),
+                "gap" => Ok(Analysis {
+                    detections: Vec::new(),
+                    evidence: vec![gap()],
+                }),
                 "slow" => {
                     for done in 0.. {
                         if ctx.cancel.is_cancelled() {
@@ -374,15 +461,22 @@ mod tests {
                     }
                     unreachable!()
                 }
-                _ => Ok(Vec::new()),
+                _ => Ok(Analysis::default()),
             }
         }
 
-        fn render(&self, ctx: &ItemContext<'_>) -> Result<(), StepError> {
+        fn render(&self, ctx: &ItemContext<'_>, _: &Analysis) -> Result<(), StepError> {
             ctx.progress.set(1, 1);
             match name(ctx) {
                 "fail-render" => Err(StepError::Failed(Box::new(Broken("encode failed")))),
                 _ => Ok(()),
+            }
+        }
+
+        fn fingerprint(&self) -> Fingerprint {
+            Fingerprint {
+                models: Digest([0; 32]),
+                settings: Digest([0; 32]),
             }
         }
 
@@ -401,9 +495,28 @@ mod tests {
         }
     }
 
+    fn gap() -> CoverageEvidence {
+        CoverageEvidence::unresolved(Problem::UnresolvedGap {
+            track: 1,
+            first: 30,
+            last: 54,
+        })
+    }
+
     fn job(inputs: &[&str], review: ReviewMode, workers: usize) -> Job {
         Job {
-            inputs: inputs.iter().map(PathBuf::from).collect(),
+            items: inputs
+                .iter()
+                .enumerate()
+                .map(|(i, name)| JobItem {
+                    id: ItemId(i as u64),
+                    input: PathBuf::from(name),
+                    destination: PathBuf::from(format!("out/{i}")),
+                    start: Start::Fresh {
+                        needs_review: false,
+                    },
+                })
+                .collect(),
             review,
             workers,
         }
@@ -443,7 +556,7 @@ mod tests {
             ]
         );
         assert_eq!(report.completed(), 2);
-        assert_eq!(report.items[1].evidence.len(), 1);
+        assert_eq!(report.items[1].analysis.evidence, [gap()]);
         let mut published = published;
         published.sort_by_key(|p| p.0);
         assert_eq!(
@@ -546,6 +659,44 @@ mod tests {
         assert_eq!(report.completed(), inputs.len());
         assert_eq!(published.len(), inputs.len());
         assert_eq!(events.len(), inputs.len() * 6 + 1);
+    }
+
+    #[test]
+    fn a_name_conflict_holds_the_item_for_review_in_automatic_mode() {
+        let mut job = job(&["ok", "ok"], ReviewMode::Off, 1);
+        job.items[1].start = Start::Fresh { needs_review: true };
+        let (report, published, _) = run(job);
+        assert_eq!(report.items[1].state, ItemState::NeedsReview);
+        assert_eq!(published, [(ItemId(0), PublishBasis::AutomaticUnreviewed)]);
+    }
+
+    #[test]
+    fn reviewed_items_publish_only_after_approval_of_every_problem() {
+        let mut resolved = gap();
+        resolved.resolution = cloakframe_core::coverage::Resolution::Dismissed;
+        let mut job = job(&["ok", "ok", "ok"], ReviewMode::Off, 1);
+        let reviewed = |decision, evidence| Start::Reviewed {
+            decision,
+            analysis: Analysis {
+                detections: Vec::new(),
+                evidence,
+            },
+        };
+        job.items[0].start = reviewed(Decision::Approve, vec![resolved]);
+        job.items[1].start = reviewed(Decision::Approve, vec![gap()]);
+        job.items[2].start = reviewed(Decision::ExportWithWarnings, vec![gap()]);
+        let (report, published, events) = run(job);
+        assert_eq!(
+            report.items.iter().map(|o| o.state).collect::<Vec<_>>(),
+            [
+                ItemState::Published(PublishBasis::Reviewed),
+                ItemState::Failed,
+                ItemState::Published(PublishBasis::ExportedWithWarnings),
+            ]
+        );
+        assert_eq!(report.completed(), 1);
+        assert_eq!(published.len(), 2);
+        assert_eq!(states_of(&events, ItemId(0))[0], ItemState::NeedsReview);
     }
 
     #[test]

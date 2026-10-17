@@ -16,6 +16,12 @@ path = "src/bin/cloakframe-cli.rs"
 cloakframe-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
+
+[features]
+# The synthetic processor for exercising the whole run without a media pipeline (M1 tests and
+# `cloakframe-cli --synthetic`). Not part of release builds.
+synthetic = []
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "=1.1.5", features = ["fs"] }
@@ -24,7 +30,7 @@ rustix = { version = "=1.1.5", features = ["fs"] }
 rustix = { version = "=1.1.5", features = ["fs", "process"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_UI_Shell"] }
 
 [lints]
 workspace = true

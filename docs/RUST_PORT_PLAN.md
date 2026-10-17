@@ -88,7 +88,7 @@
 | 이미지 | `image` 0.25(필요 codec만), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(M0에서 바이트 일치 확인). 정확히 2배 축소일 때 OpenCV가 쓰는 `INTER_AREA` 경로는 아직 옮기지 않았으므로 M2에서 이식한다. `fast_image_resize`는 화면 표시용에만 |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
 | 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), Rayon pool(CPU 연산), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 HTTP(M3)와 자식 프로세스 감독(M4)이 들어올 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았다 |
-| 설정·로그·오류 | serde + TOML + `directories`, `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
+| 설정·로그·오류 | serde + TOML, 앱 데이터 폴더는 자체 구현(`engine::app_dirs`. `directories`는 의존성 `option-ext`가 MPL-2.0이라 쓰지 않음, 2026-10-18), `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
 | 네트워크·무결성 | `reqwest` + rustls, `sha2`, `ed25519-dalek` | 모델·업데이트 URL allowlist |
 | 파일시스템 | `rustix`(Unix), `windows` crate | no-replace rename과 identity 조회에만 사용 |
@@ -283,6 +283,7 @@ crates/
 
 - **작업:** workspace와 CI(fmt, clippy `-D warnings`, 3개 OS 테스트), core 타입과 상태 전이, engine 작업 실행기(명령·이벤트·취소), 스캐너, 게시 모듈, 세션 저장, CLI(`cloakframe-cli run`, 검토 결정 JSON 적용)
 - **완료 기준:** 합성 입력의 정상·실패·취소 경로 동작, 원본과 기존 출력 불변, 임시 파일이 최종 이름으로 보이지 않음. D4·D10·D12·P-1(골격) 시험 통과
+- **진행(2026-10-18):** 7단계 구현 완료, 소요 2일(2026-10-17–18, 예산 3주). macOS에서 위 기준의 시험이 모두 통과했다. 정상·실패·검토·이름 충돌·P-1 경로는 `cloakframe-cli`를 합성 processor(`synthetic` feature, 릴리스 빌드 제외)로 끝까지 돌리는 통합 시험(`crates/cloakframe-engine/tests/cli.rs`)으로, 취소는 실행기 시험으로, D4·D12는 프로세스 전역 상태를 바꾸는 별도 시험 바이너리로 확인한다. Windows·Linux는 교차 clippy만 했으므로 PR #19–#24를 main에 넣고 3개 OS CI가 통과하면 M1 완료로 본다. 남은 일: CLI의 Ctrl+C 취소(신호 처리, M4의 자식 프로세스 감독과 함께), 앱 데이터 폴더의 1.12 설정 이전(M7)
 
 ### M2 — 사진 (CPU, YOLO5Face-n)
 

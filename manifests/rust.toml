@@ -52,9 +52,11 @@ evidence = "docs/M0_EXIF_WRITER.md"
 
 [crates.windows-sys]
 version = "=0.61.2"
-features = ["Win32_Storage_FileSystem"]
+features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_UI_Shell"]
 targets = ["windows"]
-# 파일 identity(GetFileInformationByHandleEx FileIdInfo, NTFS·ReFS의 128비트 ID). 계획 3장의 파일시스템 항목.
+# 파일 identity(GetFileInformationByHandleEx FileIdInfo), no-replace 이동(MoveFileExW), 앱 데이터 폴더
+# (SHGetKnownFolderPath). 앱 데이터 폴더를 directories crate로 찾지 않는 이유는 그 의존성 option-ext가
+# MPL-2.0이기 때문(2026-10-18 결정, deny.toml 허용 목록 유지).
 evidence = "crates/cloakframe-engine/src/identity.rs"
 
 [crates.rustix]
@@ -74,3 +76,8 @@ evidence = "crates/cloakframe-engine/src/session.rs"
 [crates.serde_json]
 version = "=1.0.154"
 evidence = "crates/cloakframe-engine/src/session.rs"
+
+[crates.sha2]
+version = "=0.11.0"
+# 0.11.1(2026-10-12)은 나온 지 일주일이 안 되어 쓰지 않음.
+evidence = "crates/cloakframe-engine/src/batch.rs"
