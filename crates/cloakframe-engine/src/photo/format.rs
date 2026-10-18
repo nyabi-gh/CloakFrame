@@ -23,6 +23,20 @@ impl fmt::Display for ImageFormat {
     }
 }
 
+impl ImageFormat {
+    /// The format a file name's extension stands for, in any letter case.
+    pub fn from_extension(extension: &str) -> Option<Self> {
+        match extension.to_ascii_lowercase().as_str() {
+            "jpg" | "jpeg" => Some(Self::Jpeg),
+            "png" => Some(Self::Png),
+            "bmp" => Some(Self::Bmp),
+            "tif" | "tiff" => Some(Self::Tiff),
+            "webp" => Some(Self::Webp),
+            _ => None,
+        }
+    }
+}
+
 const PNG_SIGNATURE: &[u8] = b"\x89PNG\r\n\x1a\n";
 
 pub fn sniff(bytes: &[u8]) -> Option<ImageFormat> {

@@ -1,8 +1,9 @@
-//! Writes the processed photo in its source format with the D6 defaults: JPEG q92 with the
-//! source's chroma subsampling, lossy WebP q90 for a lossy source, and lossless PNG, WebP and
-//! TIFF (LZW) otherwise. Metadata follows [`MetadataPolicy`] and the color outcome (D2); nothing
-//! else from the source reaches the output (D9).
+//! Writes the processed photo with the D6 defaults: JPEG q92 with the source's chroma
+//! subsampling, lossy WebP q90 for a lossy source, and lossless PNG, WebP and TIFF (LZW)
+//! otherwise. Metadata follows [`MetadataPolicy`] and the color outcome (D2); nothing else from
+//! the source reaches the output (D9).
 
+use std::borrow::Cow;
 use std::fmt;
 use std::io::Cursor;
 
@@ -54,16 +55,19 @@ fn codec(e: impl fmt::Display) -> EncodeError {
     EncodeError::Codec(e.to_string())
 }
 
-/// The encoded file for `image`, which came from `source` and went through the color policy.
+/// The encoded file for `image`, which came from `source` and went through the color policy, in
+/// `format`. That is the source's format unless the file is named for another one: 1.12.1 wrote a
+/// PNG named `.jpg` as a JPEG.
 pub fn encode(
     source: &Source,
     image: &DynamicImage,
     color: ColorOutcome,
     policy: MetadataPolicy,
+    format: ImageFormat,
 ) -> Result<Vec<u8>, EncodeError> {
     let standard = color.embed();
     let icc = standard.map(Standard::profile_bytes);
-    let container = match source.format {
+    let container = match format {
         ImageFormat::Jpeg => Container::Jpeg,
         ImageFormat::Png => Container::Png,
         ImageFormat::Webp => Container::Webp,
@@ -73,7 +77,7 @@ pub fn encode(
                 return Err(EncodeError::ProfileNotEmbeddable);
             }
             let mut out = Cursor::new(Vec::new());
-            image
+            eight_bit(image)
                 .write_to(&mut out, image::ImageFormat::Bmp)
                 .map_err(codec)?;
             return Ok(out.into_inner());
@@ -109,7 +113,7 @@ pub fn encode(
             Ok(out)
         }
         Container::Webp => {
-            let plain = if is_lossy_webp(&source.bytes) {
+            let plain = if source.format == ImageFormat::Webp && is_lossy_webp(&source.bytes) {
                 lossy_webp(image)?
             } else {
                 lossless_webp(image)?
@@ -120,40 +124,61 @@ pub fn encode(
     }
 }
 
-/// q92 with the source's subsampling (D6); 1.12.1 always wrote q100 4:4:4.
+/// 16-bit samples rounded to 8 bits, for encoders without 16-bit support.
+fn eight_bit(image: &DynamicImage) -> Cow<'_, DynamicImage> {
+    match image {
+        DynamicImage::ImageLuma16(_) => Cow::Owned(DynamicImage::ImageLuma8(image.to_luma8())),
+        DynamicImage::ImageLumaA16(_) => {
+            Cow::Owned(DynamicImage::ImageLumaA8(image.to_luma_alpha8()))
+        }
+        DynamicImage::ImageRgb16(_) => Cow::Owned(DynamicImage::ImageRgb8(image.to_rgb8())),
+        DynamicImage::ImageRgba16(_) => Cow::Owned(DynamicImage::ImageRgba8(image.to_rgba8())),
+        _ => Cow::Borrowed(image),
+    }
+}
+
+/// q92 with the source's subsampling (D6); 1.12.1 always wrote q100 4:4:4. A source that is not
+/// a JPEG has full chroma and keeps it. JPEG has no alpha, which is dropped as 1.12.1 did, and no
+/// 16-bit samples, which are scaled to 8 bits.
 fn jpeg(source: &Source, image: &DynamicImage) -> Result<Vec<u8>, EncodeError> {
-    let header = turbojpeg::read_header(&source.bytes).map_err(codec)?;
+    let source_subsamp = if source.format == ImageFormat::Jpeg {
+        turbojpeg::read_header(&source.bytes)
+            .map_err(codec)?
+            .subsamp
+    } else {
+        turbojpeg::Subsamp::None
+    };
     let mut compressor = turbojpeg::Compressor::new().map_err(codec)?;
     compressor.set_quality(JPEG_QUALITY).map_err(codec)?;
     compressor.set_optimize(true).map_err(codec)?;
-    let (format, subsamp, pixels) = match image {
+    let (format, subsamp, pixels): (_, _, Cow<'_, [u8]>) = match image {
         DynamicImage::ImageLuma8(gray) => (
             turbojpeg::PixelFormat::GRAY,
             turbojpeg::Subsamp::Gray,
-            gray.as_raw().as_slice(),
+            Cow::Borrowed(gray.as_raw()),
         ),
-        DynamicImage::ImageRgb8(rgb) => {
-            let subsamp = match header.subsamp {
+        _ if !image.color().has_color() => (
+            turbojpeg::PixelFormat::GRAY,
+            turbojpeg::Subsamp::Gray,
+            Cow::Owned(image.to_luma8().into_raw()),
+        ),
+        _ => {
+            let subsamp = match source_subsamp {
                 turbojpeg::Subsamp::Gray => turbojpeg::Subsamp::None,
                 other => other,
             };
-            (
-                turbojpeg::PixelFormat::RGB,
-                subsamp,
-                rgb.as_raw().as_slice(),
-            )
-        }
-        _ => {
-            return Err(EncodeError::Codec(
-                "a JPEG decodes to 8-bit gray or RGB".into(),
-            ));
+            let rgb = match image {
+                DynamicImage::ImageRgb8(rgb) => Cow::Borrowed(rgb.as_raw().as_slice()),
+                _ => Cow::Owned(image.to_rgb8().into_raw()),
+            };
+            (turbojpeg::PixelFormat::RGB, subsamp, rgb)
         }
     };
     compressor.set_subsamp(subsamp).map_err(codec)?;
     let channels = format.size();
     compressor
         .compress_to_vec(turbojpeg::Image {
-            pixels,
+            pixels: &*pixels,
             width: image.width() as usize,
             pitch: image.width() as usize * channels,
             height: image.height() as usize,
@@ -289,14 +314,14 @@ mod tests {
         .unwrap()
     }
 
-    /// rich-exif.jpg (camera, owner, GPS, XMP, IPTC, comment and "Private" text everywhere) as
-    /// the metadata source of an output in `format`.
-    fn rich(format: ImageFormat) -> (Source, DynamicImage) {
+    /// rich-exif.jpg (camera, owner, GPS, XMP, IPTC, comment and "Private" text everywhere), the
+    /// metadata source of every output.
+    fn rich() -> (Source, DynamicImage) {
         let source = fixture("metadata/rich-exif.jpg");
         let image = decode(&source, &MemoryBudget::new(1 << 30), &CancelToken::new())
             .unwrap()
             .image;
-        (Source { format, ..source }, image)
+        (source, image)
     }
 
     fn reread(bytes: Vec<u8>, format: ImageFormat) -> Source {
@@ -344,8 +369,9 @@ mod tests {
         let p3 = ColorOutcome::Kept(Standard::DisplayP3);
         for format in FORMATS {
             for gps in [false, true] {
-                let (source, image) = rich(format);
-                let out = encode(&source, &image, p3, MetadataPolicy::Allowlist { gps }).unwrap();
+                let (source, image) = rich();
+                let policy = MetadataPolicy::Allowlist { gps };
+                let out = encode(&source, &image, p3, policy, format).unwrap();
                 assert_eq!(dimensions(&out, format), (image.width(), image.height()));
 
                 let exif = exif_of(&out).unwrap_or_else(|| panic!("{format:?} has no EXIF"));
@@ -382,7 +408,7 @@ mod tests {
 
     #[test]
     fn lossy_webp_gets_the_same_chunks() {
-        let (source, image) = rich(ImageFormat::Webp);
+        let (source, image) = rich();
         let kept = metadata::keep(&source.bytes, MetadataPolicy::Allowlist { gps: false });
         let output = Output {
             width: image.width(),
@@ -425,12 +451,13 @@ mod tests {
             b"ICCP",
         ];
         for format in FORMATS {
-            let (source, image) = rich(format);
+            let (source, image) = rich();
             let out = encode(
                 &source,
                 &image,
                 ColorOutcome::Untagged,
                 MetadataPolicy::default(),
+                format,
             )
             .unwrap();
             for marker in MARKERS {
@@ -445,5 +472,48 @@ mod tests {
                 "{format:?}"
             );
         }
+    }
+
+    /// Outputs named for another format than the source's: full chroma from a source that is not
+    /// a JPEG, and 16-bit or alpha samples reduced where the format has none.
+    #[test]
+    fn writes_the_format_the_output_is_named_for() {
+        let rgba16 = DynamicImage::ImageRgba16(image::ImageBuffer::from_fn(9, 7, |x, y| {
+            image::Rgba([x as u16 * 7000, y as u16 * 9000, 30_000, 40_000])
+        }));
+        let mut png = Cursor::new(Vec::new());
+        rgba16.write_to(&mut png, image::ImageFormat::Png).unwrap();
+        let source = reread(png.into_inner(), ImageFormat::Png);
+        for format in [ImageFormat::Jpeg, ImageFormat::Bmp, ImageFormat::Webp] {
+            let out = encode(
+                &source,
+                &rgba16,
+                ColorOutcome::Untagged,
+                MetadataPolicy::default(),
+                format,
+            )
+            .unwrap();
+            assert_eq!(crate::photo::format::sniff(&out), Some(format));
+            assert_eq!(dimensions(&out, format), (9, 7), "{format:?}");
+        }
+        let jpeg = encode(
+            &source,
+            &rgba16,
+            ColorOutcome::Untagged,
+            MetadataPolicy::default(),
+            ImageFormat::Jpeg,
+        )
+        .unwrap();
+        let header = turbojpeg::read_header(&jpeg).unwrap();
+        assert_eq!(header.subsamp, turbojpeg::Subsamp::None);
+        let webp = encode(
+            &source,
+            &rgba16,
+            ColorOutcome::Untagged,
+            MetadataPolicy::default(),
+            ImageFormat::Webp,
+        )
+        .unwrap();
+        assert!(!is_lossy_webp(&webp));
     }
 }

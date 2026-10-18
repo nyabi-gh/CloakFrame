@@ -104,15 +104,15 @@ pub struct Decoded {
     pub permit: MemoryPermit,
 }
 
-fn reader(source: &Source) -> ImageReader<Cursor<&[u8]>> {
-    let format = match source.format {
+fn reader(bytes: &[u8], format: ImageFormat) -> ImageReader<Cursor<&[u8]>> {
+    let format = match format {
         ImageFormat::Jpeg => image::ImageFormat::Jpeg,
         ImageFormat::Png => image::ImageFormat::Png,
         ImageFormat::Bmp => image::ImageFormat::Bmp,
         ImageFormat::Tiff => image::ImageFormat::Tiff,
         ImageFormat::Webp => image::ImageFormat::WebP,
     };
-    let mut reader = ImageReader::with_format(Cursor::new(source.bytes.as_slice()), format);
+    let mut reader = ImageReader::with_format(Cursor::new(bytes), format);
     // The pixel limit and the memory budget below are the limits; image's default allocation
     // cap (512 MiB) would refuse supported images.
     reader.no_limits();
@@ -121,13 +121,16 @@ fn reader(source: &Source) -> ImageReader<Cursor<&[u8]>> {
 
 /// Width and height as stored, read from the header without decoding.
 pub fn dimensions(source: &Source) -> Result<(u32, u32), ReadError> {
-    if source.format == ImageFormat::Jpeg {
-        let header =
-            turbojpeg::read_header(&source.bytes).map_err(|e| ReadError::Decode(e.to_string()))?;
+    header_dimensions(&source.bytes, source.format)
+}
+
+pub fn header_dimensions(bytes: &[u8], format: ImageFormat) -> Result<(u32, u32), ReadError> {
+    if format == ImageFormat::Jpeg {
+        let header = turbojpeg::read_header(bytes).map_err(|e| ReadError::Decode(e.to_string()))?;
         let side = |v: usize| u32::try_from(v).map_err(|_| ReadError::Decode("size".into()));
         return Ok((side(header.width)?, side(header.height)?));
     }
-    reader(source)
+    reader(bytes, format)
         .into_dimensions()
         .map_err(|e| ReadError::Decode(e.to_string()))
 }
@@ -151,7 +154,7 @@ pub fn decode(
     let mut image = if source.format == ImageFormat::Jpeg {
         decode_jpeg(&source.bytes)?
     } else {
-        reader(source)
+        reader(&source.bytes, source.format)
             .decode()
             .map_err(|e| ReadError::Decode(e.to_string()))?
     };

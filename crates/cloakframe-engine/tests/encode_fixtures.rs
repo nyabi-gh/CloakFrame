@@ -24,7 +24,7 @@ fn export(path: &Path, policy: MetadataPolicy) -> (Source, DynamicImage, Vec<u8>
         .unwrap()
         .image;
     let outcome = color::apply(&source, &mut image).unwrap();
-    let out = encode::encode(&source, &image, outcome, policy).unwrap();
+    let out = encode::encode(&source, &image, outcome, policy, source.format).unwrap();
     (source, image, out)
 }
 
