@@ -1,17 +1,18 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, mpsc};
+use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
 
 use cloakframe_core::coverage::CoverageEvidence;
 use cloakframe_core::detection::Detection;
 use cloakframe_core::item::{Item, ItemId, ItemState, PublishBasis, PublishPermit, ReviewMode};
-use cloakframe_core::review::Digest;
+use cloakframe_core::review::{Digest, PhotoEdits};
 
 use crate::cancel::CancelToken;
 use crate::detect::DetectorHandle;
 use crate::events::{Event, ProgressBoard, ProgressReporter};
+use crate::identity::SourceStamp;
 use crate::ordered::process_ordered;
 
 const EVENT_CAPACITY: usize = 64;
@@ -41,15 +42,81 @@ pub struct ItemContext<'a> {
     pub cancel: &'a CancelToken,
     pub detector: &'a DetectorHandle,
     pub progress: ProgressReporter,
+    pub notes: &'a Notes,
+}
+
+/// Something about an item's result the user should be told that is not a failure.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Note {
+    /// The source's color profile was converted to sRGB (D2).
+    ColorConverted,
+    /// The source's color profile could not be used and was dropped; the pixels were treated as
+    /// sRGB (D2).
+    ColorProfileIgnored,
+}
+
+impl fmt::Display for Note {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::ColorConverted => "colors converted to sRGB",
+            Self::ColorProfileIgnored => "unusable color profile dropped",
+        })
+    }
+}
+
+/// The notes of one item, each kept once.
+#[derive(Debug, Default)]
+pub struct Notes(Mutex<Vec<Note>>);
+
+impl Notes {
+    pub fn add(&self, note: Note) {
+        let mut notes = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        if !notes.contains(&note) {
+            notes.push(note);
+        }
+    }
+
+    fn into_vec(self) -> Vec<Note> {
+        self.0.into_inner().unwrap_or_else(|e| e.into_inner())
+    }
+}
+
+/// What an item is rendered from once it is cleared for rendering.
+#[derive(Debug, Clone, Copy)]
+pub struct RenderRequest<'a> {
+    /// `ExportedWithoutAnonymization` renders with nothing masked.
+    pub basis: PublishBasis,
+    pub analysis: &'a Analysis,
+    pub edits: &'a PhotoEdits,
 }
 
 /// The media-specific steps of one item. The runner owns the state machine and the publish
-/// permit; a processor only does the work and reports what it could not cover.
+/// permit; a processor only does the work and reports what it could not cover. What one step
+/// hands the next travels through the runner, so nothing outlives the item.
 pub trait ItemProcessor: Send + Sync + 'static {
-    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Analysis, StepError>;
+    /// What analysis leaves for rendering the same item, such as the decoded pixels. Dropped
+    /// unused when the item goes to review.
+    type Prepared: Send;
+    /// A verified output waiting for its publish permit. Dropping it discards the output.
+    type Rendered: Send;
+
+    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Self::Prepared), StepError>;
     /// Renders the output to a temporary file next to `ctx.destination` and verifies it.
-    fn render(&self, ctx: &ItemContext<'_>, analysis: &Analysis) -> Result<(), StepError>;
-    fn publish(&self, ctx: &ItemContext<'_>, permit: &PublishPermit) -> Result<(), StepError>;
+    /// `prepared` is `None` for an item resumed from review, which must render the source
+    /// `request.analysis.source` names and fail if it is a different one.
+    fn render(
+        &self,
+        ctx: &ItemContext<'_>,
+        request: &RenderRequest<'_>,
+        prepared: Option<Self::Prepared>,
+    ) -> Result<Self::Rendered, StepError>;
+    /// Publishes the output if the source is still the one that was rendered.
+    fn publish(
+        &self,
+        ctx: &ItemContext<'_>,
+        rendered: Self::Rendered,
+        permit: &PublishPermit,
+    ) -> Result<(), StepError>;
     /// What besides the input decides the results. A stored review is bound to it, so changing
     /// models or settings invalidates earlier review decisions.
     fn fingerprint(&self) -> Fingerprint;
@@ -65,12 +132,15 @@ pub struct Fingerprint {
 pub struct Analysis {
     pub detections: Vec<Detection>,
     pub evidence: Vec<CoverageEvidence>,
+    /// The source as it was when it was read for analysis.
+    pub source: Option<SourceStamp>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Decision {
     Approve,
     ExportWithWarnings,
+    ExportWithoutAnonymization,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -82,6 +152,7 @@ pub enum Start {
     Reviewed {
         decision: Decision,
         analysis: Analysis,
+        edits: PhotoEdits,
     },
 }
 
@@ -108,6 +179,7 @@ pub struct ItemOutcome {
     pub state: ItemState,
     pub analysis: Analysis,
     pub failure: Option<String>,
+    pub notes: Vec<Note>,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -173,9 +245,9 @@ impl RunHandle {
     }
 }
 
-pub fn start(
+pub fn start<P: ItemProcessor>(
     job: Job,
-    processor: Arc<dyn ItemProcessor>,
+    processor: Arc<P>,
     detector: DetectorHandle,
 ) -> std::io::Result<RunHandle> {
     let (sender, events) = mpsc::sync_channel(EVENT_CAPACITY);
@@ -205,9 +277,9 @@ pub fn start(
     })
 }
 
-struct Runner {
+struct Runner<P> {
     job: Job,
-    processor: Arc<dyn ItemProcessor>,
+    processor: Arc<P>,
     detector: DetectorHandle,
     events: mpsc::SyncSender<Event>,
     progress: ProgressBoard,
@@ -215,7 +287,7 @@ struct Runner {
     items: BTreeMap<ItemId, CancelToken>,
 }
 
-impl Runner {
+impl<P: ItemProcessor> Runner<P> {
     fn emit(&self, event: Event) {
         // A dropped receiver means nobody is listening; the run still finishes its items.
         let _ = self.events.send(event);
@@ -268,6 +340,7 @@ impl Runner {
                             Start::Reviewed { analysis, .. } => analysis.clone(),
                         },
                         failure: None,
+                        notes: Vec::new(),
                     }
                 })
             })
@@ -277,6 +350,7 @@ impl Runner {
 
     fn process(&self, job_item: &JobItem) -> ItemOutcome {
         let id = job_item.id;
+        let notes = Notes::default();
         let ctx = ItemContext {
             item: id,
             input: &job_item.input,
@@ -284,6 +358,7 @@ impl Runner {
             cancel: &self.items[&id],
             detector: &self.detector,
             progress: self.progress.reporter(id),
+            notes: &notes,
         };
         let mut item = initial(job_item);
         let mut analysis = match &job_item.start {
@@ -315,6 +390,7 @@ impl Runner {
             state: item.state(),
             analysis,
             failure,
+            notes: notes.into_vec(),
         }
     }
 
@@ -340,9 +416,11 @@ impl Runner {
         };
 
         checkpoint()?;
-        match start {
+        let no_edits = PhotoEdits::default();
+        let (prepared, edits) = match start {
             Start::Fresh { needs_review } => {
-                *analysis = self.processor.analyze(ctx)?;
+                let (analyzed, prepared) = self.processor.analyze(ctx)?;
+                *analysis = analyzed;
                 item.finish_analysis().expect("queued item");
                 moved(item);
                 let mode = if *needs_review {
@@ -355,35 +433,46 @@ impl Runner {
                 if item.state() == ItemState::NeedsReview {
                     return Ok(());
                 }
+                (Some(prepared), &no_edits)
             }
             Start::Reviewed {
-                decision: Decision::Approve,
-                ..
+                decision, edits, ..
             } => {
-                item.approve_review(&analysis.evidence)
-                    .map_err(|e| StepError::Failed(e.into()))?;
+                match decision {
+                    Decision::Approve => item
+                        .approve_review(&analysis.evidence)
+                        .map_err(|e| StepError::Failed(e.into()))?,
+                    Decision::ExportWithWarnings => {
+                        item.export_with_warnings().expect("item awaiting review")
+                    }
+                    Decision::ExportWithoutAnonymization => item
+                        .export_without_anonymization()
+                        .expect("item awaiting review"),
+                }
                 moved(item);
+                (None, edits)
             }
-            Start::Reviewed {
-                decision: Decision::ExportWithWarnings,
-                ..
-            } => {
-                item.export_with_warnings().expect("item awaiting review");
-                moved(item);
-            }
-        }
+        };
 
         checkpoint()?;
         item.start_render().expect("item ready for render");
         moved(item);
-        self.processor.render(ctx, analysis)?;
+        let ItemState::Rendering(basis) = item.state() else {
+            unreachable!("start_render moves to Rendering")
+        };
+        let request = RenderRequest {
+            basis,
+            analysis,
+            edits,
+        };
+        let rendered = self.processor.render(ctx, &request, prepared)?;
         item.mark_verified().expect("rendering item");
         moved(item);
 
         checkpoint()?;
         let permit = PublishPermit::issue(item, &analysis.evidence)
             .map_err(|refusal| StepError::Failed(refusal.into()))?;
-        self.processor.publish(ctx, &permit)?;
+        self.processor.publish(ctx, rendered, &permit)?;
         item.publish(permit).expect("permit issued for this item");
         moved(item);
         Ok(())
@@ -437,7 +526,10 @@ mod tests {
     }
 
     impl ItemProcessor for Scripted {
-        fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Analysis, StepError> {
+        type Prepared = ();
+        type Rendered = PublishBasis;
+
+        fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, ()), StepError> {
             ctx.detector
                 .detect(
                     Rgb8Image {
@@ -450,10 +542,13 @@ mod tests {
                 .map_err(|e| StepError::Failed(e.into()))?;
             match name(ctx) {
                 "fail-analyze" => Err(StepError::Failed(Box::new(Broken("decode failed")))),
-                "gap" => Ok(Analysis {
-                    detections: Vec::new(),
-                    evidence: vec![gap()],
-                }),
+                "gap" => Ok((
+                    Analysis {
+                        evidence: vec![gap()],
+                        ..Analysis::default()
+                    },
+                    (),
+                )),
                 "slow" => {
                     for done in 0.. {
                         if ctx.cancel.is_cancelled() {
@@ -464,15 +559,27 @@ mod tests {
                     }
                     unreachable!()
                 }
-                _ => Ok(Analysis::default()),
+                _ => Ok((Analysis::default(), ())),
             }
         }
 
-        fn render(&self, ctx: &ItemContext<'_>, _: &Analysis) -> Result<(), StepError> {
+        fn render(
+            &self,
+            ctx: &ItemContext<'_>,
+            request: &RenderRequest<'_>,
+            prepared: Option<()>,
+        ) -> Result<PublishBasis, StepError> {
             ctx.progress.set(1, 1);
+            let resumed = matches!(
+                request.basis,
+                PublishBasis::Reviewed
+                    | PublishBasis::ExportedWithWarnings
+                    | PublishBasis::ExportedWithoutAnonymization
+            );
+            assert_eq!(prepared.is_none(), resumed);
             match name(ctx) {
                 "fail-render" => Err(StepError::Failed(Box::new(Broken("encode failed")))),
-                _ => Ok(()),
+                _ => Ok(request.basis),
             }
         }
 
@@ -483,8 +590,14 @@ mod tests {
             }
         }
 
-        fn publish(&self, ctx: &ItemContext<'_>, permit: &PublishPermit) -> Result<(), StepError> {
+        fn publish(
+            &self,
+            ctx: &ItemContext<'_>,
+            rendered: PublishBasis,
+            permit: &PublishPermit,
+        ) -> Result<(), StepError> {
             assert_eq!(permit.item(), ctx.item);
+            assert_eq!(permit.basis(), rendered);
             match name(ctx) {
                 "fail-publish" => Err(StepError::Failed(Box::new(Broken("name taken")))),
                 _ => {
@@ -678,16 +791,20 @@ mod tests {
         let mut resolved = gap();
         resolved.resolution = cloakframe_core::coverage::Resolution::Dismissed;
         let mut job = job(&["ok", "ok", "ok"], ReviewMode::Off, 1);
+        job.items.push(job.items[2].clone());
+        job.items[3].id = ItemId(3);
         let reviewed = |decision, evidence| Start::Reviewed {
             decision,
             analysis: Analysis {
-                detections: Vec::new(),
                 evidence,
+                ..Analysis::default()
             },
+            edits: PhotoEdits::default(),
         };
         job.items[0].start = reviewed(Decision::Approve, vec![resolved]);
         job.items[1].start = reviewed(Decision::Approve, vec![gap()]);
         job.items[2].start = reviewed(Decision::ExportWithWarnings, vec![gap()]);
+        job.items[3].start = reviewed(Decision::ExportWithoutAnonymization, vec![gap()]);
         let (report, published, events) = run(job);
         assert_eq!(
             report.items.iter().map(|o| o.state).collect::<Vec<_>>(),
@@ -695,10 +812,11 @@ mod tests {
                 ItemState::Published(PublishBasis::Reviewed),
                 ItemState::Failed,
                 ItemState::Published(PublishBasis::ExportedWithWarnings),
+                ItemState::Published(PublishBasis::ExportedWithoutAnonymization),
             ]
         );
         assert_eq!(report.completed(), 1);
-        assert_eq!(published.len(), 2);
+        assert_eq!(published.len(), 3);
         assert_eq!(states_of(&events, ItemId(0))[0], ItemState::NeedsReview);
     }
 

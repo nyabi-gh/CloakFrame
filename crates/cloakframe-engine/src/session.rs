@@ -8,7 +8,7 @@ use std::time::SystemTime;
 use cloakframe_core::coverage::CoverageEvidence;
 use cloakframe_core::detection::Detection;
 use cloakframe_core::item::ItemId;
-use cloakframe_core::review::ReviewRevision;
+use cloakframe_core::review::{PhotoEdits, ReviewRevision};
 use serde::{Deserialize, Serialize};
 
 use crate::identity::SourceStamp;
@@ -39,6 +39,9 @@ pub struct SessionItem {
     pub revision: ReviewRevision,
     pub detections: Vec<Detection>,
     pub evidence: Vec<CoverageEvidence>,
+    /// The latest accepted review decision's edits.
+    #[serde(default, skip_serializing_if = "PhotoEdits::is_empty")]
+    pub edits: PhotoEdits,
 }
 
 impl SessionItem {
@@ -229,6 +232,10 @@ mod tests {
                     kept: 100,
                     found: 259,
                 })],
+                edits: PhotoEdits {
+                    excluded: Vec::new(),
+                    added: vec![Rect::new(50.0, 60.0, 10.0, 10.0).unwrap()],
+                },
             }],
         }
     }

@@ -28,6 +28,7 @@ pub fn model_digest() -> Digest {
 
 pub struct Yolo5Face {
     session: Session,
+    limit: usize,
 }
 
 impl Yolo5Face {
@@ -42,7 +43,18 @@ impl Yolo5Face {
         }
         check_tensor(inputs[0].dtype(), &[1, 3, SIZE as i64, SIZE as i64])?;
         check_tensor(outputs[0].dtype(), &[1, ROWS as i64, COLS as i64])?;
-        Ok(Self { session })
+        Ok(Self {
+            session,
+            limit: MAX_DETECTIONS,
+        })
+    }
+
+    /// Lowers the per-image limit, as the P-1 fixture does to exercise `over_limit` on a real
+    /// crowd photo.
+    #[must_use]
+    pub fn with_detection_limit(mut self, limit: usize) -> Self {
+        self.limit = limit;
+        self
     }
 }
 
@@ -177,8 +189,8 @@ impl Detector for Yolo5Face {
             }
         }
         let mut detections = non_max_suppression(candidates, thresholds);
-        let over_limit = detections.len().saturating_sub(MAX_DETECTIONS) as u32;
-        detections.truncate(MAX_DETECTIONS);
+        let over_limit = detections.len().saturating_sub(self.limit) as u32;
+        detections.truncate(self.limit);
         Ok(Found {
             detections,
             over_limit,

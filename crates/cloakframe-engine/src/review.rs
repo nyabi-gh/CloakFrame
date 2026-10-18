@@ -4,12 +4,13 @@ use std::path::{Component, Path, PathBuf};
 
 use cloakframe_core::coverage::{Resolution, has_unresolved};
 use cloakframe_core::item::ItemId;
+use cloakframe_core::review::{EditError, PhotoEdits};
 use serde::{Deserialize, Serialize};
 
 use crate::fs_case::NameCase;
 use crate::output_plan::free_name;
 use crate::publish::TEMP_PREFIX;
-use crate::run::{Analysis, Decision, JobItem, Start};
+use crate::run::{Analysis, Decision, Fingerprint, JobItem, Start};
 use crate::session::{Session, SessionItem};
 
 /// A reviewer's decisions on a stored session, as written by the desktop app or by hand for
@@ -27,6 +28,9 @@ pub struct ItemDecision {
     pub action: Action,
     #[serde(default)]
     pub resolutions: Vec<EvidenceResolution>,
+    /// The whole edit document for the item; it replaces any earlier one.
+    #[serde(flatten)]
+    pub edits: PhotoEdits,
     /// A new file name in the same folder, for an output whose name is taken.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rename_to: Option<String>,
@@ -37,6 +41,8 @@ pub struct ItemDecision {
 pub enum Action {
     Approve,
     ExportWithWarnings,
+    /// Re-encode under the metadata rules with nothing masked (D9).
+    ExportWithoutAnonymization,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -50,11 +56,22 @@ pub struct EvidenceResolution {
 pub enum Rejection {
     UnknownItem,
     DecidedTwice,
-    Stale { current: u64 },
+    Stale {
+        current: u64,
+    },
     SourceChanged,
+    /// The item was analyzed with other models or settings than the ones rendering it now.
+    SettingsChanged,
     NoSuchEvidence(usize),
+    Edit(EditError),
+    /// Evidence marked as covered by a manual mask on an item with no added area.
+    NoManualMask {
+        evidence: usize,
+    },
     UnresolvedProblems,
-    NameTaken { suggestion: PathBuf },
+    NameTaken {
+        suggestion: PathBuf,
+    },
     InvalidName,
 }
 
@@ -67,7 +84,15 @@ impl fmt::Display for Rejection {
                 write!(f, "the decision is for an older revision (current: {current})")
             }
             Self::SourceChanged => f.write_str("the source file changed or is gone since analysis"),
+            Self::SettingsChanged => f.write_str(
+                "the models or settings differ from the ones the item was analyzed with; run it again",
+            ),
             Self::NoSuchEvidence(i) => write!(f, "the item has no evidence #{i}"),
+            Self::Edit(e) => e.fmt(f),
+            Self::NoManualMask { evidence } => write!(
+                f,
+                "evidence #{evidence} is marked as covered by a manual mask, but no area is added"
+            ),
             Self::UnresolvedProblems => f.write_str(
                 "unresolved detection problems remain; cover or dismiss them, or export with warnings",
             ),
@@ -87,10 +112,14 @@ pub struct Applied {
     pub rejected: Vec<(ItemId, Rejection)>,
 }
 
-/// Checks each decision against the session and turns the accepted ones into jobs. Accepted
-/// items have their resolutions, name and revision updated in `session`; rejected items are left
-/// as they were.
-pub fn apply(session: &mut Session, decisions: &ReviewDecisions) -> Applied {
+/// Checks each decision against the session and the processor that will render it, and turns
+/// the accepted ones into jobs. Accepted items have their resolutions, edits, name and revision
+/// updated in `session`; rejected items are left as they were.
+pub fn apply(
+    session: &mut Session,
+    decisions: &ReviewDecisions,
+    fingerprint: Fingerprint,
+) -> Applied {
     let mut applied = Applied::default();
     let mut seen = HashSet::new();
     let mut claimed: HashSet<(PathBuf, String)> = HashSet::new();
@@ -108,7 +137,7 @@ pub fn apply(session: &mut Session, decisions: &ReviewDecisions) -> Applied {
                 .push((decision.item, Rejection::UnknownItem));
             continue;
         };
-        match check(stored, decision, &output, &claimed) {
+        match check(stored, decision, fingerprint, &output, &claimed) {
             Ok(accepted) => {
                 let folder = accepted.destination.parent().unwrap_or(Path::new(""));
                 let case = NameCase::probe(&output.join(folder));
@@ -128,11 +157,16 @@ pub fn apply(session: &mut Session, decisions: &ReviewDecisions) -> Applied {
                         decision: match decision.action {
                             Action::Approve => Decision::Approve,
                             Action::ExportWithWarnings => Decision::ExportWithWarnings,
+                            Action::ExportWithoutAnonymization => {
+                                Decision::ExportWithoutAnonymization
+                            }
                         },
                         analysis: Analysis {
                             detections: stored.detections.clone(),
                             evidence: stored.evidence.clone(),
+                            source: Some(stored.source),
                         },
+                        edits: stored.edits.clone(),
                     },
                 });
             }
@@ -145,6 +179,7 @@ pub fn apply(session: &mut Session, decisions: &ReviewDecisions) -> Applied {
 fn check(
     stored: &SessionItem,
     decision: &ItemDecision,
+    fingerprint: Fingerprint,
     output: &Path,
     claimed: &HashSet<(PathBuf, String)>,
 ) -> Result<SessionItem, Rejection> {
@@ -153,15 +188,29 @@ fn check(
             current: stored.revision.number(),
         });
     }
+    let key = stored.revision.key();
+    if (key.models, key.settings) != (fingerprint.models, fingerprint.settings) {
+        return Err(Rejection::SettingsChanged);
+    }
     if !stored.source_unchanged() {
         return Err(Rejection::SourceChanged);
     }
+    decision
+        .edits
+        .check(stored.detections.len())
+        .map_err(Rejection::Edit)?;
     let mut item = stored.clone();
+    item.edits = decision.edits.clone();
     for r in &decision.resolutions {
         let evidence = item
             .evidence
             .get_mut(r.evidence)
             .ok_or(Rejection::NoSuchEvidence(r.evidence))?;
+        if r.resolution == Resolution::CoveredByManualMask && item.edits.added.is_empty() {
+            return Err(Rejection::NoManualMask {
+                evidence: r.evidence,
+            });
+        }
         evidence.resolution = r.resolution;
     }
     if decision.action == Action::Approve && has_unresolved(&item.evidence) {
@@ -215,7 +264,18 @@ mod tests {
     use crate::session::FORMAT_VERSION;
     use crate::testdir::TestDir;
     use cloakframe_core::coverage::{CoverageEvidence, Problem};
+    use cloakframe_core::detection::{Detection, ModelId};
+    use cloakframe_core::geometry::Rect;
     use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
+
+    const FINGERPRINT: Fingerprint = Fingerprint {
+        models: Digest([2; 32]),
+        settings: Digest([3; 32]),
+    };
+
+    fn rect(x: f32) -> Rect {
+        Rect::new(x, 0.0, 8.0, 8.0).unwrap()
+    }
 
     fn gap() -> CoverageEvidence {
         CoverageEvidence::unresolved(Problem::UnresolvedGap {
@@ -248,8 +308,12 @@ mod tests {
                         source: SourceStamp::of(&input).unwrap(),
                         input,
                         revision: ReviewRevision::first(key),
-                        detections: Vec::new(),
+                        detections: vec![
+                            Detection::new(ModelId::Yolo5FaceN, 0.9, rect(0.0), None, None)
+                                .unwrap(),
+                        ],
                         evidence: vec![gap()],
+                        edits: PhotoEdits::default(),
                     }
                 })
                 .collect(),
@@ -262,6 +326,7 @@ mod tests {
             revision: 0,
             action,
             resolutions: Vec::new(),
+            edits: PhotoEdits::default(),
             rename_to: None,
         }
     }
@@ -287,6 +352,7 @@ mod tests {
                     decide(2, Action::ExportWithWarnings),
                 ],
             },
+            FINGERPRINT,
         );
         assert_eq!(
             applied.rejected,
@@ -296,11 +362,15 @@ mod tests {
         assert_eq!(s.items[0].revision.number(), 0);
         assert_eq!(s.items[1].revision.number(), 1);
         assert_eq!(s.items[1].evidence[0].resolution, Resolution::Dismissed);
-        let Start::Reviewed { decision, analysis } = &applied.jobs[1].start else {
+        let Start::Reviewed {
+            decision, analysis, ..
+        } = &applied.jobs[1].start
+        else {
             panic!()
         };
         assert_eq!(*decision, Decision::ExportWithWarnings);
         assert_eq!(analysis.evidence, [gap()]);
+        assert_eq!(analysis.source, Some(s.items[2].source));
     }
 
     #[test]
@@ -320,6 +390,7 @@ mod tests {
                     decide(9, Action::ExportWithWarnings),
                 ],
             },
+            FINGERPRINT,
         );
         assert_eq!(
             applied.rejected,
@@ -345,6 +416,7 @@ mod tests {
             &ReviewDecisions {
                 items: vec![export()],
             },
+            FINGERPRINT,
         );
         assert_eq!(
             applied.rejected,
@@ -358,7 +430,7 @@ mod tests {
         for bad in ["../a.jpg", "sub/a.jpg", "", ".cloakframe-tmp-x.jpg"] {
             let mut d = export();
             d.rename_to = Some(bad.into());
-            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] });
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
             assert_eq!(applied.rejected[0].1, Rejection::InvalidName, "{bad:?}");
         }
         let mut renamed = export();
@@ -368,6 +440,7 @@ mod tests {
             &ReviewDecisions {
                 items: vec![renamed],
             },
+            FINGERPRINT,
         );
         assert!(applied.rejected.is_empty());
         assert_eq!(applied.jobs[0].destination, s.output.join("a (2).jpg"));
@@ -385,6 +458,7 @@ mod tests {
             &ReviewDecisions {
                 items: vec![decide(0, Action::ExportWithWarnings), second],
             },
+            FINGERPRINT,
         );
         assert_eq!(applied.jobs.len(), 1);
         assert!(matches!(
@@ -394,15 +468,105 @@ mod tests {
     }
 
     #[test]
+    fn edits_are_checked_stored_and_handed_to_the_job() {
+        let dir = TestDir::new();
+        let mut s = session(&dir, &["a.jpg"]);
+        let mut bad = decide(0, Action::ExportWithWarnings);
+        bad.edits.excluded = vec![1];
+        let mut empty_area = decide(0, Action::ExportWithWarnings);
+        empty_area.edits.added = vec![Rect::new(0.0, 0.0, 0.0, 4.0).unwrap()];
+        let mut covered_without_area = decide(0, Action::Approve);
+        covered_without_area.resolutions.push(EvidenceResolution {
+            evidence: 0,
+            resolution: Resolution::CoveredByManualMask,
+        });
+        for (d, want) in [
+            (bad, Rejection::Edit(EditError::NoSuchDetection(1))),
+            (empty_area, Rejection::Edit(EditError::EmptyArea(0))),
+            (
+                covered_without_area.clone(),
+                Rejection::NoManualMask { evidence: 0 },
+            ),
+        ] {
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+            assert_eq!(applied.rejected, [(ItemId(0), want)]);
+        }
+
+        let mut covered = covered_without_area;
+        covered.edits = PhotoEdits {
+            excluded: vec![0],
+            added: vec![rect(20.0)],
+        };
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions {
+                items: vec![covered.clone()],
+            },
+            FINGERPRINT,
+        );
+        assert!(applied.rejected.is_empty());
+        assert_eq!(s.items[0].edits, covered.edits);
+        let Start::Reviewed { edits, .. } = &applied.jobs[0].start else {
+            panic!()
+        };
+        assert_eq!(*edits, covered.edits);
+    }
+
+    #[test]
+    fn decisions_for_other_models_or_settings_are_refused() {
+        let dir = TestDir::new();
+        let mut s = session(&dir, &["a.jpg"]);
+        for fingerprint in [
+            Fingerprint {
+                models: Digest([9; 32]),
+                ..FINGERPRINT
+            },
+            Fingerprint {
+                settings: Digest([9; 32]),
+                ..FINGERPRINT
+            },
+        ] {
+            let applied = apply(
+                &mut s,
+                &ReviewDecisions {
+                    items: vec![decide(0, Action::ExportWithoutAnonymization)],
+                },
+                fingerprint,
+            );
+            assert_eq!(applied.rejected, [(ItemId(0), Rejection::SettingsChanged)]);
+        }
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions {
+                items: vec![decide(0, Action::ExportWithoutAnonymization)],
+            },
+            FINGERPRINT,
+        );
+        let Start::Reviewed { decision, .. } = &applied.jobs[0].start else {
+            panic!()
+        };
+        assert_eq!(*decision, Decision::ExportWithoutAnonymization);
+    }
+
+    #[test]
     fn the_decision_file_format() {
         let decisions: ReviewDecisions = serde_json::from_str(
             r#"{"items": [
                 {"item": 0, "revision": 0, "action": "approve",
                  "resolutions": [{"evidence": 0, "resolution": "covered_by_manual_mask"}]},
-                {"item": 1, "revision": 2, "action": "export_with_warnings", "rename_to": "b (2).jpg"}
+                {"item": 1, "revision": 2, "action": "export_with_warnings", "rename_to": "b (2).jpg"},
+                {"item": 2, "revision": 0, "action": "export_without_anonymization",
+                 "excluded": [0], "added": [{"x": 1, "y": 2, "width": 3, "height": 4}]}
             ]}"#,
         )
         .unwrap();
+        assert_eq!(
+            decisions.items[2].action,
+            Action::ExportWithoutAnonymization
+        );
+        assert_eq!(decisions.items[2].edits.excluded, [0]);
+        assert_eq!(decisions.items[2].edits.added[0].height(), 4.0);
+        assert!(decisions.items[1].edits.is_empty());
         assert_eq!(
             decisions.items[0].resolutions[0].resolution,
             Resolution::CoveredByManualMask

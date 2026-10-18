@@ -3,7 +3,7 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
-use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
+use cloakframe_core::review::{Digest, PhotoEdits, ReviewKey, ReviewRevision};
 use sha2::{Digest as _, Sha256};
 
 use crate::identity::SourceStamp;
@@ -59,7 +59,8 @@ pub fn job_from_scan(
 }
 
 /// The review session for the items a run left in `NeedsReview`, or `None` if there are none.
-/// Items whose source changed or vanished during the run are left out; they need a new run.
+/// Items whose source changed or vanished since it was read for analysis are left out; they need
+/// a new run.
 pub fn session_from_report(
     report: &RunReport,
     plan: &[PlannedOutput],
@@ -71,9 +72,13 @@ pub fn session_from_report(
         if outcome.state != ItemState::NeedsReview {
             continue;
         }
-        let (Ok(source), Ok(input)) =
-            (SourceStamp::of(&outcome.input), sha256_file(&outcome.input))
-        else {
+        let Some(source) = outcome.analysis.source else {
+            continue;
+        };
+        if SourceStamp::of(&outcome.input).ok() != Some(source) {
+            continue;
+        }
+        let Ok(input) = sha256_file(&outcome.input) else {
             continue;
         };
         let key = ReviewKey {
@@ -93,6 +98,7 @@ pub fn session_from_report(
             revision: ReviewRevision::first(key),
             detections: outcome.analysis.detections.clone(),
             evidence: outcome.analysis.evidence.clone(),
+            edits: PhotoEdits::default(),
         });
     }
     Ok((!items.is_empty()).then(|| Session {

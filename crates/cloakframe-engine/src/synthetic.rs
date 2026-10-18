@@ -2,24 +2,20 @@
 //! "renders" the bytes reversed (never a copy of the source, D9) and reports problems named in the
 //! file stem: `gap` gives an unresolved gap, `capped` capped candidates, `fail` a decode failure.
 
-use std::collections::HashMap;
 use std::io::{self, Write};
-use std::sync::Mutex;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::ModelId;
-use cloakframe_core::item::{ItemId, PublishPermit};
+use cloakframe_core::item::PublishPermit;
 use cloakframe_core::review::Digest;
 use sha2::{Digest as _, Sha256};
 
 use crate::identity::SourceStamp;
 use crate::publish::TempOutput;
-use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, StepError};
+use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError};
 
 #[derive(Default)]
-pub struct SyntheticProcessor {
-    rendered: Mutex<HashMap<ItemId, (TempOutput, SourceStamp)>>,
-}
+pub struct SyntheticProcessor;
 
 fn failed(message: &str) -> StepError {
     StepError::Failed(message.into())
@@ -30,7 +26,10 @@ fn io_failed(e: io::Error) -> StepError {
 }
 
 impl ItemProcessor for SyntheticProcessor {
-    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Analysis, StepError> {
+    type Prepared = ();
+    type Rendered = (TempOutput, SourceStamp);
+
+    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, ()), StepError> {
         let stem = ctx
             .input
             .file_stem()
@@ -55,33 +54,41 @@ impl ItemProcessor for SyntheticProcessor {
                 found: 280,
             }));
         }
-        Ok(Analysis {
-            detections: Vec::new(),
-            evidence,
-        })
+        let source = Some(SourceStamp::of(ctx.input).map_err(io_failed)?);
+        Ok((
+            Analysis {
+                detections: Vec::new(),
+                evidence,
+                source,
+            },
+            (),
+        ))
     }
 
-    fn render(&self, ctx: &ItemContext<'_>, _: &Analysis) -> Result<(), StepError> {
+    fn render(
+        &self,
+        ctx: &ItemContext<'_>,
+        request: &RenderRequest<'_>,
+        _: Option<()>,
+    ) -> Result<Self::Rendered, StepError> {
         let stamp = SourceStamp::of(ctx.input).map_err(io_failed)?;
+        if request.analysis.source != Some(stamp) {
+            return Err(failed("the source changed since it was analyzed"));
+        }
         let mut bytes = std::fs::read(ctx.input).map_err(io_failed)?;
         bytes.reverse();
         let mut out = TempOutput::create(ctx.destination).map_err(io_failed)?;
         out.file().write_all(&bytes).map_err(io_failed)?;
         ctx.progress.set(1, 1);
-        self.rendered
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(ctx.item, (out, stamp));
-        Ok(())
+        Ok((out, stamp))
     }
 
-    fn publish(&self, ctx: &ItemContext<'_>, permit: &PublishPermit) -> Result<(), StepError> {
-        let (out, stamp) = self
-            .rendered
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(&ctx.item)
-            .ok_or_else(|| failed("nothing was rendered"))?;
+    fn publish(
+        &self,
+        ctx: &ItemContext<'_>,
+        (out, stamp): Self::Rendered,
+        permit: &PublishPermit,
+    ) -> Result<(), StepError> {
         if SourceStamp::of(ctx.input).ok() != Some(stamp) {
             return Err(failed("the source changed while it was processed"));
         }
