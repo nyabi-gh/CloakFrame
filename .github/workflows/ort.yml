@@ -1,0 +1,109 @@
+name: ORT
+
+# The ONNX Runtime builds pinned in manifests/native.toml, fetched by hash, against the 1.12.1
+# detection fixtures on all three platforms (CPU). The engine's own detector tests take over in M2.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/ort.yml
+      - manifests/native.toml
+      - tools/fetch_native.py
+      - spikes/ort/**
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/ort.yml
+      - manifests/native.toml
+      - tools/fetch_native.py
+      - spikes/ort/**
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ort-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpu:
+    name: ORT CPU vs 1.12.1 (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            runtime: onnxruntime linux-x86_64
+            python: python3
+          - os: macos-15
+            runtime: onnxruntime macos-arm64
+            python: python3
+          - os: windows-2025
+            runtime: windows-ml windows-x64
+            python: python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    defaults:
+      run:
+        shell: bash
+    env:
+      PY: ${{ matrix.python }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Fetch the pinned runtime
+        run: |
+          lib=$("$PY" -I tools/fetch_native.py ${{ matrix.runtime }} "$RUNNER_TEMP/native")
+          echo "ORT_LIB=$lib" >> "$GITHUB_ENV"
+
+      - name: Fetch models and sample images
+        run: |
+          bash .github/scripts/fetch_test_models.sh
+          "$PY" -I - tests/fixtures/assets.json "$RUNNER_TEMP/cloakframe-test-assets" <<'EOF'
+          import hashlib, json, sys, urllib.request
+          from pathlib import Path
+          spec, dest = json.load(open(sys.argv[1])), Path(sys.argv[2])
+          for a in spec["images"]:
+              p = dest / a["name"]
+              if not p.exists():
+                  urllib.request.urlretrieve(a["url"], p)
+              if hashlib.sha256(p.read_bytes()).hexdigest() != a["sha256"]:
+                  raise SystemExit(f"hash mismatch for {a['name']}")
+          EOF
+
+      - name: OpenCV reference decode
+        run: |
+          "$PY" -m venv "$RUNNER_TEMP/venv"
+          py="$RUNNER_TEMP/venv/bin/python"; [ -x "$py" ] || py="$RUNNER_TEMP/venv/Scripts/python.exe"
+          "$py" -m pip -q install "opencv-python-headless==5.0.0.93" "numpy<3"
+          a="$RUNNER_TEMP/cloakframe-test-assets"
+          "$py" -I spikes/ort/reference/opencv_reference.py "$RUNNER_TEMP/ref" \
+            "$a/astronaut.png" "$a/messi5.jpg" "$a/lena.jpg" "$a/car_image.webp" \
+            tests/fixtures/detect/inputs/astronaut-scales.png tests/fixtures/detect/inputs/crowd-280-faces.png
+
+      - name: Install Rust
+        run: |
+          channel=$(sed -n 's/^channel = "\(.*\)"$/\1/p' manifests/rust.toml)
+          rustup toolchain install "$channel" --profile minimal
+          rustup default "$channel"
+
+      - name: Compare with the 1.12.1 fixtures
+        env:
+          ORT_DISABLE_TELEMETRY: "1"
+        run: |
+          (cd spikes/ort && cargo build --release --locked)
+          spikes/ort/target/release/ort-spike "$RUNNER_TEMP/cloakframe-test-assets" tests/fixtures \
+            "$RUNNER_TEMP/ref/decoded" "$ORT_LIB" | tee "$RUNNER_TEMP/ort.txt"
+          "$PY" -I - "$RUNNER_TEMP/ort.txt" <<'EOF'
+          import json, sys
+          line = next(l for l in open(sys.argv[1], encoding="utf-8") if l.startswith("SUMMARY "))
+          summary = json.loads(line[len("SUMMARY "):])
+          bad = {m: s for m, s in summary.items()
+                 if s["count_mismatches"] or s["unmatched"] or s["min_iou"] < 0.9999 or s["cases"] != 18}
+          print(json.dumps(summary, indent=1))
+          if bad:
+              raise SystemExit(f"differs from the 1.12.1 fixtures: {sorted(bad)}")
+          EOF

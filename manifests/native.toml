@@ -17,6 +17,8 @@ platform = "macos-arm64"
 version = "1.30.0"
 url = "https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-osx-arm64-1.30.0.tgz"
 sha256 = "6ebb5062a934537c352937821f9fe9718e7de1a2db1122a93dd363ffd53a7012"
+# ort::init_from에 주는 파일(아카이브 안 경로)
+library = "onnxruntime-osx-arm64-1.30.0/lib/libonnxruntime.1.30.0.dylib"
 license = "MIT"
 source = "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
 use = "bundle"
@@ -30,6 +32,7 @@ platform = "linux-x86_64"
 version = "1.30.0"
 url = "https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-linux-x64-1.30.0.tgz"
 sha256 = "a5ed5a3cac51fbb2e90da632ae43d19212faaa20e76484e62bcb7c23ddb3b3fd"
+library = "onnxruntime-linux-x64-1.30.0/lib/libonnxruntime.so.1.30.0"
 license = "MIT"
 source = "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
 use = "bundle"
@@ -44,6 +47,7 @@ url = "https://api.nuget.org/v3-flatcontainer/microsoft.windows.ai.machinelearni
 sha256 = "5c68ecfb947223267abf159a023f5192ad42725e4e9cc995e7c1470dd54dff63"
 # runtimes/win-x64/native의 onnxruntime.dll(ORT 1.27.1)과 DirectML.dll(1.15.4)만 쓴다.
 files = ["runtimes/win-x64/native/onnxruntime.dll", "runtimes/win-x64/native/DirectML.dll"]
+library = "runtimes/win-x64/native/onnxruntime.dll"
 contains = { onnxruntime = "1.27.1", directml = "1.15.4" }
 license = "Microsoft Software License Terms"
 license_url = "https://www.nuget.org/packages/Microsoft.Windows.AI.MachineLearning/2.4.89/License"
