@@ -5,3 +5,4 @@ pub mod budget;
 pub mod color;
 pub mod decode;
 pub mod format;
+pub mod mask;

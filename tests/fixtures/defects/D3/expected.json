@@ -37,7 +37,10 @@
     }
   ],
   "observed_1121_summary": "블록 4·8·14·20·40px 모두 12×12 셀(색 144개)로 같은 결과. 60px부터만 달라짐",
-  "proposed": [
-    "셀 경계 floor(i*L/s)와 긴 변 셀 수 round(s*long/short)는 계획에 없는 세부 사항으로 M2에서 확정"
+  "decided": [
+    "셀 경계는 floor(i*L/n), 긴 변 셀 수는 round(n*long/short) (M2 4단계)",
+    "셀은 짧은 변·긴 변 모두 최소 2px: n = min(s, max(1, L/2)). 4px 영역도 바뀌게 한다",
+    "셀 값은 채널마다 반올림한 평균, alpha 채널도 같은 평균",
+    "soft edge의 바깥 띠는 가장 가까운 가장자리 셀 값을 이어 씀"
   ]
 }
