@@ -202,3 +202,30 @@ use = "download"
 status = "m0"
 # macOS에서도 CPU로 돌린다. 감지 0건일 때 CoreML EP가 빈 동적 텐서를 거부한다.
 evidence = "docs/M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리"
+
+[[artifact]]
+id = "libjpeg-turbo"
+platform = "all"
+version = "3.1.0"
+# crate turbojpeg-sys 1.2.0이 담은 소스를 빌드해 정적 링크한다. 별도로 내려받지 않는다.
+url = "https://crates.io/api/v1/crates/turbojpeg-sys/1.2.0/download"
+sha256 = "49b5a974bc59382d35927e3a07eef2ba9a24fe7227cefe52ec44b508e1b90f86"
+license = "IJG AND BSD-3-Clause AND Zlib"
+license_note = "IJG: 문서에 'this software is based in part on the work of the Independent JPEG Group' 고지"
+source = "https://github.com/libjpeg-turbo/libjpeg-turbo/tree/3.1.0"
+use = "build"
+status = "m0"
+evidence = "docs/M2_ENCODE_SPIKE.md"
+
+[[artifact]]
+id = "libwebp"
+platform = "all"
+version = "1.6.0"
+# crate libwebp-sys 0.14.4가 담은 소스를 빌드해 정적 링크한다.
+url = "https://crates.io/api/v1/crates/libwebp-sys/0.14.4/download"
+sha256 = "6b3a87b44e34d17161e4f17d92a463d596cb13825dcd1758ed18fd3a721e189c"
+license = "BSD-3-Clause"
+source = "https://chromium.googlesource.com/webm/libwebp/+/refs/tags/v1.6.0"
+use = "build"
+status = "m0"
+evidence = "docs/M2_ENCODE_SPIKE.md"

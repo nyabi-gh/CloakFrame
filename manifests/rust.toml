@@ -81,3 +81,16 @@ evidence = "crates/cloakframe-engine/src/session.rs"
 version = "=0.11.0"
 # 0.11.1(2026-10-12)은 나온 지 일주일이 안 되어 쓰지 않음.
 evidence = "crates/cloakframe-engine/src/batch.rs"
+
+[crates.turbojpeg]
+version = "=1.5.1"
+default-features = false
+features = ["cmake"]
+# libjpeg-turbo 3.1.0을 turbojpeg-sys 1.2.0이 소스에서 정적 빌드한다(native.toml의 libjpeg-turbo).
+# 릴리스 빌드는 x86에서 nasm을 두어 SIMD를 켠다.
+evidence = "docs/M2_ENCODE_SPIKE.md"
+
+[crates.libwebp-sys]
+version = "=0.14.4"
+# libwebp 1.6.0을 소스에서 정적 빌드한다(native.toml의 libwebp). 손실 WebP 인코드에만 쓴다.
+evidence = "docs/M2_ENCODE_SPIKE.md"
