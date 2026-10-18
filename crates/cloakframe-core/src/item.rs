@@ -21,11 +21,13 @@ pub enum PublishBasis {
     Reviewed,
     /// Chosen explicitly per item despite unresolved problems.
     ExportedWithWarnings,
+    /// Chosen explicitly per item: re-encoded under the metadata rules with nothing masked (D9).
+    ExportedWithoutAnonymization,
 }
 
 impl PublishBasis {
     pub fn counts_as_normal_completion(self) -> bool {
-        self != Self::ExportedWithWarnings
+        matches!(self, Self::AutomaticUnreviewed | Self::Reviewed)
     }
 }
 
@@ -157,6 +159,14 @@ impl Item {
         Ok(())
     }
 
+    pub fn export_without_anonymization(&mut self) -> Result<(), TransitionError> {
+        if self.state != ItemState::NeedsReview {
+            return Err(self.not_allowed("export without anonymization"));
+        }
+        self.state = ItemState::ReadyForRender(PublishBasis::ExportedWithoutAnonymization);
+        Ok(())
+    }
+
     pub fn start_render(&mut self) -> Result<(), TransitionError> {
         match self.state {
             ItemState::ReadyForRender(basis) => {
@@ -223,7 +233,8 @@ impl fmt::Display for PermitRefusal {
 impl std::error::Error for PermitRefusal {}
 
 /// The only way to move an item to `Published`. It can be issued only for a verified item, and
-/// only without unresolved problems unless the item was explicitly exported with warnings (P-1).
+/// only without unresolved problems unless the reviewer explicitly chose to export the item with
+/// warnings or without anonymization (P-1).
 #[derive(Debug, PartialEq, Eq)]
 pub struct PublishPermit {
     item: ItemId,
@@ -235,7 +246,7 @@ impl PublishPermit {
         let ItemState::Verified(basis) = item.state else {
             return Err(PermitRefusal::NotVerified(item.state));
         };
-        if basis != PublishBasis::ExportedWithWarnings && has_unresolved(evidence) {
+        if basis.counts_as_normal_completion() && has_unresolved(evidence) {
             return Err(PermitRefusal::UnresolvedProblems);
         }
         Ok(Self {
@@ -335,6 +346,23 @@ mod tests {
             ItemState::Published(PublishBasis::ExportedWithWarnings)
         );
         assert!(!PublishBasis::ExportedWithWarnings.counts_as_normal_completion());
+    }
+
+    #[test]
+    fn export_without_anonymization_is_explicit_and_not_a_normal_completion() {
+        let evidence = [capped()];
+        let mut item = analyzed(1);
+        assert!(item.export_without_anonymization().is_err());
+        item.route(ReviewMode::Off, &evidence).unwrap();
+        item.export_without_anonymization().unwrap();
+        render_and_verify(&mut item);
+        let permit = PublishPermit::issue(&item, &evidence).unwrap();
+        item.publish(permit).unwrap();
+        assert_eq!(
+            item.state(),
+            ItemState::Published(PublishBasis::ExportedWithoutAnonymization)
+        );
+        assert!(!PublishBasis::ExportedWithoutAnonymization.counts_as_normal_completion());
     }
 
     #[test]

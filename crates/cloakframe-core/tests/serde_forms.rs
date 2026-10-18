@@ -4,7 +4,7 @@
 use cloakframe_core::coverage::{CoverageEvidence, Problem, Resolution};
 use cloakframe_core::detection::{Detection, ModelId};
 use cloakframe_core::geometry::{Point, Rect};
-use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
+use cloakframe_core::review::{Digest, PhotoEdits, ReviewKey, ReviewRevision};
 use serde_json::json;
 
 #[test]
@@ -85,4 +85,26 @@ fn digests_are_hex_and_revisions_round_trip() {
     );
     assert!(serde_json::from_value::<Digest>(json!("ab")).is_err());
     assert!(serde_json::from_value::<Digest>(json!("zz".repeat(32))).is_err());
+}
+
+#[test]
+fn photo_edits_leave_out_empty_lists() {
+    let edits = PhotoEdits {
+        excluded: vec![2],
+        added: vec![Rect::new(1.0, 2.0, 3.0, 4.0).unwrap()],
+    };
+    let stored = serde_json::to_value(&edits).unwrap();
+    assert_eq!(
+        stored,
+        json!({"excluded": [2], "added": [{"x": 1.0, "y": 2.0, "width": 3.0, "height": 4.0}]})
+    );
+    assert_eq!(serde_json::from_value::<PhotoEdits>(stored).unwrap(), edits);
+    assert_eq!(
+        serde_json::to_value(PhotoEdits::default()).unwrap(),
+        json!({})
+    );
+    assert_eq!(
+        serde_json::from_value::<PhotoEdits>(json!({})).unwrap(),
+        PhotoEdits::default()
+    );
 }

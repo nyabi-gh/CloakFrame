@@ -155,6 +155,18 @@ impl Overlay {
             rgba,
         })
     }
+
+    pub fn width(&self) -> u32 {
+        self.width as u32
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height as u32
+    }
+
+    pub fn rgba(&self) -> &[u8] {
+        &self.rgba
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
