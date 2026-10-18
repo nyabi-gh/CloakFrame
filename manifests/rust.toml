@@ -96,6 +96,13 @@ version = "=0.14.4"
 # libwebp 1.6.0을 소스에서 정적 빌드한다(native.toml의 libwebp). 손실 WebP 인코드에만 쓴다.
 evidence = "docs/M2_ENCODE_SPIKE.md"
 
+[crates.tiff]
+version = "=0.11.3"
+default-features = false
+features = []
+# image가 이미 쓰는 판. TIFF ICC는 직접 읽는다: image는 limit을 pixel 버퍼 크기로 잡아 작은 TIFF의 profile을 버린다.
+evidence = "crates/cloakframe-engine/src/photo/color.rs"
+
 [crates.libc]
 version = "=0.2.191"
 targets = ["linux", "macos"]

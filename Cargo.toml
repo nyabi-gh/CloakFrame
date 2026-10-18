@@ -20,6 +20,7 @@ turbojpeg = { version = "=1.5.1", default-features = false, features = ["cmake"]
 kamadak-exif = "=0.6.1"
 moxcms = "=0.9.1"
 ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "load-dynamic", "api-27"] }
+tiff = { version = "=0.11.3", default-features = false, features = [] }
 
 [workspace.lints.rust]
 # OS·FFI 어댑터에서만 #[allow(unsafe_code)]로 국소 허용한다(계획 4.1).

@@ -142,8 +142,10 @@ fn has_icc_chunk(source: &Source) -> bool {
 }
 
 fn read_icc(source: &Source) -> Option<Vec<u8>> {
-    if source.format == ImageFormat::Jpeg {
-        return jpeg_icc(&source.bytes);
+    match source.format {
+        ImageFormat::Jpeg => return jpeg_icc(&source.bytes),
+        ImageFormat::Tiff => return tiff_icc(&source.bytes),
+        _ => {}
     }
     let format = match source.format {
         ImageFormat::Png => image::ImageFormat::Png,
@@ -161,6 +163,24 @@ fn read_icc(source: &Source) -> Option<Vec<u8>> {
         .flatten()
         .filter(|p| !p.is_empty())
 }
+
+/// Tag 34675 of the first IFD. image sizes its TIFF limits from the pixel buffer, and a tag value
+/// is held as one 24-byte value per byte while it is read, so on small images it drops the
+/// profile as over the limit.
+fn tiff_icc(bytes: &[u8]) -> Option<Vec<u8>> {
+    let mut limits = tiff::decoder::Limits::default();
+    limits.decoding_buffer_size = MAX_TIFF_ICC_READ;
+    limits.ifd_value_size = MAX_TIFF_ICC_READ;
+    tiff::decoder::Decoder::new(Cursor::new(bytes))
+        .ok()?
+        .with_limits(limits)
+        .get_tag_u8_vec(tiff::tags::Tag::IccProfile)
+        .ok()
+        .filter(|p| !p.is_empty())
+}
+
+/// Room for a profile of a few megabytes at the decoder's per-byte cost.
+const MAX_TIFF_ICC_READ: usize = 128 << 20;
 
 /// APP2 `ICC_PROFILE` chunks, joined in their sequence order.
 fn jpeg_icc(bytes: &[u8]) -> Option<Vec<u8>> {
@@ -499,5 +519,29 @@ mod tests {
             apply(&jpeg, &mut image).unwrap(),
             ColorOutcome::Ignored(IgnoredProfile::Unreadable)
         );
+    }
+
+    #[test]
+    fn small_tiffs_keep_their_profile() {
+        // 8x8 RGB: image's own TIFF limits would drop the 2.5 KB profile.
+        let mut bytes = Vec::new();
+        let mut encoder = image::codecs::tiff::TiffEncoder::new(Cursor::new(&mut bytes));
+        let p3 = Standard::DisplayP3.profile_bytes().to_vec();
+        image::ImageEncoder::set_icc_profile(&mut encoder, p3.clone()).unwrap();
+        image::ImageEncoder::write_image(
+            encoder,
+            &[90; 8 * 8 * 3],
+            8,
+            8,
+            image::ExtendedColorType::Rgb8,
+        )
+        .unwrap();
+        let (srgb, _) = load("chart-srgb.png");
+        let source = Source {
+            bytes,
+            format: ImageFormat::Tiff,
+            ..srgb
+        };
+        assert_eq!(embedded_icc(&source), EmbeddedIcc::Profile(p3));
     }
 }

@@ -22,6 +22,7 @@ turbojpeg.workspace = true
 kamadak-exif.workspace = true
 moxcms.workspace = true
 ort.workspace = true
+tiff.workspace = true
 
 [features]
 # The synthetic processor for exercising the whole run without a media pipeline (M1 tests and

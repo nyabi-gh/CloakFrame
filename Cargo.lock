@@ -85,6 +85,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tiff",
  "turbojpeg",
  "windows-sys",
 ]
