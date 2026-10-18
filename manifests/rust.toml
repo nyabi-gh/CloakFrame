@@ -99,9 +99,10 @@ evidence = "docs/M2_ENCODE_SPIKE.md"
 [crates.tiff]
 version = "=0.11.3"
 default-features = false
-features = []
-# image가 이미 쓰는 판. TIFF ICC는 직접 읽는다: image는 limit을 pixel 버퍼 크기로 잡아 작은 TIFF의 profile을 버린다.
-evidence = "crates/cloakframe-engine/src/photo/color.rs"
+features = ["lzw"]
+# image가 이미 쓰는 판. image의 TIFF 인코더는 압축을 고를 수 없어 직접 LZW로 쓴다(D6, 1.12.1과 같은 압축).
+# TIFF ICC 판독도 직접 한다: image는 limit을 pixel 버퍼 크기로 잡아 작은 TIFF의 profile을 버린다.
+evidence = "crates/cloakframe-engine/src/photo/encode.rs"
 
 [crates.libc]
 version = "=0.2.191"

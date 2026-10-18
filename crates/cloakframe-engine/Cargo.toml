@@ -22,6 +22,7 @@ turbojpeg.workspace = true
 kamadak-exif.workspace = true
 moxcms.workspace = true
 ort.workspace = true
+libwebp-sys.workspace = true
 tiff.workspace = true
 
 [features]
