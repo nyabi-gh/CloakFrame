@@ -19,15 +19,17 @@ fn detections_round_trip_and_invalid_ones_are_rejected() {
     .unwrap();
     let stored = serde_json::to_value(&face).unwrap();
     assert_eq!(stored["model"], "yolo5_face_n");
+    assert_eq!(stored["kind"], "face");
     assert_eq!(stored["frame"], 12);
     assert_eq!(serde_json::from_value::<Detection>(stored).unwrap(), face);
 
-    let plate = json!({"model": "plate_yolov9_t", "score": 0.5, "bbox": {"x": 0, "y": 0, "width": 4, "height": 2}});
+    let plate = json!({"model": "plate_yolov9_t", "kind": "plate", "score": 0.5, "bbox": {"x": 0, "y": 0, "width": 4, "height": 2}});
     assert!(serde_json::from_value::<Detection>(plate.clone()).is_ok());
     for (field, value) in [
         ("score", json!(1.5)),
         ("bbox", json!({"x": 0, "y": 0, "width": -1, "height": 2})),
         ("landmarks", json!(vec![json!({"x": 0, "y": 0}); 5])),
+        ("kind", json!("face")),
     ] {
         let mut bad = plate.clone();
         bad[field] = value;

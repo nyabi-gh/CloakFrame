@@ -105,6 +105,19 @@ impl Rect {
     pub fn area(&self) -> f32 {
         self.width * self.height
     }
+
+    /// Intersection over union, 0 when either box is empty. Same f32 arithmetic as 1.12.1
+    /// `intersectionOverUnion`, so NMS keeps the same boxes.
+    pub fn iou(&self, other: &Rect) -> f32 {
+        let (a, b) = (self.area(), other.area());
+        if a <= 0.0 || b <= 0.0 {
+            return 0.0;
+        }
+        let w = (self.right().min(other.right()) - self.x.max(other.x)).max(0.0);
+        let h = (self.bottom().min(other.bottom()) - self.y.max(other.y)).max(0.0);
+        let intersection = w * h;
+        intersection / (a + b - intersection)
+    }
 }
 
 #[cfg(test)]
@@ -131,5 +144,15 @@ mod tests {
     fn allows_negative_origin_and_empty_size() {
         let r = Rect::new(-4.0, -2.0, 10.0, 0.0).unwrap();
         assert_eq!((r.right(), r.bottom(), r.area()), (6.0, -2.0, 0.0));
+    }
+
+    #[test]
+    fn iou_of_overlapping_disjoint_and_empty_boxes() {
+        let a = Rect::new(0.0, 0.0, 10.0, 10.0).unwrap();
+        let b = Rect::new(5.0, 0.0, 10.0, 10.0).unwrap();
+        assert_eq!(a.iou(&b), 50.0 / 150.0);
+        assert_eq!(a.iou(&a), 1.0);
+        assert_eq!(a.iou(&Rect::new(10.0, 0.0, 5.0, 5.0).unwrap()), 0.0);
+        assert_eq!(a.iou(&Rect::new(1.0, 1.0, 0.0, 5.0).unwrap()), 0.0);
     }
 }
