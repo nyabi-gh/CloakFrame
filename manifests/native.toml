@@ -170,6 +170,7 @@ url = "https://github.com/yakhyo/yolov5-face-onnx-inference/releases/download/we
 sha256 = "eb244a06e36999db732b317c2b30fa113cd6cfc1a397eaf738f2d6f33c01f640"
 size = 11021477
 # 코드 GPL-3.0(YOLO5Face), 학습 데이터 WIDER FACE는 비상업 연구용. 재배포하지 않고 사용자가 받는다.
+# engine은 이 해시의 바이트로만 세션을 만든다(detect::yolo5face::MODEL_SHA256, 같은 값인지 시험으로 확인).
 license = "non-commercial (upstream terms)"
 source = "https://github.com/deepcam-cn/yolov5-face"
 use = "download"

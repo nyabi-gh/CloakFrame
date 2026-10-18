@@ -2,8 +2,10 @@
 
 use cloakframe_core::detection::{Detection, ModelId, Thresholds, non_max_suppression};
 use cloakframe_core::geometry::{Point, Rect};
+use cloakframe_core::review::Digest;
 use ort::session::Session;
 use ort::value::{TensorElementType, TensorRef, ValueType};
+use sha2::{Digest as _, Sha256};
 
 use super::resize::resize_linear;
 use super::runtime::OrtRuntime;
@@ -16,12 +18,23 @@ const PAD_VALUE: u8 = 114;
 /// 1.12.1's per-image limit; NMS survivors beyond it are reported as `Found::over_limit`.
 const MAX_DETECTIONS: usize = 300;
 
+/// The model file this detector runs (`manifests/native.toml`). Sessions are made only from bytes
+/// with this hash (plan 4.6).
+pub const MODEL_SHA256: &str = "eb244a06e36999db732b317c2b30fa113cd6cfc1a397eaf738f2d6f33c01f640";
+
+pub fn model_digest() -> Digest {
+    MODEL_SHA256.parse().expect("a valid SHA-256")
+}
+
 pub struct Yolo5Face {
     session: Session,
 }
 
 impl Yolo5Face {
     pub fn new(runtime: &OrtRuntime, model: &[u8]) -> Result<Self, DetectError> {
+        if Digest(Sha256::digest(model).into()) != model_digest() {
+            return Err(unexpected("file is not the pinned one (SHA-256 differs)"));
+        }
         let session = runtime.cpu_session(model).map_err(failed)?;
         let (inputs, outputs) = (session.inputs(), session.outputs());
         if inputs.len() != 1 || outputs.len() != 1 {
@@ -242,6 +255,16 @@ mod tests {
             .unwrap();
         assert_eq!((edge.bbox().x(), edge.bbox().y()), (0.0, 0.0));
         assert_eq!((edge.bbox().width(), edge.bbox().height()), (30.0, 30.0));
+    }
+
+    #[test]
+    fn the_pinned_hash_is_the_manifest_entry() {
+        let manifest = include_str!("../../../../manifests/native.toml");
+        let entry = manifest
+            .split("[[artifact]]")
+            .find(|e| e.contains("version = \"yolov5n_face\""))
+            .unwrap();
+        assert!(entry.contains(&format!("sha256 = \"{MODEL_SHA256}\"")));
     }
 
     #[test]
