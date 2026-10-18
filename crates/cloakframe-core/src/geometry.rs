@@ -146,13 +146,15 @@ mod tests {
         assert_eq!((r.right(), r.bottom(), r.area()), (6.0, -2.0, 0.0));
     }
 
+    /// tests/fixtures/legacy/tests/testIntersectionOverUnion.json (normative).
     #[test]
     fn iou_of_overlapping_disjoint_and_empty_boxes() {
         let a = Rect::new(0.0, 0.0, 10.0, 10.0).unwrap();
         let b = Rect::new(5.0, 0.0, 10.0, 10.0).unwrap();
         assert_eq!(a.iou(&b), 50.0 / 150.0);
         assert_eq!(a.iou(&a), 1.0);
+        assert_eq!(a.iou(&Rect::new(100.0, 100.0, 10.0, 10.0).unwrap()), 0.0);
+        assert_eq!(a.iou(&Rect::new(0.0, 0.0, 0.0, 0.0).unwrap()), 0.0);
         assert_eq!(a.iou(&Rect::new(10.0, 0.0, 5.0, 5.0).unwrap()), 0.0);
-        assert_eq!(a.iou(&Rect::new(1.0, 1.0, 0.0, 5.0).unwrap()), 0.0);
     }
 }
