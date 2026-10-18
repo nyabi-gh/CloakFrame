@@ -45,9 +45,6 @@ pub struct Found {
     /// Detections NMS kept beyond the per-image limit. The caller records them as
     /// `Problem::CappedCandidates`, the only kind of omission D11 counts.
     pub over_limit: u32,
-    /// Lowest-scored candidates dropped before NMS to bound its cost (1.12.1's limit). D11 re-runs
-    /// such images on tiles in M3; until then a nonzero count means the result may be incomplete.
-    pub dropped_before_nms: u32,
 }
 
 /// A loaded model session. `Send` but not required to be `Sync`: the inference thread is its

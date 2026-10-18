@@ -1,6 +1,10 @@
 //! YOLO5Face-n on the pinned ONNX Runtime against the 1.12.1 detection fixtures
 //! (tests/fixtures/detect/yolo5face, 6 images x 3 score thresholds, NMS 0.4).
 //!
+//! 1.12.1 kept only the 2,000 best candidates before NMS. The crowd fixture exceeds that at every
+//! threshold (defects/D11/observed_1121.json), so there every 1.12.1 detection must still be found
+//! and the result must be all 280 faces (defects/D11/expected.json); elsewhere the results match.
+//!
 //! Needs, as CI provides them (plan 9.1: missing assets fail the test rather than skip it):
 //! - `CLOAKFRAME_ORT_LIBRARY`: the library `tools/fetch_native.py` prints for this platform
 //! - `CLOAKFRAME_TEST_ASSETS`: the folder `tools/fetch_test_assets.py` filled
@@ -22,6 +26,8 @@ use sha2::{Digest, Sha256};
 const MIN_IOU: f32 = 0.9999;
 const MAX_SCORE_DIFF: f32 = 1e-5;
 const MAX_ROLL_DIFF: f32 = 1e-4;
+const CROWD: &str = "crowd-280-faces";
+const CROWD_FACES: usize = 280;
 
 fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures")
@@ -129,9 +135,14 @@ fn yolo5face_matches_the_1_12_1_fixtures() {
             if found.over_limit != 0 {
                 failures.push(format!("{case}: {} over the limit", found.over_limit));
             }
-            if found.detections.len() != want.detections.len() {
+            let expected = if stem == CROWD {
+                CROWD_FACES
+            } else {
+                want.detections.len()
+            };
+            if found.detections.len() != expected {
                 failures.push(format!(
-                    "{case}: {} detections, 1.12.1 found {}",
+                    "{case}: {} detections, expected {expected} (1.12.1 found {})",
                     found.detections.len(),
                     want.detections.len()
                 ));

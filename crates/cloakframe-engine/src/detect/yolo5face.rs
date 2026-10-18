@@ -13,9 +13,7 @@ const SIZE: usize = 640;
 const ROWS: usize = 25_200;
 const COLS: usize = 16;
 const PAD_VALUE: u8 = 114;
-/// 1.12.1's limits. Above `MAX_CANDIDATES` NMS cost grows quadratically; see `Found` for how
-/// each limit is reported.
-const MAX_CANDIDATES: usize = 2_000;
+/// 1.12.1's per-image limit; NMS survivors beyond it are reported as `Found::over_limit`.
 const MAX_DETECTIONS: usize = 300;
 
 pub struct Yolo5Face {
@@ -156,17 +154,14 @@ impl Detector for Yolo5Face {
             return Err(unexpected(&format!("output shape {shape:?}")));
         }
 
+        // Every row goes to NMS. 1.12.1 kept only the 2,000 best-scored candidates, which lost 21
+        // of the 280 faces in the D11 crowd fixture; the fixed 25,200 rows bound NMS instead
+        // (about 0.3 s in the worst case of no overlap at all).
         let mut candidates = Vec::new();
         for row in data.as_chunks::<COLS>().0 {
             if let Some(d) = decode_row(row, lb, image, min_score)? {
                 candidates.push(d);
             }
-        }
-        let mut dropped_before_nms = 0;
-        if candidates.len() > MAX_CANDIDATES {
-            candidates.sort_by(|a, b| b.score().total_cmp(&a.score()));
-            dropped_before_nms = (candidates.len() - MAX_CANDIDATES) as u32;
-            candidates.truncate(MAX_CANDIDATES);
         }
         let mut detections = non_max_suppression(candidates, thresholds);
         let over_limit = detections.len().saturating_sub(MAX_DETECTIONS) as u32;
@@ -174,7 +169,6 @@ impl Detector for Yolo5Face {
         Ok(Found {
             detections,
             over_limit,
-            dropped_before_nms,
         })
     }
 }
