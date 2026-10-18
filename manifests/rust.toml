@@ -100,3 +100,9 @@ version = "=0.2.191"
 targets = ["linux", "macos"]
 # 메모리 예산의 실제 RAM 조회(sysctl hw.memsize, sysconf). 1.12.1과 같은 규칙.
 evidence = "crates/cloakframe-engine/src/photo/budget.rs"
+
+[crates.moxcms]
+version = "=0.9.1"
+# ICC 판정과 sRGB 변환에만 쓴다. 출력에 넣는 profile은 assets/icc(tools/icc/make_profiles.py)이며,
+# moxcms의 encode 결과는 libpng 검사(4바이트 정렬)를 통과하지 못해 쓰지 않는다.
+evidence = "crates/cloakframe-engine/src/photo/color.rs"

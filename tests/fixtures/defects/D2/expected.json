@@ -2,7 +2,7 @@
   "id": "D2",
   "requirement": "알려진 색 공간(sRGB·Display P3·Adobe RGB)은 pixel을 그대로 두고 번들한 표준 profile을 붙인다. 그 밖의 profile은 sRGB로 변환하고 결과에 '색 변환함'을 표시한다. profile이 없으면 sRGB로 보고 아무것도 붙이지 않는다.",
   "stage": "M2",
-  "identification": "profile 바이트가 아니라 rXYZ/gXYZ/bXYZ·wtpt·TRC를 비교해 판정한다(fixture profile은 직접 생성한 것이라 공식 profile과 바이트가 다름). colorant 허용오차 0.002, gamma 허용오차 0.01",
+  "identification": "profile 바이트가 아니라 rXYZ/gXYZ/bXYZ·TRC를 비교해 판정한다(fixture profile은 직접 생성한 것이라 공식 profile과 바이트가 다름). M2에서 확정(2026-10-18): colorant(D50 적응 후) 성분별 허용오차 0.002, 순수 gamma 곡선은 지수 허용오차 0.01, 그 밖의 곡선은 0..1의 65점에서 값 차 0.002 이하",
   "cases": [
     {
       "input": "chart-srgb.png",
@@ -76,7 +76,9 @@
   ],
   "jpeg_reencode_tolerance": "q92 재인코딩 후 입력 대비 채널당 최대 차 6 이하",
   "observed_1121_summary": "모든 출력에서 ICC가 사라지고 pixel은 그대로(wide-gamut 입력도 변환 없이 sRGB로 해석됨)",
-  "proposed": [
-    "profile 판정 허용오차(colorant 0.002, gamma 0.01)는 M2에서 확정"
-  ]
+  "decided_m2": {
+    "srgb_tagged_output": "원본에 sRGB profile이 있으면 번들 sRGB profile을 붙이고, profile이 없으면 아무것도 붙이지 않는다",
+    "unusable_profile": "읽을 수 없거나 pixel과 맞지 않는(예: 회색 pixel의 RGB profile) profile은 버리고 sRGB로 보며 결과에 표시한다",
+    "detection_copy": "Display P3·Adobe RGB 원본은 감지용 RGB8 사본만 sRGB로 변환하고 저장 pixel은 그대로 둔다"
+  }
 }

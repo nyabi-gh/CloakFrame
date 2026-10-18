@@ -2,5 +2,6 @@
 //! display orientation and the detection copy (plan 4.3, steps 2–3).
 
 pub mod budget;
+pub mod color;
 pub mod decode;
 pub mod format;
