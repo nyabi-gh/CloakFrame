@@ -4,4 +4,5 @@ pub mod coverage;
 pub mod detection;
 pub mod geometry;
 pub mod item;
+pub mod mask;
 pub mod review;
