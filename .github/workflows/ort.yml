@@ -1,7 +1,8 @@
 name: ORT
 
 # The ONNX Runtime builds pinned in manifests/native.toml, fetched by hash, against the 1.12.1
-# detection fixtures on all three platforms (CPU). The engine's own detector tests take over in M2.
+# detection fixtures on all three platforms (CPU), through the M0 spike. The engine's own tests
+# (ci.yml) cover YOLO5Face-n from M2; this keeps YuNet and the plate model covered until M3.
 on:
   workflow_dispatch:
   pull_request:
@@ -12,6 +13,9 @@ on:
       - manifests/native.toml
       - tools/fetch_native.py
       - spikes/ort/**
+      - tools/fetch_test_assets.py
+      - tools/resize-reference/**
+      - tests/fixtures/resize/**
   push:
     branches:
       - main
@@ -20,6 +24,9 @@ on:
       - manifests/native.toml
       - tools/fetch_native.py
       - spikes/ort/**
+      - tools/fetch_test_assets.py
+      - tools/resize-reference/**
+      - tests/fixtures/resize/**
 
 permissions:
   contents: read
@@ -61,18 +68,7 @@ jobs:
 
       - name: Fetch models and sample images
         run: |
-          bash .github/scripts/fetch_test_models.sh
-          "$PY" -I - tests/fixtures/assets.json "$RUNNER_TEMP/cloakframe-test-assets" <<'EOF'
-          import hashlib, json, sys, urllib.request
-          from pathlib import Path
-          spec, dest = json.load(open(sys.argv[1])), Path(sys.argv[2])
-          for a in spec["images"]:
-              p = dest / a["name"]
-              if not p.exists():
-                  urllib.request.urlretrieve(a["url"], p)
-              if hashlib.sha256(p.read_bytes()).hexdigest() != a["sha256"]:
-                  raise SystemExit(f"hash mismatch for {a['name']}")
-          EOF
+          "$PY" -I tools/fetch_test_assets.py "$RUNNER_TEMP/cloakframe-test-assets"
 
       - name: OpenCV reference decode
         run: |
@@ -83,6 +79,22 @@ jobs:
           "$py" -I spikes/ort/reference/opencv_reference.py "$RUNNER_TEMP/ref" \
             "$a/astronaut.png" "$a/messi5.jpg" "$a/lena.jpg" "$a/car_image.webp" \
             tests/fixtures/detect/inputs/astronaut-scales.png tests/fixtures/detect/inputs/crowd-280-faces.png
+
+      # The engine's resize test compares with hashes made under x86 emulation; real x86 OpenCV
+      # (IPP, AVX2 dispatch) must give the same bytes.
+      - name: OpenCV resize reference on real x86
+        if: runner.os != 'macOS'
+        run: |
+          py="$RUNNER_TEMP/venv/bin/python"; [ -x "$py" ] || py="$RUNNER_TEMP/venv/Scripts/python.exe"
+          "$py" -I tools/resize-reference/make.py "$RUNNER_TEMP/resize.json"
+          "$PY" -I - tests/fixtures/resize/opencv-5.0.0-x86_64.json "$RUNNER_TEMP/resize.json" <<'EOF'
+          import json, sys
+          committed, here = (json.load(open(p, encoding="utf-8"))["cases"] for p in sys.argv[1:])
+          if committed != here:
+              bad = [c["src"] + c["dst"] for c, h in zip(committed, here) if c != h]
+              raise SystemExit(f"OpenCV resize differs from the committed reference: {bad}")
+          print(len(here), "cases match")
+          EOF
 
       - name: Install Rust
         run: |

@@ -32,6 +32,18 @@ cargo build --workspace
 cargo test --workspace
 ```
 
+The detector tests run the pinned ONNX Runtime on hashed models and sample
+images, which are not in the repository. Fetch them once and point the tests at
+them (use `linux-x86_64`, or `windows-ml windows-x64`, on other platforms):
+
+```bash
+export CLOAKFRAME_ORT_LIBRARY=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 ~/.cache/cloakframe-native)
+export CLOAKFRAME_TEST_ASSETS=$(python3 -I tools/fetch_test_assets.py ~/.cache/cloakframe-test-assets)
+export ORT_DISABLE_TELEMETRY=1
+```
+
+Without them those tests fail rather than skip.
+
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.
 

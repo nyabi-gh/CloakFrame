@@ -1,8 +1,12 @@
+pub mod resize;
+pub mod runtime;
+pub mod yolo5face;
+
 use std::fmt;
 use std::sync::mpsc;
 use std::thread;
 
-use cloakframe_core::detection::Detection;
+use cloakframe_core::detection::{Detection, Thresholds};
 
 /// sRGB RGB8 pixels in display orientation, the detection input of plan 4.3.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,6 +19,9 @@ pub struct Rgb8Image {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DetectError {
     Failed(String),
+    /// The model's inputs or outputs are not what the detector decodes. Not a reason to retry on
+    /// another execution provider (plan 3).
+    UnexpectedModel(String),
     /// The inference thread is gone (its detector panicked).
     Unavailable,
 }
@@ -23,6 +30,7 @@ impl fmt::Display for DetectError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Failed(reason) => write!(f, "detection failed: {reason}"),
+            Self::UnexpectedModel(reason) => write!(f, "unexpected model: {reason}"),
             Self::Unavailable => f.write_str("inference thread is not running"),
         }
     }
@@ -30,24 +38,37 @@ impl fmt::Display for DetectError {
 
 impl std::error::Error for DetectError {}
 
+/// What one detector found in one image.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct Found {
+    pub detections: Vec<Detection>,
+    /// Detections NMS kept beyond the per-image limit. The caller records them as
+    /// `Problem::CappedCandidates`, the only kind of omission D11 counts.
+    pub over_limit: u32,
+    /// Lowest-scored candidates dropped before NMS to bound its cost (1.12.1's limit). D11 re-runs
+    /// such images on tiles in M3; until then a nonzero count means the result may be incomplete.
+    pub dropped_before_nms: u32,
+}
+
 /// A loaded model session. `Send` but not required to be `Sync`: the inference thread is its
 /// only owner, so no two callers can run one session at the same time (D8).
 pub trait Detector: Send {
-    fn detect(&mut self, image: &Rgb8Image) -> Result<Vec<Detection>, DetectError>;
+    fn detect(&mut self, image: &Rgb8Image, thresholds: &Thresholds) -> Result<Found, DetectError>;
 }
 
 /// Finds nothing. For runs that do not detect, and for tests.
 pub struct NoDetections;
 
 impl Detector for NoDetections {
-    fn detect(&mut self, _: &Rgb8Image) -> Result<Vec<Detection>, DetectError> {
-        Ok(Vec::new())
+    fn detect(&mut self, _: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+        Ok(Found::default())
     }
 }
 
 type Request = (
     Rgb8Image,
-    mpsc::SyncSender<Result<Vec<Detection>, DetectError>>,
+    Thresholds,
+    mpsc::SyncSender<Result<Found, DetectError>>,
 );
 
 /// Cloneable access to the detector running on its own thread. The thread ends when the last
@@ -63,17 +84,17 @@ impl DetectorHandle {
         thread::Builder::new()
             .name("cloakframe-inference".into())
             .spawn(move || {
-                for (image, reply) in incoming {
-                    let _ = reply.send(detector.detect(&image));
+                for (image, thresholds, reply) in incoming {
+                    let _ = reply.send(detector.detect(&image, &thresholds));
                 }
             })?;
         Ok(Self { requests })
     }
 
-    pub fn detect(&self, image: Rgb8Image) -> Result<Vec<Detection>, DetectError> {
+    pub fn detect(&self, image: Rgb8Image, thresholds: Thresholds) -> Result<Found, DetectError> {
         let (reply, response) = mpsc::sync_channel(1);
         self.requests
-            .send((image, reply))
+            .send((image, thresholds, reply))
             .map_err(|_| DetectError::Unavailable)?;
         response.recv().map_err(|_| DetectError::Unavailable)?
     }
@@ -92,7 +113,7 @@ mod tests {
     }
 
     impl Detector for OneFacePerImage {
-        fn detect(&mut self, image: &Rgb8Image) -> Result<Vec<Detection>, DetectError> {
+        fn detect(&mut self, image: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
             assert!(!self.busy.swap(true, Ordering::SeqCst), "concurrent detect");
             if image.width == 0 {
                 self.busy.store(false, Ordering::SeqCst);
@@ -103,7 +124,10 @@ mod tests {
             let bbox = Rect::new(0.0, 0.0, image.width as f32, image.height as f32).unwrap();
             let face = Detection::new(ModelId::YuNet, 0.9, bbox, None, None).unwrap();
             self.busy.store(false, Ordering::SeqCst);
-            Ok(vec![face])
+            Ok(Found {
+                detections: vec![face],
+                ..Found::default()
+            })
         }
     }
 
@@ -130,8 +154,8 @@ mod tests {
                 let handle = handle.clone();
                 s.spawn(move || {
                     for _ in 0..10 {
-                        let found = handle.detect(image(w)).unwrap();
-                        assert_eq!(found[0].bbox().width(), w as f32);
+                        let found = handle.detect(image(w), Thresholds::default()).unwrap();
+                        assert_eq!(found.detections[0].bbox().width(), w as f32);
                     }
                 });
             }
@@ -142,16 +166,17 @@ mod tests {
     fn detector_errors_reach_the_caller_and_the_thread_keeps_serving() {
         let handle = spawn();
         assert_eq!(
-            handle.detect(image(0)),
+            handle.detect(image(0), Thresholds::default()),
             Err(DetectError::Failed("empty image".into()))
         );
-        assert!(handle.detect(image(4)).is_ok());
+        assert!(handle.detect(image(4), Thresholds::default()).is_ok());
     }
 
     #[test]
     fn a_panicking_detector_makes_the_handle_unavailable() {
         let handle = spawn();
-        assert_eq!(handle.detect(image(13)), Err(DetectError::Unavailable));
-        assert_eq!(handle.detect(image(4)), Err(DetectError::Unavailable));
+        let t = Thresholds::default();
+        assert_eq!(handle.detect(image(13), t), Err(DetectError::Unavailable));
+        assert_eq!(handle.detect(image(4), t), Err(DetectError::Unavailable));
     }
 }

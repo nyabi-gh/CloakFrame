@@ -22,7 +22,8 @@ macOS에서 1.12.1 빌드 의존성(Homebrew Qt·OpenCV·ONNX Runtime·FFmpeg �
 | `detect/inputs/` | 생성한 감지 입력: 크기 5단계 astronaut(작은 얼굴), 같은 얼굴 280개(D11) |
 | `defects/<D·P 항목>/` | `expected.json`(올바른 기대 결과, 손으로 작성), `observed_1121.json`(1.12.1 재현 결과, 생성), 입력 파일 |
 | `metadata/` | allowlist EXIF 기준. 허용·금지·GPS 태그를 모두 넣은 JPEG와 1.12.1 `copyMetadata` 결과 |
-| `assets.json` | 저장소에 넣지 않고 해시로 받는 외부 입력(모델, 표본 이미지) |
+| `assets.json` | 저장소에 넣지 않고 해시로 받는 외부 입력(모델, 표본 이미지). `tools/fetch_test_assets.py <폴더>`로 받는다 |
+| `resize/` | OpenCV 5.0.0 `cv::resize(INTER_LINEAR)`의 x86 일반 경로 출력 SHA-256(2배 축소의 `INTER_AREA` 경로 포함). 입력은 파일에 적힌 식으로 만드는 잡음 패턴이라 저장하지 않는다. 생성: `tools/resize-reference/make.py`(macOS arm64 pip 판은 KleidiCV HAL 때문에 축소가 ±1 달라 쓰지 않음, CI `ort.yml`이 실제 x86에서 다시 만들어 비교) |
 | `decode/` | 디코더 회귀 입력. `noninterleaved-420.jpg`는 성분마다 scan이 따로인 baseline 4:2:0 JPEG(`cjpeg -quality 92 -sample 2x2 -scans`, 0·1·2 성분 각각 한 scan), `interleaved-420.jpg`는 같은 그림의 일반 JPEG. `*.djpeg.png`는 libjpeg-turbo 3.2.0 `djpeg` 결과로, 기대 pixel이다. 그림은 96×64 수식 패턴([M2 기록](../../docs/M2_ENCODE_SPIKE.md)) |
 
 `legacy`에 없는 1.12.1 시험 묶음: `custom_model_consent_tests`(사용자 ONNX 제거), `stage_cleanup_tests`(snapshot·stage 제거), `update_cache_tests`(Velopack 사용으로 캐시 권한 검사 제거). Windows 전용 `testScanDoesNotFollowJunctions`는 macOS에서 실행되지 않아 기록이 없다.

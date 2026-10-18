@@ -311,6 +311,11 @@ fn sessions(o: Options) -> Result<u8, String> {
 }
 
 fn main() -> ExitCode {
+    // SAFETY: the first statement of main; no other thread exists yet.
+    #[allow(unsafe_code)]
+    unsafe {
+        cloakframe_engine::detect::runtime::disable_telemetry()
+    };
     let mut args = std::env::args().skip(1);
     let command = args.next();
     let rest: Vec<String> = args.collect();

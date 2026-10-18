@@ -400,17 +400,17 @@ fn initial(job_item: &JobItem) -> Item {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::detect::{DetectError, Detector, Rgb8Image};
+    use crate::detect::{DetectError, Detector, Found, Rgb8Image};
     use cloakframe_core::coverage::Problem;
-    use cloakframe_core::detection::Detection;
+    use cloakframe_core::detection::Thresholds;
     use std::sync::Mutex;
     use std::time::Duration;
 
     struct NoFaces;
 
     impl Detector for NoFaces {
-        fn detect(&mut self, _: &Rgb8Image) -> Result<Vec<Detection>, DetectError> {
-            Ok(Vec::new())
+        fn detect(&mut self, _: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+            Ok(Found::default())
         }
     }
 
@@ -439,11 +439,14 @@ mod tests {
     impl ItemProcessor for Scripted {
         fn analyze(&self, ctx: &ItemContext<'_>) -> Result<Analysis, StepError> {
             ctx.detector
-                .detect(Rgb8Image {
-                    width: 1,
-                    height: 1,
-                    data: vec![0; 3],
-                })
+                .detect(
+                    Rgb8Image {
+                        width: 1,
+                        height: 1,
+                        data: vec![0; 3],
+                    },
+                    Thresholds::default(),
+                )
                 .map_err(|e| StepError::Failed(e.into()))?;
             match name(ctx) {
                 "fail-analyze" => Err(StepError::Failed(Box::new(Broken("decode failed")))),
