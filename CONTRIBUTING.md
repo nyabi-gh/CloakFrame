@@ -23,6 +23,9 @@ CloakFrame 1.12.1 was the last release of the C++ implementation; its source is
 kept at the `v1.12.1` tag. This branch is the Rust rewrite described in
 [docs/RUST_PORT_PLAN.md](docs/RUST_PORT_PLAN.md). The workspace builds with the
 toolchain pinned in `rust-toolchain.toml`, which `rustup` installs on first use.
+The JPEG and WebP codecs (libjpeg-turbo, libwebp) are built from source during
+the build, so a C compiler and CMake are also needed. On x86, NASM enables
+libjpeg-turbo's SIMD code; builds without it work but are slower.
 
 ```bash
 cargo build --workspace

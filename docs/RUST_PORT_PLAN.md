@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -290,6 +290,11 @@ crates/
 
 - **작업:** `INTER_LINEAR` 이식 규칙(M0 기록)을 시험으로 고정하고 2배 축소의 `INTER_AREA` 경로 추가, 지원 형식·bit depth·alpha·방향, 색 정책, EXIF writer, 마스크 4종·shape·padding·roll·soft edge, 인코딩 기본값, 게시 게이트, 검토 결정 적용, 익명화 없이 내보내기
 - **완료 기준:** 사진 fixture 통과, D2·D3·D6·D9·P-2(타입) 시험 통과
+- **진행(2026-10-18, 시작 같은 날):** 0–7단계로 나눠 단계마다 PR을 하나씩 올린다.
+  - 완료: 0단계 코덱 spike(#25, JPEG는 libjpeg-turbo, 손실 WebP는 libwebp, 고정 ORT를 CI에서 3개 OS 비교), 1단계 읽기·디코드(#26, 형식 내용 판정·여러 프레임 거부·512 MP·메모리 예산·EXIF 방향·감지 사본)
+  - PR 열림: 2단계 색 정책 D2(#27, colorimetry 판정, 번들 profile `assets/icc`, 그 밖은 sRGB 변환)
+  - 남음: 3단계 감지(engine에 `ort`, `INTER_LINEAR` 고정·`INTER_AREA` 이식, YOLO5Face-n, NMS·IoU, 종류별 임계값, 감지 fixture 54건), 4단계 마스크 렌더러(core, D3), 5단계 인코딩·메타데이터(D6, EXIF writer, ICC 부착, D9), 6단계 PhotoProcessor·검토 결정의 수동 영역, 7단계 완료 확인
+  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`)
 
 ### M3 — 모델·GPU·다운로드·타일
 
