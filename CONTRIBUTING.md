@@ -32,9 +32,9 @@ cargo build --workspace
 cargo test --workspace
 ```
 
-The detector tests run the pinned ONNX Runtime on hashed models and sample
-images, which are not in the repository. Fetch them once and point the tests at
-them (use `linux-x86_64`, or `windows-ml windows-x64`, on other platforms):
+The detector tests, the photo P-1 tests and the command-line photo tests run
+the pinned ONNX Runtime on hashed models and sample images, which are not in
+the repository. Fetch them once and point the tests at them (use `linux-x86_64`, or `windows-ml windows-x64`, on other platforms):
 
 ```bash
 export CLOAKFRAME_ORT_LIBRARY=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 ~/.cache/cloakframe-native)
@@ -43,6 +43,14 @@ export ORT_DISABLE_TELEMETRY=1
 ```
 
 Without them those tests fail rather than skip.
+
+With the same files the command-line tool processes photos:
+
+```bash
+cargo run -p cloakframe-engine --bin cloakframe-cli -- run --output out --review off \
+  --ort-library "$CLOAKFRAME_ORT_LIBRARY" \
+  --face-model "$CLOAKFRAME_TEST_ASSETS/yolov5n_face.onnx" photos/
+```
 
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.

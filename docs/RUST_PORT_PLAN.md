@@ -68,7 +68,7 @@
 | D8 | 탐지기 포인터 데이터 경쟁 | 세션 소유자를 추론 스레드 하나로 둠. Rust 타입으로 보장 | M3 |
 | D9 | 원본 복사 시 GPS·시리얼 보존 | 원본 바이트 복사 제거 | M2 |
 | D10 | 대소문자 비교가 파일시스템과 무관 | 대소문자 동일시 여부를 파일시스템 조사로 한 곳에서 결정 | M1 |
-| D11 | NMS 전 후보 상한 초과분을 누락 영역으로 셈 | NMS 후 상한 초과만 `CoverageEvidence`로 기록. NMS 전 후보는 상한을 넉넉히 두고 초과 시 타일로 재탐지 | M3 |
+| D11 | NMS 전 후보 상한 초과분을 누락 영역으로 셈 | NMS 후 상한 초과만 `CoverageEvidence`로 기록. NMS 전 후보는 자르지 않는다. 출력 크기가 고정된 YOLO5Face-n(25,200행)은 M2에서 상한을 없앴고(2026-10-18, crowd fixture 259 → 280개), 그렇지 않은 모델은 상한을 넉넉히 두고 초과 시 타일로 재탐지 | M2(YOLO5Face), M3 |
 | D12 | 사진 사본을 시스템 임시 폴더에 둠 | 사본 자체를 만들지 않음 | M1 |
 | P-1 | 경고가 있는 결과도 출력 폴더에 게시 | 미해결 자동 감지 문제가 있으면 `PublishPermit`을 발급하지 않음 | M1, M2, M5 |
 | P-2 | 얼굴·번호판 결과에 종류 없음, 임계값 공유 | `DetectionKind` 보존, 종류별 임계값·NMS·추적 연관 | M2, M5 |
@@ -142,6 +142,7 @@ crates/
 - **처리 후 검토:** 분석은 검토보다 앞서 진행한다. 검토를 기다리는 결과는 앱 데이터 폴더의 세션(감지 결과와 편집 결정만, pixel 없음)에 두고, 승인되기 전에는 출력 폴더에 아무것도 쓰지 않는다.
 - **자동 모드(검토 끔):** 미해결 문제가 없는 항목만 게시하고 "자동 처리·미검토"로 표시한다. 나머지는 "검토 필요" 목록에 남는다.
 - **경고 포함 내보내기:** 미해결 문제를 알고도 내보내려면 검토 화면에서 항목별로 명시적으로 고른다. 정상 완료 수에 넣지 않는다.
+- **익명화 없이 내보내기:** 검토 화면에서 항목별로 명시적으로 고른다. 아무것도 가리지 않고 같은 메타데이터 규칙으로 다시 인코딩하며(D9), 미해결 문제가 있어도 게시하되 정상 완료 수에 넣지 않는다.
 - gap과 누락 후보는 수동 마스크로 덮거나 검토자가 오탐이라고 지정해야 해결된다. 해당 프레임을 열어 본 것만으로는 해결되지 않는다.
 
 ### 4.3 사진 파이프라인
@@ -150,8 +151,8 @@ crates/
 2. **읽기:** 열고 identity 기록 → 바이트 전체 읽기(2 GB 상한) → 닫기. 이후 디코드, EXIF 방향, ICC, 메타데이터 allowlist는 모두 이 바이트만 쓴다. 이미지 하나를 여러 라이브러리가 다시 파싱하지 않는다.
 3. **디코드:** 픽셀 상한(512 MP)과 메모리 permit, EXIF 방향을 pixel에 반영. 저장용 버퍼(U8/U16, alpha 유지)와 감지용 sRGB RGB8 버퍼를 따로 만든다.
 4. **감지:** 전체 보기 한 번. 고품질 모드는 겹치는 타일 + 타일 간 NMS를 더한다.
-5. **검토:** 원본 좌표의 편집 문서. 필요할 때만.
-6. **렌더·인코딩:** core 렌더러(미리보기와 같은 함수)로 마스크 적용 → D6 기본값으로 인코딩 → D2 색 정책, 선택 시 allowlist EXIF를 새로 작성
+5. **검토:** 원본 좌표의 편집 문서(가리지 않을 감지와 추가로 가릴 영역). 필요할 때만. 검토가 끝난 항목은 원본을 다시 읽고, 분석할 때와 identity가 같을 때만 렌더한다.
+6. **렌더·인코딩:** core 렌더러(미리보기와 같은 함수)로 마스크 적용 → D6 기본값으로 인코딩 → D2 색 정책, 선택 시 allowlist EXIF를 새로 작성. 출력 형식은 출력 이름의 확장자를 따른다(내용과 이름이 다른 원본, 1.12.1과 같음)
 7. **게시:** 원본 identity(크기, 수정 시각, 파일 ID)가 그대로인지 확인 → 4.5의 방식으로 게시. 원본이 바뀌었으면 그 항목은 실패
 
 ### 4.4 영상 파이프라인
@@ -291,10 +292,10 @@ crates/
 - **작업:** `INTER_LINEAR` 이식 규칙(M0 기록)을 시험으로 고정하고 2배 축소의 `INTER_AREA` 경로 추가, 지원 형식·bit depth·alpha·방향, 색 정책, EXIF writer, 마스크 4종·shape·padding·roll·soft edge, 인코딩 기본값, 게시 게이트, 검토 결정 적용, 익명화 없이 내보내기
 - **완료 기준:** 사진 fixture 통과, D2·D3·D6·D9·P-2(타입) 시험 통과
 - **진행(2026-10-18, 시작 같은 날):** 0–7단계로 나눠 단계마다 PR을 하나씩 올린다.
-  - 완료: 0단계 코덱 spike(#25, JPEG는 libjpeg-turbo, 손실 WebP는 libwebp, 고정 ORT를 CI에서 3개 OS 비교), 1단계 읽기·디코드(#26, 형식 내용 판정·여러 프레임 거부·512 MP·메모리 예산·EXIF 방향·감지 사본), 2단계 색 정책 D2(#27, colorimetry 판정, 번들 profile `assets/icc`, 그 밖은 sRGB 변환), 3단계 감지(#28, engine에 `ort`와 `OrtRuntime`(`ORT_DISABLE_TELEMETRY=1`이 아니면 로드 거부, `PreferCPU` 후 CPU EP 명시), `INTER_LINEAR` 고정·`INTER_AREA` 이식, YOLO5Face-n, core의 IoU·종류별 NMS·`Thresholds`(P-2), 결과 JSON의 `kind`. 엔진 디코드 경로로 YOLO5Face-n 감지 fixture 18건(6장 × 3임계값)을 3개 OS CI에서 비교. YuNet·번호판 36건은 M3 어댑터 전까지 `ort.yml` spike가 비교), 4단계 마스크 렌더러(#29, core `mask`: 채우기·모자이크·블러·사용자 이미지, 사각형·타원, padding, soft edge, 사용자 이미지 roll. 모자이크는 D3 강도(짧은 변 셀 수 4–16, 기본 8, 셀 경계 `floor(i·L/n)`, 긴 변 `round(n·long/short)`, 셀은 최소 2 px), 블러는 영역 밖 pixel까지 커널에 넣고 sigma 하한 4 px. 감지 box는 모든 조합에서 완전히 가림(property 시험). 사각형 채우기·soft edge·사용자 이미지는 1.12.1 fixture와 pixel이 같고, 타원은 1.12.1이 가린 pixel을 모두 가림)
-  - 진행: 5단계 인코딩·메타데이터(`photo::encode`·`photo::metadata`: 원본 형식으로 저장, JPEG q92·원본 서브샘플링(libjpeg-turbo), 손실 WebP 원본은 libwebp q90, PNG·무손실 WebP·TIFF(LZW, 1.12.1과 같음)는 무손실(D6). 메타데이터 기본은 전부 제거, 보존 시 allowlist EXIF를 새로 쓰고 GPS는 별도 동의, ColorSpace는 출력에서 계산. D2 결과대로 번들 profile을 JPEG APP2·PNG iCCP·WebP ICCP·TIFF 34675에 붙임. 원본 바이트 복사 없음(D9). 네 컨테이너 출력이 exiftool `-validate`·exiv2·ImageMagick에서 읽힘. 작은 TIFF의 ICC를 `image`가 limit 때문에 버리던 2단계 판독 결함도 고침)
-  - 남음: 6단계 PhotoProcessor·검토 결정의 수동 영역, 7단계 완료 확인
-  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`)
+  - 완료: 0단계 코덱 spike(#25, JPEG는 libjpeg-turbo, 손실 WebP는 libwebp, 고정 ORT를 CI에서 3개 OS 비교), 1단계 읽기·디코드(#26, 형식 내용 판정·여러 프레임 거부·512 MP·메모리 예산·EXIF 방향·감지 사본), 2단계 색 정책 D2(#27, colorimetry 판정, 번들 profile `assets/icc`, 그 밖은 sRGB 변환), 3단계 감지(#28, engine에 `ort`와 `OrtRuntime`(`ORT_DISABLE_TELEMETRY=1`이 아니면 로드 거부, `PreferCPU` 후 CPU EP 명시), `INTER_LINEAR` 고정·`INTER_AREA` 이식, YOLO5Face-n, core의 IoU·종류별 NMS·`Thresholds`(P-2), 결과 JSON의 `kind`. 엔진 디코드 경로로 YOLO5Face-n 감지 fixture 18건(6장 × 3임계값)을 3개 OS CI에서 비교. YuNet·번호판 36건은 M3 어댑터 전까지 `ort.yml` spike가 비교), 4단계 마스크 렌더러(#29, core `mask`: 채우기·모자이크·블러·사용자 이미지, 사각형·타원, padding, soft edge, 사용자 이미지 roll. 모자이크는 D3 강도(짧은 변 셀 수 4–16, 기본 8, 셀 경계 `floor(i·L/n)`, 긴 변 `round(n·long/short)`, 셀은 최소 2 px), 블러는 영역 밖 pixel까지 커널에 넣고 sigma 하한 4 px. 감지 box는 모든 조합에서 완전히 가림(property 시험). 사각형 채우기·soft edge·사용자 이미지는 1.12.1 fixture와 pixel이 같고, 타원은 1.12.1이 가린 pixel을 모두 가림), 5단계 인코딩·메타데이터(#30, `photo::encode`·`photo::metadata`: 원본 형식으로 저장, JPEG q92·원본 서브샘플링(libjpeg-turbo), 손실 WebP 원본은 libwebp q90, PNG·무손실 WebP·TIFF(LZW, 1.12.1과 같음)는 무손실(D6). 메타데이터 기본은 전부 제거, 보존 시 allowlist EXIF를 새로 쓰고 GPS는 별도 동의, ColorSpace는 출력에서 계산. D2 결과대로 번들 profile을 JPEG APP2·PNG iCCP·WebP ICCP·TIFF 34675에 붙임. 원본 바이트 복사 없음(D9). 네 컨테이너 출력이 exiftool `-validate`·exiv2·ImageMagick에서 읽힘. 작은 TIFF의 ICC를 `image`가 limit 때문에 버리던 2단계 판독 결함도 고침)
+  - 진행: 6단계 사진 처리기(`photo::process::PhotoProcessor`: 읽기 → 디코드 → 색 정책 → sRGB 감지 사본으로 YOLO5Face-n → 마스크 → 인코딩 → 게시 직전 원본 identity 확인. 실행기가 분석에서 렌더로 넘기는 상태와 렌더 결과를 항목 안에서만 들고 있어, 검토로 가는 항목은 디코드한 pixel과 메모리 permit을 바로 놓음. `Found.over_limit`은 `CappedCandidates`로 기록해 P-1로 게시를 막고, NMS 전 후보 상한은 없앰(D11). 검토 결정의 제외·추가 영역(core `PhotoEdits`)을 마스크 영역으로 반영하고, "수동 마스크로 덮음" 해결은 추가 영역이 있을 때만 받음. 익명화 없이 내보내기(D9)는 별도 게시 근거로 정상 완료에 넣지 않음. 검토 결정은 분석 때와 같은 모델·설정의 처리기에만 적용. 출력 형식은 이름의 확장자(1.12.1 규범 fixture), 변환하거나 버린 색 profile은 결과 note로 표시(D2). 모델은 고정 SHA-256과 같은 바이트로만 세션을 만듦. CLI는 `--ort-library`·`--face-model`·`--keep-metadata`·`--keep-gps`로 실제 감지 경로를 돌리고, 스캔에서 처리할 파일이 나올 때만 모델을 불러옴. 시험: 가짜 감지기 파이프라인 11건(1.12.1 worker 시험 6개 포함), 실제 모델의 P-1(사진)·D11 2건, CLI 6건)
+  - 남음: 7단계 완료 확인
+  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 감지 0건 사진은 미해결 문제가 아니라 정상 게시
 
 ### M3 — 모델·GPU·다운로드·타일
 
