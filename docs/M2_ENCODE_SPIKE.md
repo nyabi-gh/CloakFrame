@@ -58,7 +58,7 @@
 
 - **JPEG 디코드·인코드는 libjpeg-turbo로 한다**(메인테이너 결정). 라이선스는 IJG + BSD-3-Clause + zlib이고 crate(`turbojpeg`, `turbojpeg-sys`)는 `Unlicense OR MIT`라 cargo-deny 허용 목록은 그대로 통과한다. C 라이브러리의 라이선스는 `manifests/native.toml`과 THIRD_PARTY_NOTICES에 적는다. IJG 라이선스는 문서에 "this software is based in part on the work of the Independent JPEG Group" 고지를 요구한다.
 - 버린 대안: zune-jpeg 0.5.16 정식판을 기다리고 인코드는 jpeg-encoder. C 빌드는 없지만 디코드 결과가 1.12.1(OpenCV)과 달라(정상 파일에서도 PSNR 52–55 dB) 감지 fixture 비교가 근사가 되고, 디코더 결함의 수정 시점을 우리가 정할 수 없다.
-- 손실 WebP는 libwebp(`libwebp-sys` 0.14.4, libwebp 1.6.0)로 한다. PNG·TIFF·BMP·WebP 디코드와 PNG·TIFF·무손실 WebP 인코드는 `image`가 맡는다.
+- 손실 WebP는 libwebp(`libwebp-sys` 0.14.4, libwebp 1.6.0)로 한다. PNG·TIFF·BMP·WebP 디코드와 PNG·TIFF·무손실 WebP 인코드는 `image`가 맡는다. (M2 5단계에서 바뀜: TIFF 인코드는 LZW를 쓰려고 `tiff` crate로 직접 한다.)
 - 릴리스 빌드(M7)는 x86에서 libjpeg-turbo SIMD를 쓰도록 nasm을 둔다. CI 시험 빌드는 nasm 없이 SIMD 없는 빌드도 허용한다(`require-simd` 끔).
 
 ## 다시 돌리기

@@ -4,7 +4,7 @@ Rust 재작성이 쓰는 외부 구성 요소의 정확한 버전과 출처다. 
 
 | 파일 | 내용 | 읽는 쪽 |
 | --- | --- | --- |
-| [rust.toml](rust.toml) | Rust 툴체인, M0에서 정한 crate 버전과 feature | M1 workspace의 `rust-toolchain.toml`·`Cargo.toml` |
+| [rust.toml](rust.toml) | Rust 툴체인, M0에서 정하고 이후 단계에서 들인 crate의 버전과 feature | workspace의 `rust-toolchain.toml`·`Cargo.toml` |
 | [native.toml](native.toml) | ONNX Runtime, Windows ML, FFmpeg, Sparkle, Velopack, 글꼴, 감지 모델의 플랫폼별 버전·URL·SHA-256·라이선스·소스 위치 | 빌드·패키징(M7), 모델 다운로드(M3), THIRD_PARTY_NOTICES |
 
 - `status = "m0"`은 M0 spike가 그 파일로 결과를 확인한 항목, `"carried"`는 1.12.1 릴리스 고정값을 이어받아 `stage` 단계에서 다시 정할 항목이다.
