@@ -9,6 +9,7 @@ pub mod fs_case;
 pub mod identity;
 pub mod ordered;
 pub mod output_plan;
+pub mod photo;
 pub mod publish;
 pub mod review;
 pub mod run;

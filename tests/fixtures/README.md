@@ -23,6 +23,7 @@ macOS에서 1.12.1 빌드 의존성(Homebrew Qt·OpenCV·ONNX Runtime·FFmpeg �
 | `defects/<D·P 항목>/` | `expected.json`(올바른 기대 결과, 손으로 작성), `observed_1121.json`(1.12.1 재현 결과, 생성), 입력 파일 |
 | `metadata/` | allowlist EXIF 기준. 허용·금지·GPS 태그를 모두 넣은 JPEG와 1.12.1 `copyMetadata` 결과 |
 | `assets.json` | 저장소에 넣지 않고 해시로 받는 외부 입력(모델, 표본 이미지) |
+| `decode/` | 디코더 회귀 입력. `noninterleaved-420.jpg`는 성분마다 scan이 따로인 baseline 4:2:0 JPEG(`cjpeg -quality 92 -sample 2x2 -scans`, 0·1·2 성분 각각 한 scan), `interleaved-420.jpg`는 같은 그림의 일반 JPEG. `*.djpeg.png`는 libjpeg-turbo 3.2.0 `djpeg` 결과로, 기대 pixel이다. 그림은 96×64 수식 패턴([M2 기록](../../docs/M2_ENCODE_SPIKE.md)) |
 
 `legacy`에 없는 1.12.1 시험 묶음: `custom_model_consent_tests`(사용자 ONNX 제거), `stage_cleanup_tests`(snapshot·stage 제거), `update_cache_tests`(Velopack 사용으로 캐시 권한 검사 제거). Windows 전용 `testScanDoesNotFollowJunctions`는 macOS에서 실행되지 않아 기록이 없다.
 

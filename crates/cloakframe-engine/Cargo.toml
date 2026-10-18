@@ -17,6 +17,9 @@ cloakframe-core.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
+image.workspace = true
+turbojpeg.workspace = true
+kamadak-exif.workspace = true
 
 [features]
 # The synthetic processor for exercising the whole run without a media pipeline (M1 tests and
@@ -25,12 +28,13 @@ synthetic = []
 
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "=1.1.5", features = ["fs"] }
+libc = "=0.2.191"
 
 [target.'cfg(unix)'.dev-dependencies]
 rustix = { version = "=1.1.5", features = ["fs", "process"] }
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_UI_Shell"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_SystemInformation", "Win32_UI_Shell"] }
 
 [lints]
 workspace = true

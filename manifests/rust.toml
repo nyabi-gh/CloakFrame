@@ -42,8 +42,8 @@ evidence = "docs/M0_EGUI.md"
 [crates.image]
 version = "=0.25.10"
 default-features = false
-features = ["jpeg", "png", "webp", "tiff"]
-# 손실 WebP 인코더가 없다(D6). M2에서 libwebp 바인딩을 정해 이 파일과 native.toml에 추가한다.
+features = ["png", "tiff", "bmp", "webp"]
+# JPEG는 turbojpeg가 맡는다(zune-jpeg 결함, docs/M2_ENCODE_SPIKE.md). 손실 WebP는 libwebp-sys.
 evidence = "docs/M0_EXIF_WRITER.md"
 
 [crates.kamadak-exif]
@@ -94,3 +94,9 @@ evidence = "docs/M2_ENCODE_SPIKE.md"
 version = "=0.14.4"
 # libwebp 1.6.0을 소스에서 정적 빌드한다(native.toml의 libwebp). 손실 WebP 인코드에만 쓴다.
 evidence = "docs/M2_ENCODE_SPIKE.md"
+
+[crates.libc]
+version = "=0.2.191"
+targets = ["linux", "macos"]
+# 메모리 예산의 실제 RAM 조회(sysctl hw.memsize, sysconf). 1.12.1과 같은 규칙.
+evidence = "crates/cloakframe-engine/src/photo/budget.rs"
