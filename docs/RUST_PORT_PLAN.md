@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -316,7 +316,7 @@ crates/
 - **완료 기준:** 1.12.1 대비 허용오차 내 결과, 소규모 벤치마크 재현율, GPU 없을 때 CPU로 동작, Windows 실기기에서 GPU 강제 리셋 시 같은 입력을 CPU로 다시 실행(M0에서 옮김). D5·D7·D8·D11 시험 통과
 - **단계(2026-10-19 계획):** 단계마다 브랜치·PR 하나.
   1. YuNet 어댑터(`m3-yunet`): engine `detect::yunet`, 감지 fixture 18건을 engine 시험으로 옮김(`ort.yml` spike는 고정 런타임 확인용으로 세 모델을 계속 비교). 이 단계 첫 커밋에 M2 완료 확정 문서. **완료(2026-10-19, PR #33, main `f7def9a`):** OpenCV `FaceDetectorYN` 후처리(정수 box NMS, top-k 5,000, 점수 엄격 비교, 얼굴 하나면 NMS 생략)를 옮겨 18건이 1.12.1과 같음(최소 IoU 0.99999, 점수 차 7e-7). 처리기·CLI의 모델 선택은 2단계 감지 구성에서. 3개 OS CI와 `ort.yml`의 고정 ORT 비교 통과
-  2. 번호판 어댑터와 종류별 임계값(`m3-plate`): YOLOv9-t end2end, 얼굴·번호판 모델을 함께 돌리는 감지 구성, 실제 모델의 종류별 기본 임계값, fixture 18건
+  2. 번호판 어댑터와 종류별 임계값(`m3-plate`): YOLOv9-t end2end, 얼굴·번호판 모델을 함께 돌리는 감지 구성, 실제 모델의 종류별 기본 임계값, fixture 18건. **구현(2026-10-19, CI 확인 전, [기록](M3_DETECTION.md)):** engine `detect::plate`가 1.12.1 `PlateDetector`의 전처리·해석을 옮겨 18건이 1.12.1과 같음(최소 IoU 0.9999966). 그래프 안 NMS의 상한 100개·IoU 0.45를 initializer 교체로 풀고 core NMS를 번호판 임계값으로 직접 돌림(원래 출력과 9장에서 같음, 100개 넘는 출력 시험). 그래서 고정 모델 중 NMS 뒤 출력이 제한된 모델은 없다. 모델별 기본 임계값은 core `ModelId::default_thresholds`(1.12.1이 실제로 쓴 값: 얼굴 score 0.5·NMS 0.4, 번호판 score 0.5·NMS 0.45). 감지 구성 `detect::models::DetectionModels`(얼굴 모델 하나 또는 없음, 번호판 켬·끔, 둘 다 없으면 거부)가 `PhotoSettings`에 들어가 review key의 `models`가 되고, 선택한 모델은 추론 스레드 하나에서 모델 사이 NMS 없이 합쳐짐(P-2). `Found.over_limit`은 모델별. CLI는 `--face-model` 대신 `--models DIR`·`--faces yolo5face-n|yunet|off`·`--plates on|off`, `review`도 같은 선택을 받음. 결정(2026-10-19): 기본 얼굴 모델 YOLO5Face-n, 번호판 기본 꺼짐(얼굴 없는 사진 179장 중 10장에 score 0.5 이상 번호판 오탐), 임계값은 1.12.1 값을 두고 6단계 벤치마크에서 다시 정함, 번호판 그래프 상한은 풂. 1단계 YuNet이 OpenCV처럼 NMS 전 후보를 5,000개로 잘라 약 440–770명 넘는 사진에서 얼굴을 버릴 수 있던 것을 찾아, 같은 날 결정으로 상한을 없앰(후보는 많아야 8,400개, 최악 NMS 60 ms)
   3. EP 정책과 CPU 폴백: macOS CoreML(MLProgram, 번호판은 CPU), Windows DML, GPU 오류 시 그 항목부터 CPU 재실행과 표시(오류 주입 시험). Windows 실기기 GPU 리셋은 장치가 생기면 확인(M7·M8로 옮긴 확인과 같음)
   4. 모델 manifest·다운로드·캐시: URL allowlist, 모델 폴더 안 임시 파일로 받으며 해시 계산 후 rename, (모델, 입력 크기, EP)마다 세션 하나·스캔 뒤 필요한 모델만 로드(D5·D7), 이용 조건 표시 자료
   5. 타일 모드: 고해상도 사진의 작은 얼굴용 타일 감지와 겹침 병합, 출력 수가 제한된 모델의 상한 초과 시 타일 재감지(D11)

@@ -202,6 +202,7 @@ source = "https://github.com/ankandrew/open-image-models"
 use = "download"
 status = "m0"
 # macOS에서도 CPU로 돌린다. 감지 0건일 때 CoreML EP가 빈 동적 텐서를 거부한다.
+# engine은 그래프 NMS의 상한(100)·IoU(0.45) initializer를 바꿔 풀고 NMS를 직접 한다(docs/M3_DETECTION.md).
 evidence = "docs/M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리"
 
 [[artifact]]
