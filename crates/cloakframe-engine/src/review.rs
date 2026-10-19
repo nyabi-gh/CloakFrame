@@ -3,6 +3,7 @@ use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
 use cloakframe_core::coverage::{Resolution, has_unresolved};
+use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::ItemId;
 use cloakframe_core::review::{EditError, PhotoEdits};
 use serde::{Deserialize, Serialize};
@@ -16,24 +17,71 @@ use crate::session::{Session, SessionItem};
 /// A reviewer's decisions on a stored session, as written by the desktop app or by hand for
 /// `cloakframe-cli review`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ReviewDecisions {
     pub items: Vec<ItemDecision>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(from = "ItemDecisionForm", into = "ItemDecisionForm")]
 pub struct ItemDecision {
     pub item: ItemId,
     /// The revision number the decision was made on; decisions on an older one are refused.
     pub revision: u64,
     pub action: Action,
-    #[serde(default)]
     pub resolutions: Vec<EvidenceResolution>,
     /// The whole edit document for the item; it replaces any earlier one.
-    #[serde(flatten)]
     pub edits: PhotoEdits,
     /// A new file name in the same folder, for an output whose name is taken.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub rename_to: Option<String>,
+}
+
+/// The stored form of [`ItemDecision`], with the edits at the top level. serde cannot refuse
+/// unknown keys next to a flattened field, and a misspelt edit key must not be ignored.
+#[derive(Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ItemDecisionForm {
+    item: ItemId,
+    revision: u64,
+    action: Action,
+    #[serde(default)]
+    resolutions: Vec<EvidenceResolution>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    excluded: Vec<usize>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    added: Vec<Rect>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    rename_to: Option<String>,
+}
+
+impl From<ItemDecisionForm> for ItemDecision {
+    fn from(f: ItemDecisionForm) -> Self {
+        Self {
+            item: f.item,
+            revision: f.revision,
+            action: f.action,
+            resolutions: f.resolutions,
+            edits: PhotoEdits {
+                excluded: f.excluded,
+                added: f.added,
+            },
+            rename_to: f.rename_to,
+        }
+    }
+}
+
+impl From<ItemDecision> for ItemDecisionForm {
+    fn from(d: ItemDecision) -> Self {
+        Self {
+            item: d.item,
+            revision: d.revision,
+            action: d.action,
+            resolutions: d.resolutions,
+            excluded: d.edits.excluded,
+            added: d.edits.added,
+            rename_to: d.rename_to,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +94,7 @@ pub enum Action {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EvidenceResolution {
     /// Index into the item's stored evidence.
     pub evidence: usize,
@@ -265,7 +314,6 @@ mod tests {
     use crate::testdir::TestDir;
     use cloakframe_core::coverage::{CoverageEvidence, Problem};
     use cloakframe_core::detection::{Detection, ModelId};
-    use cloakframe_core::geometry::Rect;
     use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
 
     const FINGERPRINT: Fingerprint = Fingerprint {
@@ -572,5 +620,25 @@ mod tests {
             Resolution::CoveredByManualMask
         );
         assert_eq!(decisions.items[1].rename_to.as_deref(), Some("b (2).jpg"));
+    }
+
+    #[test]
+    fn unknown_keys_are_refused() {
+        // A misspelt "added" or "resolutions" would publish without the mask the reviewer meant.
+        for json in [
+            r#"{"items": [{"item": 0, "revision": 0, "action": "approve",
+                "add": [{"x": 1, "y": 2, "width": 3, "height": 4}]}]}"#,
+            r#"{"items": [{"item": 0, "revision": 0, "action": "approve",
+                "resolution": [{"evidence": 0, "resolution": "dismissed"}]}]}"#,
+            r#"{"items": [{"item": 0, "revision": 0, "action": "approve",
+                "resolutions": [{"evidence": 0, "resolution": "dismissed", "note": "x"}]}]}"#,
+            r#"{"items": [], "item": []}"#,
+        ] {
+            let error = serde_json::from_str::<ReviewDecisions>(json).unwrap_err();
+            assert!(
+                error.to_string().contains("unknown field"),
+                "{json}: {error}"
+            );
+        }
     }
 }
