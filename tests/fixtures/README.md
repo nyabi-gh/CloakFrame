@@ -18,7 +18,7 @@ macOS에서 1.12.1 빌드 의존성(Homebrew Qt·OpenCV·ONNX Runtime·FFmpeg �
 | --- | --- |
 | `legacy/<suite>/<test>.json` | 1.12.1 시험 하나. `asserts_cpp`는 그 시험의 assert 식과 통과 횟수, `calls`는 시험이 core API에 넣은 실제 입력과 출력이다. 이미지·파일 입출력은 같은 이름의 폴더에 PNG·원본 파일로 있다 |
 | `legacy/index.json` | 시험마다 상태(`normative`·`intent`·`changed`·`dropped`), 관련 계획 단계·항목, 메모 |
-| `detect/<model>/<image>@<score>.json` | 1.12.1 감지기 3종(CPU) 결과. NMS 0.4, score 0.1·0.25·0.5 |
+| `detect/<model>/<image>@<score>.json` | 1.12.1 감지기 3종(CPU) 결과. NMS 0.4, score 0.1·0.25·0.5. 새 YOLO5Face-n은 NMS 전 후보를 자르지 않으므로(D11) crowd 3건은 1.12.1 결과를 모두 포함한 280개를 기대한다(`crates/cloakframe-engine/tests/detect_fixtures.rs`) |
 | `detect/inputs/` | 생성한 감지 입력: 크기 5단계 astronaut(작은 얼굴), 같은 얼굴 280개(D11) |
 | `defects/<D·P 항목>/` | `expected.json`(올바른 기대 결과, 손으로 작성), `observed_1121.json`(1.12.1 재현 결과, 생성), 입력 파일 |
 | `metadata/` | allowlist EXIF 기준. 허용·금지·GPS 태그를 모두 넣은 JPEG와 1.12.1 `copyMetadata` 결과 |
