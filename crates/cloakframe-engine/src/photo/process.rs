@@ -7,7 +7,7 @@ use std::io::{self, Write};
 use std::path::Path;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
-use cloakframe_core::detection::{ModelId, Thresholds};
+use cloakframe_core::detection::{DetectionKind, Thresholds};
 use cloakframe_core::item::{PublishBasis, PublishPermit};
 use cloakframe_core::mask::{MaskError, MaskStyle, Method, Overlay};
 use cloakframe_core::review::Digest;
@@ -20,20 +20,19 @@ use super::encode;
 use super::format::{ImageFormat, sniff};
 use super::mask;
 use super::metadata::MetadataPolicy;
-use crate::detect::yolo5face;
+use crate::detect::models::DetectionModels;
 use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
 use crate::run::{
     Analysis, Fingerprint, ItemContext, ItemProcessor, Note, RenderRequest, StepError,
 };
 
-/// M2 detects faces with YOLO5Face-n only; choosing the model joins the settings in M3.
-const FACE_MODEL: ModelId = ModelId::Yolo5FaceN;
-
 /// Everything besides the input that decides a photo's output. A stored review is bound to all of
 /// it (plan 4.2).
-#[derive(Debug, Clone, PartialEq, Default)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct PhotoSettings {
+    /// The detector the run is given must load these models.
+    pub models: DetectionModels,
     pub thresholds: Thresholds,
     pub style: MaskStyle,
     /// The user's image for [`Method::CustomImage`].
@@ -41,15 +40,32 @@ pub struct PhotoSettings {
     pub metadata: MetadataPolicy,
 }
 
+impl Default for PhotoSettings {
+    fn default() -> Self {
+        let models = DetectionModels::default();
+        Self {
+            models,
+            thresholds: models.default_thresholds(),
+            style: MaskStyle::default(),
+            overlay: None,
+            metadata: MetadataPolicy::default(),
+        }
+    }
+}
+
 impl PhotoSettings {
+    /// The models are the fingerprint's other half; the thresholds of a kind the models do not
+    /// detect change nothing.
     fn digest(&self) -> Digest {
         let mut h = Sha256::new();
-        for (kind, t) in [
-            ("face", self.thresholds.face),
-            ("plate", self.thresholds.plate),
-        ] {
+        for kind in self.models.ids().map(|id| id.kind()) {
+            let t = self.thresholds.of(kind);
+            let name = match kind {
+                DetectionKind::Face => "face",
+                DetectionKind::Plate => "plate",
+            };
             h.update(format!(
-                "{kind} score {:08x} nms {:08x}\n",
+                "{name} score {:08x} nms {:08x}\n",
                 t.score().to_bits(),
                 t.nms_iou().to_bits()
             ));
@@ -219,17 +235,23 @@ impl ItemProcessor for PhotoProcessor {
             .map_err(failed)?;
         let pixels = prepared.pixels();
         ctx.progress.set(pixels, 2 * pixels);
-        let kept = found.detections.len() as u32;
-        let evidence = (found.over_limit > 0)
-            .then(|| {
+        let evidence = found
+            .over_limit
+            .iter()
+            .filter(|&&(_, dropped)| dropped > 0)
+            .map(|&(model, dropped)| {
+                let kept = found
+                    .detections
+                    .iter()
+                    .filter(|d| d.model() == model)
+                    .count() as u32;
                 CoverageEvidence::unresolved(Problem::CappedCandidates {
-                    model: FACE_MODEL,
+                    model,
                     frame: None,
                     kept,
-                    found: kept + found.over_limit,
+                    found: kept + dropped,
                 })
             })
-            .into_iter()
             .collect();
         let analysis = Analysis {
             detections: found.detections,
@@ -332,7 +354,7 @@ impl ItemProcessor for PhotoProcessor {
 
     fn fingerprint(&self) -> Fingerprint {
         Fingerprint {
-            models: yolo5face::model_digest(),
+            models: self.settings.models.digest(),
             settings: self.settings.digest(),
         }
     }
@@ -341,25 +363,35 @@ impl ItemProcessor for PhotoProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::detect::models::FaceModel;
     use cloakframe_core::detection::KindThresholds;
     use cloakframe_core::mask::MosaicStrength;
 
+    fn with_plates() -> PhotoSettings {
+        let models = DetectionModels::new(Some(FaceModel::Yolo5FaceN), true).unwrap();
+        PhotoSettings {
+            models,
+            thresholds: models.default_thresholds(),
+            ..PhotoSettings::default()
+        }
+    }
+
     #[test]
     fn every_setting_changes_the_fingerprint() {
-        let base = PhotoSettings::default();
+        let base = with_plates();
         let processor = |s: PhotoSettings| PhotoProcessor::new(s).unwrap().fingerprint();
         let changed = [
             PhotoSettings {
                 thresholds: Thresholds {
                     face: KindThresholds::new(0.25, 0.4).unwrap(),
-                    ..Thresholds::default()
+                    ..base.thresholds
                 },
                 ..base.clone()
             },
             PhotoSettings {
                 thresholds: Thresholds {
                     plate: KindThresholds::new(0.5, 0.3).unwrap(),
-                    ..Thresholds::default()
+                    ..base.thresholds
                 },
                 ..base.clone()
             },
@@ -406,6 +438,25 @@ mod tests {
             assert!(!seen.contains(&fingerprint.settings));
             seen.push(fingerprint.settings);
         }
+    }
+
+    #[test]
+    fn the_models_make_the_other_half_of_the_fingerprint() {
+        let fingerprint = |s: PhotoSettings| PhotoProcessor::new(s).unwrap().fingerprint();
+        let default = fingerprint(PhotoSettings::default());
+        let plates = fingerprint(with_plates());
+        assert_eq!(default.models, DetectionModels::default().digest());
+        assert_eq!(plates.models, with_plates().models.digest());
+        assert_ne!(default.models, plates.models);
+        // Without plates, the plate thresholds decide nothing.
+        let other_plate = PhotoSettings {
+            thresholds: Thresholds {
+                plate: KindThresholds::new(0.2, 0.3).unwrap(),
+                ..PhotoSettings::default().thresholds
+            },
+            ..PhotoSettings::default()
+        };
+        assert_eq!(fingerprint(other_plate), default);
     }
 
     #[test]

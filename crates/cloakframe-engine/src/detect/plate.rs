@@ -22,6 +22,9 @@ const ANCHORS: i64 = 5_376;
 const NMS_MAX_BOXES: &str = "/end2end/Constant_24_output_0";
 const NMS_IOU: &str = "/end2end/Constant_25_output_0";
 
+/// The published name of the model file.
+pub const FILE_NAME: &str = "yolo-v9-t-512-license-plates-end2end.onnx";
+
 /// The model file this detector runs (`manifests/native.toml`). Sessions are made only from bytes
 /// with this hash (plan 4.6).
 pub const MODEL_SHA256: &str = "746fdd358ec110418775d7c9d8d07910d48b1a21471f92bf4421f6510d6daade";
@@ -186,7 +189,7 @@ impl Detector for Plate {
         }
         Ok(Found {
             detections: non_max_suppression(candidates, thresholds),
-            over_limit: 0,
+            over_limit: Vec::new(),
         })
     }
 }

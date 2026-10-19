@@ -28,6 +28,17 @@ impl ModelId {
             Self::PlateYolov9T => DetectionKind::Plate,
         }
     }
+
+    /// The thresholds for this model's detections unless the user sets others. These are what
+    /// 1.12.1 applied: score 0.5 and NMS 0.4, except that the plate graph suppressed at its own
+    /// 0.45 and ignored the NMS setting. Revisited with the labeled benchmark (plan 9.2).
+    pub fn default_thresholds(self) -> KindThresholds {
+        let (score, nms_iou) = match self {
+            Self::Yolo5FaceN | Self::YuNet => (0.5, 0.4),
+            Self::PlateYolov9T => (0.5, 0.45),
+        };
+        KindThresholds { score, nms_iou }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -234,18 +245,9 @@ impl KindThresholds {
     }
 }
 
-impl Default for KindThresholds {
-    /// 1.12.1's defaults.
-    fn default() -> Self {
-        Self {
-            score: 0.5,
-            nms_iou: 0.4,
-        }
-    }
-}
-
-/// Separate thresholds per kind (P-2). 1.12.1 used one pair for faces and plates.
-#[derive(Debug, Clone, Copy, PartialEq, Default)]
+/// Separate thresholds per kind (P-2). 1.12.1 used one pair for faces and plates. The defaults
+/// depend on the models (`ModelId::default_thresholds`).
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Thresholds {
     pub face: KindThresholds,
     pub plate: KindThresholds,
@@ -386,9 +388,16 @@ mod tests {
         for (score, nms) in [(-0.1, 0.4), (0.5, 1.1), (f32::NAN, 0.4)] {
             assert_eq!(KindThresholds::new(score, nms), Err(ThresholdError));
         }
+    }
+
+    #[test]
+    fn defaults_are_what_1_12_1_applied() {
+        let face = KindThresholds::new(0.5, 0.4).unwrap();
+        assert_eq!(ModelId::Yolo5FaceN.default_thresholds(), face);
+        assert_eq!(ModelId::YuNet.default_thresholds(), face);
         assert_eq!(
-            Thresholds::default().of(DetectionKind::Face),
-            KindThresholds::new(0.5, 0.4).unwrap()
+            ModelId::PlateYolov9T.default_thresholds(),
+            KindThresholds::new(0.5, 0.45).unwrap()
         );
     }
 

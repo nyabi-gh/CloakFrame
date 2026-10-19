@@ -126,7 +126,7 @@ fn plate_matches_the_1_12_1_fixtures() {
 
 /// The plate graph returns at most 100 boxes and suppresses at IoU 0.45. With NMS off here, the
 /// car photo tiled 3x3 gives more than 100 boxes: the graph's limits no longer apply (with them,
-/// 35 come out). With NMS at the graph's 0.45, each tile's plate is found once.
+/// 35 come out). With the default NMS, each tile's plate is found once.
 #[test]
 fn the_plate_graph_limits_are_lifted() {
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
@@ -151,9 +151,10 @@ fn the_plate_graph_limits_are_lifted() {
     let unsuppressed = thresholds(KindThresholds::new(0.001, 1.0).unwrap());
     let found = detector.detect(&tiled, &unsuppressed).unwrap();
     assert!(found.detections.len() > 100, "{}", found.detections.len());
-    assert_eq!(found.over_limit, 0);
+    assert!(found.over_limit.is_empty());
 
-    let plates = thresholds(KindThresholds::new(0.25, 0.45).unwrap());
+    let nms = ModelId::PlateYolov9T.default_thresholds().nms_iou();
+    let plates = thresholds(KindThresholds::new(0.25, nms).unwrap());
     let found = detector.detect(&tiled, &plates).unwrap();
     let mut tiles: Vec<(usize, usize)> = found
         .detections
@@ -211,8 +212,8 @@ fn compare(detector: &mut dyn Detector, id: ModelId, expected: impl Fn(&str, usi
             };
             let found = detector.detect(&image, &thresholds).unwrap();
             cases += 1;
-            if found.over_limit != 0 {
-                failures.push(format!("{case}: {} over the limit", found.over_limit));
+            if !found.over_limit.is_empty() {
+                failures.push(format!("{case}: over the limit {:?}", found.over_limit));
             }
             let expected = expected(stem, want.detections.len());
             if found.detections.len() != expected {

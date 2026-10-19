@@ -1,7 +1,7 @@
-//! `cloakframe-cli` on photos with the real detector: an automatic run, a review that excludes a
-//! detection and adds an area, exporting without anonymization, decisions refused for other
-//! settings, the pinned model, and a rerun that leaves the earlier output alone (1.12.1
-//! testWorkerReportsUnredactedOutputAsWarningAndPreservesIt).
+//! `cloakframe-cli` on photos with the real detectors: an automatic run, faces and plates in one
+//! run, a review that excludes a detection and adds an area, exporting without anonymization,
+//! decisions refused for other settings or models, the pinned models, and a rerun that leaves the
+//! earlier output alone (1.12.1 testWorkerReportsUnredactedOutputAsWarningAndPreservesIt).
 //!
 //! Needs `CLOAKFRAME_ORT_LIBRARY` and `CLOAKFRAME_TEST_ASSETS` (see CONTRIBUTING.md). The CLI sets
 //! `ORT_DISABLE_TELEMETRY` itself, so the tests run it without that variable.
@@ -9,7 +9,7 @@
 mod common;
 
 use std::io::Cursor;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use common::{TestDir, fixtures, required_env, rgb};
@@ -71,8 +71,11 @@ impl Fixture {
     }
 
     fn run(&self, extra: &[&str]) -> Output {
+        self.run_with_models(&assets(), extra)
+    }
+
+    fn run_with_models(&self, models: &Path, extra: &[&str]) -> Output {
         let library = required_env("CLOAKFRAME_ORT_LIBRARY");
-        let model = assets().join("yolov5n_face.onnx");
         let out = self.root.join("out");
         let input = self.root.join("in");
         let mut args = vec![
@@ -81,8 +84,8 @@ impl Fixture {
             out.to_str().unwrap(),
             "--ort-library",
             library.to_str().unwrap(),
-            "--face-model",
-            model.to_str().unwrap(),
+            "--models",
+            models.to_str().unwrap(),
         ];
         args.extend(extra);
         args.push(input.to_str().unwrap());
@@ -219,25 +222,93 @@ fn decisions_need_the_settings_the_run_used() {
 }
 
 #[test]
-fn only_the_pinned_model_runs() {
+fn decisions_need_the_models_the_run_used() {
     let f = Fixture::new();
     f.astronaut();
-    let other = f.input("other.onnx", b"not the model");
-    let library = required_env("CLOAKFRAME_ORT_LIBRARY");
+    let r = f.run(&["--review", "required", "--faces", "yunet"]);
+    assert_eq!(r.code, 3, "{}{}", r.stdout, r.stderr);
+    let id = session_id(&r.stdout);
+    let decision = r#"{"items": [{"item": 0, "revision": 0, "action": "approve"}]}"#;
+    for other in [&[][..], &["--faces", "yunet", "--plates", "on"]] {
+        let r = f.review(&id, decision, other);
+        assert_eq!(r.code, 1, "{other:?}: {}{}", r.stdout, r.stderr);
+        assert!(
+            r.stdout.contains("models or settings differ"),
+            "{}",
+            r.stdout
+        );
+    }
+    let r = f.review(&id, decision, &["--faces", "yunet"]);
+    assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
+}
+
+/// Plates are off unless asked for; with them on, the car photo's plate is masked along with
+/// what the face model finds, and the result records each detection's kind (P-2).
+#[test]
+fn plates_join_the_faces_when_turned_on() {
+    let f = Fixture::new();
+    f.input(
+        "car.webp",
+        &std::fs::read(assets().join("car_image.webp")).unwrap(),
+    );
+    let plate = {
+        let path = fixtures().join("detect/plate/car_image@0.50.json");
+        let want: Expected = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
+        assert_eq!(want.detections.len(), 1);
+        want.detections[0].bbox
+    };
+    let kinds = |r: &Output| {
+        let stored = f.session(&session_id(&r.stdout));
+        let mut kinds: Vec<String> = stored["items"][0]["detections"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|d| d["kind"].as_str().unwrap().to_owned())
+            .collect();
+        kinds.dedup();
+        kinds
+    };
+    let r = f.run(&["--review", "required"]);
+    assert_eq!(r.code, 3, "{}{}", r.stdout, r.stderr);
+    assert_eq!(kinds(&r), ["face"]);
+
+    let r = f.run(&["--review", "required", "--plates", "on"]);
+    assert_eq!(r.code, 3, "{}{}", r.stdout, r.stderr);
+    assert_eq!(kinds(&r), ["face", "plate"]);
+    let r = f.run(&["--review", "required", "--faces", "off", "--plates", "on"]);
+    assert_eq!(r.code, 3, "{}{}", r.stdout, r.stderr);
+    assert_eq!(kinds(&r), ["plate"]);
+
+    let r = f.run(&["--review", "off", "--plates", "on"]);
+    assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
+    let source = rgb(&f.root.join("in/car.webp"));
+    let out = rgb(&f.out("car.webp"));
+    let (x, y) = centre(plate);
+    assert_ne!(source.get_pixel(x, y).0, BLACK);
+    assert_eq!(out.get_pixel(x, y).0, BLACK);
+}
+
+#[test]
+fn only_the_pinned_models_run() {
+    let f = Fixture::new();
+    f.astronaut();
+    let models = f.root.join("models");
+    std::fs::create_dir(&models).unwrap();
+    std::fs::write(models.join("yolov5n_face.onnx"), b"not the model").unwrap();
     let out = f.root.join("out");
-    let r = f.cli(&[
-        "run",
-        "--output",
-        out.to_str().unwrap(),
-        "--ort-library",
-        library.to_str().unwrap(),
-        "--face-model",
-        other.to_str().unwrap(),
-        f.root.join("in/astronaut.png").to_str().unwrap(),
-    ]);
+    let r = f.run_with_models(&models, &[]);
     assert_eq!(r.code, 1);
     assert!(r.stderr.contains("not the pinned one"), "{}", r.stderr);
     assert!(!r.stderr.contains("usage:"), "{}", r.stderr);
+    assert!(!out.exists());
+    // The YuNet file is missing.
+    let r = f.run_with_models(&models, &["--faces", "yunet"]);
+    assert_eq!(r.code, 1);
+    assert!(
+        r.stderr.contains("face_detection_yunet_2023mar.onnx"),
+        "{}",
+        r.stderr
+    );
     assert!(!out.exists());
 
     let r = f.cli(&["run", "--output", out.to_str().unwrap(), "in"]);
@@ -246,6 +317,17 @@ fn only_the_pinned_model_runs() {
     let r = f.cli(&["run", "--output", "out", "--videos", "in"]);
     assert_eq!(r.code, 2);
     assert!(r.stderr.contains("videos"), "{}", r.stderr);
+    let r = f.run(&["--faces", "off"]);
+    assert_eq!(r.code, 2);
+    assert!(r.stderr.contains("--plates on"), "{}", r.stderr);
+    let r = f.run(&["--faces", "scrfd"]);
+    assert_eq!(r.code, 2);
+    assert!(
+        r.stderr.contains("yolo5face-n, yunet or off"),
+        "{}",
+        r.stderr
+    );
+    assert!(!out.exists());
 }
 
 /// A photo without faces is published like any other: no detection is not an unresolved problem

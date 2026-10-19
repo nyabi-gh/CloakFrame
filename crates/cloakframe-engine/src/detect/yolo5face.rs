@@ -16,6 +16,9 @@ const ROWS: usize = 25_200;
 const COLS: usize = 16;
 const PAD_VALUE: u8 = 114;
 
+/// The published name of the model file.
+pub const FILE_NAME: &str = "yolov5n_face.onnx";
+
 /// The model file this detector runs (`manifests/native.toml`). Sessions are made only from bytes
 /// with this hash (plan 4.6).
 pub const MODEL_SHA256: &str = "eb244a06e36999db732b317c2b30fa113cd6cfc1a397eaf738f2d6f33c01f640";
@@ -178,7 +181,7 @@ impl Detector for Yolo5Face {
         // found unmasked. Masking cost follows the masked area, not the box count.
         Ok(Found {
             detections: non_max_suppression(candidates, thresholds),
-            over_limit: 0,
+            over_limit: Vec::new(),
         })
     }
 }

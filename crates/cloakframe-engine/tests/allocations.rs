@@ -79,7 +79,7 @@ impl Detector for WholeImage {
         let bbox = Rect::new(0.0, 0.0, image.width as f32, image.height as f32).unwrap();
         Ok(Found {
             detections: vec![Detection::new(ModelId::Yolo5FaceN, 0.9, bbox, None, None).unwrap()],
-            over_limit: 0,
+            over_limit: Vec::new(),
         })
     }
 }

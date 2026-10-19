@@ -52,9 +52,11 @@ With the same files the command-line tool processes photos:
 
 ```bash
 cargo run -p cloakframe-engine --bin cloakframe-cli -- run --output out --review off \
-  --ort-library "$CLOAKFRAME_ORT_LIBRARY" \
-  --face-model "$CLOAKFRAME_TEST_ASSETS/yolov5n_face.onnx" photos/
+  --ort-library "$CLOAKFRAME_ORT_LIBRARY" --models "$CLOAKFRAME_TEST_ASSETS" photos/
 ```
+
+It detects faces with YOLO5Face-n; `--faces yunet` picks the other face model
+and `--plates on` adds license plates.
 
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.

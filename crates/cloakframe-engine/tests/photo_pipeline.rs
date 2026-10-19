@@ -74,7 +74,7 @@ fn face(x: f32, y: f32, w: f32, h: f32) -> Detection {
 #[derive(Default)]
 struct Scripted {
     detections: Vec<Detection>,
-    over_limit: u32,
+    over_limit: Vec<(ModelId, u32)>,
     touch: Option<PathBuf>,
 }
 
@@ -87,7 +87,7 @@ impl Detector for Scripted {
         }
         Ok(Found {
             detections: self.detections.clone(),
-            over_limit: self.over_limit,
+            over_limit: self.over_limit.clone(),
         })
     }
 }
@@ -195,7 +195,7 @@ fn capped_detections_hold_the_photo_until_it_is_exported_with_warnings() {
         processor(MetadataPolicy::Strip),
         Scripted {
             detections: vec![face(2.0, 2.0, 8.0, 8.0)],
-            over_limit: 3,
+            over_limit: vec![(ModelId::Yolo5FaceN, 3)],
             touch: None,
         },
     );

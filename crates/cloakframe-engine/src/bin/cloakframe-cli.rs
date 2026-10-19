@@ -7,8 +7,8 @@ use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::batch::{job_from_scan, session_from_report};
 use cloakframe_engine::cancel::CancelToken;
+use cloakframe_engine::detect::models::{DetectionModels, FaceModel};
 use cloakframe_engine::detect::runtime::OrtRuntime;
-use cloakframe_engine::detect::yolo5face::Yolo5Face;
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
@@ -20,17 +20,22 @@ use cloakframe_engine::session::{SessionId, SessionStore};
 
 const USAGE: &str = "\
 usage:
-  cloakframe-cli run --output DIR --ort-library FILE --face-model FILE
+  cloakframe-cli run --output DIR --ort-library FILE --models DIR
+                     [--faces yolo5face-n|yunet|off] [--plates on|off]
                      [--review required|off] [--keep-metadata [--keep-gps]] [--recursive]
                      [--workers N] [--sessions DIR] INPUT...
-  cloakframe-cli review --session ID --decisions FILE [--keep-metadata [--keep-gps]]
-                        [--workers N] [--sessions DIR]
+  cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
+                        [--plates on|off] [--keep-metadata [--keep-gps]] [--workers N]
+                        [--sessions DIR]
   cloakframe-cli sessions [--sessions DIR]
   cloakframe-cli --version
 
---ort-library is the ONNX Runtime library to load and --face-model the YOLO5Face-n file
-(yolov5n_face.onnx), which must be the one this build pins. review takes the settings run was
-given; decisions on items analyzed with other settings are refused.
+--ort-library is the ONNX Runtime library to load. --models is the folder that holds the model
+files under their published names (yolov5n_face.onnx, face_detection_yunet_2023mar.onnx,
+yolo-v9-t-512-license-plates-end2end.onnx); each must be the one this build pins. --faces picks
+the face model (default yolo5face-n) and --plates turns license plates on or off (default off).
+review takes the settings run was given; decisions on items analyzed with other settings are
+refused.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
 
 exit status: 0 done, 1 failed or refused items or a failed run, 2 usage error, 3 items wait for
@@ -81,7 +86,9 @@ struct Options {
     session: Option<String>,
     decisions: Option<PathBuf>,
     ort_library: Option<PathBuf>,
-    face_model: Option<PathBuf>,
+    models: Option<PathBuf>,
+    faces: Option<Option<FaceModel>>,
+    plates: Option<bool>,
     keep_metadata: bool,
     keep_gps: bool,
     inputs: Vec<PathBuf>,
@@ -117,7 +124,24 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
             "--session" => o.session = Some(args.value(&arg)?),
             "--decisions" => o.decisions = Some(args.value(&arg)?.into()),
             "--ort-library" => o.ort_library = Some(args.value(&arg)?.into()),
-            "--face-model" => o.face_model = Some(args.value(&arg)?.into()),
+            "--models" => o.models = Some(args.value(&arg)?.into()),
+            "--faces" => {
+                o.faces = Some(match args.value(&arg)?.as_str() {
+                    "yolo5face-n" => Some(FaceModel::Yolo5FaceN),
+                    "yunet" => Some(FaceModel::YuNet),
+                    "off" => None,
+                    other => {
+                        return Err(format!("--faces is yolo5face-n, yunet or off, not {other}"));
+                    }
+                })
+            }
+            "--plates" => {
+                o.plates = Some(match args.value(&arg)?.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    other => return Err(format!("--plates is on or off, not {other}")),
+                })
+            }
             "--keep-metadata" => o.keep_metadata = true,
             "--keep-gps" => o.keep_gps = true,
             flag if flag.starts_with("--") => return Err(format!("unknown option {flag}")),
@@ -137,6 +161,15 @@ fn session_store(o: &Options) -> Result<SessionStore, CliError> {
         .ok_or_else(|| failed("no app data folder for this user; pass --sessions DIR"))
 }
 
+fn detection_models(o: &Options) -> Result<DetectionModels, CliError> {
+    let default = DetectionModels::default();
+    DetectionModels::new(
+        o.faces.unwrap_or(default.face()),
+        o.plates.unwrap_or(default.plates()),
+    )
+    .map_err(|e| usage(format!("{e}: --faces off needs --plates on")))
+}
+
 fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
     // Builds with the synthetic processor never get here with --synthetic.
     if o.synthetic {
@@ -153,7 +186,10 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
     } else {
         MetadataPolicy::Strip
     };
+    let models = detection_models(o)?;
     PhotoProcessor::new(PhotoSettings {
+        models,
+        thresholds: models.default_thresholds(),
         metadata,
         ..PhotoSettings::default()
     })
@@ -165,15 +201,17 @@ fn spawn(detector: Box<dyn Detector>) -> Result<DetectorHandle, CliError> {
         .map_err(|e| failed(format!("cannot start the inference thread: {e}")))
 }
 
-/// Loads ONNX Runtime from `library` and the face model from `model`, whose hash the detector
-/// checks before making a session from those bytes.
-fn face_detector(library: &Path, model: &Path) -> Result<DetectorHandle, CliError> {
+/// Loads ONNX Runtime from `library` and the models from their files in `dir`.
+fn detector(
+    library: &Path,
+    dir: &Path,
+    models: DetectionModels,
+) -> Result<DetectorHandle, CliError> {
     let runtime = OrtRuntime::load(library).map_err(|e| failed(e.to_string()))?;
-    let bytes =
-        std::fs::read(model).map_err(|e| failed(format!("cannot read the face model: {e}")))?;
-    let detector = Yolo5Face::new(&runtime, &bytes)
-        .map_err(|e| failed(format!("cannot load the face model: {e}")))?;
-    spawn(Box::new(detector))
+    let detector = models
+        .load(&runtime, dir)
+        .map_err(|e| failed(e.to_string()))?;
+    spawn(detector)
 }
 
 fn state_label(state: ItemState) -> &'static str {
@@ -280,15 +318,16 @@ fn run(o: Options) -> Result<u8, CliError> {
         return run_with(&o, &output, processor, || spawn(Box::new(NoDetections)));
     }
     let processor = photo_processor(&o)?;
+    let models = detection_models(&o)?;
     let library = o
         .ort_library
         .clone()
         .ok_or_else(|| usage("run needs --ort-library FILE"))?;
-    let model = o
-        .face_model
+    let dir = o
+        .models
         .clone()
-        .ok_or_else(|| usage("run needs --face-model FILE"))?;
-    run_with(&o, &output, processor, || face_detector(&library, &model))
+        .ok_or_else(|| usage("run needs --models DIR"))?;
+    run_with(&o, &output, processor, || detector(&library, &dir, models))
 }
 
 /// The detector is made only once the scan found something to analyze.

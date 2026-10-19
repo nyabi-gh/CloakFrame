@@ -520,6 +520,7 @@ fn initial(job_item: &JobItem) -> Item {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::detect::models::DetectionModels;
     use crate::detect::{DetectError, Detector, Found, Rgb8Image};
     use cloakframe_core::coverage::Problem;
     use cloakframe_core::detection::Thresholds;
@@ -569,7 +570,7 @@ mod tests {
                         height: 1,
                         data: vec![0; 3],
                     },
-                    Thresholds::default(),
+                    DetectionModels::default().default_thresholds(),
                 )
                 .map_err(|e| StepError::Failed(e.into()))?;
             match name(ctx) {

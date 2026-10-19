@@ -15,6 +15,9 @@ use super::{DetectError, Detector, Found, Rgb8Image};
 const SIZE: usize = 640;
 const STRIDES: [usize; 3] = [8, 16, 32];
 
+/// The published name of the model file.
+pub const FILE_NAME: &str = "face_detection_yunet_2023mar.onnx";
+
 /// The model file this detector runs (`manifests/native.toml`). Sessions are made only from bytes
 /// with this hash (plan 4.6).
 pub const MODEL_SHA256: &str = "8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4";
@@ -258,7 +261,7 @@ impl Detector for YuNet {
         }
         Ok(Found {
             detections,
-            over_limit: 0,
+            over_limit: Vec::new(),
         })
     }
 }

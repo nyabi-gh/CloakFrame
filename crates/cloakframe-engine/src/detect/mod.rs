@@ -1,3 +1,4 @@
+pub mod models;
 pub mod plate;
 pub mod resize;
 pub mod runtime;
@@ -8,7 +9,7 @@ use std::fmt;
 use std::sync::mpsc;
 use std::thread;
 
-use cloakframe_core::detection::{Detection, Thresholds};
+use cloakframe_core::detection::{Detection, ModelId, Thresholds};
 
 /// sRGB RGB8 pixels in display orientation, the detection input of plan 4.3.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,14 +41,15 @@ impl fmt::Display for DetectError {
 
 impl std::error::Error for DetectError {}
 
-/// What one detector found in one image.
+/// What the detectors found in one image.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Found {
     pub detections: Vec<Detection>,
-    /// Detections NMS kept that a model with a bounded output could not return. The caller
-    /// records them as `Problem::CappedCandidates`, the only kind of omission D11 counts.
-    /// YOLO5Face-n returns every survivor, so this is 0 for it.
-    pub over_limit: u32,
+    /// By model, detections NMS kept that a model with a bounded output could not return. The
+    /// caller records each as `Problem::CappedCandidates`, the only kind of omission D11 counts.
+    /// The pinned models return every survivor (the plate graph's limit is lifted), so this is
+    /// empty for them.
+    pub over_limit: Vec<(ModelId, u32)>,
 }
 
 /// A loaded model session. `Send` but not required to be `Sync`: the inference thread is its
@@ -103,7 +105,6 @@ impl DetectorHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cloakframe_core::detection::ModelId;
     use cloakframe_core::geometry::Rect;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -139,6 +140,10 @@ mod tests {
         }
     }
 
+    fn thresholds() -> Thresholds {
+        models::DetectionModels::default().default_thresholds()
+    }
+
     fn spawn() -> DetectorHandle {
         DetectorHandle::spawn(Box::new(OneFacePerImage {
             busy: Arc::new(AtomicBool::new(false)),
@@ -154,7 +159,7 @@ mod tests {
                 let handle = handle.clone();
                 s.spawn(move || {
                     for _ in 0..10 {
-                        let found = handle.detect(image(w), Thresholds::default()).unwrap();
+                        let found = handle.detect(image(w), thresholds()).unwrap();
                         assert_eq!(found.detections[0].bbox().width(), w as f32);
                     }
                 });
@@ -166,16 +171,16 @@ mod tests {
     fn detector_errors_reach_the_caller_and_the_thread_keeps_serving() {
         let handle = spawn();
         assert_eq!(
-            handle.detect(image(0), Thresholds::default()),
+            handle.detect(image(0), thresholds()),
             Err(DetectError::Failed("empty image".into()))
         );
-        assert!(handle.detect(image(4), Thresholds::default()).is_ok());
+        assert!(handle.detect(image(4), thresholds()).is_ok());
     }
 
     #[test]
     fn a_panicking_detector_makes_the_handle_unavailable() {
         let handle = spawn();
-        let t = Thresholds::default();
+        let t = thresholds();
         assert_eq!(handle.detect(image(13), t), Err(DetectError::Unavailable));
         assert_eq!(handle.detect(image(4), t), Err(DetectError::Unavailable));
     }
