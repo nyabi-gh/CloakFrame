@@ -280,4 +280,4 @@ M2 범위에 걸리는 항목은 1·2·4·6·7·8·12·17번, M1 범위는 5·9�
 | 13 | 모자이크 강도 상한 16 → 12. D3 expected·계획 D3·CHANGES 갱신 | `be2ed6b` | core `mask` `invalid_inputs_are_refused`, `mask_fixtures.rs` |
 | 14 | 감지 0건 사진에 "nothing detected" note(게시는 그대로). 계획의 범위 조정 순서에서 타일 모드를 뺌 | `e8889ce` | `cli_photo.rs` `a_rerun_keeps_the_earlier_output`, D2 파이프라인 시험의 note |
 
-PR #32에서 3개 OS CI가 모두 통과했다(Windows의 16번 시험 포함, 2026-10-19). 남은 것: 문서 표의 "남김" 항목(THIRD_PARTY_NOTICES, README, ROADMAP, 로그 정책, 시간 예산 문구), Windows 링커 경고 LNK4098(main에 이미 있었음, 별도 조사).
+PR #32에서 3개 OS CI가 모두 통과했다(Windows의 16번 시험 포함, 2026-10-19). 남은 것: 문서 표의 "남김" 항목(THIRD_PARTY_NOTICES, README, ROADMAP, 로그 정책, 시간 예산 문구), Windows 링커 경고 LNK4098(main에 이미 있었음): 원인은 `turbojpeg-sys`의 C 런타임 설정이고 upstream 수정을 올렸다([M2 기록](M2_ENCODE_SPIKE.md#windows의-lnk4098-경고-2026-10-19), [honzasp/rust-turbojpeg#44](https://github.com/honzasp/rust-turbojpeg/pull/44)).

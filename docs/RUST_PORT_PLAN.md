@@ -308,15 +308,15 @@ crates/
     | P-1(사진) | `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`(가짜 감지기), `cli.rs`(M1 골격). 실제 모델은 NMS 뒤 상한이 없어 잘린 후보가 생기지 않음: `p1_photo.rs` 2건(crowd 280개, NMS 0.9의 601개를 모두 가림) |
   - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 6단계 판단 확정(2026-10-19): 감지 0건 사진은 미해결 문제가 아니라 정상 게시(1.12.1은 경고), 출력 형식은 이름의 확장자(1.12.1 규범 fixture), CLI 검토 결정은 run과 같은 모델·설정에만 적용. 넓은 색역 사진의 BMP 출력은 실패 대신 sRGB 변환·표시(위). 재검토 결정(2026-10-19): CMYK TIFF와 JPEG 압축 TIFF도 거부, 감지 0건은 결과에 표시
   - **완료(2026-10-19):** 소요 2일(2026-10-18–19, 예산 4주, 125% 점검 기준 5주 안), PR #25–#31과 7단계 `m2-verify`. 위 표의 시험이 macOS arm64(고정 ORT 1.30.0)에서 모두 통과, 3개 OS CI는 `m2-verify` PR에서 확인. 이월: YuNet·번호판 어댑터와 실제 모델의 종류별 임계값(M3)
-  - **재검토(2026-10-19):** M0–M2 전체를 다시 봤다([기록](M0_M2_REVIEW.md)). 결함 10건, 위험 6건, 의심 5건과 문서 불일치를 찾았고, 그중 사실만 바로잡는 문서는 같은 날 고쳤다. 같은 날 1–21번을 메인테이너가 정한 순서로 항목마다 실패하는 시험을 먼저 넣고 고쳤다(`m2-verify`, 항목별 커밋, 처리 내용은 기록의 "처리" 절). 결정: 사진은 NMS 뒤 상한 없이 모두 가림(1번), CMYK TIFF도 거부(6번), 모자이크 강도 4–12(13번), 감지 0건은 표시하고 타일 모드는 범위 조정 목록에서 뺌(14번). macOS arm64에서 시험 216건 통과. PR #32(`m2-verify`)에서 Linux·macOS·Windows CI가 모두 통과해(Windows FAT32·긴 경로 시험 포함) 같은 날 완료를 확정하고 main을 `132e4bd`로 fast-forward했다. 남은 것: Windows 시험 바이너리의 링커 경고 LNK4098(C 런타임 불일치, main에 이미 있었음)은 별도로 원인을 조사한다
+  - **재검토(2026-10-19):** M0–M2 전체를 다시 봤다([기록](M0_M2_REVIEW.md)). 결함 10건, 위험 6건, 의심 5건과 문서 불일치를 찾았고, 그중 사실만 바로잡는 문서는 같은 날 고쳤다. 같은 날 1–21번을 메인테이너가 정한 순서로 항목마다 실패하는 시험을 먼저 넣고 고쳤다(`m2-verify`, 항목별 커밋, 처리 내용은 기록의 "처리" 절). 결정: 사진은 NMS 뒤 상한 없이 모두 가림(1번), CMYK TIFF도 거부(6번), 모자이크 강도 4–12(13번), 감지 0건은 표시하고 타일 모드는 범위 조정 목록에서 뺌(14번). macOS arm64에서 시험 216건 통과. PR #32(`m2-verify`)에서 Linux·macOS·Windows CI가 모두 통과해(Windows FAT32·긴 경로 시험 포함) 같은 날 완료를 확정하고 main을 `132e4bd`로 fast-forward했다. 남은 것: Windows debug 시험 빌드의 링커 경고 LNK4098은 `turbojpeg-sys`가 libjpeg-turbo의 C 런타임을 Rust와 맞추지 않아 생긴다. 배포 빌드(release, `+crt-static`)는 맞고 드러난 결함은 없다. upstream 수정을 올렸고([honzasp/rust-turbojpeg#44](https://github.com/honzasp/rust-turbojpeg/pull/44)), 그 판이 나오면 올린다([기록](M2_ENCODE_SPIKE.md#windows의-lnk4098-경고-2026-10-19))
 
 ### M3 — 모델·GPU·다운로드·타일
 
 - **작업:** YuNet·번호판 어댑터, 3장 EP 정책과 CPU 폴백, 모델 다운로드·캐시, 타일 모드, 종류별 임계값
 - **완료 기준:** 1.12.1 대비 허용오차 내 결과, 소규모 벤치마크 재현율, GPU 없을 때 CPU로 동작, Windows 실기기에서 GPU 강제 리셋 시 같은 입력을 CPU로 다시 실행(M0에서 옮김). D5·D7·D8·D11 시험 통과
 - **단계(2026-10-19 계획):** 단계마다 브랜치·PR 하나.
-  1. YuNet 어댑터(`m3-yunet`): engine `detect::yunet`, 감지 fixture 18건을 engine 시험으로 옮김(`ort.yml` spike는 고정 런타임 확인용으로 세 모델을 계속 비교). 이 단계 첫 커밋에 M2 완료 확정 문서. **진행(2026-10-19):** OpenCV `FaceDetectorYN` 후처리(정수 box NMS, top-k 5,000, 점수 엄격 비교, 얼굴 하나면 NMS 생략)를 옮겨 18건이 1.12.1과 같음(최소 IoU 0.99999, 점수 차 7e-7). 처리기·CLI의 모델 선택은 2단계 감지 구성에서
-  2. 번호판 어댑터와 종류별 임계값: YOLOv9-t end2end, 얼굴·번호판 모델을 함께 돌리는 감지 구성, 실제 모델의 종류별 기본 임계값, fixture 18건
+  1. YuNet 어댑터(`m3-yunet`): engine `detect::yunet`, 감지 fixture 18건을 engine 시험으로 옮김(`ort.yml` spike는 고정 런타임 확인용으로 세 모델을 계속 비교). 이 단계 첫 커밋에 M2 완료 확정 문서. **완료(2026-10-19, PR #33, main `f7def9a`):** OpenCV `FaceDetectorYN` 후처리(정수 box NMS, top-k 5,000, 점수 엄격 비교, 얼굴 하나면 NMS 생략)를 옮겨 18건이 1.12.1과 같음(최소 IoU 0.99999, 점수 차 7e-7). 처리기·CLI의 모델 선택은 2단계 감지 구성에서. 3개 OS CI와 `ort.yml`의 고정 ORT 비교 통과
+  2. 번호판 어댑터와 종류별 임계값(`m3-plate`): YOLOv9-t end2end, 얼굴·번호판 모델을 함께 돌리는 감지 구성, 실제 모델의 종류별 기본 임계값, fixture 18건
   3. EP 정책과 CPU 폴백: macOS CoreML(MLProgram, 번호판은 CPU), Windows DML, GPU 오류 시 그 항목부터 CPU 재실행과 표시(오류 주입 시험). Windows 실기기 GPU 리셋은 장치가 생기면 확인(M7·M8로 옮긴 확인과 같음)
   4. 모델 manifest·다운로드·캐시: URL allowlist, 모델 폴더 안 임시 파일로 받으며 해시 계산 후 rename, (모델, 입력 크기, EP)마다 세션 하나·스캔 뒤 필요한 모델만 로드(D5·D7), 이용 조건 표시 자료
   5. 타일 모드: 고해상도 사진의 작은 얼굴용 타일 감지와 겹침 병합, 출력 수가 제한된 모델의 상한 초과 시 타일 재감지(D11)
