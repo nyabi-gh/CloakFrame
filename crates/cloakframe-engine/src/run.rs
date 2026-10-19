@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt;
+use std::panic::AssertUnwindSafe;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
 use std::thread;
@@ -277,6 +278,14 @@ pub fn start<P: ItemProcessor>(
     })
 }
 
+fn panic_message(payload: &(dyn std::any::Any + Send)) -> &str {
+    payload
+        .downcast_ref::<&str>()
+        .copied()
+        .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
+        .unwrap_or("panic")
+}
+
 struct Runner<P> {
     job: Job,
     processor: Arc<P>,
@@ -365,17 +374,26 @@ impl<P: ItemProcessor> Runner<P> {
             Start::Fresh { .. } => Analysis::default(),
             Start::Reviewed { analysis, .. } => analysis.clone(),
         };
-        let result = self.drive(&ctx, &job_item.start, &mut item, &mut analysis);
+        // Decoders and parsers run on untrusted input; a panic in one of them fails its item
+        // instead of the whole run, which would lose the report and the items held for review.
+        let result = std::panic::catch_unwind(AssertUnwindSafe(|| {
+            self.drive(&ctx, &job_item.start, &mut item, &mut analysis)
+        }));
         let failure = match result {
-            Ok(()) => None,
-            Err(StepError::Cancelled) => {
+            Ok(Ok(())) => None,
+            Ok(Err(StepError::Cancelled)) => {
                 item.cancel().expect("non-terminal items can be cancelled");
                 None
             }
-            Err(StepError::Failed(e)) => {
+            Ok(Err(StepError::Failed(e))) => {
                 item.fail().expect("non-terminal items can fail");
                 Some(e.to_string())
             }
+            Err(payload) if !item.state().is_terminal() => {
+                item.fail().expect("non-terminal items can fail");
+                Some(format!("internal error: {}", panic_message(&*payload)))
+            }
+            Err(payload) => std::panic::resume_unwind(payload),
         };
         if failure.is_some() || item.state() == ItemState::Cancelled {
             self.emit(Event::ItemState {
@@ -515,7 +533,8 @@ mod tests {
     impl std::error::Error for Broken {}
 
     /// Behaves according to the input's file name: `ok`, `gap` (reports an unresolved gap),
-    /// `fail-analyze`, `fail-render`, `fail-publish`, `slow` (works until cancelled).
+    /// `fail-analyze`, `fail-render`, `fail-publish`, `panic-analyze`, `panic-render`, `slow`
+    /// (works until cancelled).
     #[derive(Default)]
     struct Scripted {
         published: Mutex<Vec<(ItemId, PublishBasis)>>,
@@ -542,6 +561,7 @@ mod tests {
                 .map_err(|e| StepError::Failed(e.into()))?;
             match name(ctx) {
                 "fail-analyze" => Err(StepError::Failed(Box::new(Broken("decode failed")))),
+                "panic-analyze" => panic!("decoder bug"),
                 "gap" => Ok((
                     Analysis {
                         evidence: vec![gap()],
@@ -579,6 +599,7 @@ mod tests {
             assert_eq!(prepared.is_none(), resumed);
             match name(ctx) {
                 "fail-render" => Err(StepError::Failed(Box::new(Broken("encode failed")))),
+                "panic-render" => panic!("encoder bug"),
                 _ => Ok(request.basis),
             }
         }
@@ -723,6 +744,38 @@ mod tests {
         assert_eq!(published, [(ItemId(3), PublishBasis::AutomaticUnreviewed)]);
         assert_eq!(
             states_of(&events, ItemId(0)).last(),
+            Some(&ItemState::Failed)
+        );
+    }
+
+    #[test]
+    fn a_panicking_step_fails_only_that_item() {
+        let (report, published, events) = run(job(
+            &["ok", "gap", "panic-analyze", "panic-render", "ok"],
+            ReviewMode::Off,
+            1,
+        ));
+        assert_eq!(
+            report.items.iter().map(|o| o.state).collect::<Vec<_>>(),
+            [
+                ItemState::Published(PublishBasis::AutomaticUnreviewed),
+                ItemState::NeedsReview,
+                ItemState::Failed,
+                ItemState::Failed,
+                ItemState::Published(PublishBasis::AutomaticUnreviewed),
+            ]
+        );
+        assert_eq!(
+            report.items[2].failure.as_deref(),
+            Some("internal error: decoder bug")
+        );
+        assert_eq!(
+            report.items[3].failure.as_deref(),
+            Some("internal error: encoder bug")
+        );
+        assert_eq!(published.len(), 2);
+        assert_eq!(
+            states_of(&events, ItemId(3)).last(),
             Some(&ItemState::Failed)
         );
     }
