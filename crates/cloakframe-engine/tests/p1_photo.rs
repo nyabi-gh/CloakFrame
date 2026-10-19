@@ -13,7 +13,7 @@ use std::sync::{Arc, OnceLock};
 use cloakframe_core::detection::KindThresholds;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::detect::DetectorHandle;
-use cloakframe_engine::detect::runtime::OrtRuntime;
+use cloakframe_engine::detect::runtime::{Backend, OrtRuntime};
 use cloakframe_engine::detect::yolo5face::Yolo5Face;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Job, JobItem, RunReport, Start, start};
@@ -30,7 +30,10 @@ fn runtime() -> &'static OrtRuntime {
 fn detector() -> DetectorHandle {
     let model =
         std::fs::read(required_env("CLOAKFRAME_TEST_ASSETS").join("yolov5n_face.onnx")).unwrap();
-    DetectorHandle::spawn(Box::new(Yolo5Face::new(runtime(), &model).unwrap())).unwrap()
+    DetectorHandle::spawn(Box::new(
+        Yolo5Face::new(runtime(), &model, Backend::Cpu).unwrap(),
+    ))
+    .unwrap()
 }
 
 fn run_with(item: JobItem, settings: PhotoSettings) -> RunReport {

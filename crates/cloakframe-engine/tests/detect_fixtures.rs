@@ -1,6 +1,7 @@
 //! The detectors on the pinned ONNX Runtime against the 1.12.1 detection fixtures
-//! (tests/fixtures/detect/<model>, 6 images x 3 score thresholds). The face fixtures used NMS
-//! 0.4; 1.12.1 ignored that setting for plates, whose graph suppressed at 0.45.
+//! (tests/fixtures/detect/<model>, 6 images x 3 score thresholds), on the CPU and on this
+//! platform's accelerator. The face fixtures used NMS 0.4; 1.12.1 ignored that setting for
+//! plates, whose graph suppressed at 0.45.
 //!
 //! YOLO5Face-n: 1.12.1 kept only the 2,000 best candidates before NMS. The crowd fixture exceeds
 //! that at every threshold (defects/D11/observed_1121.json), so there every 1.12.1 detection must
@@ -20,10 +21,11 @@ use std::sync::OnceLock;
 use cloakframe_core::detection::{DetectionKind, KindThresholds, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_engine::cancel::CancelToken;
-use cloakframe_engine::detect::plate::Plate;
-use cloakframe_engine::detect::runtime::OrtRuntime;
-use cloakframe_engine::detect::yolo5face::Yolo5Face;
-use cloakframe_engine::detect::yunet::YuNet;
+use cloakframe_engine::detect::fallback::{self, Acceleration, Backends};
+use cloakframe_engine::detect::plate::{self, Plate};
+use cloakframe_engine::detect::runtime::{Backend, OrtRuntime};
+use cloakframe_engine::detect::yolo5face::{self, Yolo5Face};
+use cloakframe_engine::detect::yunet::{self, YuNet};
 use cloakframe_engine::detect::{Detector, Rgb8Image};
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::{color, decode};
@@ -36,6 +38,7 @@ const MAX_SCORE_DIFF: f32 = 1e-5;
 const MAX_ROLL_DIFF: f32 = 1e-4;
 const CROWD: &str = "crowd-280-faces";
 const CROWD_FACES: usize = 280;
+const MODELS: [ModelId; 3] = [ModelId::Yolo5FaceN, ModelId::YuNet, ModelId::PlateYolov9T];
 
 #[derive(Deserialize)]
 struct Asset {
@@ -69,18 +72,44 @@ fn runtime() -> &'static OrtRuntime {
     RUNTIME.get_or_init(|| OrtRuntime::load(&required_env("CLOAKFRAME_ORT_LIBRARY")).unwrap())
 }
 
-fn model_bytes(assets: &Path, name: &str) -> Vec<u8> {
+/// The model's file from the test assets, checked against tests/fixtures/assets.json.
+fn model_bytes(model: ModelId) -> Vec<u8> {
+    let name = match model {
+        ModelId::Yolo5FaceN => yolo5face::FILE_NAME,
+        ModelId::YuNet => yunet::FILE_NAME,
+        ModelId::PlateYolov9T => plate::FILE_NAME,
+    };
     let spec: Assets =
         serde_json::from_str(&std::fs::read_to_string(fixtures().join("assets.json")).unwrap())
             .unwrap();
-    let model = spec.models.iter().find(|m| m.name == name).unwrap();
-    let bytes = std::fs::read(assets.join(&model.name)).unwrap();
+    let asset = spec.models.iter().find(|m| m.name == name).unwrap();
+    let bytes = std::fs::read(required_env("CLOAKFRAME_TEST_ASSETS").join(name)).unwrap();
     let digest: String = Sha256::digest(&bytes)
         .iter()
         .map(|b| format!("{b:02x}"))
         .collect();
-    assert_eq!(digest, model.sha256, "{}", model.name);
+    assert_eq!(digest, asset.sha256, "{name}");
     bytes
+}
+
+fn on_cpu(model: ModelId) -> Box<dyn Detector> {
+    let (runtime, bytes) = (runtime(), model_bytes(model));
+    match model {
+        ModelId::Yolo5FaceN => Box::new(Yolo5Face::new(runtime, &bytes, Backend::Cpu).unwrap()),
+        ModelId::YuNet => Box::new(YuNet::new(runtime, &bytes, Backend::Cpu).unwrap()),
+        ModelId::PlateYolov9T => Box::new(Plate::new(runtime, &bytes, Backend::Cpu).unwrap()),
+    }
+}
+
+/// The count to find: every 1.12.1 detection, and for YOLO5Face-n all 280 crowd faces.
+fn expected_count(model: ModelId) -> impl Fn(&str, usize) -> usize {
+    move |stem, found_1121| {
+        if model == ModelId::Yolo5FaceN && stem == CROWD {
+            CROWD_FACES
+        } else {
+            found_1121
+        }
+    }
 }
 
 /// The detection copy the photo pipeline makes: decode, EXIF orientation, color policy.
@@ -94,34 +123,123 @@ fn detection_copy(path: &Path) -> Rgb8Image {
 
 #[test]
 fn yolo5face_matches_the_1_12_1_fixtures() {
-    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
-    let mut detector =
-        Yolo5Face::new(runtime(), &model_bytes(&assets, "yolov5n_face.onnx")).unwrap();
-    compare(&mut detector, ModelId::Yolo5FaceN, |stem, found_1121| {
-        if stem == CROWD {
-            CROWD_FACES
-        } else {
-            found_1121
-        }
-    });
+    let id = ModelId::Yolo5FaceN;
+    compare(on_cpu(id).as_mut(), id, expected_count(id));
 }
 
 #[test]
 fn yunet_matches_the_1_12_1_fixtures() {
-    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
-    let model = model_bytes(&assets, "face_detection_yunet_2023mar.onnx");
-    let mut detector = YuNet::new(runtime(), &model).unwrap();
-    compare(&mut detector, ModelId::YuNet, |_, found_1121| found_1121);
+    let id = ModelId::YuNet;
+    compare(on_cpu(id).as_mut(), id, expected_count(id));
 }
 
 #[test]
 fn plate_matches_the_1_12_1_fixtures() {
+    let id = ModelId::PlateYolov9T;
+    compare(on_cpu(id).as_mut(), id, expected_count(id));
+}
+
+/// Each model where a run puts it, with the CPU behind it. On macOS the face models must stay on
+/// CoreML throughout; the Windows runners have no GPU, so there DirectML may give way at start.
+#[test]
+fn the_models_match_the_fixtures_where_a_run_puts_them() {
+    for id in MODELS {
+        let backends = Backends::default();
+        let backend = fallback::backend_for(id, Acceleration::Gpu);
+        let mut detector =
+            fallback::load(runtime(), id, model_bytes(id), backend, &backends).unwrap();
+        compare(detector.as_mut(), id, expected_count(id));
+        let entry = &backends.get()[0];
+        println!(
+            "{id:?}: asked for {backend}, ran on {} {:?}",
+            entry.backend, entry.fallback
+        );
+        if cfg!(target_os = "macos") {
+            assert_eq!((entry.backend, &entry.fallback), (backend, &None), "{id:?}");
+        }
+        if let Some(f) = &entry.fallback {
+            assert!(f.at_start, "{id:?} {f:?}");
+        }
+    }
+}
+
+/// A real accelerator failure: CoreML rejects the plate graph's empty tensor when nothing is
+/// found. The plate model is forced onto CoreML here; the photo with no plate is analyzed again
+/// on the CPU, and the model stays there.
+#[cfg(target_os = "macos")]
+#[test]
+fn an_image_that_fails_on_coreml_is_analyzed_again_on_the_cpu() {
+    let id = ModelId::PlateYolov9T;
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
-    let model = model_bytes(&assets, "yolo-v9-t-512-license-plates-end2end.onnx");
-    let mut detector = Plate::new(runtime(), &model).unwrap();
-    compare(&mut detector, ModelId::PlateYolov9T, |_, found_1121| {
-        found_1121
-    });
+    let car = detection_copy(&assets.join("car_image.webp"));
+    let empty = detection_copy(&fixtures().join("detect/inputs/astronaut-scales.png"));
+    let t = id.default_thresholds();
+    let thresholds = Thresholds { face: t, plate: t };
+    let mut cpu = on_cpu(id);
+    let backends = Backends::default();
+    let mut forced =
+        fallback::load(runtime(), id, model_bytes(id), Backend::CoreMl, &backends).unwrap();
+
+    let first = forced.detect(&car, &thresholds).unwrap();
+    assert!(!first.reran_on_cpu);
+    assert_eq!(first.detections.len(), 1);
+    assert_eq!(backends.get()[0].backend, Backend::CoreMl);
+
+    let failed = forced.detect(&empty, &thresholds).unwrap();
+    assert!(failed.reran_on_cpu);
+    assert_eq!(
+        failed,
+        cpu.detect(&empty, &thresholds)
+            .map(|mut f| {
+                f.reran_on_cpu = true;
+                f
+            })
+            .unwrap()
+    );
+    let entry = &backends.get()[0];
+    assert_eq!(entry.backend, Backend::Cpu);
+    let f = entry.fallback.as_ref().unwrap();
+    assert_eq!((f.from, f.at_start), (Backend::CoreMl, false));
+    assert!(f.reason.contains("zero elements"), "{}", f.reason);
+
+    let later = forced.detect(&car, &thresholds).unwrap();
+    assert!(!later.reran_on_cpu);
+    assert_eq!(later, cpu.detect(&car, &thresholds).unwrap());
+}
+
+/// CoreML keeps compiled models per ORT build and model, so a new runtime or model never loads
+/// an old one; a graph with replaced initializers is not cached.
+#[cfg(target_os = "macos")]
+#[test]
+fn coreml_caches_compiled_models_per_runtime_build_and_model() {
+    let dir = common::TestDir::new();
+    let cached = runtime()
+        .clone()
+        .with_coreml_cache(dir.path().to_path_buf());
+    YuNet::new(&cached, &model_bytes(ModelId::YuNet), Backend::CoreMl).unwrap();
+    Plate::new(
+        &cached,
+        &model_bytes(ModelId::PlateYolov9T),
+        Backend::CoreMl,
+    )
+    .unwrap();
+    let builds: Vec<_> = std::fs::read_dir(dir.path())
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .collect();
+    assert_eq!(builds.len(), 1, "{builds:?}");
+    assert_eq!(builds[0].file_name().unwrap().len(), 16);
+    let models: Vec<_> = std::fs::read_dir(&builds[0])
+        .unwrap()
+        .map(|e| e.unwrap().file_name().into_string().unwrap())
+        .collect();
+    assert_eq!(models, [yunet::MODEL_SHA256]);
+    assert!(
+        std::fs::read_dir(builds[0].join(yunet::MODEL_SHA256))
+            .unwrap()
+            .next()
+            .is_some()
+    );
 }
 
 /// The plate graph returns at most 100 boxes and suppresses at IoU 0.45. With NMS off here, the
@@ -130,8 +248,7 @@ fn plate_matches_the_1_12_1_fixtures() {
 #[test]
 fn the_plate_graph_limits_are_lifted() {
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
-    let model = model_bytes(&assets, "yolo-v9-t-512-license-plates-end2end.onnx");
-    let mut detector = Plate::new(runtime(), &model).unwrap();
+    let mut detector = on_cpu(ModelId::PlateYolov9T);
     let car = detection_copy(&assets.join("car_image.webp"));
     let (w, h) = (car.width as usize, car.height as usize);
     let mut tiled = Rgb8Image {

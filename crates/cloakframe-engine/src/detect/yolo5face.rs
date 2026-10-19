@@ -8,7 +8,7 @@ use ort::value::{TensorElementType, TensorRef, ValueType};
 use sha2::{Digest as _, Sha256};
 
 use super::resize::resize_linear;
-use super::runtime::OrtRuntime;
+use super::runtime::{Backend, OrtRuntime};
 use super::{DetectError, Detector, Found, Rgb8Image};
 
 const SIZE: usize = 640;
@@ -32,11 +32,13 @@ pub struct Yolo5Face {
 }
 
 impl Yolo5Face {
-    pub fn new(runtime: &OrtRuntime, model: &[u8]) -> Result<Self, DetectError> {
+    pub fn new(runtime: &OrtRuntime, model: &[u8], backend: Backend) -> Result<Self, DetectError> {
         if Digest(Sha256::digest(model).into()) != model_digest() {
             return Err(unexpected("file is not the pinned one (SHA-256 differs)"));
         }
-        let session = runtime.cpu_session(model).map_err(failed)?;
+        let session = runtime
+            .session(model, backend, Vec::new())
+            .map_err(failed)?;
         let (inputs, outputs) = (session.inputs(), session.outputs());
         if inputs.len() != 1 || outputs.len() != 1 {
             return Err(unexpected("not one input and one output"));
@@ -181,7 +183,7 @@ impl Detector for Yolo5Face {
         // found unmasked. Masking cost follows the masked area, not the box count.
         Ok(Found {
             detections: non_max_suppression(candidates, thresholds),
-            over_limit: Vec::new(),
+            ..Found::default()
         })
     }
 }

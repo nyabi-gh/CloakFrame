@@ -75,6 +75,7 @@ fn face(x: f32, y: f32, w: f32, h: f32) -> Detection {
 struct Scripted {
     detections: Vec<Detection>,
     over_limit: Vec<(ModelId, u32)>,
+    reran_on_cpu: bool,
     touch: Option<PathBuf>,
 }
 
@@ -88,6 +89,7 @@ impl Detector for Scripted {
         Ok(Found {
             detections: self.detections.clone(),
             over_limit: self.over_limit.clone(),
+            reran_on_cpu: self.reran_on_cpu,
         })
     }
 }
@@ -182,6 +184,31 @@ fn masks_what_was_detected_and_publishes_unreviewed_in_automatic_mode() {
     assert_eq!(std::fs::read(&input).unwrap(), bytes);
 }
 
+/// A photo the GPU failed on was analyzed again on the CPU; that is said, and it is published as
+/// usual.
+#[test]
+fn a_photo_analyzed_again_on_the_cpu_says_so() {
+    let dir = Dir::new();
+    let input = dir.input("face.png", &png(32, 32));
+    let report = run(
+        vec![fresh(0, &input, dir.out("face.png"))],
+        ReviewMode::Off,
+        processor(MetadataPolicy::Strip),
+        Scripted {
+            detections: vec![face(2.0, 2.0, 8.0, 8.0)],
+            reran_on_cpu: true,
+            ..Scripted::default()
+        },
+    );
+    let item = &report.items[0];
+    assert_eq!(
+        item.state,
+        ItemState::Published(PublishBasis::AutomaticUnreviewed)
+    );
+    assert_eq!(item.notes, [Note::AnalyzedAgainOnCpu]);
+    assert_eq!(*rgb(&dir.out("face.png")).get_pixel(5, 5), BLACK);
+}
+
 /// P-1 with a scripted detector (the real crowd photo is in p1_photo.rs). 1.12.1
 /// testDroppedDetectionsKeepTheRunOutOfCleanCompletion published such a photo with a warning;
 /// now it waits for review and only an explicit export publishes it.
@@ -196,7 +223,7 @@ fn capped_detections_hold_the_photo_until_it_is_exported_with_warnings() {
         Scripted {
             detections: vec![face(2.0, 2.0, 8.0, 8.0)],
             over_limit: vec![(ModelId::Yolo5FaceN, 3)],
-            touch: None,
+            ..Scripted::default()
         },
     );
     let item = &report.items[0];

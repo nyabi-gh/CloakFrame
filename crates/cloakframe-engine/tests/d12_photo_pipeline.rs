@@ -23,7 +23,7 @@ impl Detector for OneFace {
         let bbox = Rect::new(4.0, 4.0, 16.0, 16.0).unwrap();
         Ok(Found {
             detections: vec![Detection::new(ModelId::Yolo5FaceN, 0.9, bbox, None, None).unwrap()],
-            over_limit: Vec::new(),
+            ..Found::default()
         })
     }
 }

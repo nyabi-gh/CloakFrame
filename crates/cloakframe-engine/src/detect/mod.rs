@@ -1,3 +1,4 @@
+pub mod fallback;
 pub mod models;
 pub mod plate;
 pub mod resize;
@@ -50,6 +51,8 @@ pub struct Found {
     /// The pinned models return every survivor (the plate graph's limit is lifted), so this is
     /// empty for them.
     pub over_limit: Vec<(ModelId, u32)>,
+    /// The image failed on the accelerator and was analyzed again on the CPU.
+    pub reran_on_cpu: bool,
 }
 
 /// A loaded model session. `Send` but not required to be `Sync`: the inference thread is its

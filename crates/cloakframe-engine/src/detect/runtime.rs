@@ -3,6 +3,8 @@
 
 use std::fmt;
 use std::path::Path;
+#[cfg(target_os = "macos")]
+use std::path::PathBuf;
 
 use ort::environment::Environment;
 use ort::ep;
@@ -44,11 +46,45 @@ impl fmt::Display for RuntimeError {
 
 impl std::error::Error for RuntimeError {}
 
+/// Where a session runs. The accelerators are the ones the pinned runtimes carry (plan 3):
+/// CoreML in the macOS build, DirectML in Windows ML.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Backend {
+    Cpu,
+    CoreMl,
+    DirectMl,
+}
+
+impl Backend {
+    /// This platform's accelerator, if its runtime has one.
+    pub fn accelerator() -> Option<Self> {
+        if cfg!(target_os = "macos") {
+            Some(Self::CoreMl)
+        } else if cfg!(windows) {
+            Some(Self::DirectMl)
+        } else {
+            None
+        }
+    }
+}
+
+impl fmt::Display for Backend {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Cpu => "CPU",
+            Self::CoreMl => "CoreML",
+            Self::DirectMl => "DirectML",
+        })
+    }
+}
+
 /// The process's ONNX Runtime environment. ORT allows one per process, so it is loaded once and
-/// shared by every session.
-#[derive(Debug)]
+/// shared by every session. Clones share it.
+#[derive(Debug, Clone)]
 pub struct OrtRuntime {
     env: Environment,
+    #[cfg(target_os = "macos")]
+    coreml_cache: Option<PathBuf>,
 }
 
 impl OrtRuntime {
@@ -65,23 +101,33 @@ impl OrtRuntime {
             .with_telemetry(false)
             .build()
             .map_err(|e| load(e.to_string()))?;
-        Ok(Self { env })
+        Ok(Self {
+            env,
+            #[cfg(target_os = "macos")]
+            coreml_cache: None,
+        })
     }
 
-    /// A CPU session with 1.12.1's CPU options: every graph optimization and one intra-op
-    /// thread per logical core.
-    pub(crate) fn cpu_session(&self, model: &[u8]) -> ort::Result<Session> {
-        self.cpu_session_with(model, Vec::new())
+    /// Keeps CoreML's compiled models under `dir`. Without it, every CoreML session compiles its
+    /// model again.
+    #[cfg(target_os = "macos")]
+    #[must_use]
+    pub fn with_coreml_cache(mut self, dir: PathBuf) -> Self {
+        self.coreml_cache = Some(dir);
+        self
     }
 
-    /// [`Self::cpu_session`] with the named initializers of the graph replaced before it is
-    /// optimized.
-    pub(crate) fn cpu_session_with(
+    /// A session on `backend` with the named initializers of the graph replaced before it is
+    /// optimized. The options are 1.12.1's: on the CPU every graph optimization and one intra-op
+    /// thread per logical core; on an accelerator the extended level, whose layout steps beyond
+    /// it help only CPU nodes and can turn nodes into forms the accelerator no longer takes, and
+    /// one thread.
+    pub(crate) fn session(
         &self,
         model: &[u8],
+        backend: Backend,
         initializers: Vec<(&str, DynValue)>,
     ) -> ort::Result<Session> {
-        let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let option = |r: Result<SessionBuilder, ort::Error<SessionBuilder>>| {
             r.map_err(ort::Error::<()>::from)
         };
@@ -89,12 +135,60 @@ impl OrtRuntime {
         // ort's builder sets the MaxEfficiency policy, under which ORT 1.31 adds CoreML next to an
         // explicit CPU EP. Reset it before naming the EP.
         builder = option(builder.with_auto_device(AutoDevicePolicy::PreferCPU))?;
-        builder = option(builder.with_optimization_level(GraphOptimizationLevel::All))?;
+        let (level, threads) = match backend {
+            Backend::Cpu => (
+                GraphOptimizationLevel::All,
+                std::thread::available_parallelism().map_or(1, |n| n.get()),
+            ),
+            Backend::CoreMl | Backend::DirectMl => (GraphOptimizationLevel::Level2, 1),
+        };
+        builder = option(builder.with_optimization_level(level))?;
         builder = option(builder.with_intra_threads(threads))?;
+        // A replaced initializer leaves the graph's structure as it was, so CoreML would load the
+        // compiled model of the graph as published; such sessions are not cached.
+        #[cfg(target_os = "macos")]
+        let cache = self
+            .coreml_cache
+            .as_ref()
+            .filter(|_| initializers.is_empty());
         for (name, value) in initializers {
             builder = option(builder.with_initializer(name, value))?;
         }
-        let cpu = ep::CPU::default().build().error_on_failure();
-        option(builder.with_execution_providers([cpu]))?.commit_from_memory(model)
+        let provider = match backend {
+            Backend::Cpu => ep::CPU::default().build(),
+            #[cfg(target_os = "macos")]
+            Backend::CoreMl => {
+                let mut coreml = ep::CoreML::default()
+                    .with_model_format(ep::coreml::ModelFormat::MLProgram)
+                    .with_compute_units(ep::coreml::ComputeUnits::All);
+                if let Some(dir) = cache {
+                    let dir = coreml_cache_dir(dir, model);
+                    std::fs::create_dir_all(&dir)
+                        .map_err(|e| ort::Error::new(format!("{}: {e}", dir.display())))?;
+                    coreml = coreml.with_model_cache_dir(dir.display());
+                }
+                coreml.build()
+            }
+            #[cfg(windows)]
+            Backend::DirectMl => {
+                builder = option(builder.with_memory_pattern(false))?;
+                builder = option(builder.with_parallel_execution(false))?;
+                ep::DirectML::default().with_device_id(0).build()
+            }
+            other => return Err(ort::Error::new(format!("{other} is not in this build"))),
+        };
+        option(builder.with_execution_providers([provider.error_on_failure()]))?
+            .commit_from_memory(model)
     }
+}
+
+/// One folder per ORT build and model. CoreML reuses a compiled model while the graph's structure
+/// is unchanged, even when its weights or the runtime that partitioned it changed.
+#[cfg(target_os = "macos")]
+fn coreml_cache_dir(root: &Path, model: &[u8]) -> PathBuf {
+    use sha2::{Digest as _, Sha256};
+    let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
+    let build = Sha256::digest(ort::info().as_bytes());
+    root.join(&hex(&build)[..16])
+        .join(hex(&Sha256::digest(model)))
 }

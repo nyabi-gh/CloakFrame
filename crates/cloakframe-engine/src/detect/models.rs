@@ -7,11 +7,9 @@ use cloakframe_core::detection::{ModelId, Thresholds};
 use cloakframe_core::review::Digest;
 use sha2::{Digest as _, Sha256};
 
-use super::plate::{self, Plate};
+use super::fallback::{self, Acceleration, Backends};
 use super::runtime::OrtRuntime;
-use super::yolo5face::{self, Yolo5Face};
-use super::yunet::{self, YuNet};
-use super::{DetectError, Detector, Found, Rgb8Image};
+use super::{DetectError, Detector, Found, Rgb8Image, plate, yolo5face, yunet};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FaceModel {
@@ -80,6 +78,12 @@ impl fmt::Display for LoadError {
 
 impl std::error::Error for LoadError {}
 
+/// A run's models as one detector, and where each of them runs.
+pub struct Loaded {
+    pub detector: Box<dyn Detector>,
+    pub backends: Backends,
+}
+
 /// The face model, if faces are detected, and whether license plates are. Never neither.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DetectionModels {
@@ -138,26 +142,32 @@ impl DetectionModels {
         }
     }
 
-    /// Sessions for the models from their files in `dir`, under the published names. Each
-    /// detector checks the bytes against the pinned hash before making a session from them.
-    pub fn load(&self, runtime: &OrtRuntime, dir: &Path) -> Result<Box<dyn Detector>, LoadError> {
-        let mut detectors: Vec<Box<dyn Detector>> = Vec::new();
+    /// Sessions for the models from their files in `dir`, under the published names, each on
+    /// the backend `fallback::backend_for` names with the CPU behind it. Each detector checks the
+    /// bytes against the pinned hash before making a session from them.
+    pub fn load(
+        &self,
+        runtime: &OrtRuntime,
+        dir: &Path,
+        acceleration: Acceleration,
+    ) -> Result<Loaded, LoadError> {
+        let backends = Backends::default();
+        let mut detectors = Vec::new();
         for id in self.ids() {
             let path = dir.join(pinned(id).0);
             let bytes = match std::fs::read(&path) {
                 Ok(bytes) => bytes,
                 Err(error) => return Err(LoadError::Read { path, error }),
             };
-            let detector: Result<Box<dyn Detector>, DetectError> = match id {
-                ModelId::Yolo5FaceN => {
-                    Yolo5Face::new(runtime, &bytes).map(|d| Box::new(d) as Box<dyn Detector>)
-                }
-                ModelId::YuNet => YuNet::new(runtime, &bytes).map(|d| Box::new(d) as _),
-                ModelId::PlateYolov9T => Plate::new(runtime, &bytes).map(|d| Box::new(d) as _),
-            };
-            detectors.push(detector.map_err(|error| LoadError::Model { path, error })?);
+            let backend = fallback::backend_for(id, acceleration);
+            let detector = fallback::load(runtime, id, bytes, backend, &backends)
+                .map_err(|error| LoadError::Model { path, error })?;
+            detectors.push(detector);
         }
-        Ok(Box::new(Combined(detectors)))
+        Ok(Loaded {
+            detector: Box::new(Combined(detectors)),
+            backends,
+        })
     }
 }
 
@@ -173,6 +183,7 @@ impl Detector for Combined {
             let found = detector.detect(image, thresholds)?;
             all.detections.extend(found.detections);
             all.over_limit.extend(found.over_limit);
+            all.reran_on_cpu |= found.reran_on_cpu;
         }
         Ok(all)
     }
@@ -261,6 +272,7 @@ mod tests {
             Ok(Found {
                 detections: self.0.clone(),
                 over_limit: self.1.clone(),
+                ..Found::default()
             })
         }
     }

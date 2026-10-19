@@ -57,6 +57,9 @@ pub enum Note {
     /// The detector found nothing to mask. Not an unresolved problem, but a small face the model
     /// missed would otherwise go unnoticed (review item 14).
     NothingDetected,
+    /// The GPU failed on this item, which was analyzed again on the CPU; the rest of the run uses
+    /// the CPU for that model (plan 3).
+    AnalyzedAgainOnCpu,
     /// Published, but the folder could not be flushed to disk (some network and FUSE volumes).
     FolderNotFlushed,
     /// Published, but a temp file was left next to the output; a later run removes it.
@@ -69,6 +72,7 @@ impl fmt::Display for Note {
             Self::ColorConverted => "colors converted to sRGB",
             Self::ColorProfileIgnored => "unusable color profile dropped",
             Self::NothingDetected => "nothing detected",
+            Self::AnalyzedAgainOnCpu => "the GPU failed; analyzed again on the CPU",
             Self::FolderNotFlushed => "the output folder could not be flushed to disk",
             Self::TempFileLeft => "a temporary file was left next to the output",
         })

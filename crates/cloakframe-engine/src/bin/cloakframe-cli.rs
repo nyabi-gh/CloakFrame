@@ -7,6 +7,7 @@ use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::batch::{job_from_scan, session_from_report};
 use cloakframe_engine::cancel::CancelToken;
+use cloakframe_engine::detect::fallback::Acceleration;
 use cloakframe_engine::detect::models::{DetectionModels, FaceModel};
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
@@ -208,10 +209,10 @@ fn detector(
     models: DetectionModels,
 ) -> Result<DetectorHandle, CliError> {
     let runtime = OrtRuntime::load(library).map_err(|e| failed(e.to_string()))?;
-    let detector = models
-        .load(&runtime, dir)
+    let loaded = models
+        .load(&runtime, dir, Acceleration::default())
         .map_err(|e| failed(e.to_string()))?;
-    spawn(detector)
+    spawn(loaded.detector)
 }
 
 fn state_label(state: ItemState) -> &'static str {

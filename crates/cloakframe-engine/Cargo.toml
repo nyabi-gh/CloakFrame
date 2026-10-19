@@ -31,6 +31,11 @@ unicode-normalization.workspace = true
 # `cloakframe-cli --synthetic`). Not part of release builds.
 synthetic = []
 
+# The accelerators the pinned runtimes carry (plan 3); with load-dynamic the features only add
+# their API.
+[target.'cfg(target_os = "macos")'.dependencies]
+ort = { workspace = true, features = ["coreml"] }
+
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "=1.1.5", features = ["fs"] }
 libc = "=0.2.191"
@@ -39,6 +44,7 @@ libc = "=0.2.191"
 rustix = { version = "=1.1.5", features = ["fs", "process"] }
 
 [target.'cfg(windows)'.dependencies]
+ort = { workspace = true, features = ["directml"] }
 windows-sys = { version = "=0.61.2", features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_SystemInformation", "Win32_UI_Shell"] }
 
 [lints]

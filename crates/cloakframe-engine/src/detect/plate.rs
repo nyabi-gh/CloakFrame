@@ -9,7 +9,7 @@ use ort::value::{Tensor, TensorElementType, TensorRef, ValueType};
 use sha2::{Digest as _, Sha256};
 
 use super::resize::resize_linear;
-use super::runtime::OrtRuntime;
+use super::runtime::{Backend, OrtRuntime};
 use super::{DetectError, Detector, Found, Rgb8Image};
 
 const SIZE: usize = 512;
@@ -38,7 +38,7 @@ pub struct Plate {
 }
 
 impl Plate {
-    pub fn new(runtime: &OrtRuntime, model: &[u8]) -> Result<Self, DetectError> {
+    pub fn new(runtime: &OrtRuntime, model: &[u8], backend: Backend) -> Result<Self, DetectError> {
         if Digest(Sha256::digest(model).into()) != model_digest() {
             return Err(unexpected("file is not the pinned one (SHA-256 differs)"));
         }
@@ -48,8 +48,9 @@ impl Plate {
         let max_boxes = Tensor::from_array(([1usize], vec![ANCHORS])).map_err(failed)?;
         let no_suppression = Tensor::from_array(([1usize], vec![1.0f32])).map_err(failed)?;
         let session = runtime
-            .cpu_session_with(
+            .session(
                 model,
+                backend,
                 vec![
                     (NMS_MAX_BOXES, max_boxes.into_dyn()),
                     (NMS_IOU, no_suppression.into_dyn()),
@@ -189,7 +190,7 @@ impl Detector for Plate {
         }
         Ok(Found {
             detections: non_max_suppression(candidates, thresholds),
-            over_limit: Vec::new(),
+            ..Found::default()
         })
     }
 }

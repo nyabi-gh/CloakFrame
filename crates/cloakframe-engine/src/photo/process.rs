@@ -233,6 +233,9 @@ impl ItemProcessor for PhotoProcessor {
             .detector
             .detect(copy, self.settings.thresholds)
             .map_err(failed)?;
+        if found.reran_on_cpu {
+            ctx.notes.add(Note::AnalyzedAgainOnCpu);
+        }
         let pixels = prepared.pixels();
         ctx.progress.set(pixels, 2 * pixels);
         let evidence = found
