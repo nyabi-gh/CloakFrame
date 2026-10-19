@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
-use cloakframe_core::coverage::{Resolution, has_unresolved};
+use cloakframe_core::coverage::{Problem, Resolution, has_unresolved};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::ItemId;
 use cloakframe_core::review::{EditError, PhotoEdits};
@@ -113,8 +113,12 @@ pub enum Rejection {
     SettingsChanged,
     NoSuchEvidence(usize),
     Edit(EditError),
-    /// Evidence marked as covered by a manual mask on an item with no added area.
-    NoManualMask {
+    /// Evidence marked as covered by a manual mask that the added areas do not cover.
+    NotCovered {
+        evidence: usize,
+    },
+    /// Evidence with no area of its own marked as covered by a manual mask.
+    NothingToCover {
         evidence: usize,
     },
     UnresolvedProblems,
@@ -138,9 +142,13 @@ impl fmt::Display for Rejection {
             ),
             Self::NoSuchEvidence(i) => write!(f, "the item has no evidence #{i}"),
             Self::Edit(e) => e.fmt(f),
-            Self::NoManualMask { evidence } => write!(
+            Self::NotCovered { evidence } => write!(
                 f,
-                "evidence #{evidence} is marked as covered by a manual mask, but no area is added"
+                "evidence #{evidence} is marked as covered by a manual mask, but the added areas do not cover it"
+            ),
+            Self::NothingToCover { evidence } => write!(
+                f,
+                "evidence #{evidence} has no area to cover; dismiss it or export with warnings"
             ),
             Self::UnresolvedProblems => f.write_str(
                 "unresolved detection problems remain; cover or dismiss them, or export with warnings",
@@ -255,10 +263,19 @@ fn check(
             .evidence
             .get_mut(r.evidence)
             .ok_or(Rejection::NoSuchEvidence(r.evidence))?;
-        if r.resolution == Resolution::CoveredByManualMask && item.edits.added.is_empty() {
-            return Err(Rejection::NoManualMask {
-                evidence: r.evidence,
-            });
+        if r.resolution == Resolution::CoveredByManualMask {
+            // Capped candidates, failed frames and gaps carry no box to compare with. Gaps get
+            // their track boxes with video edits (M5).
+            let Problem::WeakCandidate { bbox, .. } = evidence.problem else {
+                return Err(Rejection::NothingToCover {
+                    evidence: r.evidence,
+                });
+            };
+            if !bbox.is_covered_by(&item.edits.added) {
+                return Err(Rejection::NotCovered {
+                    evidence: r.evidence,
+                });
+            }
         }
         evidence.resolution = r.resolution;
     }
@@ -312,7 +329,7 @@ mod tests {
     use crate::output_plan::Conflict;
     use crate::session::FORMAT_VERSION;
     use crate::testdir::TestDir;
-    use cloakframe_core::coverage::{CoverageEvidence, Problem};
+    use cloakframe_core::coverage::CoverageEvidence;
     use cloakframe_core::detection::{Detection, ModelId};
     use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
 
@@ -377,6 +394,24 @@ mod tests {
             edits: PhotoEdits::default(),
             rename_to: None,
         }
+    }
+
+    fn weak(bbox: Rect) -> CoverageEvidence {
+        CoverageEvidence::unresolved(Problem::WeakCandidate {
+            model: ModelId::Yolo5FaceN,
+            frame: None,
+            bbox,
+            score: 0.3,
+        })
+    }
+
+    fn covered(mut d: ItemDecision, added: Vec<Rect>) -> ItemDecision {
+        d.resolutions.push(EvidenceResolution {
+            evidence: 0,
+            resolution: Resolution::CoveredByManualMask,
+        });
+        d.edits.added = added;
+        d
     }
 
     fn dismissed(mut d: ItemDecision) -> ItemDecision {
@@ -523,28 +558,17 @@ mod tests {
         bad.edits.excluded = vec![1];
         let mut empty_area = decide(0, Action::ExportWithWarnings);
         empty_area.edits.added = vec![Rect::new(0.0, 0.0, 0.0, 4.0).unwrap()];
-        let mut covered_without_area = decide(0, Action::Approve);
-        covered_without_area.resolutions.push(EvidenceResolution {
-            evidence: 0,
-            resolution: Resolution::CoveredByManualMask,
-        });
         for (d, want) in [
             (bad, Rejection::Edit(EditError::NoSuchDetection(1))),
             (empty_area, Rejection::Edit(EditError::EmptyArea(0))),
-            (
-                covered_without_area.clone(),
-                Rejection::NoManualMask { evidence: 0 },
-            ),
         ] {
             let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
             assert_eq!(applied.rejected, [(ItemId(0), want)]);
         }
 
-        let mut covered = covered_without_area;
-        covered.edits = PhotoEdits {
-            excluded: vec![0],
-            added: vec![rect(20.0)],
-        };
+        s.items[0].evidence = vec![weak(rect(20.0))];
+        let mut covered = covered(decide(0, Action::Approve), vec![rect(20.0)]);
+        covered.edits.excluded = vec![0];
         let applied = apply(
             &mut s,
             &ReviewDecisions {
@@ -558,6 +582,59 @@ mod tests {
             panic!()
         };
         assert_eq!(*edits, covered.edits);
+    }
+
+    #[test]
+    fn a_manual_mask_resolves_only_the_area_it_covers() {
+        let dir = TestDir::new();
+        let mut s = session(&dir, &["a.jpg"]);
+        let capped = CoverageEvidence::unresolved(Problem::CappedCandidates {
+            model: ModelId::Yolo5FaceN,
+            frame: None,
+            kept: 1,
+            found: 3,
+        });
+        let pixel = Rect::new(0.0, 0.0, 1.0, 1.0).unwrap();
+        let half = Rect::new(40.0, 0.0, 4.0, 8.0).unwrap();
+        for (evidence, added, want) in [
+            (
+                weak(rect(40.0)),
+                vec![],
+                Rejection::NotCovered { evidence: 0 },
+            ),
+            (
+                weak(rect(40.0)),
+                vec![pixel],
+                Rejection::NotCovered { evidence: 0 },
+            ),
+            (
+                weak(rect(40.0)),
+                vec![half],
+                Rejection::NotCovered { evidence: 0 },
+            ),
+            // Nothing to compare an area with: these can only be dismissed.
+            (
+                capped,
+                vec![pixel],
+                Rejection::NothingToCover { evidence: 0 },
+            ),
+            (
+                gap(),
+                vec![pixel],
+                Rejection::NothingToCover { evidence: 0 },
+            ),
+        ] {
+            s.items[0].evidence = vec![evidence];
+            let d = covered(decide(0, Action::Approve), added);
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+            assert_eq!(applied.rejected, [(ItemId(0), want)]);
+        }
+
+        s.items[0].evidence = vec![weak(rect(40.0))];
+        let other_half = Rect::new(44.0, 0.0, 4.0, 8.0).unwrap();
+        let d = covered(decide(0, Action::Approve), vec![half, other_half]);
+        let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+        assert!(applied.rejected.is_empty(), "{:?}", applied.rejected);
     }
 
     #[test]

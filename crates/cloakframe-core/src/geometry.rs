@@ -118,11 +118,66 @@ impl Rect {
         let intersection = w * h;
         intersection / (a + b - intersection)
     }
+
+    /// Whether every point of this box lies in at least one of `areas`.
+    pub fn is_covered_by(&self, areas: &[Rect]) -> bool {
+        // The areas' edges cut the box into cells that are each wholly inside or outside every
+        // area, so testing one point per cell is exact.
+        let edges = |lo: f32, hi: f32, cuts: &mut dyn Iterator<Item = f32>| {
+            let mut v: Vec<f32> = cuts.filter(|&c| lo < c && c < hi).collect();
+            v.extend([lo, hi]);
+            v.sort_by(f32::total_cmp);
+            v.dedup();
+            v
+        };
+        let xs = edges(
+            self.x,
+            self.right(),
+            &mut areas.iter().flat_map(|a| [a.x, a.right()]),
+        );
+        let ys = edges(
+            self.y,
+            self.bottom(),
+            &mut areas.iter().flat_map(|a| [a.y, a.bottom()]),
+        );
+        xs.windows(2).all(|x| {
+            ys.windows(2).all(|y| {
+                let (cx, cy) = ((x[0] + x[1]) / 2.0, (y[0] + y[1]) / 2.0);
+                areas
+                    .iter()
+                    .any(|a| a.x <= cx && cx <= a.right() && a.y <= cy && cy <= a.bottom())
+            })
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn coverage_needs_the_union_of_areas_to_hold_the_box() {
+        let r = |x, y, w, h| Rect::new(x, y, w, h).unwrap();
+        let face = r(10.0, 10.0, 8.0, 8.0);
+        assert!(face.is_covered_by(&[r(0.0, 0.0, 40.0, 40.0)]));
+        assert!(face.is_covered_by(&[face]));
+        assert!(face.is_covered_by(&[r(10.0, 10.0, 4.0, 8.0), r(14.0, 10.0, 4.0, 8.0)]));
+        assert!(face.is_covered_by(&[
+            r(0.0, 0.0, 14.0, 14.0),
+            r(12.0, 0.0, 20.0, 20.0),
+            r(0.0, 12.0, 14.0, 20.0),
+        ]));
+        assert!(!face.is_covered_by(&[]));
+        assert!(!face.is_covered_by(&[r(0.0, 0.0, 1.0, 1.0)]));
+        assert!(!face.is_covered_by(&[r(10.0, 10.0, 8.0, 7.5)]));
+        // Four corners that leave the centre open.
+        assert!(!face.is_covered_by(&[
+            r(10.0, 10.0, 3.0, 3.0),
+            r(15.0, 10.0, 3.0, 3.0),
+            r(10.0, 15.0, 3.0, 3.0),
+            r(15.0, 15.0, 3.0, 3.0),
+        ]));
+    }
 
     #[test]
     fn rejects_non_finite_and_negative_sizes() {
