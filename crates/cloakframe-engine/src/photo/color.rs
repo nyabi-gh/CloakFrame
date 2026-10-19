@@ -301,7 +301,8 @@ fn same_curve(a: &ToneReprCurve, b: &ToneReprCurve) -> bool {
 }
 
 /// Applies the color policy in place: known spaces are kept, other RGB profiles are converted
-/// to sRGB (relative colorimetric), and anything unusable is dropped with a note.
+/// to sRGB and gray profiles to the sRGB curve (relative colorimetric), and anything unusable is
+/// dropped with a note.
 pub fn apply(source: &Source, image: &mut DynamicImage) -> Result<ColorOutcome, ColorError> {
     let icc = match embedded_icc(source) {
         EmbeddedIcc::None => return Ok(ColorOutcome::Untagged),
@@ -318,6 +319,10 @@ pub fn apply(source: &Source, image: &mut DynamicImage) -> Result<ColorOutcome, 
             | DynamicImage::ImageRgb16(_)
             | DynamicImage::ImageRgba16(_)
     );
+    if profile.color_space == DataColorSpace::Gray && !rgb_image {
+        gray_to_srgb_curve(&profile, image)?;
+        return Ok(ColorOutcome::Converted);
+    }
     if profile.color_space != DataColorSpace::Rgb || !rgb_image {
         return Ok(ColorOutcome::Ignored(IgnoredProfile::NotForTheseSamples));
     }
@@ -381,6 +386,40 @@ fn to_srgb(from: &ColorProfile, image: &mut DynamicImage) -> Result<(), ColorErr
             transform_in_place(buffer, |src, dst| t.transform(src, dst)).map_err(failed)
         }
         _ => unreachable!("apply only converts RGB images"),
+    }
+}
+
+/// Gray stays gray: an sRGB gray is the sRGB curve alone, which untagged outputs are read with.
+fn gray_to_srgb_curve(from: &ColorProfile, image: &mut DynamicImage) -> Result<(), ColorError> {
+    let mut srgb_gray = ColorProfile::new_gray_with_gamma(1.0);
+    srgb_gray.gray_trc = ColorProfile::new_srgb().red_trc;
+    let failed = |e: moxcms::CmsError| ColorError(e.to_string());
+    match image {
+        DynamicImage::ImageLuma8(buffer) => {
+            let t = from
+                .create_transform_8bit(Layout::Gray, &srgb_gray, Layout::Gray, options())
+                .map_err(failed)?;
+            transform_in_place(buffer, |src, dst| t.transform(src, dst)).map_err(failed)
+        }
+        DynamicImage::ImageLumaA8(buffer) => {
+            let t = from
+                .create_transform_8bit(Layout::GrayAlpha, &srgb_gray, Layout::GrayAlpha, options())
+                .map_err(failed)?;
+            transform_in_place(buffer, |src, dst| t.transform(src, dst)).map_err(failed)
+        }
+        DynamicImage::ImageLuma16(buffer) => {
+            let t = from
+                .create_transform_16bit(Layout::Gray, &srgb_gray, Layout::Gray, options())
+                .map_err(failed)?;
+            transform_in_place(buffer, |src, dst| t.transform(src, dst)).map_err(failed)
+        }
+        DynamicImage::ImageLumaA16(buffer) => {
+            let t = from
+                .create_transform_16bit(Layout::GrayAlpha, &srgb_gray, Layout::GrayAlpha, options())
+                .map_err(failed)?;
+            transform_in_place(buffer, |src, dst| t.transform(src, dst)).map_err(failed)
+        }
+        _ => unreachable!("apply converts gray profiles only on gray images"),
     }
 }
 
@@ -568,6 +607,56 @@ mod tests {
             apply(&jpeg, &mut image).unwrap(),
             ColorOutcome::Ignored(IgnoredProfile::Unreadable)
         );
+    }
+
+    /// Gray profiles (macOS "Generic Gray Gamma 2.2", dot gain profiles) describe gray pixels;
+    /// they are converted to the sRGB curve like other profiles.
+    #[test]
+    fn gray_profiles_convert_gray_pixels_to_the_srgb_curve() {
+        let icc = ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
+        let dir = crate::testdir::TestDir::new();
+        let ramp = image::GrayImage::from_fn(256, 1, |x, _| image::Luma([x as u8]));
+        let srgb = |v: f64| {
+            let l = (v / 255.0).powf(1.8);
+            let e = if l <= 0.003_130_8 {
+                12.92 * l
+            } else {
+                1.055 * l.powf(1.0 / 2.4) - 0.055
+            };
+            e * 255.0
+        };
+        for image in [
+            DynamicImage::ImageLuma8(ramp.clone()),
+            DynamicImage::ImageLumaA8(DynamicImage::ImageLuma8(ramp.clone()).to_luma_alpha8()),
+            DynamicImage::ImageLuma16(DynamicImage::ImageLuma8(ramp.clone()).to_luma16()),
+        ] {
+            let mut png = std::io::Cursor::new(Vec::new());
+            let mut encoder = image::codecs::png::PngEncoder::new(&mut png);
+            image::ImageEncoder::set_icc_profile(&mut encoder, icc.clone()).unwrap();
+            image.write_with_encoder(encoder).unwrap();
+            let path = dir.path().join("gray.png");
+            std::fs::write(&path, png.into_inner()).unwrap();
+            let source = read_source(&path).unwrap();
+            let mut converted = image.clone();
+            assert_eq!(
+                apply(&source, &mut converted).unwrap(),
+                ColorOutcome::Converted
+            );
+            assert_eq!(converted.color(), image.color());
+            let got = converted.to_luma8();
+            for x in [0u32, 16, 64, 128, 200, 255] {
+                let want = srgb(f64::from(x));
+                let v = f64::from(got.get_pixel(x, 0).0[0]);
+                assert!(
+                    (v - want).abs() <= 1.0,
+                    "{:?} {x}: {v} vs {want}",
+                    image.color()
+                );
+            }
+            if let DynamicImage::ImageLumaA8(a) = &converted {
+                assert!(a.pixels().all(|p| p.0[1] == 255));
+            }
+        }
     }
 
     /// image's 40-byte BMP header rewritten as a BITMAPV5HEADER embedding `icc` after the pixels.

@@ -12,7 +12,7 @@ Rust 구현이 1.12.1과 다르게 동작하는 점을 한 줄씩 적는다([계
 | 임시 파일 | 원본 사본을 시스템 임시 폴더의 비공개 stage에 둠(D12) | 원본 사본을 만들지 않고, 출력만 대상 폴더 안의 임시 이름(`.cloakframe-tmp-*`)으로 쓴 뒤 같은 폴더에서 이름을 바꿈. 점으로 시작하는 이름이라 macOS·Linux에서는 숨김 파일이고 Windows에서는 보임. 하루 넘은 남은 임시 파일은 다음 실행이 지움 | 큰 원본에서 디스크 여유 부족 실패가 생기고 사본이 남을 수 있었다 |
 | 사진 입력 | CMYK·YCCK JPEG를 OpenCV의 단순 변환으로 RGB로 바꿔 처리 | 거부("CMYK JPEG는 지원하지 않음") | 색 정책(M2 2단계)은 CMYK를 다루지 않으므로 잘못된 색으로 처리하지 않는다. CMYK TIFF는 아직 단순 변환으로 처리하므로 둘의 처리를 다시 정한다([재검토](M0_M2_REVIEW.md) 6번) |
 | 사진 입력 | JPEG 압축 TIFF(스캐너·Photoshop)를 libtiff로 읽어 처리 | 거부("JPEG 압축 TIFF는 지원하지 않음") | 쓰는 TIFF 디코더가 YCbCr JPEG strip을 읽지 못하고, RGB로 잘못 표기된 파일은 엉뚱한 pixel로 디코드한다([재검토](M0_M2_REVIEW.md) 4번). 지원은 수요를 보고 strip을 libjpeg-turbo로 디코드하는 방식으로 정한다 |
-| 사진 색(D2) | ICC profile을 버리고 pixel을 그대로 써서 wide gamut 사진의 색이 틀어짐 | sRGB·Display P3·Adobe RGB는 pixel을 그대로 두고 번들 표준 profile을 붙임. 그 밖의 profile은 sRGB로 변환하고 결과에 표시. 읽을 수 없는 profile은 버리고 표시 | 결과 사진의 색이 원본과 같게 보이도록 한다 |
+| 사진 색(D2) | ICC profile을 버리고 pixel을 그대로 써서 wide gamut 사진의 색이 틀어짐 | sRGB·Display P3·Adobe RGB는 pixel을 그대로 두고 번들 표준 profile을 붙임. 그 밖의 profile은 sRGB로(회색 사진의 회색 profile은 sRGB 곡선의 회색으로) 변환하고 결과에 표시. 읽을 수 없는 profile은 버리고 표시 | 결과 사진의 색이 원본과 같게 보이도록 한다 |
 | BMP 색(D2) | BMP의 ICC profile을 읽지도 쓰지도 않음 | BMP V5에 내장된 profile을 읽어 D2를 적용(다른 파일을 가리키는 profile은 버리고 표시). BMP 출력에는 profile을 붙이지 않으므로 Display P3·Adobe RGB 사진은 sRGB로 변환하고 표시 | macOS 미리보기·Quick Look이 profile을 내장한 BMP를 열지 못한다 |
 | 모자이크(D3) | 픽셀 단위 블록 크기(기본 14px), 셀 수 12개 상한 때문에 큰 얼굴에서는 설정이 무효 | "강도" 4–16(기본 8): 영역 짧은 변에 들어가는 셀 수. 셀 값은 셀 영역의 평균. 작은 영역에서도 셀은 최소 2px | 범위 안의 모든 설정이 결과를 바꾸게 한다 |
 | 블러 | sigma = 짧은 변 / 6, 영역 안 pixel만 커널에 씀. 2px 미만 영역은 평균색으로 채움 | sigma는 같고 하한 4px. 영역 밖 pixel도 커널에 넣어 가장자리까지 같은 정도로 흐림 | 작은·얇은 영역과 영역 가장자리에 세부가 남지 않게 한다(계획 5장) |

@@ -78,6 +78,7 @@
   "observed_1121_summary": "모든 출력에서 ICC가 사라지고 pixel은 그대로(wide-gamut 입력도 변환 없이 sRGB로 해석됨)",
   "decided_m2": {
     "srgb_tagged_output": "원본에 sRGB profile이 있으면 번들 sRGB profile을 붙이고, profile이 없으면 아무것도 붙이지 않는다",
+    "gray_profile": "회색 pixel의 회색 profile은 pixel과 맞는 profile이므로 sRGB 곡선의 회색으로 변환하고 결과에 표시한다(재검토 7번)",
     "unusable_profile": "읽을 수 없거나 pixel과 맞지 않는(예: 회색 pixel의 RGB profile) profile은 버리고 sRGB로 보며 결과에 표시한다",
     "detection_copy": "Display P3·Adobe RGB 원본은 감지용 RGB8 사본만 sRGB로 변환하고 저장 pixel은 그대로 둔다",
     "bmp": "BMP 원본은 BITMAPV5HEADER에 내장된 profile(MBED)로 판정한다(image는 읽지 않음). 다른 파일을 가리키는 profile(LINK)은 읽지 않고 버림 표시. BMP 출력은 profile 없이 쓰므로 Display P3·Adobe RGB는 sRGB로 변환하고 color_converted로 표시한다(기준: expected-display-p3-as-srgb.png·expected-adobe-rgb-as-srgb.png, Little CMS, 채널당 2 이내). profile을 내장한 V5 BMP는 macOS ImageIO가 열지 못한다(2026-10-19 확인, ImageMagick 출력도 같음)"
