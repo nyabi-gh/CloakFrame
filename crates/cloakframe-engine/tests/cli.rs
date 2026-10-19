@@ -50,6 +50,21 @@ impl Fixture {
         )
     }
 
+    /// The exit code and what went to stderr.
+    fn cli_stderr(&self, args: &[&str]) -> (i32, String) {
+        let output = Command::new(env!("CARGO_BIN_EXE_cloakframe-cli"))
+            .args(args)
+            .arg("--sessions")
+            .arg(self.root.join("sessions"))
+            .arg("--synthetic")
+            .output()
+            .unwrap();
+        (
+            output.status.code().unwrap(),
+            String::from_utf8(output.stderr).unwrap(),
+        )
+    }
+
     fn run(&self, review: &str) -> (i32, String) {
         let input = self.root.join("in");
         let out = self.out();
@@ -287,6 +302,28 @@ fn the_output_folder_inside_the_input_is_not_scanned() {
         assert!(code == 0 || code == 3, "{stdout}");
     }
     assert_eq!(files(&out), ["a.jpg"]);
+}
+
+/// A failure while running is not a usage error: exit 1 with the reason and no usage text.
+#[test]
+fn runtime_errors_exit_with_one() {
+    let f = Fixture::new();
+    f.input("a-gap.jpg", b"gap");
+    std::fs::write(f.root.join("sessions"), b"not a folder").unwrap();
+    let (code, stderr) = f.cli_stderr(&[
+        "run",
+        "--output",
+        f.out().to_str().unwrap(),
+        "--review",
+        "off",
+        f.root.join("in").to_str().unwrap(),
+    ]);
+    assert_eq!(code, 1, "{stderr}");
+    assert!(
+        stderr.contains("cannot save the review session"),
+        "{stderr}"
+    );
+    assert!(!stderr.contains("usage:"), "{stderr}");
 }
 
 #[test]

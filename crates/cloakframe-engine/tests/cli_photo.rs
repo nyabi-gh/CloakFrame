@@ -255,8 +255,9 @@ fn only_the_pinned_model_runs() {
         other.to_str().unwrap(),
         f.root.join("in/astronaut.png").to_str().unwrap(),
     ]);
-    assert_eq!(r.code, 2);
+    assert_eq!(r.code, 1);
     assert!(r.stderr.contains("not the pinned one"), "{}", r.stderr);
+    assert!(!r.stderr.contains("usage:"), "{}", r.stderr);
     assert!(!out.exists());
 
     let r = f.cli(&["run", "--output", out.to_str().unwrap(), "in"]);

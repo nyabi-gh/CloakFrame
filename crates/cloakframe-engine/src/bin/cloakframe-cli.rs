@@ -33,12 +33,28 @@ usage:
 given; decisions on items analyzed with other settings are refused.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
 
-exit status: 0 done, 1 failed or refused items, 2 usage error, 3 items wait for review";
+exit status: 0 done, 1 failed or refused items or a failed run, 2 usage error, 3 items wait for
+review";
 
 const DONE: u8 = 0;
 const FAILED: u8 = 1;
 const USAGE_ERROR: u8 = 2;
 const NEEDS_REVIEW: u8 = 3;
+
+enum CliError {
+    /// The command line itself is wrong; the usage text follows the message.
+    Usage(String),
+    /// Something failed while carrying out a valid command.
+    Failed(String),
+}
+
+fn usage(message: impl Into<String>) -> CliError {
+    CliError::Usage(message.into())
+}
+
+fn failed(message: impl Into<String>) -> CliError {
+    CliError::Failed(message.into())
+}
 
 struct Args {
     rest: std::vec::IntoIter<String>,
@@ -112,25 +128,25 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
     Ok(o)
 }
 
-fn session_store(o: &Options) -> Result<SessionStore, String> {
+fn session_store(o: &Options) -> Result<SessionStore, CliError> {
     if let Some(dir) = &o.sessions {
         return Ok(SessionStore::new(dir));
     }
     cloakframe_engine::app_dirs::data_dir()
         .map(|dir| SessionStore::new(dir.join("sessions")))
-        .ok_or_else(|| "no app data folder for this user; pass --sessions DIR".into())
+        .ok_or_else(|| failed("no app data folder for this user; pass --sessions DIR"))
 }
 
-fn photo_processor(o: &Options) -> Result<PhotoProcessor, String> {
+fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
     // Builds with the synthetic processor never get here with --synthetic.
     if o.synthetic {
-        return Err("this build has no synthetic processor".into());
+        return Err(usage("this build has no synthetic processor"));
     }
     if o.videos {
-        return Err("this build cannot process videos yet".into());
+        return Err(usage("this build cannot process videos yet"));
     }
     if o.keep_gps && !o.keep_metadata {
-        return Err("--keep-gps needs --keep-metadata".into());
+        return Err(usage("--keep-gps needs --keep-metadata"));
     }
     let metadata = if o.keep_metadata {
         MetadataPolicy::Allowlist { gps: o.keep_gps }
@@ -141,20 +157,22 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, String> {
         metadata,
         ..PhotoSettings::default()
     })
-    .map_err(|e| e.to_string())
+    .map_err(|e| failed(e.to_string()))
 }
 
-fn spawn(detector: Box<dyn Detector>) -> Result<DetectorHandle, String> {
-    DetectorHandle::spawn(detector).map_err(|e| format!("cannot start the inference thread: {e}"))
+fn spawn(detector: Box<dyn Detector>) -> Result<DetectorHandle, CliError> {
+    DetectorHandle::spawn(detector)
+        .map_err(|e| failed(format!("cannot start the inference thread: {e}")))
 }
 
 /// Loads ONNX Runtime from `library` and the face model from `model`, whose hash the detector
 /// checks before making a session from those bytes.
-fn face_detector(library: &Path, model: &Path) -> Result<DetectorHandle, String> {
-    let runtime = OrtRuntime::load(library).map_err(|e| e.to_string())?;
-    let bytes = std::fs::read(model).map_err(|e| format!("cannot read the face model: {e}"))?;
-    let detector =
-        Yolo5Face::new(&runtime, &bytes).map_err(|e| format!("cannot load the face model: {e}"))?;
+fn face_detector(library: &Path, model: &Path) -> Result<DetectorHandle, CliError> {
+    let runtime = OrtRuntime::load(library).map_err(|e| failed(e.to_string()))?;
+    let bytes =
+        std::fs::read(model).map_err(|e| failed(format!("cannot read the face model: {e}")))?;
+    let detector = Yolo5Face::new(&runtime, &bytes)
+        .map_err(|e| failed(format!("cannot load the face model: {e}")))?;
     spawn(Box::new(detector))
 }
 
@@ -229,9 +247,9 @@ fn execute<P: ItemProcessor>(
     job: Job,
     processor: Arc<P>,
     detector: DetectorHandle,
-) -> Result<RunReport, String> {
-    let handle =
-        start(job, processor, detector).map_err(|e| format!("cannot start the run: {e}"))?;
+) -> Result<RunReport, CliError> {
+    let handle = start(job, processor, detector)
+        .map_err(|e| failed(format!("cannot start the run: {e}")))?;
     Ok(handle.wait())
 }
 
@@ -248,10 +266,13 @@ fn clean_stale(job: &Job) {
     }
 }
 
-fn run(o: Options) -> Result<u8, String> {
-    let output = o.output.clone().ok_or("run needs --output DIR")?;
+fn run(o: Options) -> Result<u8, CliError> {
+    let output = o
+        .output
+        .clone()
+        .ok_or_else(|| usage("run needs --output DIR"))?;
     if o.inputs.is_empty() {
-        return Err("run needs at least one input".into());
+        return Err(usage("run needs at least one input"));
     }
     #[cfg(feature = "synthetic")]
     if o.synthetic {
@@ -262,8 +283,11 @@ fn run(o: Options) -> Result<u8, String> {
     let library = o
         .ort_library
         .clone()
-        .ok_or("run needs --ort-library FILE")?;
-    let model = o.face_model.clone().ok_or("run needs --face-model FILE")?;
+        .ok_or_else(|| usage("run needs --ort-library FILE"))?;
+    let model = o
+        .face_model
+        .clone()
+        .ok_or_else(|| usage("run needs --face-model FILE"))?;
     run_with(&o, &output, processor, || face_detector(&library, &model))
 }
 
@@ -272,8 +296,8 @@ fn run_with<P: ItemProcessor>(
     o: &Options,
     output: &Path,
     processor: P,
-    detector: impl FnOnce() -> Result<DetectorHandle, String>,
-) -> Result<u8, String> {
+    detector: impl FnOnce() -> Result<DetectorHandle, CliError>,
+) -> Result<u8, CliError> {
     let store = session_store(o)?;
     let scanned = scan(
         &ScanRequest {
@@ -284,7 +308,7 @@ fn run_with<P: ItemProcessor>(
         },
         &CancelToken::new(),
     )
-    .map_err(|_| "scan cancelled")?;
+    .map_err(|_| failed("scan cancelled"))?;
     for issue in &scanned.issues {
         eprintln!("cannot read {}: {:?}", issue.path.display(), issue.kind);
     }
@@ -314,23 +338,25 @@ fn run_with<P: ItemProcessor>(
     };
     let report = execute(job, Arc::new(processor), detector)?;
     print_report(&report);
-    if let Some(session) = session_from_report(&report, &plan, output, fingerprint)
-        .map_err(|e| format!("cannot prepare the review session: {e}"))?
-    {
+    let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
+    for (item, reason) in &left_out {
+        println!("{}\tnot kept for review\t{reason}", item.0);
+    }
+    if let Some(session) = session {
         let id = SessionId::generate();
         store
             .save(&id, &session)
-            .map_err(|e| format!("cannot save the review session: {e}"))?;
+            .map_err(|e| failed(format!("cannot save the review session: {e}")))?;
         println!("session\t{}", id.as_str());
     }
     let mut code = exit_for(&report);
-    if code == DONE && !scanned.issues.is_empty() {
-        code = FAILED;
+    if !scanned.issues.is_empty() || !left_out.is_empty() {
+        code = code.max(FAILED);
     }
     Ok(code)
 }
 
-fn review(o: Options) -> Result<u8, String> {
+fn review(o: Options) -> Result<u8, CliError> {
     #[cfg(feature = "synthetic")]
     if o.synthetic {
         return review_with(&o, cloakframe_engine::synthetic::SyntheticProcessor);
@@ -339,19 +365,23 @@ fn review(o: Options) -> Result<u8, String> {
     review_with(&o, processor)
 }
 
-fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, String> {
+fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, CliError> {
     let id = o
         .session
         .as_deref()
         .and_then(SessionId::parse)
-        .ok_or("review needs --session ID (as printed by run)")?;
-    let decisions_path = o.decisions.clone().ok_or("review needs --decisions FILE")?;
+        .ok_or_else(|| usage("review needs --session ID (as printed by run)"))?;
+    let decisions_path = o
+        .decisions
+        .clone()
+        .ok_or_else(|| usage("review needs --decisions FILE"))?;
     let store = session_store(o)?;
-    let mut session = store.load(&id).map_err(|e| e.to_string())?;
+    let mut session = store.load(&id).map_err(|e| failed(e.to_string()))?;
     let decisions: ReviewDecisions = serde_json::from_slice(
-        &std::fs::read(&decisions_path).map_err(|e| format!("cannot read the decisions: {e}"))?,
+        &std::fs::read(&decisions_path)
+            .map_err(|e| failed(format!("cannot read the decisions: {e}")))?,
     )
-    .map_err(|e| format!("the decisions file is not valid: {e}"))?;
+    .map_err(|e| failed(format!("the decisions file is not valid: {e}")))?;
 
     let applied = apply(&mut session, &decisions, processor.fingerprint());
     for (item, rejection) in &applied.rejected {
@@ -384,11 +414,11 @@ fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, String
     if session.items.is_empty() {
         store
             .remove(&id)
-            .map_err(|e| format!("cannot remove the finished session: {e}"))?;
+            .map_err(|e| failed(format!("cannot remove the finished session: {e}")))?;
     } else {
         store
             .save(&id, &session)
-            .map_err(|e| format!("cannot save the review session: {e}"))?;
+            .map_err(|e| failed(format!("cannot save the review session: {e}")))?;
         if code == DONE {
             code = NEEDS_REVIEW;
         }
@@ -396,11 +426,11 @@ fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, String
     Ok(code)
 }
 
-fn sessions(o: Options) -> Result<u8, String> {
+fn sessions(o: Options) -> Result<u8, CliError> {
     let store = session_store(&o)?;
     for id in store
         .list()
-        .map_err(|e| format!("cannot list sessions: {e}"))?
+        .map_err(|e| failed(format!("cannot list sessions: {e}")))?
     {
         match store.load(&id) {
             Ok(s) => println!(
@@ -429,16 +459,22 @@ fn main() -> ExitCode {
             println!("cloakframe-cli {}", env!("CARGO_PKG_VERSION"));
             Ok(DONE)
         }
-        Some(c @ ("run" | "review" | "sessions")) => parse(rest).and_then(|o| match c {
-            "run" => run(o),
-            "review" => review(o),
-            _ => sessions(o),
-        }),
-        _ => Err(String::new()),
+        Some(c @ ("run" | "review" | "sessions")) => {
+            parse(rest).map_err(usage).and_then(|o| match c {
+                "run" => run(o),
+                "review" => review(o),
+                _ => sessions(o),
+            })
+        }
+        _ => Err(usage("")),
     };
     match result {
         Ok(code) => ExitCode::from(code),
-        Err(message) => {
+        Err(CliError::Failed(message)) => {
+            eprintln!("error: {message}");
+            ExitCode::from(FAILED)
+        }
+        Err(CliError::Usage(message)) => {
             if !message.is_empty() {
                 eprintln!("error: {message}");
             }
