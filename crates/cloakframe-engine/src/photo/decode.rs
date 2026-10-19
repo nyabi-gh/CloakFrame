@@ -4,7 +4,7 @@ use std::io::{self, Cursor, Read};
 use std::path::Path;
 
 use image::metadata::Orientation;
-use image::{DynamicImage, ImageReader};
+use image::{DynamicImage, ImageReader, Limits};
 
 use crate::cancel::CancelToken;
 use crate::detect::Rgb8Image;
@@ -14,6 +14,9 @@ use crate::photo::format::{ImageFormat, has_several_frames, sniff};
 
 pub const MAX_FILE_BYTES: u64 = 2 << 30;
 pub const MAX_PIXELS: u64 = 512_000_000;
+/// The largest color profile read from a compressed chunk (PNG `iCCP`). A JPEG carries at most
+/// 255 APP2 chunks of 65,519 bytes, about 16 MiB; larger profiles do not occur in practice.
+pub const MAX_ICC_BYTES: u64 = 16 << 20;
 
 #[derive(Debug)]
 pub enum ReadError {
@@ -104,7 +107,12 @@ pub struct Decoded {
     pub permit: MemoryPermit,
 }
 
-fn reader(bytes: &[u8], format: ImageFormat) -> ImageReader<Cursor<&[u8]>> {
+/// A reader for the source bytes. `decoded` is the memory the caller lets the decoded image take.
+pub(crate) fn reader(
+    bytes: &[u8],
+    format: ImageFormat,
+    decoded: u64,
+) -> ImageReader<Cursor<&[u8]>> {
     let format = match format {
         ImageFormat::Jpeg => image::ImageFormat::Jpeg,
         ImageFormat::Png => image::ImageFormat::Png,
@@ -115,7 +123,14 @@ fn reader(bytes: &[u8], format: ImageFormat) -> ImageReader<Cursor<&[u8]>> {
     let mut reader = ImageReader::with_format(Cursor::new(bytes), format);
     // The pixel limit and the memory budget below are the limits; image's default allocation
     // cap (512 MiB) would refuse supported images.
-    reader.no_limits();
+    let mut limits = Limits::no_limits();
+    if format == image::ImageFormat::Png {
+        // png inflates iCCP while reading the header, up to this many bytes in all; a small file
+        // can otherwise expand to gigabytes outside the memory budget. Other chunks it holds are
+        // at most the file's size.
+        limits.max_alloc = Some((bytes.len() as u64).saturating_add(MAX_ICC_BYTES + decoded));
+    }
+    reader.limits(limits);
     reader
 }
 
@@ -130,7 +145,7 @@ pub fn header_dimensions(bytes: &[u8], format: ImageFormat) -> Result<(u32, u32)
         let side = |v: usize| u32::try_from(v).map_err(|_| ReadError::Decode("size".into()));
         return Ok((side(header.width)?, side(header.height)?));
     }
-    reader(bytes, format)
+    reader(bytes, format, 0)
         .into_dimensions()
         .map_err(|e| ReadError::Decode(e.to_string()))
 }
@@ -148,13 +163,14 @@ pub fn decode(
     if pixels > MAX_PIXELS {
         return Err(ReadError::TooManyPixels { width, height });
     }
+    let estimate = estimated_bytes(pixels, source.bytes.len() as u64);
     let permit = budget
-        .acquire(estimated_bytes(pixels, source.bytes.len() as u64), cancel)
+        .acquire(estimate, cancel)
         .map_err(ReadError::Memory)?;
     let mut image = if source.format == ImageFormat::Jpeg {
         decode_jpeg(&source.bytes)?
     } else {
-        reader(&source.bytes, source.format)
+        reader(&source.bytes, source.format, estimate)
             .decode()
             .map_err(|e| ReadError::Decode(e.to_string()))?
     };
@@ -225,7 +241,7 @@ pub fn detection_rgb8(image: &DynamicImage) -> Rgb8Image {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::testdir::TestDir;
     use image::{GenericImageView, ImageEncoder, Rgb, RgbImage};
@@ -475,6 +491,17 @@ mod tests {
             detection_rgb8(&DynamicImage::ImageLuma8(gray)).data,
             [77, 77, 77]
         );
+    }
+
+    /// A PNG whose `iCCP` inflates to `size` zero bytes from a file of about `size / 1000`.
+    pub(crate) fn png_with_icc_of(size: usize) -> Vec<u8> {
+        let mut png = Cursor::new(Vec::new());
+        let mut encoder = image::codecs::png::PngEncoder::new(&mut png);
+        encoder.set_icc_profile(vec![0; size]).unwrap();
+        encoder
+            .write_image(&[0; 16 * 16 * 3], 16, 16, image::ExtendedColorType::Rgb8)
+            .unwrap();
+        png.into_inner()
     }
 
     #[test]

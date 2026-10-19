@@ -1,13 +1,13 @@
 use std::fmt;
 use std::io::Cursor;
 
-use image::{DynamicImage, ImageBuffer, ImageDecoder, ImageReader};
+use image::{DynamicImage, ImageBuffer, ImageDecoder};
 use moxcms::{
     ColorProfile, DataColorSpace, Layout, RenderingIntent, ToneReprCurve, TransformOptions, Xyzd,
 };
 
 use crate::detect::Rgb8Image;
-use crate::photo::decode::{Source, detection_rgb8};
+use crate::photo::decode::{self, Source, detection_rgb8};
 use crate::photo::format::ImageFormat;
 
 /// Color spaces whose pixels are kept as they are, with a bundled profile attached (D2).
@@ -145,21 +145,20 @@ fn has_icc_chunk(source: &Source) -> bool {
 }
 
 fn read_icc(source: &Source) -> Option<Vec<u8>> {
-    let format = match source.format {
+    match source.format {
         ImageFormat::Jpeg => return jpeg_icc(&source.bytes),
         ImageFormat::Tiff => return tiff_icc(&source.bytes),
-        ImageFormat::Png => image::ImageFormat::Png,
-        ImageFormat::Webp => image::ImageFormat::WebP,
+        ImageFormat::Png | ImageFormat::Webp => {}
         ImageFormat::Bmp => unreachable!("BMP profiles are read by bmp_icc"),
-    };
-    let mut decoder = ImageReader::with_format(Cursor::new(source.bytes.as_slice()), format)
+    }
+    let mut decoder = decode::reader(&source.bytes, source.format, 0)
         .into_decoder()
         .ok()?;
     decoder
         .icc_profile()
         .ok()
         .flatten()
-        .filter(|p| !p.is_empty())
+        .filter(|p| !p.is_empty() && p.len() as u64 <= decode::MAX_ICC_BYTES)
 }
 
 /// Tag 34675 of the first IFD. image sizes its TIFF limits from the pixel buffer, and a tag value
@@ -685,5 +684,22 @@ mod tests {
             ..srgb
         };
         assert_eq!(embedded_icc(&source), EmbeddedIcc::Profile(p3.clone()));
+    }
+
+    #[test]
+    fn a_profile_over_the_limit_is_unreadable() {
+        use crate::photo::decode::MAX_ICC_BYTES;
+        use crate::photo::decode::tests::png_with_icc_of;
+        let dir = crate::testdir::TestDir::new();
+        let source = |size| {
+            let path = dir.path().join(format!("{size}.png"));
+            std::fs::write(&path, png_with_icc_of(size)).unwrap();
+            read_source(&path).unwrap()
+        };
+        let limit = MAX_ICC_BYTES as usize;
+        assert_eq!(embedded_icc(&source(limit + 1)), EmbeddedIcc::Unreadable);
+        assert!(
+            matches!(embedded_icc(&source(limit)), EmbeddedIcc::Profile(p) if p.len() == limit)
+        );
     }
 }
