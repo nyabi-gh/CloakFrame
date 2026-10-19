@@ -12,7 +12,8 @@
 - **표시:** 다시 분석한 항목에는 note "the GPU failed; analyzed again on the CPU"(`Note::AnalyzedAgainOnCpu`)가 붙는다. CLI는 시작할 때 모델마다 어디서 도는지("YOLO5Face-n runs on CoreML", 시작하지 못하면 "… runs on the CPU: it could not start on CoreML (이유)")를, 실행 중 옮겨 갔으면 끝에 "… moved to the CPU for the rest of the run: CoreML failed (이유)"를 stderr에 쓴다.
 - **어디서 돌았는지는 review key에 들어가지 않는다.** 결과가 허용오차 안에서 같기 때문이다(fixture 시험이 실행 위치마다 확인). `--gpu off`로 분석한 세션도 기본값으로 `review`할 수 있다.
 - **CoreML 컴파일 캐시:** `<캐시 폴더>/coreml/<ORT 빌드 정보 SHA-256 앞 16자>/<모델 SHA-256>`에 둔다. 캐시 폴더는 macOS `~/Library/Caches/CloakFrame`(`app_dirs::cache_dir`)이다. CoreML은 그래프 구조가 같으면 가중치나 분할한 런타임이 바뀌어도 컴파일된 모델을 다시 쓰므로 런타임 빌드와 모델마다 폴더를 나눈다. initializer를 바꾼 그래프(번호판)는 구조가 같아 원래 그래프의 컴파일 결과를 잘못 쓸 수 있으므로 캐시하지 않는다. 이전 폴더 정리는 4단계(모델 캐시)에서 정한다.
-- **확인하지 못한 것:** Windows DirectML은 GitHub runner에 GPU가 없어, 그곳에서는 시작할 때 CPU로 가도 시험이 통과한다(macOS만 가속기에 남는지 확인한다). 번호판을 DirectML에서 후보 0개 입력으로 돌리는 확인(M0에서 남김)과 실기기 GPU 리셋은 Windows GPU 장치가 생기면 한다.
+- **CI(PR #35):** 3개 OS 모두 통과했다. macOS runner(가상 머신)에서도 얼굴 모델이 CoreML에 남고 fixture와 같았다(시험이 그렇게 요구한다).
+- **확인하지 못한 것:** Windows DirectML은 GitHub runner에 GPU가 없어, 그곳에서는 시작할 때 CPU로 가도 시험이 통과한다(macOS만 가속기에 남는지 확인한다). runner가 실제로 어느 쪽이었는지는 시험이 출력을 잡아 로그에 남지 않아 모른다. 번호판을 DirectML에서 후보 0개 입력으로 돌리는 확인(M0에서 남김)과 실기기 GPU 리셋은 Windows GPU 장치가 생기면 한다.
 
 ## CoreML과 CPU
 

@@ -155,7 +155,7 @@ macOS에서 맞춘 구현을 다시 쓰면서 x86에서 처음엔 1 차이가 �
 ### 계획에 반영할 것
 
 - ORT 텔레메트리: 공식 빌드는 1.29부터 1DS를 담는다. 끄는 수단은 `ORT_DISABLE_TELEMETRY=1`이고, `with_telemetry(false)`는 보조로만 둔다. 환경 변수는 `main` 첫 줄, 다른 스레드가 생기기 전에 설정한다. 릴리스 시험에 netwatch 감시를 넣고, 새 ORT 버전마다 다시 돌린다.
-- EP: 세션마다 `with_auto_device(PreferCPU)`로 `ort`의 기본 정책을 덮은 뒤 EP를 명시한다. 번호판 모델은 모든 플랫폼에서 CPU로 시작하고, 가속 EP는 YOLO5Face에만 쓴다(Windows DML은 M0에서 번호판도 통과했으므로 M3에서 감지 0건 입력으로 다시 확인).
+- EP: 세션마다 `with_auto_device(PreferCPU)`로 `ort`의 기본 정책을 덮은 뒤 EP를 명시한다. 번호판 모델은 모든 플랫폼에서 CPU로 시작하고, 가속 EP는 YOLO5Face에만 쓴다(Windows DML은 M0에서 번호판도 통과했으므로 M3에서 감지 0건 입력으로 다시 확인). M3 3단계에서 정한 결과: macOS는 YuNet도 CoreML, Windows는 번호판도 DML([M3 EP 기록](M3_EP.md)).
 - 1.12.1 패키지의 텔레메트리는 레거시 정책상 코드로 고치지 않고, README·릴리스 노트로 따로 안내하지도 않는다(2026-10-17 메인테이너 결정).
 
 ## Linux 사전 실행 (x86_64 에뮬레이션)
