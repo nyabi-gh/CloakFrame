@@ -22,5 +22,6 @@
       "rule": "YuNet은 280개 모두 찾음(detect/yunet/crowd-280-faces@0.25.json). YOLO5Face 결과는 1.12.1의 259개 이상"
     }
   ],
-  "observed_1121_summary": "NMS 후 259개(상한 300 미만)인데 omitted 4017(0.1)·3030(0.25)·1656(0.5)으로 보고, 사진은 경고와 함께 게시(P-1)"
+  "observed_1121_summary": "NMS 후 259개(상한 300 미만)인데 omitted 4017(0.1)·3030(0.25)·1656(0.5)으로 보고, 사진은 경고와 함께 게시(P-1)",
+  "decided_m2": "YOLO5Face-n은 NMS 전 후보를 자르지 않는다(출력 25,200행이 상한, 2026-10-18). crowd 3건 모두 280개, capped_candidates 0(crates/cloakframe-engine/tests/detect_fixtures.rs, p1_photo.rs). NMS 전 상한과 타일 재탐지는 출력 크기가 고정되지 않은 모델에서 M3에 정한다"
 }

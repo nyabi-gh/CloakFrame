@@ -85,7 +85,7 @@
 | 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.36.x 기준 1.95)가 결정 |
 | UI | egui/eframe 0.36.x(wgpu 기본, glow 대체 경로), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda`로 macOS·Windows만(Windows는 winit 메시지 훅에서 `TranslateAcceleratorW`). muda는 GTK 창에만 붙어 Linux는 egui 메뉴 막대. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL, Regular 2개 4.1 MB, 이름 이체자 처리는 M6). UI 시험은 `egui_kittest`([M0 기록](M0_EGUI.md)) |
 | 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 `api-27`로 macOS 공식 1.30.0·Windows ML 1.27.1 모두 세 모델의 CPU 결과와 CoreML·DML 결과가 1.12.1과 같음을 확인. `ort`의 세션 빌더는 EP 자동 선택 정책 `MaxEfficiency`를 기본으로 걸어 ORT 1.31이 CPU 세션에도 CoreML을 붙이므로, 세션마다 `with_auto_device(PreferCPU)`로 덮고 EP를 명시한다. RC이므로 정확한 버전으로 고정 |
-| 이미지 | `image` 0.25(PNG·TIFF·BMP·WebP, 필요 codec만), JPEG 디코드·인코드는 libjpeg-turbo(`turbojpeg`, 2026-10-18 결정: `image`의 zune-jpeg 0.5.15가 non-interleaved 4:2:0 JPEG를 조용히 잘못 디코드하고, libjpeg-turbo는 1.12.1의 OpenCV와 pixel까지 같음, [기록](M2_ENCODE_SPIKE.md)), 손실 WebP 인코드는 libwebp(`libwebp-sys`), TIFF 인코드(LZW)와 TIFF ICC 판독은 `tiff`(M2 5단계: `image`의 TIFF 인코더는 압축을 고를 수 없고, `image`는 작은 TIFF의 ICC를 limit 때문에 버림), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer(`engine::photo::metadata`) | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(`engine::detect::resize`). 정확히 2배 축소일 때 OpenCV가 바꿔 쓰는 `INTER_AREA` 경로까지 옮겼고, x86 OpenCV 5.0.0 일반 경로와 92개 크기 조합에서 바이트 일치를 시험으로 고정했다(M2 3단계, `tests/fixtures/resize`). `fast_image_resize`는 화면 표시용에만 |
+| 이미지 | `image` 0.25(PNG·TIFF·BMP·WebP, 필요 codec만), JPEG 디코드·인코드는 libjpeg-turbo(`turbojpeg`, 2026-10-18 결정: `image`의 zune-jpeg 0.5.15가 non-interleaved 4:2:0 JPEG를 조용히 잘못 디코드하고, libjpeg-turbo는 1.12.1의 OpenCV와 pixel까지 같음, [기록](M2_ENCODE_SPIKE.md)), 손실 WebP 인코드는 libwebp(`libwebp-sys`), TIFF 인코드(LZW)와 TIFF ICC 판독은 `tiff`(M2 5단계: `image`의 TIFF 인코더는 압축을 고를 수 없고, `image`는 작은 TIFF의 ICC를 limit 때문에 버림), BMP V5의 내장 ICC는 자체 판독(`image`가 읽지 않음, M2 7단계), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer(`engine::photo::metadata`) | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(`engine::detect::resize`). 정확히 2배 축소일 때 OpenCV가 바꿔 쓰는 `INTER_AREA` 경로까지 옮겼고, x86 OpenCV 5.0.0 일반 경로와 92개 크기 조합에서 바이트 일치를 시험으로 고정했다(M2 3단계, `tests/fixtures/resize`). `fast_image_resize`는 화면 표시용에만 |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
 | 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), Rayon pool(CPU 연산), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 HTTP(M3)와 자식 프로세스 감독(M4)이 들어올 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았다 |
 | 설정·로그·오류 | serde + TOML, 앱 데이터 폴더는 자체 구현(`engine::app_dirs`. `directories`는 의존성 `option-ext`가 MPL-2.0이라 쓰지 않음, 2026-10-18), `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
@@ -152,7 +152,7 @@ crates/
 3. **디코드:** 픽셀 상한(512 MP)과 메모리 permit, EXIF 방향을 pixel에 반영. 저장용 버퍼(U8/U16, alpha 유지)와 감지용 sRGB RGB8 버퍼를 따로 만든다.
 4. **감지:** 전체 보기 한 번. 고품질 모드는 겹치는 타일 + 타일 간 NMS를 더한다.
 5. **검토:** 원본 좌표의 편집 문서(가리지 않을 감지와 추가로 가릴 영역). 필요할 때만. 검토가 끝난 항목은 원본을 다시 읽고, 분석할 때와 identity가 같을 때만 렌더한다.
-6. **렌더·인코딩:** core 렌더러(미리보기와 같은 함수)로 마스크 적용 → D6 기본값으로 인코딩 → D2 색 정책, 선택 시 allowlist EXIF를 새로 작성. 출력 형식은 출력 이름의 확장자를 따른다(내용과 이름이 다른 원본, 1.12.1과 같음)
+6. **렌더·인코딩:** core 렌더러(미리보기와 같은 함수)로 마스크 적용 → D6 기본값으로 인코딩 → D2 색 정책, 선택 시 allowlist EXIF를 새로 작성. 출력 형식은 출력 이름의 확장자를 따른다(내용과 이름이 다른 원본, 1.12.1과 같음). BMP 출력에는 profile을 붙이지 않으므로 Display P3·Adobe RGB는 sRGB로 변환하고 결과에 표시한다(BMP V5는 profile을 담을 수 있지만 macOS ImageIO가 그런 파일을 열지 못함, 2026-10-19)
 7. **게시:** 원본 identity(크기, 수정 시각, 파일 ID)가 그대로인지 확인 → 4.5의 방식으로 게시. 원본이 바뀌었으면 그 항목은 실패
 
 ### 4.4 영상 파이프라인
@@ -258,7 +258,7 @@ crates/
 | 단계 | M1 | M2 | M3 | M4 | M5 | M6 | M7 | M8 | 합계 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 예산(주) | 3 | 4 | 3 | 4 | 5 | 7 | 4 | 2 | 32 |
-| 실제 | 2일 | | | | | | | | |
+| 실제 | 2일 | 2일 | | | | | | | |
 
 **점검 규칙:** 단계가 끝날 때마다 실제 소요를 이 표 옆에 적는다. 어느 단계든 예산의 125%를 넘으면(예: 4주 예산이 5주를 넘음) 아래 범위 조정 순서에서 아직 미루지 않은 첫 항목을 첫 stable 뒤로 미룬다. M5 끝에는 누적 소요를 전체 예산과 비교해 한 번 더 점검하고, 남은 단계(M6–M8 13주)가 남은 예산에 들어가지 않으면 다음 항목도 미룬다.
 
@@ -287,14 +287,27 @@ crates/
 - **완료 기준:** 합성 입력의 정상·실패·취소 경로 동작, 원본과 기존 출력 불변, 임시 파일이 최종 이름으로 보이지 않음. D4·D10·D12·P-1(골격) 시험 통과
 - **완료(2026-10-18):** 소요 2일(2026-10-17–18, 예산 3주), PR #18–#24. main `160f17b`에서 Linux·macOS·Windows CI가 위 기준의 시험을 모두 통과했다. 정상·실패·검토·이름 충돌·P-1 경로는 `cloakframe-cli`를 합성 processor(`synthetic` feature, 릴리스 빌드 제외)로 끝까지 돌리는 통합 시험(`crates/cloakframe-engine/tests/cli.rs`)으로, 취소는 실행기 시험으로, D4(Windows는 폴더 ACL 상속)·D12는 프로세스 전역 상태를 바꾸는 별도 시험 바이너리로 확인한다. 이월: CLI의 Ctrl+C 취소(신호 처리, M4의 자식 프로세스 감독과 함께), 1.12 설정 이전(M7)
 
-### M2 — 사진 (CPU, YOLO5Face-n)
+### M2 — 사진 (CPU, YOLO5Face-n) (2026-10-19 완료)
 
 - **작업:** `INTER_LINEAR` 이식 규칙(M0 기록)을 시험으로 고정하고 2배 축소의 `INTER_AREA` 경로 추가, 지원 형식·bit depth·alpha·방향, 색 정책, EXIF writer, 마스크 4종·shape·padding·roll·soft edge, 인코딩 기본값, 게시 게이트, 검토 결정 적용, 익명화 없이 내보내기
 - **완료 기준:** 사진 fixture 통과, D2·D3·D6·D9·P-2(타입) 시험 통과
 - **진행(2026-10-18, 시작 같은 날):** 0–7단계로 나눠 단계마다 PR을 하나씩 올린다.
   - 완료: 0단계 코덱 spike(#25, JPEG는 libjpeg-turbo, 손실 WebP는 libwebp, 고정 ORT를 CI에서 3개 OS 비교), 1단계 읽기·디코드(#26, 형식 내용 판정·여러 프레임 거부·512 MP·메모리 예산·EXIF 방향·감지 사본), 2단계 색 정책 D2(#27, colorimetry 판정, 번들 profile `assets/icc`, 그 밖은 sRGB 변환), 3단계 감지(#28, engine에 `ort`와 `OrtRuntime`(`ORT_DISABLE_TELEMETRY=1`이 아니면 로드 거부, `PreferCPU` 후 CPU EP 명시), `INTER_LINEAR` 고정·`INTER_AREA` 이식, YOLO5Face-n, core의 IoU·종류별 NMS·`Thresholds`(P-2), 결과 JSON의 `kind`. 엔진 디코드 경로로 YOLO5Face-n 감지 fixture 18건(6장 × 3임계값)을 3개 OS CI에서 비교. YuNet·번호판 36건은 M3 어댑터 전까지 `ort.yml` spike가 비교), 4단계 마스크 렌더러(#29, core `mask`: 채우기·모자이크·블러·사용자 이미지, 사각형·타원, padding, soft edge, 사용자 이미지 roll. 모자이크는 D3 강도(짧은 변 셀 수 4–16, 기본 8, 셀 경계 `floor(i·L/n)`, 긴 변 `round(n·long/short)`, 셀은 최소 2 px), 블러는 영역 밖 pixel까지 커널에 넣고 sigma 하한 4 px. 감지 box는 모든 조합에서 완전히 가림(property 시험). 사각형 채우기·soft edge·사용자 이미지는 1.12.1 fixture와 pixel이 같고, 타원은 1.12.1이 가린 pixel을 모두 가림), 5단계 인코딩·메타데이터(#30, `photo::encode`·`photo::metadata`: 원본 형식으로 저장, JPEG q92·원본 서브샘플링(libjpeg-turbo), 손실 WebP 원본은 libwebp q90, PNG·무손실 WebP·TIFF(LZW, 1.12.1과 같음)는 무손실(D6). 메타데이터 기본은 전부 제거, 보존 시 allowlist EXIF를 새로 쓰고 GPS는 별도 동의, ColorSpace는 출력에서 계산. D2 결과대로 번들 profile을 JPEG APP2·PNG iCCP·WebP ICCP·TIFF 34675에 붙임. 원본 바이트 복사 없음(D9). 네 컨테이너 출력이 exiftool `-validate`·exiv2·ImageMagick에서 읽힘. 작은 TIFF의 ICC를 `image`가 limit 때문에 버리던 2단계 판독 결함도 고침), 6단계 사진 처리기(#31, `photo::process::PhotoProcessor`: 읽기 → 디코드 → 색 정책 → sRGB 감지 사본으로 YOLO5Face-n → 마스크 → 인코딩 → 게시 직전 원본 identity 확인. 실행기가 분석에서 렌더로 넘기는 상태와 렌더 결과를 항목 안에서만 들고 있어, 검토로 가는 항목은 디코드한 pixel과 메모리 permit을 바로 놓음. `Found.over_limit`은 `CappedCandidates`로 기록해 P-1로 게시를 막고, NMS 전 후보 상한은 없앰(D11). 검토 결정의 제외·추가 영역(core `PhotoEdits`)을 마스크 영역으로 반영하고, "수동 마스크로 덮음" 해결은 추가 영역이 있을 때만 받음. 익명화 없이 내보내기(D9)는 별도 게시 근거로 정상 완료에 넣지 않음. 검토 결정은 분석 때와 같은 모델·설정의 처리기에만 적용. 출력 형식은 이름의 확장자(1.12.1 규범 fixture), 변환하거나 버린 색 profile은 결과 note로 표시(D2). 모델은 고정 SHA-256과 같은 바이트로만 세션을 만듦. CLI는 `--ort-library`·`--face-model`·`--keep-metadata`·`--keep-gps`로 실제 감지 경로를 돌리고, 스캔에서 처리할 파일이 나올 때만 모델을 불러옴. 시험: 가짜 감지기 파이프라인 11건(1.12.1 worker 시험 6개 포함), 실제 모델의 P-1(사진)·D11 2건, CLI 6건)
-  - 남음: 7단계 완료 확인
-  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 감지 0건 사진은 미해결 문제가 아니라 정상 게시
+  - 완료: 7단계 완료 확인(m2-verify). 완료 기준과 P-1(사진)을 확인하는 시험은 아래 표. 이름으로 연결된 Rust 시험이 없던 1.12.1 M2 시험 5개(형식 내용 판정, 여러 프레임, EXIF 방향 두 개, 지원 확장자)는 fixture를 읽는 `decode_fixtures.rs`로, plan 항목이 없던 사진 시험 2개(메타데이터 판독 실패, 스레드 간 soft edge)와 D2 게시 파일 확인을 추가함. 확인 중 찾은 D2 누락: `image`가 BMP V5의 내장 profile을 읽지 않아 Display P3 BMP를 표시 없이 sRGB로 봤음 → 색 정책이 내장 profile(`MBED`)을 직접 읽고, 다른 파일을 가리키는 연결 profile(`LINK`)은 읽지 않고 버림 표시. BMP 출력은 profile 없이 sRGB로 변환(4.3). D2 기준 그림 `expected-{display-p3,adobe-rgb}-as-srgb.png`(Little CMS)를 `gen_inputs.py`로 추가
+  - **완료 기준 확인:**
+
+    | 항목 | 확인하는 시험(`crates/cloakframe-engine` 기준, core는 표시) |
+    | --- | --- |
+    | 사진 fixture: 감지·resize·디코드 | `detect_fixtures.rs`(YOLO5Face-n 18건), `detect::resize` 단위(`fixtures/resize`, x86은 `ort.yml`), `photo::decode` 단위(`fixtures/decode`), `decode_fixtures.rs` 5건 |
+    | 사진 fixture: 1.12.1 마스크·메타데이터·worker | `mask_fixtures.rs` 9건, `encode_fixtures.rs`의 allowlist·썸네일·EXIF 판독 실패, `photo_pipeline.rs`의 worker 시험 6개, `cli_photo.rs` `a_rerun_keeps_the_earlier_output`, core `geometry`·`detection`의 IoU·NMS·잘못된 감지 |
+    | D2 | `photo::color` 단위 9건(판정·유지·변환·감지 사본·버린 profile·BMP V5 profile·BMP 출력 변환), `photo::encode` `every_container_carries_the_allowlist_and_the_profile`, `photo_pipeline.rs` `published_photos_follow_the_d2_color_policy`(9건의 게시 파일 profile·pixel·note), `bmp_outputs_are_srgb_and_bmp_profiles_are_read` |
+    | D3 | `mask_fixtures.rs` `mosaic_strength_sets_the_cell_count`·`mosaic_touches_only_the_region`, core `mask` 단위(셀 평균, 작은·가장자리 영역) |
+    | D6 | `encode_fixtures.rs` `d6_*` 2건 |
+    | D9 | `encode_fixtures.rs` `d9_exports_carry_only_what_the_policy_allows`, `photo_pipeline.rs` `exporting_without_anonymization_*`, `cli_photo.rs` `exporting_without_anonymization_keeps_every_pixel` |
+    | P-2(타입) | core `detection` 단위(종류별 NMS·임계값, 모델이 정하는 종류, 번호판 landmark 거부), core `serde_forms.rs`, `cli_photo.rs` 결과 JSON의 `kind` |
+    | P-1(사진) | `p1_photo.rs` 2건(실제 모델, 상한 100), `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`, `cli.rs`(M1 골격) |
+  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 6단계 판단 확정(2026-10-19): 감지 0건 사진은 미해결 문제가 아니라 정상 게시(1.12.1은 경고), 출력 형식은 이름의 확장자(1.12.1 규범 fixture), CLI 검토 결정은 run과 같은 모델·설정에만 적용. 넓은 색역 사진의 BMP 출력은 실패 대신 sRGB 변환·표시(위)
+  - **완료(2026-10-19):** 소요 2일(2026-10-18–19, 예산 4주, 125% 점검 기준 5주 안), PR #25–#31과 7단계 `m2-verify`. 위 표의 시험이 macOS arm64(고정 ORT 1.30.0)에서 모두 통과, 3개 OS CI는 `m2-verify` PR에서 확인. 이월: YuNet·번호판 어댑터와 실제 모델의 종류별 임계값(M3)
 
 ### M3 — 모델·GPU·다운로드·타일
 
