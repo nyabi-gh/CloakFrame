@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 
-use crate::fs_case::NameCase;
+use crate::fs_case::NameRule;
 use crate::scan::{MediaKind, ScannedFile};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -36,7 +36,7 @@ pub fn output_relative(file: &ScannedFile) -> PathBuf {
 /// Plans one output per input in order. Name collisions inside the run are judged by each
 /// destination folder's own case rule (D10), probed once per folder.
 pub fn plan_outputs(files: &[ScannedFile], output: &Path) -> Vec<PlannedOutput> {
-    let mut cases: HashMap<PathBuf, NameCase> = HashMap::new();
+    let mut cases: HashMap<PathBuf, NameRule> = HashMap::new();
     let mut taken: HashSet<(PathBuf, String)> = HashSet::new();
     let mut planned = Vec::with_capacity(files.len());
     for file in files {
@@ -44,7 +44,7 @@ pub fn plan_outputs(files: &[ScannedFile], output: &Path) -> Vec<PlannedOutput> 
         let folder = relative.parent().unwrap_or(Path::new("")).to_path_buf();
         let case = *cases
             .entry(folder.clone())
-            .or_insert_with(|| NameCase::probe(&output.join(&folder)));
+            .or_insert_with(|| NameRule::probe(&output.join(&folder)));
         let name = relative
             .file_name()
             .map(OsStr::to_string_lossy)
@@ -151,7 +151,7 @@ mod tests {
     fn duplicates_inside_the_run_follow_the_folder_case_rule() {
         let dir = TestDir::new();
         let out = dir.mkdir("out");
-        let folds = NameCase::probe(&out) == NameCase::Insensitive;
+        let folds = NameRule::probe(&out).ignores_case;
         let files = [
             scanned(&dir, "a/Same.jpg", "Same.jpg", MediaKind::Image),
             scanned(&dir, "b/same.jpg", "same.jpg", MediaKind::Image),
@@ -177,6 +177,29 @@ mod tests {
                 Some(Path::new("same (2).jpg"))
             );
         }
+    }
+
+    /// APFS and HFS+ compare names regardless of Unicode normalization: a name typed on Windows
+    /// (NFC) and the same name made on a Mac (NFD) are one name there (review item 9).
+    #[test]
+    fn duplicates_inside_the_run_follow_the_folder_normalization_rule() {
+        let dir = TestDir::new();
+        let out = dir.mkdir("out");
+        let (nfc, nfd) = (
+            "\u{c0ac}\u{c9c4}.jpg",
+            "\u{1109}\u{1161}\u{110c}\u{1175}\u{11ab}.jpg",
+        );
+        std::fs::write(out.join(nfc), b"x").unwrap();
+        let folds = out.join(nfd).exists();
+        std::fs::remove_file(out.join(nfc)).unwrap();
+        let files = [
+            scanned(&dir, &format!("a/{nfc}"), nfc, MediaKind::Image),
+            scanned(&dir, &format!("b/{nfd}"), nfd, MediaKind::Image),
+        ];
+        let plan = plan_outputs(&files, &out);
+        assert_eq!(plan[0].conflict, None);
+        let want = folds.then_some(Conflict::Duplicate);
+        assert_eq!(plan[1].conflict, want, "folds: {folds}");
     }
 
     #[test]

@@ -22,6 +22,7 @@ moxcms = "=0.9.1"
 ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "load-dynamic", "api-27"] }
 libwebp-sys = "=0.14.4"
 tiff = { version = "=0.11.3", default-features = false, features = ["lzw"] }
+unicode-normalization = "=0.1.25"
 
 [workspace.lints.rust]
 # OS·FFI 어댑터에서만 #[allow(unsafe_code)]로 국소 허용한다(계획 4.1).

@@ -24,6 +24,7 @@ moxcms.workspace = true
 ort.workspace = true
 libwebp-sys.workspace = true
 tiff.workspace = true
+unicode-normalization.workspace = true
 
 [features]
 # The synthetic processor for exercising the whole run without a media pipeline (M1 tests and

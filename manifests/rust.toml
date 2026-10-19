@@ -110,6 +110,11 @@ targets = ["linux", "macos"]
 # 메모리 예산의 실제 RAM 조회(sysctl hw.memsize, sysconf). 1.12.1과 같은 규칙.
 evidence = "crates/cloakframe-engine/src/photo/budget.rs"
 
+[crates.unicode-normalization]
+version = "=0.1.25"
+# 출력 이름 충돌 판정에서 정규화를 무시하는 볼륨(APFS·HFS+)의 NFC·NFD 이름을 한 이름으로 본다(D10, 재검토 9번).
+evidence = "crates/cloakframe-engine/src/fs_case.rs"
+
 [crates.moxcms]
 version = "=0.9.1"
 # ICC 판정과 sRGB 변환에만 쓴다. 출력에 넣는 profile은 assets/icc(tools/icc/make_profiles.py)이며,

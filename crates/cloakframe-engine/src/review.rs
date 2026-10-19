@@ -8,7 +8,7 @@ use cloakframe_core::item::ItemId;
 use cloakframe_core::review::{EditError, PhotoEdits};
 use serde::{Deserialize, Serialize};
 
-use crate::fs_case::NameCase;
+use crate::fs_case::NameRule;
 use crate::output_plan::free_name;
 use crate::publish::TEMP_PREFIX;
 use crate::run::{Analysis, Decision, Fingerprint, JobItem, Start};
@@ -197,7 +197,7 @@ pub fn apply(
         match check(stored, decision, fingerprint, &output, &claimed) {
             Ok(accepted) => {
                 let folder = accepted.destination.parent().unwrap_or(Path::new(""));
-                let case = NameCase::probe(&output.join(folder));
+                let case = NameRule::probe(&output.join(folder));
                 let name = accepted
                     .destination
                     .file_name()
@@ -294,7 +294,7 @@ fn check(
         }
         item.destination = folder.join(name);
     }
-    let case = NameCase::probe(&output.join(&folder));
+    let case = NameRule::probe(&output.join(&folder));
     let is_free = |name: &str| {
         !claimed.contains(&(folder.clone(), case.key(name)))
             && output.join(&folder).join(name).symlink_metadata().is_err()
