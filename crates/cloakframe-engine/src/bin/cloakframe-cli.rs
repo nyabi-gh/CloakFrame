@@ -9,9 +9,11 @@ use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::batch::{job_from_scan, session_from_report};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::{Acceleration, Backends, ModelBackend};
-use cloakframe_engine::detect::models::{DetectionModels, FaceModel};
+use cloakframe_engine::detect::models::{DetectionModels, FaceModel, LoadError};
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
+use cloakframe_engine::model_files::download::{Https, download};
+use cloakframe_engine::model_files::{MODEL_FILES, ModelStore, Status, model_file};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::publish::remove_stale_temp_files;
@@ -22,23 +24,27 @@ use cloakframe_engine::session::{SessionId, SessionStore};
 
 const USAGE: &str = "\
 usage:
-  cloakframe-cli run --output DIR --ort-library FILE --models DIR
+  cloakframe-cli run --output DIR --ort-library FILE [--models DIR]
                      [--faces yolo5face-n|yunet|off] [--plates on|off] [--gpu on|off]
                      [--review required|off] [--keep-metadata [--keep-gps]] [--recursive]
                      [--workers N] [--sessions DIR] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
                         [--plates on|off] [--keep-metadata [--keep-gps]] [--workers N]
                         [--sessions DIR]
+  cloakframe-cli models [--models DIR]
+  cloakframe-cli models fetch [--accept-terms] [--models DIR] yolo5face-n|yunet|plates...
   cloakframe-cli sessions [--sessions DIR]
   cloakframe-cli --version
 
 --ort-library is the ONNX Runtime library to load. --models is the folder that holds the model
-files under their published names (yolov5n_face.onnx, face_detection_yunet_2023mar.onnx,
-yolo-v9-t-512-license-plates-end2end.onnx); each must be the one this build pins. --faces picks
-the face model (default yolo5face-n) and --plates turns license plates on or off (default off).
---gpu off keeps every model on the CPU; by default each runs on the GPU where this build can, and
-a model the GPU fails moves to the CPU for the rest of the run. review takes the settings run was given; decisions on items analyzed with other settings are
-refused.
+files under their published names; each must be the one this build pins. By default it is the
+app's model folder, into which models CloakFrame 1.12.1 downloaded are copied. models lists the
+models with their terms, and models fetch downloads them from their projects on GitHub (nothing
+is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts that.
+--faces picks the face model (default yolo5face-n) and --plates turns license plates on or off
+(default off). --gpu off keeps every model on the CPU; by default each runs on the GPU where this
+build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
+settings run was given; decisions on items analyzed with other settings are refused.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
 
 exit status: 0 done, 1 failed or refused items or a failed run, 2 usage error, 3 items wait for
@@ -95,6 +101,7 @@ struct Options {
     gpu: Option<Acceleration>,
     keep_metadata: bool,
     keep_gps: bool,
+    accept_terms: bool,
     inputs: Vec<PathBuf>,
 }
 
@@ -155,6 +162,7 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
             }
             "--keep-metadata" => o.keep_metadata = true,
             "--keep-gps" => o.keep_gps = true,
+            "--accept-terms" => o.accept_terms = true,
             flag if flag.starts_with("--") => return Err(format!("unknown option {flag}")),
             _ => args.positional.push(arg),
         }
@@ -233,23 +241,90 @@ fn model_name(model: ModelId) -> &'static str {
     }
 }
 
-/// Loads ONNX Runtime from `library` and the models from their files in `dir`, and says where
-/// each runs.
+/// The name `models fetch` takes.
+fn fetch_name(model: ModelId) -> &'static str {
+    match model {
+        ModelId::Yolo5FaceN => "yolo5face-n",
+        ModelId::YuNet => "yunet",
+        ModelId::PlateYolov9T => "plates",
+    }
+}
+
+fn megabytes(bytes: u64) -> String {
+    format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
+}
+
+/// The model folder: --models, or the app's (`true`).
+fn model_store(o: &Options) -> Result<(ModelStore, bool), CliError> {
+    if let Some(dir) = &o.models {
+        return Ok((ModelStore::new(dir), false));
+    }
+    cloakframe_engine::app_dirs::model_dir()
+        .map(|dir| (ModelStore::new(dir), true))
+        .ok_or_else(|| failed("no app data folder for this user; pass --models DIR"))
+}
+
+/// Copies into the app's model folder the models it lacks that CloakFrame 1.12.1 downloaded.
+fn import_legacy(
+    store: &ModelStore,
+    models: impl IntoIterator<Item = ModelId>,
+) -> Result<(), CliError> {
+    let folders = cloakframe_engine::legacy::model_dirs();
+    for model in models {
+        match store.import(model, &folders) {
+            Ok(Some(from)) => eprintln!(
+                "copied {} from {}",
+                model_file(model).name,
+                from.parent().unwrap_or(&from).display()
+            ),
+            Ok(None) => {}
+            Err(e) => {
+                return Err(failed(format!(
+                    "cannot copy {} into {}: {e}",
+                    model_file(model).name,
+                    store.dir().display()
+                )));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Loads ONNX Runtime from `library` and the models from `store`, and says where each runs.
 fn detector(
     library: &Path,
-    dir: &Path,
+    (store, app_folder): &(ModelStore, bool),
     models: DetectionModels,
     acceleration: Acceleration,
 ) -> Result<Started, CliError> {
+    if *app_folder {
+        import_legacy(store, models.ids())?;
+    }
     let runtime = OrtRuntime::load(library).map_err(|e| failed(e.to_string()))?;
     #[cfg(target_os = "macos")]
     let runtime = match cloakframe_engine::app_dirs::cache_dir() {
-        Some(cache) => runtime.with_coreml_cache(cache.join("coreml")),
+        Some(cache) => {
+            if let Err(e) = cloakframe_engine::legacy::remove_coreml_cache(&cache) {
+                eprintln!("cannot remove the models CloakFrame 1.12.1 compiled for CoreML: {e}");
+            }
+            let runtime = runtime.with_coreml_cache(cache.join("coreml"));
+            if let Err(e) = runtime.remove_unused_coreml_caches() {
+                eprintln!("cannot remove compiled CoreML models this build does not use: {e}");
+            }
+            runtime
+        }
         None => runtime,
     };
     let loaded = models
-        .load(&runtime, dir, acceleration)
-        .map_err(|e| failed(e.to_string()))?;
+        .load(&runtime, store, acceleration)
+        .map_err(|e| match e {
+            LoadError::Missing { model, .. } => failed(format!(
+                "{e}; download it with `cloakframe-cli models fetch {}{}`",
+                fetch_name(model),
+                if *app_folder { "" } else { " --models DIR" }
+            )),
+            e => failed(e.to_string()),
+        })?;
     for m in loaded.backends.get() {
         match &m.fallback {
             Some(f) => eprintln!(
@@ -390,13 +465,10 @@ fn run(o: Options) -> Result<u8, CliError> {
         .ort_library
         .clone()
         .ok_or_else(|| usage("run needs --ort-library FILE"))?;
-    let dir = o
-        .models
-        .clone()
-        .ok_or_else(|| usage("run needs --models DIR"))?;
+    let store = model_store(&o)?;
     let acceleration = o.gpu.unwrap_or_default();
     run_with(&o, &output, processor, || {
-        detector(&library, &dir, models, acceleration)
+        detector(&library, &store, models, acceleration)
     })
 }
 
@@ -536,6 +608,126 @@ fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, CliErr
     Ok(code)
 }
 
+fn models(o: Options) -> Result<u8, CliError> {
+    let words: Vec<String> = o
+        .inputs
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
+    let (store, app_folder) = model_store(&o)?;
+    match words.split_first() {
+        None => list_models(&store, app_folder),
+        Some((command, names)) if command == "fetch" => {
+            fetch_models(&store, app_folder, names, o.accept_terms)
+        }
+        Some((other, _)) => Err(usage(format!("models takes fetch or nothing, not {other}"))),
+    }
+}
+
+fn list_models(store: &ModelStore, app_folder: bool) -> Result<u8, CliError> {
+    if app_folder {
+        import_legacy(store, MODEL_FILES.iter().map(|f| f.model))?;
+    }
+    for file in &MODEL_FILES {
+        let status = match store.status(file.model) {
+            Ok(Status::Present) => "present",
+            Ok(Status::Missing) => "missing",
+            Ok(Status::Different) => "not the pinned file",
+            Err(e) => {
+                return Err(failed(format!(
+                    "cannot read {}: {e}",
+                    store.path(file.model).display()
+                )));
+            }
+        };
+        println!(
+            "{}\t{status}\t{}\t{}",
+            fetch_name(file.model),
+            megabytes(file.size),
+            file.terms.license
+        );
+        println!("\t{}", file.terms.summary);
+        println!("\t{}", file.terms.source);
+    }
+    println!("folder\t{}", store.dir().display());
+    Ok(DONE)
+}
+
+fn fetch_models(
+    store: &ModelStore,
+    app_folder: bool,
+    names: &[String],
+    accept_terms: bool,
+) -> Result<u8, CliError> {
+    if names.is_empty() {
+        return Err(usage("models fetch needs yolo5face-n, yunet or plates"));
+    }
+    let mut wanted = Vec::new();
+    for name in names {
+        let model = MODEL_FILES
+            .iter()
+            .map(|f| f.model)
+            .find(|&m| fetch_name(m) == name)
+            .ok_or_else(|| {
+                usage(format!(
+                    "models fetch takes yolo5face-n, yunet or plates, not {name}"
+                ))
+            })?;
+        if !wanted.contains(&model) {
+            wanted.push(model);
+        }
+    }
+    if app_folder {
+        import_legacy(store, wanted.iter().copied())?;
+    }
+    let mut needed = Vec::new();
+    for model in wanted {
+        match store.status(model) {
+            Ok(Status::Present) => {
+                eprintln!(
+                    "{} is already in {}",
+                    model_name(model),
+                    store.dir().display()
+                );
+            }
+            Ok(Status::Missing | Status::Different) => needed.push(model),
+            Err(e) => {
+                return Err(failed(format!(
+                    "cannot read {}: {e}",
+                    store.path(model).display()
+                )));
+            }
+        }
+    }
+    let restricted: Vec<_> = needed
+        .iter()
+        .map(|&m| model_file(m))
+        .filter(|f| f.terms.non_commercial_only)
+        .collect();
+    if !accept_terms && !restricted.is_empty() {
+        for file in restricted {
+            eprintln!("{}: {}", model_name(file.model), file.terms.summary);
+        }
+        return Err(usage(
+            "pass --accept-terms to download a model whose terms limit its use",
+        ));
+    }
+    let https = Https::default();
+    for model in needed {
+        let file = model_file(model);
+        eprintln!(
+            "downloading {} ({}): {}",
+            model_name(model),
+            megabytes(file.size),
+            file.terms.summary
+        );
+        download(store, model, &https, &CancelToken::new(), &mut |_| {})
+            .map_err(|e| failed(format!("cannot download {}: {e}", model_name(model))))?;
+        println!("{}\t{}", fetch_name(model), store.path(model).display());
+    }
+    Ok(DONE)
+}
+
 fn sessions(o: Options) -> Result<u8, CliError> {
     let store = session_store(&o)?;
     for id in store
@@ -569,10 +761,11 @@ fn main() -> ExitCode {
             println!("cloakframe-cli {}", env!("CARGO_PKG_VERSION"));
             Ok(DONE)
         }
-        Some(c @ ("run" | "review" | "sessions")) => {
+        Some(c @ ("run" | "review" | "models" | "sessions")) => {
             parse(rest).map_err(usage).and_then(|o| match c {
                 "run" => run(o),
                 "review" => review(o),
+                "models" => models(o),
                 _ => sessions(o),
             })
         }

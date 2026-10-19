@@ -1,7 +1,7 @@
 //! The models a run detects with, and their sessions as one detector for the inference thread.
 
 use std::fmt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use cloakframe_core::detection::{ModelId, Thresholds};
 use cloakframe_core::review::Digest;
@@ -9,7 +9,8 @@ use sha2::{Digest as _, Sha256};
 
 use super::fallback::{self, Acceleration, Backends};
 use super::runtime::OrtRuntime;
-use super::{DetectError, Detector, Found, Rgb8Image, plate, yolo5face, yunet};
+use super::{DetectError, Detector, Found, Rgb8Image};
+use crate::model_files::{ModelStore, model_file};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FaceModel {
@@ -30,15 +31,6 @@ impl FaceModel {
 
 const DEFAULT_FACE: FaceModel = FaceModel::Yolo5FaceN;
 
-/// The published file name and pinned SHA-256 of a model (`manifests/native.toml`).
-fn pinned(model: ModelId) -> (&'static str, &'static str) {
-    match model {
-        ModelId::Yolo5FaceN => (yolo5face::FILE_NAME, yolo5face::MODEL_SHA256),
-        ModelId::YuNet => (yunet::FILE_NAME, yunet::MODEL_SHA256),
-        ModelId::PlateYolov9T => (plate::FILE_NAME, plate::MODEL_SHA256),
-    }
-}
-
 /// A run that detects nothing would publish its photos unmasked.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct NothingToDetect;
@@ -53,6 +45,11 @@ impl std::error::Error for NothingToDetect {}
 
 #[derive(Debug)]
 pub enum LoadError {
+    /// The model folder has no file under the model's name; it has to be downloaded.
+    Missing {
+        model: ModelId,
+        path: PathBuf,
+    },
     Read {
         path: PathBuf,
         error: std::io::Error,
@@ -66,6 +63,7 @@ pub enum LoadError {
 impl fmt::Display for LoadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Missing { path, .. } => write!(f, "the model {} is missing", path.display()),
             Self::Read { path, error } => {
                 write!(f, "cannot read the model {}: {error}", path.display())
             }
@@ -128,7 +126,7 @@ impl DetectionModels {
     pub fn digest(&self) -> Digest {
         let mut h = Sha256::new();
         for id in self.ids() {
-            h.update(format!("{:?} {}\n", id.kind(), pinned(id).1));
+            h.update(format!("{:?} {}\n", id.kind(), model_file(id).sha256));
         }
         Digest(h.finalize().into())
     }
@@ -142,21 +140,25 @@ impl DetectionModels {
         }
     }
 
-    /// Sessions for the models from their files in `dir`, under the published names, each on
-    /// the backend `fallback::backend_for` names with the CPU behind it. Each detector checks the
-    /// bytes against the pinned hash before making a session from them.
+    /// Sessions for the models from their files in `store`, each on the backend
+    /// `fallback::backend_for` names with the CPU behind it: one session per model, input size and
+    /// backend for the whole run (D7), since every model has a fixed input size. Each detector
+    /// checks the bytes against the pinned hash before making a session from them (D5).
     pub fn load(
         &self,
         runtime: &OrtRuntime,
-        dir: &Path,
+        store: &ModelStore,
         acceleration: Acceleration,
     ) -> Result<Loaded, LoadError> {
         let backends = Backends::default();
         let mut detectors = Vec::new();
         for id in self.ids() {
-            let path = dir.join(pinned(id).0);
-            let bytes = match std::fs::read(&path) {
+            let path = store.path(id);
+            let bytes = match store.read(id) {
                 Ok(bytes) => bytes,
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    return Err(LoadError::Missing { model: id, path });
+                }
                 Err(error) => return Err(LoadError::Read { path, error }),
             };
             let backend = fallback::backend_for(id, acceleration);
@@ -245,24 +247,6 @@ mod tests {
         assert_eq!(t.plate, ModelId::PlateYolov9T.default_thresholds());
         let plates_only = DetectionModels::new(None, true).unwrap();
         assert_eq!(plates_only.default_thresholds().plate, t.plate);
-    }
-
-    #[test]
-    fn the_file_names_are_the_published_ones() {
-        let manifest = include_str!("../../../../manifests/native.toml");
-        for id in [ModelId::Yolo5FaceN, ModelId::YuNet, ModelId::PlateYolov9T] {
-            let (name, sha256) = pinned(id);
-            let entry = manifest
-                .split("[[artifact]]")
-                .find(|e| e.contains(&format!("sha256 = \"{sha256}\"")))
-                .unwrap_or_else(|| panic!("{id:?} is not in the manifest"));
-            // `lines` also strips the CR of a Windows checkout.
-            let url = entry
-                .lines()
-                .find_map(|l| l.strip_prefix("url = "))
-                .unwrap_or_else(|| panic!("{id:?} has no url"));
-            assert!(url.ends_with(&format!("/{name}\"")), "{id:?}: {url}");
-        }
     }
 
     struct Finds(Vec<Detection>, Vec<(ModelId, u32)>);
