@@ -146,6 +146,23 @@ fn rectangle_soft_edges_match_1_12_1() {
     assert!(max_level_diff(large) <= 1);
 }
 
+/// 1.12.1 testSoftEdgeMasksAgreeAcrossThreads: soft ellipses rendered on several threads at once
+/// are the same as rendered alone.
+#[test]
+fn soft_edge_masks_agree_across_threads() {
+    const TEST: &str = "testSoftEdgeMasksAgreeAcrossThreads";
+    let alone = run(TEST);
+    assert!(!alone.is_empty());
+    let threads: Vec<_> = (0..4).map(|_| std::thread::spawn(|| run(TEST))).collect();
+    for thread in threads {
+        let cases = thread.join().unwrap();
+        assert_eq!(cases.len(), alone.len());
+        for (i, (a, b)) in alone.iter().zip(&cases).enumerate() {
+            assert_eq!(a.ours, b.ours, "{TEST}[{i}]");
+        }
+    }
+}
+
 /// Every pixel 1.12.1 fully masked (black fill) is fully masked here.
 fn covers_what_1_12_1_covered(case: &Case) {
     let (ours, theirs) = (case.ours.to_rgb8(), case.theirs.to_rgb8());

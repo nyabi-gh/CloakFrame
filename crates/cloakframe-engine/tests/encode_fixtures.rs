@@ -87,6 +87,7 @@ fn ijg_luma_table(quality: u32) -> Vec<u16> {
         .collect()
 }
 
+/// D6. 1.12.1 testEncodeParams asked for q100 4:4:4 instead.
 #[test]
 fn d6_jpeg_is_q92_with_the_source_subsampling() {
     for (name, subsamp) in [
@@ -392,4 +393,32 @@ fn the_embedded_thumbnail_is_dropped() {
     assert!(exif.fields().all(|f| f.ifd_num == In::PRIMARY));
     let make = exif.get_field(Tag::Make, In::PRIMARY).unwrap();
     assert_eq!(make.display_value().to_string(), "\"TestCamera\"");
+}
+
+/// 1.12.1 testMetadataFailurePublishesCleanImage: a source whose EXIF block cannot be read is
+/// still written, with no metadata, when metadata is kept.
+#[test]
+fn an_unreadable_exif_block_leaves_a_clean_output() {
+    let plain = std::fs::read(fixtures().join("defects/D6/q90-420.jpg")).unwrap();
+    let mut app1 = b"Exif\0\0II\x2a\0\xff\xff\xff\x7f".to_vec();
+    app1.extend([0xAB; 32]);
+    let mut damaged = plain[..2].to_vec();
+    damaged.extend([0xFF, 0xE1]);
+    damaged.extend(((app1.len() + 2) as u16).to_be_bytes());
+    damaged.extend(&app1);
+    damaged.extend(&plain[2..]);
+    assert!(exif_of(&damaged).is_none());
+    let dir = std::env::temp_dir().join(format!("cloakframe-exif-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("damaged.jpg");
+    std::fs::write(&path, &damaged).unwrap();
+    let (_, image, out) = export(&path, MetadataPolicy::Allowlist { gps: true });
+    std::fs::remove_dir_all(&dir).unwrap();
+    assert!(exif_of(&out).is_none());
+    assert!(!out.windows(6).any(|w| w == b"Exif\0\0"));
+    let header = turbojpeg::read_header(&out).unwrap();
+    assert_eq!(
+        (header.width as u32, header.height as u32),
+        (image.width(), image.height())
+    );
 }

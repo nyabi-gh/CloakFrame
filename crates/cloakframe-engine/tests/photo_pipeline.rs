@@ -1,6 +1,7 @@
 //! The photo processor through the runner with a scripted detector: masking and publishing, P-1
-//! for capped photos, the reviewer's edits, exporting without anonymization (D9), the source
-//! checks before publishing, and the 1.12.1 worker tests for photos (tests/fixtures/legacy).
+//! for capped photos, the reviewer's edits, exporting without anonymization (D9), the color policy
+//! on published files (D2), the source checks before publishing, and the 1.12.1 worker tests for
+//! photos (tests/fixtures/legacy).
 
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -15,6 +16,7 @@ use cloakframe_core::review::PhotoEdits;
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::photo::budget::MemoryBudget;
+use cloakframe_engine::photo::color::{EmbeddedIcc, Standard, embedded_icc};
 use cloakframe_engine::photo::decode::{decode, read_source};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
@@ -481,23 +483,84 @@ fn a_review_of_an_older_source_is_not_rendered() {
     assert!(dir.outputs().is_empty());
 }
 
-/// D2: a profile other than the three kept ones is converted, and the result says so.
+fn max_channel_diff(a: &RgbImage, b: &RgbImage) -> u8 {
+    assert_eq!(a.dimensions(), b.dimensions());
+    a.as_raw()
+        .iter()
+        .zip(b.as_raw())
+        .map(|(x, y)| x.abs_diff(*y))
+        .max()
+        .unwrap()
+}
+
+/// D2 (tests/fixtures/defects/D2) on the published files: known color spaces keep their pixels
+/// and carry the bundled profile, other profiles are converted to sRGB and noted, untagged photos
+/// stay untagged.
 #[test]
-fn a_converted_color_profile_is_noted_on_the_result() {
+fn published_photos_follow_the_d2_color_policy() {
+    const JPEG_REENCODE: u8 = 6;
+    let d2 = fixtures().join("defects/D2");
+    let reference = rgb(&d2.join("expected-wide-gamma18-as-srgb.png"));
+    let srgb = Some(Standard::Srgb);
+    let cases = [
+        ("chart-srgb.png", srgb, None),
+        ("chart-srgb.jpg", srgb, None),
+        ("chart-display-p3.png", Some(Standard::DisplayP3), None),
+        ("chart-display-p3.jpg", Some(Standard::DisplayP3), None),
+        ("chart-adobe-rgb.png", Some(Standard::AdobeRgb), None),
+        ("chart-adobe-rgb.jpg", Some(Standard::AdobeRgb), None),
+        ("chart-wide-gamma18.png", None, Some(2)),
+        ("chart-wide-gamma18.jpg", None, Some(4)),
+        ("chart-untagged.png", None, None),
+    ];
     let dir = Dir::new();
-    let bytes = std::fs::read(fixtures().join("defects/D2/chart-wide-gamma18.png")).unwrap();
-    let input = dir.input("chart.png", &bytes);
+    let items = cases
+        .iter()
+        .enumerate()
+        .map(|(i, (name, ..))| {
+            let input = dir.input(name, &std::fs::read(d2.join(name)).unwrap());
+            fresh(i as u64, &input, dir.out(name))
+        })
+        .collect();
     let report = run(
-        vec![fresh(0, &input, dir.out("chart.png"))],
+        items,
         ReviewMode::Off,
         processor(MetadataPolicy::Strip),
         Scripted::default(),
     );
-    assert_eq!(
-        report.items[0].state,
-        ItemState::Published(PublishBasis::AutomaticUnreviewed)
-    );
-    assert_eq!(report.items[0].notes, [Note::ColorConverted]);
+    for ((name, profile, converted), item) in cases.iter().zip(&report.items) {
+        assert_eq!(
+            item.state,
+            ItemState::Published(PublishBasis::AutomaticUnreviewed),
+            "{name}: {:?}",
+            item.failure
+        );
+        let out = dir.out(name);
+        let embedded = embedded_icc(&read_source(&out).unwrap());
+        let want = profile.map_or(EmbeddedIcc::None, |s| {
+            EmbeddedIcc::Profile(s.profile_bytes().to_vec())
+        });
+        assert_eq!(embedded, want, "{name}");
+        let pixels = rgb(&out);
+        match converted {
+            Some(tolerance) => {
+                assert_eq!(item.notes, [Note::ColorConverted], "{name}");
+                let diff = max_channel_diff(&pixels, &reference);
+                assert!(diff <= *tolerance, "{name}: {diff} from Little CMS");
+            }
+            None => {
+                assert!(item.notes.is_empty(), "{name}: {:?}", item.notes);
+                let source = rgb(&d2.join(name));
+                let tolerance = if name.ends_with(".jpg") {
+                    JPEG_REENCODE
+                } else {
+                    0
+                };
+                let diff = max_channel_diff(&pixels, &source);
+                assert!(diff <= tolerance, "{name}: pixels moved by {diff}");
+            }
+        }
+    }
 }
 
 /// 1.12.1 testWorkerDecodesOnlySupportedContent: the content decides how a file is read, and a
