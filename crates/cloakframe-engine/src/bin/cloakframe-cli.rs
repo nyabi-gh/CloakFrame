@@ -4,10 +4,11 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
+use cloakframe_core::detection::ModelId;
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::batch::{job_from_scan, session_from_report};
 use cloakframe_engine::cancel::CancelToken;
-use cloakframe_engine::detect::fallback::Acceleration;
+use cloakframe_engine::detect::fallback::{Acceleration, Backends, ModelBackend};
 use cloakframe_engine::detect::models::{DetectionModels, FaceModel};
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
@@ -22,7 +23,7 @@ use cloakframe_engine::session::{SessionId, SessionStore};
 const USAGE: &str = "\
 usage:
   cloakframe-cli run --output DIR --ort-library FILE --models DIR
-                     [--faces yolo5face-n|yunet|off] [--plates on|off]
+                     [--faces yolo5face-n|yunet|off] [--plates on|off] [--gpu on|off]
                      [--review required|off] [--keep-metadata [--keep-gps]] [--recursive]
                      [--workers N] [--sessions DIR] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
@@ -35,7 +36,8 @@ usage:
 files under their published names (yolov5n_face.onnx, face_detection_yunet_2023mar.onnx,
 yolo-v9-t-512-license-plates-end2end.onnx); each must be the one this build pins. --faces picks
 the face model (default yolo5face-n) and --plates turns license plates on or off (default off).
-review takes the settings run was given; decisions on items analyzed with other settings are
+--gpu off keeps every model on the CPU; by default each runs on the GPU where this build can, and
+a model the GPU fails moves to the CPU for the rest of the run. review takes the settings run was given; decisions on items analyzed with other settings are
 refused.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
 
@@ -90,6 +92,7 @@ struct Options {
     models: Option<PathBuf>,
     faces: Option<Option<FaceModel>>,
     plates: Option<bool>,
+    gpu: Option<Acceleration>,
     keep_metadata: bool,
     keep_gps: bool,
     inputs: Vec<PathBuf>,
@@ -141,6 +144,13 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
                     "on" => true,
                     "off" => false,
                     other => return Err(format!("--plates is on or off, not {other}")),
+                })
+            }
+            "--gpu" => {
+                o.gpu = Some(match args.value(&arg)?.as_str() {
+                    "on" => Acceleration::Gpu,
+                    "off" => Acceleration::CpuOnly,
+                    other => return Err(format!("--gpu is on or off, not {other}")),
                 })
             }
             "--keep-metadata" => o.keep_metadata = true,
@@ -202,17 +212,73 @@ fn spawn(detector: Box<dyn Detector>) -> Result<DetectorHandle, CliError> {
         .map_err(|e| failed(format!("cannot start the inference thread: {e}")))
 }
 
-/// Loads ONNX Runtime from `library` and the models from their files in `dir`.
+/// The inference thread and where each model on it runs.
+struct Started {
+    handle: DetectorHandle,
+    backends: Backends,
+}
+
+fn without_models() -> Result<Started, CliError> {
+    Ok(Started {
+        handle: spawn(Box::new(NoDetections))?,
+        backends: Backends::default(),
+    })
+}
+
+fn model_name(model: ModelId) -> &'static str {
+    match model {
+        ModelId::Yolo5FaceN => "YOLO5Face-n",
+        ModelId::YuNet => "YuNet",
+        ModelId::PlateYolov9T => "the license-plate model",
+    }
+}
+
+/// Loads ONNX Runtime from `library` and the models from their files in `dir`, and says where
+/// each runs.
 fn detector(
     library: &Path,
     dir: &Path,
     models: DetectionModels,
-) -> Result<DetectorHandle, CliError> {
+    acceleration: Acceleration,
+) -> Result<Started, CliError> {
     let runtime = OrtRuntime::load(library).map_err(|e| failed(e.to_string()))?;
+    #[cfg(target_os = "macos")]
+    let runtime = match cloakframe_engine::app_dirs::cache_dir() {
+        Some(cache) => runtime.with_coreml_cache(cache.join("coreml")),
+        None => runtime,
+    };
     let loaded = models
-        .load(&runtime, dir, Acceleration::default())
+        .load(&runtime, dir, acceleration)
         .map_err(|e| failed(e.to_string()))?;
-    spawn(loaded.detector)
+    for m in loaded.backends.get() {
+        match &m.fallback {
+            Some(f) => eprintln!(
+                "{} runs on the CPU: it could not start on {} ({})",
+                model_name(m.model),
+                f.from,
+                f.reason
+            ),
+            None => eprintln!("{} runs on {}", model_name(m.model), m.backend),
+        }
+    }
+    Ok(Started {
+        handle: spawn(loaded.detector)?,
+        backends: loaded.backends,
+    })
+}
+
+/// Models the GPU failed during the run. The item it failed on is noted in the report.
+fn print_fallbacks(backends: &[ModelBackend]) {
+    for m in backends {
+        if let Some(f) = m.fallback.as_ref().filter(|f| !f.at_start) {
+            eprintln!(
+                "{} moved to the CPU for the rest of the run: {} failed ({})",
+                model_name(m.model),
+                f.from,
+                f.reason
+            );
+        }
+    }
 }
 
 fn state_label(state: ItemState) -> &'static str {
@@ -316,7 +382,7 @@ fn run(o: Options) -> Result<u8, CliError> {
     #[cfg(feature = "synthetic")]
     if o.synthetic {
         let processor = cloakframe_engine::synthetic::SyntheticProcessor;
-        return run_with(&o, &output, processor, || spawn(Box::new(NoDetections)));
+        return run_with(&o, &output, processor, without_models);
     }
     let processor = photo_processor(&o)?;
     let models = detection_models(&o)?;
@@ -328,7 +394,10 @@ fn run(o: Options) -> Result<u8, CliError> {
         .models
         .clone()
         .ok_or_else(|| usage("run needs --models DIR"))?;
-    run_with(&o, &output, processor, || detector(&library, &dir, models))
+    let acceleration = o.gpu.unwrap_or_default();
+    run_with(&o, &output, processor, || {
+        detector(&library, &dir, models, acceleration)
+    })
 }
 
 /// The detector is made only once the scan found something to analyze.
@@ -336,7 +405,7 @@ fn run_with<P: ItemProcessor>(
     o: &Options,
     output: &Path,
     processor: P,
-    detector: impl FnOnce() -> Result<DetectorHandle, CliError>,
+    detector: impl FnOnce() -> Result<Started, CliError>,
 ) -> Result<u8, CliError> {
     let store = session_store(o)?;
     let scanned = scan(
@@ -371,13 +440,14 @@ fn run_with<P: ItemProcessor>(
     );
     clean_stale(&job);
     let fingerprint = processor.fingerprint();
-    let detector = if job.items.is_empty() {
-        spawn(Box::new(NoDetections))?
+    let started = if job.items.is_empty() {
+        without_models()?
     } else {
         detector()?
     };
-    let report = execute(job, Arc::new(processor), detector)?;
+    let report = execute(job, Arc::new(processor), started.handle)?;
     print_report(&report);
+    print_fallbacks(&started.backends.get());
     let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
     for (item, reason) in &left_out {
         println!("{}\tnot kept for review\t{reason}", item.0);

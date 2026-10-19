@@ -7,6 +7,11 @@ pub fn data_dir() -> Option<PathBuf> {
     platform_data_dir()
 }
 
+/// The per-user folder for files the app can make again, such as compiled CoreML models.
+pub fn cache_dir() -> Option<PathBuf> {
+    platform_cache_dir()
+}
+
 fn absolute(value: Option<OsString>) -> Option<PathBuf> {
     value.map(PathBuf::from).filter(|p| p.is_absolute())
 }
@@ -17,11 +22,23 @@ fn platform_data_dir() -> Option<PathBuf> {
         .map(|home| home.join("Library/Application Support/CloakFrame"))
 }
 
+#[cfg(target_os = "macos")]
+fn platform_cache_dir() -> Option<PathBuf> {
+    absolute(std::env::var_os("HOME")).map(|home| home.join("Library/Caches/CloakFrame"))
+}
+
 #[cfg(all(unix, not(target_os = "macos")))]
 fn platform_data_dir() -> Option<PathBuf> {
     absolute(std::env::var_os("XDG_DATA_HOME"))
         .or_else(|| absolute(std::env::var_os("HOME")).map(|home| home.join(".local/share")))
         .map(|data| data.join("cloakframe"))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn platform_cache_dir() -> Option<PathBuf> {
+    absolute(std::env::var_os("XDG_CACHE_HOME"))
+        .or_else(|| absolute(std::env::var_os("HOME")).map(|home| home.join(".cache")))
+        .map(|cache| cache.join("cloakframe"))
 }
 
 #[cfg(windows)]
@@ -46,6 +63,11 @@ fn platform_data_dir() -> Option<PathBuf> {
     absolute(folder).map(|local| local.join("CloakFrame"))
 }
 
+#[cfg(windows)]
+fn platform_cache_dir() -> Option<PathBuf> {
+    platform_data_dir().map(|data| data.join("Cache"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,6 +77,11 @@ mod tests {
         let dir = data_dir().expect("the test user has a data folder");
         assert!(dir.is_absolute());
         assert!(dir.ends_with("CloakFrame") || dir.ends_with("cloakframe"));
+        let cache = cache_dir().expect("the test user has a cache folder");
+        assert!(cache.is_absolute());
+        let app = |c: std::path::Component<'_>| c.as_os_str().eq_ignore_ascii_case("cloakframe");
+        assert!(cache.components().any(app), "{}", cache.display());
+        assert_ne!(cache, dir);
     }
 
     #[test]

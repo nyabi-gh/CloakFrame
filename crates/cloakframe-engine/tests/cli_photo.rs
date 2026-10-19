@@ -1,7 +1,8 @@
 //! `cloakframe-cli` on photos with the real detectors: an automatic run, faces and plates in one
 //! run, a review that excludes a detection and adds an area, exporting without anonymization,
-//! decisions refused for other settings or models, the pinned models, and a rerun that leaves the
-//! earlier output alone (1.12.1 testWorkerReportsUnredactedOutputAsWarningAndPreservesIt).
+//! decisions refused for other settings or models, the pinned models, where the models run, and a
+//! rerun that leaves the earlier output alone (1.12.1
+//! testWorkerReportsUnredactedOutputAsWarningAndPreservesIt).
 //!
 //! Needs `CLOAKFRAME_ORT_LIBRARY` and `CLOAKFRAME_TEST_ASSETS` (see CONTRIBUTING.md). The CLI sets
 //! `ORT_DISABLE_TELEMETRY` itself, so the tests run it without that variable.
@@ -61,6 +62,9 @@ impl Fixture {
             .arg("--sessions")
             .arg(self.root.join("sessions"))
             .env_remove("ORT_DISABLE_TELEMETRY")
+            // The app's cache folder (compiled CoreML models) inside the test's folder.
+            .env("HOME", self.root.join("home"))
+            .env_remove("XDG_CACHE_HOME")
             .output()
             .unwrap();
         Output {
@@ -328,6 +332,52 @@ fn only_the_pinned_models_run() {
         r.stderr
     );
     assert!(!out.exists());
+}
+
+/// Each model runs on this platform's accelerator unless --gpu off; macOS keeps the compiled
+/// CoreML models in the app's cache folder.
+#[test]
+fn the_models_run_where_the_gpu_setting_says() {
+    let f = Fixture::new();
+    f.astronaut();
+    let r = f.run(&["--review", "required", "--faces", "yunet", "--plates", "on"]);
+    assert_eq!(r.code, 3, "{}{}", r.stdout, r.stderr);
+    let (faces, plates) = if cfg!(target_os = "macos") {
+        ("CoreML", "CPU")
+    } else if cfg!(windows) {
+        ("DirectML", "DirectML")
+    } else {
+        ("CPU", "CPU")
+    };
+    if !cfg!(windows) {
+        // The Windows runners have no GPU, so there DirectML may give way to the CPU at start.
+        assert!(
+            r.stderr.contains(&format!("YuNet runs on {faces}\n")),
+            "{}",
+            r.stderr
+        );
+        let plate_line = format!("the license-plate model runs on {plates}\n");
+        assert!(r.stderr.contains(&plate_line), "{}", r.stderr);
+    }
+    let cache = f.root.join("home/Library/Caches/CloakFrame/coreml");
+    assert_eq!(cache.is_dir(), cfg!(target_os = "macos"));
+
+    let r = f.run(&["--review", "required", "--gpu", "off"]);
+    assert_eq!(r.code, 3, "{}{}", r.stdout, r.stderr);
+    assert!(
+        r.stderr.contains("YOLO5Face-n runs on CPU\n"),
+        "{}",
+        r.stderr
+    );
+    // Where the models ran does not bind a review: the results are the same.
+    let id = session_id(&r.stdout);
+    let decision = r#"{"items": [{"item": 0, "revision": 0, "action": "approve"}]}"#;
+    let r = f.review(&id, decision, &[]);
+    assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
+
+    let r = f.run(&["--gpu", "maybe"]);
+    assert_eq!(r.code, 2);
+    assert!(r.stderr.contains("--gpu is on or off"), "{}", r.stderr);
 }
 
 /// A photo without faces is published like any other: no detection is not an unresolved problem

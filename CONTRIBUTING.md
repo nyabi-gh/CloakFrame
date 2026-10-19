@@ -56,7 +56,8 @@ cargo run -p cloakframe-engine --bin cloakframe-cli -- run --output out --review
 ```
 
 It detects faces with YOLO5Face-n; `--faces yunet` picks the other face model
-and `--plates on` adds license plates.
+and `--plates on` adds license plates. Models run on the GPU where the build
+can (CoreML on macOS, DirectML on Windows); `--gpu off` keeps them on the CPU.
 
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.
