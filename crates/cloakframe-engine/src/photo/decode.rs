@@ -158,6 +158,9 @@ pub fn decode(
     if has_several_frames(&source.bytes, source.format) {
         return Err(ReadError::SeveralFrames(source.format));
     }
+    if source.format == ImageFormat::Tiff {
+        check_tiff(&source.bytes)?;
+    }
     let (width, height) = dimensions(source)?;
     let pixels = u64::from(width) * u64::from(height);
     if pixels > MAX_PIXELS {
@@ -191,6 +194,25 @@ pub fn decode(
         orientation,
         permit,
     })
+}
+
+/// Refuses the TIFF layouts image would decode to wrong pixels or with an unhelpful error.
+fn check_tiff(bytes: &[u8]) -> Result<(), ReadError> {
+    let Ok(mut tiff) = tiff::decoder::Decoder::new(Cursor::new(bytes)) else {
+        return Ok(());
+    };
+    let mut tag = |t| {
+        tiff.find_tag(t)
+            .ok()
+            .flatten()
+            .and_then(|v| v.into_u16().ok())
+    };
+    // image refuses YCbCr JPEG strips and decodes those labeled RGB through zune-jpeg, which
+    // gets non-interleaved and subsampled data wrong (docs/M2_ENCODE_SPIKE.md).
+    if matches!(tag(tiff::tags::Tag::Compression), Some(6 | 7)) {
+        return Err(ReadError::Unsupported("a JPEG-compressed TIFF"));
+    }
+    Ok(())
 }
 
 /// libjpeg-turbo rather than image's decoder, which silently decodes non-interleaved 4:2:0
@@ -502,6 +524,83 @@ pub(crate) mod tests {
             .write_image(&[0; 16 * 16 * 3], 16, 16, image::ExtendedColorType::Rgb8)
             .unwrap();
         png.into_inner()
+    }
+
+    /// A little-endian TIFF of one strip holding `strip` as is, with the given tags (type SHORT
+    /// unless noted) besides size, strip location and samples.
+    pub(crate) fn tiff_with_strip(
+        (width, height): (u32, u32),
+        samples: u16,
+        compression: u16,
+        photometric: u16,
+        strip: &[u8],
+    ) -> Vec<u8> {
+        let mut tags: Vec<(u16, u16, u32, u32)> = vec![
+            (256, 4, 1, width),
+            (257, 4, 1, height),
+            (258, 3, 1, 8),
+            (259, 3, 1, u32::from(compression)),
+            (262, 3, 1, u32::from(photometric)),
+            (273, 4, 1, 0),
+            (277, 3, 1, u32::from(samples)),
+            (278, 4, 1, height),
+            (279, 4, 1, strip.len() as u32),
+        ];
+        let ifd_len = 2 + tags.len() * 12 + 4;
+        let bits_at = 8 + ifd_len;
+        let strip_at = bits_at + 2 * usize::from(samples);
+        for t in &mut tags {
+            match t.0 {
+                258 if samples > 1 => *t = (258, 3, u32::from(samples), bits_at as u32),
+                273 => t.3 = strip_at as u32,
+                _ => {}
+            }
+        }
+        let mut out = b"II*\0\x08\0\0\0".to_vec();
+        out.extend((tags.len() as u16).to_le_bytes());
+        for (tag, kind, count, value) in tags {
+            out.extend(tag.to_le_bytes());
+            out.extend(kind.to_le_bytes());
+            out.extend(count.to_le_bytes());
+            if kind == 3 && count == 1 {
+                out.extend((value as u16).to_le_bytes());
+                out.extend([0, 0]);
+            } else {
+                out.extend(value.to_le_bytes());
+            }
+        }
+        out.extend([0; 4]);
+        for _ in 0..samples {
+            out.extend(8u16.to_le_bytes());
+        }
+        out.extend(strip);
+        out
+    }
+
+    #[test]
+    fn refuses_a_jpeg_compressed_tiff() {
+        let dir = TestDir::new();
+        let image = solid(96, 64);
+        let raw = tiff_with_strip((96, 64), 3, 1, 2, image.as_raw());
+        let s = source(&dir, "raw.tif", &raw).unwrap();
+        assert_eq!(
+            decode(&s, &budget(), &CancelToken::new())
+                .unwrap()
+                .image
+                .to_rgb8(),
+            image
+        );
+        // 6 is the old-style JPEG compression, 7 the current one; YCbCr is how such files are
+        // written, and RGB is what a mislabeled one claims.
+        for (compression, photometric) in [(7, 6), (7, 2), (6, 6)] {
+            let tiff = tiff_with_strip((96, 64), 3, compression, photometric, &jpeg(&image));
+            let s = source(&dir, "jpeg.tif", &tiff).unwrap();
+            let error = decode(&s, &budget(), &CancelToken::new()).unwrap_err();
+            assert!(
+                matches!(error, ReadError::Unsupported("a JPEG-compressed TIFF")),
+                "{compression} {photometric}: {error}"
+            );
+        }
     }
 
     #[test]
