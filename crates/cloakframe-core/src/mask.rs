@@ -23,7 +23,7 @@ impl fmt::Display for MaskError {
         f.write_str(match self {
             Self::BufferSize => "pixel buffer does not match the image size",
             Self::PaddingOutOfRange => "padding is outside 0..=1",
-            Self::StrengthOutOfRange => "mosaic strength is outside 4..=16",
+            Self::StrengthOutOfRange => "mosaic strength is outside 4..=12",
             Self::MissingOverlay => "the custom image method needs an image",
         })
     }
@@ -52,7 +52,8 @@ pub struct MosaicStrength(u8);
 
 impl MosaicStrength {
     pub const MIN: u8 = 4;
-    pub const MAX: u8 = 16;
+    /// 1.12.1 capped the cells at 12; a finer mosaic than that hides less (review item 13).
+    pub const MAX: u8 = 12;
 
     pub fn new(cells: u8) -> Result<Self, MaskError> {
         if !(Self::MIN..=Self::MAX).contains(&cells) {
@@ -1148,7 +1149,9 @@ mod tests {
             Err(MaskError::MissingOverlay)
         );
         assert_eq!(MosaicStrength::new(3), Err(MaskError::StrengthOutOfRange));
-        assert_eq!(MosaicStrength::new(17), Err(MaskError::StrengthOutOfRange));
+        // 12 cells across was the weakest mosaic 1.12.1 could make; more cells would hide less.
+        assert!(MosaicStrength::new(12).is_ok());
+        assert_eq!(MosaicStrength::new(13), Err(MaskError::StrengthOutOfRange));
         assert_eq!(Padding::new(f32::NAN), Err(MaskError::PaddingOutOfRange));
         assert_eq!(Overlay::new(2, 1, vec![0; 4]), Err(MaskError::BufferSize));
     }
