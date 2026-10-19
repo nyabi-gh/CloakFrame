@@ -78,6 +78,25 @@ jobs:
           echo "CLOAKFRAME_ORT_LIBRARY=$lib" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_TEST_ASSETS=$assets" >> "$GITHUB_ENV"
 
+      # tests/windows_fat32.rs: camera cards are FAT32, which has no 128-bit file IDs.
+      - name: Make a FAT32 volume
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $vhd = Join-Path $env:RUNNER_TEMP 'fat32.vhd'
+          $script = Join-Path $env:RUNNER_TEMP 'fat32.diskpart'
+          @(
+            "create vdisk file=`"$vhd`" maximum=256 type=expandable"
+            "select vdisk file=`"$vhd`""
+            'attach vdisk'
+            'create partition primary'
+            'format fs=fat32 quick label=CFFAT32'
+            'assign letter=T'
+          ) | Set-Content -Encoding ascii $script
+          diskpart /s $script
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "CLOAKFRAME_FAT32_DIR=T:\" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
       - name: Test
         # `synthetic` adds the end-to-end CLI tests; release builds leave it off.
         env:

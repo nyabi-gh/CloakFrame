@@ -49,7 +49,8 @@ pub fn identity(path: &Path) -> io::Result<FileIdentity> {
     use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{
-        FILE_FLAG_BACKUP_SEMANTICS, FILE_ID_INFO, FileIdInfo, GetFileInformationByHandleEx,
+        BY_HANDLE_FILE_INFORMATION, FILE_FLAG_BACKUP_SEMANTICS, FILE_ID_INFO, FileIdInfo,
+        GetFileInformationByHandle, GetFileInformationByHandleEx,
     };
 
     // Directories can only be opened with backup semantics; no access right is needed to read
@@ -74,12 +75,25 @@ pub fn identity(path: &Path) -> io::Result<FileIdentity> {
             size_of::<FILE_ID_INFO>() as u32,
         )
     };
+    if ok != 0 {
+        return Ok(FileIdentity {
+            device: info.VolumeSerialNumber,
+            file: u128::from_le_bytes(info.FileId.Identifier),
+        });
+    }
+    // FAT32, exFAT (camera cards) and some SMB servers do not answer FileIdInfo; the older call
+    // gives a 64-bit file index there. A volume answers one way or the other every time, so
+    // identities on it stay comparable.
+    // SAFETY: an all-zero BY_HANDLE_FILE_INFORMATION is valid (integers and FILETIMEs), and the
+    // call fills it in while the handle is open.
+    let mut basic: BY_HANDLE_FILE_INFORMATION = unsafe { std::mem::zeroed() };
+    let ok = unsafe { GetFileInformationByHandle(file.as_raw_handle(), &raw mut basic) };
     if ok == 0 {
         return Err(io::Error::last_os_error());
     }
     Ok(FileIdentity {
-        device: info.VolumeSerialNumber,
-        file: u128::from_le_bytes(info.FileId.Identifier),
+        device: u64::from(basic.dwVolumeSerialNumber),
+        file: (u128::from(basic.nFileIndexHigh) << 32) | u128::from(basic.nFileIndexLow),
     })
 }
 

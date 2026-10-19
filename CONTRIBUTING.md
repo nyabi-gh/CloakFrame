@@ -44,6 +44,10 @@ export ORT_DISABLE_TELEMETRY=1
 
 Without them those tests fail rather than skip.
 
+On Windows the tests also need a folder on a FAT32 volume, as on a camera SD
+card, in `CLOAKFRAME_FAT32_DIR`. CI makes one from a VHD with `diskpart` (see
+`.github/workflows/ci.yml`); a FAT32 USB stick or card works as well.
+
 With the same files the command-line tool processes photos:
 
 ```bash

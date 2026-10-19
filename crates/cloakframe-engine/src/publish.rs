@@ -203,11 +203,9 @@ fn rename_no_replace(from: &Path, to: &Path) -> io::Result<Option<io::Error>> {
 #[cfg(windows)]
 #[allow(unsafe_code)]
 fn rename_no_replace(from: &Path, to: &Path) -> io::Result<Option<io::Error>> {
-    use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::{MOVEFILE_WRITE_THROUGH, MoveFileExW};
 
-    let wide = |p: &Path| -> Vec<u16> { p.as_os_str().encode_wide().chain([0]).collect() };
-    let (from_w, to_w) = (wide(from), wide(to));
+    let (from_w, to_w) = (verbatim(from)?, verbatim(to)?);
     // SAFETY: both buffers are NUL-terminated UTF-16 strings that outlive the call. Without
     // MOVEFILE_REPLACE_EXISTING the move fails if the destination exists.
     let ok = unsafe { MoveFileExW(from_w.as_ptr(), to_w.as_ptr(), MOVEFILE_WRITE_THROUGH) };
@@ -215,6 +213,33 @@ fn rename_no_replace(from: &Path, to: &Path) -> io::Result<Option<io::Error>> {
         return Err(io::Error::last_os_error());
     }
     Ok(None)
+}
+
+/// The NUL-terminated `\\?\` form of `path`. std's file functions switch to it for long paths;
+/// a direct Win32 call has to as well, or paths past MAX_PATH fail (the CLI has no long path
+/// manifest). Such paths skip Win32 normalization, so the path is made absolute and normalized
+/// first.
+#[cfg(windows)]
+fn verbatim(path: &Path) -> io::Result<Vec<u16>> {
+    use std::os::windows::ffi::OsStrExt;
+
+    let absolute: Vec<u16> = std::path::absolute(path)?
+        .as_os_str()
+        .encode_wide()
+        .collect();
+    let starts = |prefix: &str| absolute.starts_with(&prefix.encode_utf16().collect::<Vec<_>>());
+    let (prefix, rest) = if starts(r"\\?\") || starts(r"\\.\") {
+        ("", &absolute[..])
+    } else if starts(r"\\") {
+        (r"\\?\UNC\", &absolute[2..])
+    } else {
+        (r"\\?\", &absolute[..])
+    };
+    Ok(prefix
+        .encode_utf16()
+        .chain(rest.iter().copied())
+        .chain([0])
+        .collect())
 }
 
 /// Leaves a race with another writer of the same name between the check and the rename; that
@@ -388,5 +413,22 @@ mod tests {
             [AfterPublish::FolderNotSynced(_)]
         ));
         assert_eq!(names(&dir.path().join("out")), ["photo.jpg"]);
+    }
+
+    /// Windows: std reaches paths past MAX_PATH (260) by turning them into `\\?\` paths, and
+    /// the rename has to as well, or only the temp file is written (review item 16).
+    #[test]
+    fn a_destination_past_max_path_publishes() {
+        let dir = TestDir::new();
+        let deep = (0..6).fold(dir.path().to_path_buf(), |p, i| {
+            p.join(format!("{i}-a-folder-name-long-enough-to-add-up-quickly"))
+        });
+        let destination = deep.join("photo.jpg");
+        assert!(destination.as_os_str().len() > 300);
+        let mut out = TempOutput::create(&destination).unwrap();
+        out.file().write_all(b"masked").unwrap();
+        assert_eq!(out.publish(&permit()).unwrap().path, destination);
+        assert_eq!(names(&deep), ["photo.jpg"]);
+        assert_eq!(fs::read(&destination).unwrap(), b"masked");
     }
 }
