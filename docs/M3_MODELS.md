@@ -21,6 +21,7 @@
 - **D7:** CLI는 스캔에서 처리할 파일이 나온 뒤에만 런타임과 모델을 불러오고(M2부터), 그 실행이 감지할 모델만 읽는다. 세 모델 모두 입력 크기가 고정이라 (모델, 입력 크기, 실행 위치)의 세션은 모델과 실행 위치마다 하나다. 실행이 만든 세션 수를 `fallback::Backends::sessions_made`로 세어 시험한다. GPU 실패로 CPU로 옮기면 그 모델의 CPU 세션이 하나 더 생긴다(실행 위치가 다름). 영상은 M5에서 같은 실행의 감지 스레드를 쓴다.
 - **CoreML 캐시 정리(2026-10-19 결정: 바로 지움 + 1.12.1 것도):** 실행이 CoreML 캐시를 설정할 때 `<캐시 폴더>/coreml` 아래에서 이 빌드의 ORT 폴더가 아닌 것과, 그 폴더 안의 고정 모델 해시가 아닌 것을 지운다(`OrtRuntime::remove_unused_coreml_caches`). 1.12.1의 `~/Library/Caches/CloakFrame/CloakFrame/coreml-models`(Qt `CacheLocation` + `coreml-models`)도 지운다(`legacy::remove_coreml_cache`). 두 판을 동시에 돌리면 다른 판의 컴파일 결과가 지워져 그 판이 다시 컴파일하거나, 컴파일 중이었다면 CPU로 시작한다. 지우지 못하면 CLI가 stderr에 알리고 실행은 계속한다.
 - **미러(4.6):** 자체 GitHub 릴리스를 만드는 일이라 M7로 미뤘다. 지금은 upstream URL을 쓴다.
+- **CI(PR #36):** 3개 OS 모두 통과했다. job 로그로 보면 Windows(`windows-2025`)와 Linux(`ubuntu-24.04`)에서도 실제 GitHub 다운로드(각 OS 인증서 저장소), D5, D7 시험이 돌아 통과했다. Windows는 Users에 수정 권한을 준 폴더의 D5 시험을 돌렸고, 앱 폴더 CLI 시험은 설계대로 빠졌다. Linux는 1.12.1의 `CloakFrame/models`에서 복사하는 시험까지 돌았다.
 
 ## 다운로드 경로
 
@@ -65,7 +66,7 @@
 
 ## 확인하지 못한 것
 
-- Windows·Linux의 다운로드(OS 인증서 저장소 확인)는 CI의 `cli_models.rs`가 처음 돌린다. AppImage(M7)에서 Linux 인증서 위치를 찾는지는 패키지 시험에서 확인한다.
+- AppImage(M7)에서 Linux 인증서 위치를 찾는지는 패키지 시험에서 확인한다(CI는 Ubuntu runner의 시스템 인증서로만 확인).
 - 데이터가 오지 않고 연결만 남은 다운로드는 취소가 다음 데이터나 본문 한도(15분)까지 늦는다. ureq에는 읽기마다 다시 시작하는 시간 한도가 없다(1.12.1은 30초). CLI는 Ctrl+C로 끝나므로 지금은 문제가 없고, 앱(M6)은 취소 응답 목표(9.3)를 위해 다운로드 스레드를 기다리지 않고 취소를 끝내는 방식으로 붙인다.
 - YOLO5Face-n(11 MB)은 `--accept-terms` 경로를 실제로 받아 보지 않았다. 다운로드 코드는 다른 두 모델과 같다.
 - 1.12.1이 남긴 다른 파일: 데이터 폴더의 `stage-roots.txt`(출력 루트 기억 파일, 계획 1.2에서 제거)와 캐시 폴더의 `staging`(D12의 원본 사본 stage, 1.12.1이 정리함). 이 단계는 모델과 CoreML 캐시만 다뤘다. 나머지를 M7 이전에서 지울지는 그때 정한다.
