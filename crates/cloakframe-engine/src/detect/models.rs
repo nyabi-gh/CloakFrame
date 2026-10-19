@@ -245,7 +245,12 @@ mod tests {
                 .split("[[artifact]]")
                 .find(|e| e.contains(&format!("sha256 = \"{sha256}\"")))
                 .unwrap_or_else(|| panic!("{id:?} is not in the manifest"));
-            assert!(entry.contains(&format!("/{name}\"\n")), "{id:?}: {entry}");
+            // `lines` also strips the CR of a Windows checkout.
+            let url = entry
+                .lines()
+                .find_map(|l| l.strip_prefix("url = "))
+                .unwrap_or_else(|| panic!("{id:?} has no url"));
+            assert!(url.ends_with(&format!("/{name}\"")), "{id:?}: {url}");
         }
     }
 
