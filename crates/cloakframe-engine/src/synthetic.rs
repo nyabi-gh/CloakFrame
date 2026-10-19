@@ -10,7 +10,7 @@ use cloakframe_core::item::PublishPermit;
 use cloakframe_core::review::Digest;
 use sha2::{Digest as _, Sha256};
 
-use crate::identity::SourceStamp;
+use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
 use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError};
 
@@ -55,11 +55,15 @@ impl ItemProcessor for SyntheticProcessor {
             }));
         }
         let source = Some(SourceStamp::of(ctx.input).map_err(io_failed)?);
+        let input = Some(content_digest(
+            &std::fs::read(ctx.input).map_err(io_failed)?,
+        ));
         Ok((
             Analysis {
                 detections: Vec::new(),
                 evidence,
                 source,
+                input,
             },
             (),
         ))
@@ -72,10 +76,12 @@ impl ItemProcessor for SyntheticProcessor {
         _: Option<()>,
     ) -> Result<Self::Rendered, StepError> {
         let stamp = SourceStamp::of(ctx.input).map_err(io_failed)?;
-        if request.analysis.source != Some(stamp) {
+        let mut bytes = std::fs::read(ctx.input).map_err(io_failed)?;
+        if request.analysis.source != Some(stamp)
+            || request.analysis.input != Some(content_digest(&bytes))
+        {
             return Err(failed("the source changed since it was analyzed"));
         }
-        let mut bytes = std::fs::read(ctx.input).map_err(io_failed)?;
         bytes.reverse();
         let mut out = TempOutput::create(ctx.destination).map_err(io_failed)?;
         out.file().write_all(&bytes).map_err(io_failed)?;

@@ -1,7 +1,14 @@
 use std::io;
 use std::path::Path;
 
+use cloakframe_core::review::Digest;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest as _, Sha256};
+
+/// SHA-256 of a source's bytes as they were read, to which a review is bound (plan 4.2).
+pub fn content_digest(bytes: &[u8]) -> Digest {
+    Digest(Sha256::digest(bytes).into())
+}
 
 /// Which file a path names, independent of how the path is spelled (case, `..`, links to the
 /// same file). Two paths with the same identity are the same file.

@@ -21,7 +21,7 @@ use super::format::{ImageFormat, sniff};
 use super::mask;
 use super::metadata::MetadataPolicy;
 use crate::detect::yolo5face;
-use crate::identity::SourceStamp;
+use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
 use crate::run::{
     Analysis, Fingerprint, ItemContext, ItemProcessor, Note, RenderRequest, StepError,
@@ -235,6 +235,7 @@ impl ItemProcessor for PhotoProcessor {
             detections: found.detections,
             evidence,
             source: Some(prepared.source.stamp),
+            input: Some(content_digest(&prepared.source.bytes)),
         };
         Ok((analysis, prepared))
     }
@@ -249,7 +250,9 @@ impl ItemProcessor for PhotoProcessor {
             Some(p) => p,
             None => {
                 let p = self.prepare(ctx)?;
-                if request.analysis.source != Some(p.source.stamp) {
+                if request.analysis.source != Some(p.source.stamp)
+                    || request.analysis.input != Some(content_digest(&p.source.bytes))
+                {
                     return Err(failed(PhotoError::ChangedSinceAnalysis));
                 }
                 p

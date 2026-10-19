@@ -1,6 +1,4 @@
 use std::fmt;
-use std::fs::File;
-use std::io::{self, Read};
 use std::path::Path;
 
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
@@ -12,20 +10,6 @@ use crate::output_plan::{PlannedOutput, plan_outputs};
 use crate::run::{Fingerprint, Job, JobItem, RunReport, Start};
 use crate::scan::ScannedFile;
 use crate::session::{FORMAT_VERSION, Session, SessionItem};
-
-pub fn sha256_file(path: &Path) -> io::Result<Digest> {
-    let mut file = File::open(path)?;
-    let mut hasher = Sha256::new();
-    let mut buffer = vec![0; 1 << 16];
-    loop {
-        let n = file.read(&mut buffer)?;
-        if n == 0 {
-            break;
-        }
-        hasher.update(&buffer[..n]);
-    }
-    Ok(Digest(hasher.finalize().into()))
-}
 
 /// One job item per scanned file, in scan order. An output whose name is taken goes to review
 /// even in automatic mode.
@@ -66,8 +50,6 @@ pub enum LeftOut {
     NotAnalyzed,
     /// The source changed or vanished since it was read for analysis.
     SourceChanged,
-    /// The source could not be read again.
-    Unreadable(String),
 }
 
 impl fmt::Display for LeftOut {
@@ -77,7 +59,6 @@ impl fmt::Display for LeftOut {
             Self::SourceChanged => {
                 f.write_str("the source changed or is gone since analysis; run it again")
             }
-            Self::Unreadable(e) => write!(f, "cannot read the source again ({e}); run it again"),
         }
     }
 }
@@ -96,7 +77,7 @@ pub fn session_from_report(
         if outcome.state != ItemState::NeedsReview {
             continue;
         }
-        let Some(source) = outcome.analysis.source else {
+        let (Some(source), Some(input)) = (outcome.analysis.source, outcome.analysis.input) else {
             left_out.push((outcome.item, LeftOut::NotAnalyzed));
             continue;
         };
@@ -104,13 +85,6 @@ pub fn session_from_report(
             left_out.push((outcome.item, LeftOut::SourceChanged));
             continue;
         }
-        let input = match sha256_file(&outcome.input) {
-            Ok(digest) => digest,
-            Err(e) => {
-                left_out.push((outcome.item, LeftOut::Unreadable(e.to_string())));
-                continue;
-            }
-        };
         let key = ReviewKey {
             input,
             models: fingerprint.models,
@@ -159,6 +133,7 @@ mod tests {
                 state: ItemState::NeedsReview,
                 analysis: Analysis {
                     source: Some(SourceStamp::of(&input).unwrap()),
+                    input: Some(Digest([1; 32])),
                     ..Analysis::default()
                 },
                 failure: None,
@@ -198,17 +173,6 @@ mod tests {
                 (ItemId(1), LeftOut::SourceChanged),
                 (ItemId(2), LeftOut::SourceChanged)
             ]
-        );
-    }
-
-    #[test]
-    fn hashes_files_with_sha256() {
-        let dir = TestDir::new();
-        let path = dir.path().join("abc.txt");
-        std::fs::write(&path, b"abc").unwrap();
-        assert_eq!(
-            sha256_file(&path).unwrap().to_string(),
-            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
         );
     }
 }

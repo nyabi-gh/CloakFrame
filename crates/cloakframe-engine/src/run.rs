@@ -141,6 +141,9 @@ pub struct Analysis {
     pub evidence: Vec<CoverageEvidence>,
     /// The source as it was when it was read for analysis.
     pub source: Option<SourceStamp>,
+    /// [`content_digest`](crate::identity::content_digest) of the bytes analyzed. A review is
+    /// rendered only from the same bytes.
+    pub input: Option<Digest>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -158,7 +161,7 @@ pub enum Start {
     /// Resumes a stored analysis with the reviewer's decision; evidence carries the resolutions.
     Reviewed {
         decision: Decision,
-        analysis: Analysis,
+        analysis: Box<Analysis>,
         edits: PhotoEdits,
     },
 }
@@ -352,7 +355,7 @@ impl<P: ItemProcessor> Runner<P> {
                         state: item.state(),
                         analysis: match &job_item.start {
                             Start::Fresh { .. } => Analysis::default(),
-                            Start::Reviewed { analysis, .. } => analysis.clone(),
+                            Start::Reviewed { analysis, .. } => Analysis::clone(analysis),
                         },
                         failure: None,
                         notes: Vec::new(),
@@ -378,7 +381,7 @@ impl<P: ItemProcessor> Runner<P> {
         let mut item = initial(job_item);
         let mut analysis = match &job_item.start {
             Start::Fresh { .. } => Analysis::default(),
-            Start::Reviewed { analysis, .. } => analysis.clone(),
+            Start::Reviewed { analysis, .. } => Analysis::clone(analysis),
         };
         // Decoders and parsers run on untrusted input; a panic in one of them fails its item
         // instead of the whole run, which would lose the report and the items held for review.
@@ -866,10 +869,10 @@ mod tests {
         job.items[3].id = ItemId(3);
         let reviewed = |decision, evidence| Start::Reviewed {
             decision,
-            analysis: Analysis {
+            analysis: Box::new(Analysis {
                 evidence,
                 ..Analysis::default()
-            },
+            }),
             edits: PhotoEdits::default(),
         };
         job.items[0].start = reviewed(Decision::Approve, vec![resolved]);

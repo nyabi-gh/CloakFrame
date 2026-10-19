@@ -147,7 +147,7 @@ fn reviewed(
         destination,
         start: Start::Reviewed {
             decision,
-            analysis,
+            analysis: Box::new(analysis),
             edits,
         },
     }
@@ -463,6 +463,55 @@ fn a_review_of_an_older_source_is_not_rendered() {
         Scripted::default(),
     );
     std::fs::write(&input, png(17, 16)).unwrap();
+    let report = run(
+        vec![reviewed(
+            &input,
+            dir.out("a.png"),
+            Decision::Approve,
+            report.items[0].analysis.clone(),
+            PhotoEdits::default(),
+        )],
+        ReviewMode::Required,
+        processor(MetadataPolicy::Strip),
+        Scripted::default(),
+    );
+    assert_eq!(report.items[0].state, ItemState::Failed);
+    assert_eq!(
+        report.items[0].failure.as_deref(),
+        Some("the source changed since it was analyzed; run it again")
+    );
+    assert!(dir.outputs().is_empty());
+}
+
+/// The review is bound to the bytes analyzed (plan 4.2), not only to the file's identity, size
+/// and modification time: content replaced in place with the time put back is refused too.
+#[test]
+fn a_review_of_other_bytes_with_the_same_stamp_is_not_rendered() {
+    let dir = Dir::new();
+    let input = dir.input("a.png", &png(16, 16));
+    let report = run(
+        vec![fresh(0, &input, dir.out("a.png"))],
+        ReviewMode::Required,
+        processor(MetadataPolicy::Strip),
+        Scripted::default(),
+    );
+    let modified = std::fs::metadata(&input).unwrap().modified().unwrap();
+    let mut other = Cursor::new(Vec::new());
+    RgbImage::from_pixel(16, 16, Rgb([10, 150, 100]))
+        .write_to(&mut other, image::ImageFormat::Png)
+        .unwrap();
+    let other = other.into_inner();
+    assert_eq!(
+        other.len(),
+        std::fs::metadata(&input).unwrap().len() as usize
+    );
+    std::fs::write(&input, &other).unwrap();
+    std::fs::File::options()
+        .write(true)
+        .open(&input)
+        .unwrap()
+        .set_modified(modified)
+        .unwrap();
     let report = run(
         vec![reviewed(
             &input,

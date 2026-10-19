@@ -218,11 +218,12 @@ pub fn apply(
                                 Decision::ExportWithoutAnonymization
                             }
                         },
-                        analysis: Analysis {
+                        analysis: Box::new(Analysis {
                             detections: stored.detections.clone(),
                             evidence: stored.evidence.clone(),
                             source: Some(stored.source),
-                        },
+                            input: Some(stored.revision.key().input),
+                        }),
                         edits: stored.edits.clone(),
                     },
                 });
