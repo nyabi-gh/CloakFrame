@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -300,14 +300,15 @@ crates/
     | --- | --- |
     | 사진 fixture: 감지·resize·디코드 | `detect_fixtures.rs`(YOLO5Face-n 18건), `detect::resize` 단위(`fixtures/resize`, x86은 `ort.yml`), `photo::decode` 단위(`fixtures/decode`), `decode_fixtures.rs` 5건 |
     | 사진 fixture: 1.12.1 마스크·메타데이터·worker | `mask_fixtures.rs` 9건, `encode_fixtures.rs`의 allowlist·썸네일·EXIF 판독 실패, `photo_pipeline.rs`의 worker 시험 6개, `cli_photo.rs` `a_rerun_keeps_the_earlier_output`, core `geometry`·`detection`의 IoU·NMS·잘못된 감지 |
-    | D2 | `photo::color` 단위 9건(판정·유지·변환·감지 사본·버린 profile·BMP V5 profile·BMP 출력 변환), `photo::encode` `every_container_carries_the_allowlist_and_the_profile`, `photo_pipeline.rs` `published_photos_follow_the_d2_color_policy`(9건의 게시 파일 profile·pixel·note), `bmp_outputs_are_srgb_and_bmp_profiles_are_read` |
+    | D2 | `photo::color` 단위 9건(판정·유지·변환·감지 사본·버린 profile·BMP V5 profile·BMP 출력 변환), `photo::encode` `every_container_carries_the_allowlist_and_the_profile`, `photo_pipeline.rs` `published_photos_follow_the_d2_color_policy`(9건의 게시 파일 profile·pixel·note), `bmp_outputs_are_srgb_and_bmp_profiles_are_read`. 버린 profile의 결과 표시와 Adobe RGB 감지 사본은 시험이 없음(재검토 17번), 회색 profile은 버림(재검토 7번) |
     | D3 | `mask_fixtures.rs` `mosaic_strength_sets_the_cell_count`·`mosaic_touches_only_the_region`, core `mask` 단위(셀 평균, 작은·가장자리 영역) |
-    | D6 | `encode_fixtures.rs` `d6_*` 2건 |
+    | D6 | `encode_fixtures.rs` `d6_*` 2건. 손실 WebP는 손실 여부만 보고 q90은 확인하지 않음(재검토 17번), 비표준 서브샘플링 원본은 인코딩 실패(재검토 8번) |
     | D9 | `encode_fixtures.rs` `d9_exports_carry_only_what_the_policy_allows`, `photo_pipeline.rs` `exporting_without_anonymization_*`, `cli_photo.rs` `exporting_without_anonymization_keeps_every_pixel` |
     | P-2(타입) | core `detection` 단위(종류별 NMS·임계값, 모델이 정하는 종류, 번호판 landmark 거부), core `serde_forms.rs`, `cli_photo.rs` 결과 JSON의 `kind` |
-    | P-1(사진) | `p1_photo.rs` 2건(실제 모델, 상한 100), `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`, `cli.rs`(M1 골격) |
+    | P-1(사진) | `p1_photo.rs` 2건(실제 모델, 상한 100), `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`, `cli.rs`(M1 골격). 상한을 넘어 버린 감지는 경고 포함 내보내기에서도 가려지지 않음(재검토 1번) |
   - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 6단계 판단 확정(2026-10-19): 감지 0건 사진은 미해결 문제가 아니라 정상 게시(1.12.1은 경고), 출력 형식은 이름의 확장자(1.12.1 규범 fixture), CLI 검토 결정은 run과 같은 모델·설정에만 적용. 넓은 색역 사진의 BMP 출력은 실패 대신 sRGB 변환·표시(위)
   - **완료(2026-10-19):** 소요 2일(2026-10-18–19, 예산 4주, 125% 점검 기준 5주 안), PR #25–#31과 7단계 `m2-verify`. 위 표의 시험이 macOS arm64(고정 ORT 1.30.0)에서 모두 통과, 3개 OS CI는 `m2-verify` PR에서 확인. 이월: YuNet·번호판 어댑터와 실제 모델의 종류별 임계값(M3)
+  - **재검토(2026-10-19):** M0–M2 전체를 다시 봤다([기록](M0_M2_REVIEW.md)). 결함 10건, 위험 6건, 의심 5건과 문서 불일치를 찾았고, 그중 사실만 바로잡는 문서는 같은 날 고쳤다. M2 범위에 걸리는 항목(1·2·4·6·7·8·12·17번)이 남아 있고 3개 OS CI도 아직 돌지 않았으므로, 위 완료 표시는 이 항목들을 처리하고 CI를 통과한 뒤 확정한다. M1 범위의 항목(5·9·10·15·16·18·19번)도 같은 기록에 있다. 고칠 순서는 메인테이너가 정한다
 
 ### M3 — 모델·GPU·다운로드·타일
 
