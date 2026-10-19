@@ -6,19 +6,15 @@
 //! Needs `CLOAKFRAME_ORT_LIBRARY` and `CLOAKFRAME_TEST_ASSETS` (see CONTRIBUTING.md). The CLI sets
 //! `ORT_DISABLE_TELEMETRY` itself, so the tests run it without that variable.
 
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use std::process::Command;
-use std::sync::atomic::{AtomicU32, Ordering};
+mod common;
 
+use std::io::Cursor;
+use std::path::PathBuf;
+use std::process::Command;
+
+use common::{TestDir, fixtures, required_env, rgb};
 use image::{Rgb, RgbImage};
 use serde::Deserialize;
-
-fn required_env(name: &str) -> PathBuf {
-    std::env::var_os(name)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| panic!("{name} is not set (see CONTRIBUTING.md)"))
-}
 
 fn assets() -> PathBuf {
     required_env("CLOAKFRAME_TEST_ASSETS")
@@ -26,6 +22,7 @@ fn assets() -> PathBuf {
 
 struct Fixture {
     root: PathBuf,
+    _dir: TestDir,
 }
 
 struct Output {
@@ -36,15 +33,9 @@ struct Output {
 
 impl Fixture {
     fn new() -> Self {
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let root = std::env::temp_dir().join(format!(
-            "cloakframe-cli-photo-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("in")).unwrap();
-        Self { root }
+        let dir = TestDir::new();
+        let root = dir.mkdir("in").parent().unwrap().to_path_buf();
+        Self { root, _dir: dir }
     }
 
     fn input(&self, name: &str, bytes: &[u8]) -> PathBuf {
@@ -118,22 +109,12 @@ impl Fixture {
     }
 }
 
-impl Drop for Fixture {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.root);
-    }
-}
-
 fn session_id(stdout: &str) -> String {
     stdout
         .lines()
         .find_map(|l| l.strip_prefix("session\t"))
         .expect("a session was saved")
         .to_owned()
-}
-
-fn rgb(path: &Path) -> RgbImage {
-    image::open(path).unwrap().to_rgb8()
 }
 
 #[derive(Deserialize)]
@@ -149,8 +130,7 @@ struct ExpectedDetection {
 
 /// The face 1.12.1 found in astronaut.png at the default score threshold.
 fn astronaut_face() -> [f32; 4] {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/detect/yolo5face/astronaut@0.50.json");
+    let path = fixtures().join("detect/yolo5face/astronaut@0.50.json");
     let want: Expected = serde_json::from_slice(&std::fs::read(path).unwrap()).unwrap();
     assert_eq!(want.detections.len(), 1);
     want.detections[0].bbox

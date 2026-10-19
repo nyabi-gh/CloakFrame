@@ -146,7 +146,7 @@ fn flip_first_letter(name: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testdir::TestDir;
+    use crate::test_support::TestDir;
 
     fn folds_here(dir: &Path) -> bool {
         std::fs::write(dir.join("probe.txt"), b"x").unwrap();

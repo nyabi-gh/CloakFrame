@@ -2,21 +2,23 @@
 //! content, several frames found without decoding them, EXIF orientation, and the extensions the
 //! scanner takes as images.
 
+mod common;
+
 use std::io::{self, Cursor};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::decode::{Decoded, ReadError, decode, exif_orientation, read_source};
 use cloakframe_engine::photo::format::{ImageFormat, has_several_frames};
 use cloakframe_engine::scan::{MediaKind, ScanRequest, scan};
+use common::{TestDir, fixtures};
 use image::codecs::png::PngEncoder;
 use image::{ExtendedColorType, GenericImageView, ImageEncoder};
 use serde_json::Value;
 
 fn legacy() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/legacy/tests")
+    fixtures().join("legacy/tests")
 }
 
 fn calls(test: &str) -> Vec<Value> {
@@ -32,34 +34,6 @@ fn copy_of(call: &Value) -> PathBuf {
 fn decoded(path: &Path) -> Result<Decoded, ReadError> {
     let source = read_source(path)?;
     decode(&source, &MemoryBudget::new(1 << 30), &CancelToken::new())
-}
-
-struct Dir(PathBuf);
-
-impl Dir {
-    fn new() -> Self {
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let root = std::env::temp_dir().join(format!(
-            "cloakframe-decode-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(&root).unwrap();
-        Self(root)
-    }
-
-    fn write(&self, name: &str, bytes: &[u8]) -> PathBuf {
-        let path = self.0.join(name);
-        std::fs::write(&path, bytes).unwrap();
-        path
-    }
-}
-
-impl Drop for Dir {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
 }
 
 /// 1.12.1 testImageFormatsAreDecidedByContent. The fixture numbers formats in 1.12.1's enum
@@ -187,12 +161,12 @@ fn rows(value: &Value) -> Vec<Vec<u8>> {
 /// says, compared with 1.12.1's recorded output.
 #[test]
 fn orientation_moves_pixels_like_1_12_1() {
-    let dir = Dir::new();
+    let dir = TestDir::new();
     let calls = calls("testOrientationTransforms");
     assert_eq!(calls.len(), 3);
     for call in calls {
         let orientation = call["orientation"].as_u64().unwrap() as u16;
-        let path = dir.write(
+        let path = dir.write_bytes(
             &format!("o{orientation}.png"),
             &gray_png(&rows(&call["input"]), orientation),
         );
@@ -213,16 +187,16 @@ fn orientation_moves_pixels_like_1_12_1() {
 /// case and counts anything else as unsupported.
 #[test]
 fn the_scanner_takes_the_supported_image_extensions_in_any_case() {
-    let dir = Dir::new();
+    let dir = TestDir::new();
     let images = [
         "a.jpg", "b.JPEG", "c.png", "d.Bmp", "e.tif", "f.TIFF", "g.webp",
     ];
     for name in images.iter().chain(&["h.txt", "i.gif"]) {
-        dir.write(name, b"x");
+        dir.write_bytes(name, b"x");
     }
     let result = scan(
         &ScanRequest {
-            inputs: vec![dir.0.clone()],
+            inputs: vec![dir.path().to_path_buf()],
             recursive: false,
             include_videos: false,
             output: None,

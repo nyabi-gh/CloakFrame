@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn same_file_through_different_paths_has_one_identity() {
-        let dir = crate::testdir::TestDir::new();
+        let dir = crate::test_support::TestDir::new();
         let file = dir.write("a/one.jpg");
         let other = dir.write("a/two.jpg");
         let via_dotdot = dir.path().join("a/../a/one.jpg");
@@ -128,7 +128,7 @@ mod tests {
 
     #[test]
     fn hard_links_share_an_identity() {
-        let dir = crate::testdir::TestDir::new();
+        let dir = crate::test_support::TestDir::new();
         let file = dir.write("photo.jpg");
         let link = dir.path().join("linked.jpg");
         std::fs::hard_link(&file, &link).unwrap();

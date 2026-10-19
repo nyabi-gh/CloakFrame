@@ -489,11 +489,12 @@ mod tests {
     use crate::cancel::CancelToken;
     use crate::photo::budget::MemoryBudget;
     use crate::photo::decode::{decode, read_source};
-    use std::path::{Path, PathBuf};
+    use crate::test_support::bmp_v5_with_profile;
+    use std::path::PathBuf;
 
     fn d2(name: &str) -> PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/defects/D2")
+        crate::test_support::fixtures()
+            .join("defects/D2")
             .join(name)
     }
 
@@ -646,7 +647,7 @@ mod tests {
     #[test]
     fn gray_profiles_convert_gray_pixels_to_the_srgb_curve() {
         let icc = ColorProfile::new_gray_with_gamma(1.8).encode().unwrap();
-        let dir = crate::testdir::TestDir::new();
+        let dir = crate::test_support::TestDir::new();
         let ramp = image::GrayImage::from_fn(256, 1, |x, _| image::Luma([x as u8]));
         let srgb = |v: f64| {
             let l = (v / 255.0).powf(1.8);
@@ -691,34 +692,12 @@ mod tests {
         }
     }
 
-    /// image's 40-byte BMP header rewritten as a BITMAPV5HEADER embedding `icc` after the pixels.
-    fn with_v5_profile(bmp: &[u8], icc: &[u8]) -> Vec<u8> {
-        let le32 = |at: usize| u32::from_le_bytes(bmp[at..at + 4].try_into().unwrap());
-        assert_eq!(le32(BMP_FILE_HEADER), 40);
-        let rest = &bmp[BMP_FILE_HEADER + 40..];
-        let mut header = bmp[BMP_FILE_HEADER..BMP_FILE_HEADER + 40].to_vec();
-        header.resize(BMP_V5_HEADER, 0);
-        header[0..4].copy_from_slice(&(BMP_V5_HEADER as u32).to_le_bytes());
-        header[56..60].copy_from_slice(&BMP_PROFILE_EMBEDDED.to_le_bytes());
-        header[112..116].copy_from_slice(&((BMP_V5_HEADER + rest.len()) as u32).to_le_bytes());
-        header[116..120].copy_from_slice(&(icc.len() as u32).to_le_bytes());
-        let total = BMP_FILE_HEADER + BMP_V5_HEADER + rest.len() + icc.len();
-        let mut out = b"BM".to_vec();
-        out.extend((total as u32).to_le_bytes());
-        out.extend(&bmp[6..10]);
-        out.extend((le32(10) + 84).to_le_bytes());
-        out.extend(header);
-        out.extend(rest);
-        out.extend(icc);
-        out
-    }
-
     fn bmp_source(icc: Option<&[u8]>) -> (Source, DynamicImage) {
         let (png, image) = load("chart-display-p3.png");
         let mut plain = Cursor::new(Vec::new());
         image.write_to(&mut plain, image::ImageFormat::Bmp).unwrap();
         let bytes = match icc {
-            Some(p) => with_v5_profile(plain.get_ref(), p),
+            Some(p) => bmp_v5_with_profile(plain.get_ref(), p),
             None => plain.into_inner(),
         };
         let source = Source {
@@ -810,8 +789,8 @@ mod tests {
     #[test]
     fn a_profile_over_the_limit_is_unreadable() {
         use crate::photo::decode::MAX_ICC_BYTES;
-        use crate::photo::decode::tests::png_with_icc_of;
-        let dir = crate::testdir::TestDir::new();
+        use crate::test_support::png_with_icc_of;
+        let dir = crate::test_support::TestDir::new();
         let source = |size| {
             let path = dir.path().join(format!("{size}.png"));
             std::fs::write(&path, png_with_icc_of(size)).unwrap();

@@ -200,7 +200,7 @@ fn is_hidden_or_system(entry: &fs::DirEntry) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testdir::TestDir;
+    use crate::test_support::TestDir;
 
     fn request(inputs: &[PathBuf], recursive: bool) -> ScanRequest {
         ScanRequest {

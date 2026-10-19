@@ -171,10 +171,7 @@ mod tests {
 
     #[test]
     fn matches_opencv_on_every_reference_case() {
-        let path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/../../tests/fixtures/resize/opencv-5.0.0-x86_64.json"
-        );
+        let path = crate::test_support::fixtures().join("resize/opencv-5.0.0-x86_64.json");
         let reference: Reference =
             serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
         assert!(reference.cases.len() >= 90);

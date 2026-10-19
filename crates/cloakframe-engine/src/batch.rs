@@ -116,7 +116,7 @@ pub fn session_from_report(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testdir::TestDir;
+    use crate::test_support::TestDir;
 
     /// An item held for review whose source changed or vanished cannot be reviewed; it is
     /// reported with the reason instead of silently missing from the session.

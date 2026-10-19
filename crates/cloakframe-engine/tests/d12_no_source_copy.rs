@@ -1,10 +1,12 @@
 //! D12: publishing never writes to the system temp folder; the only extra file is the hidden
 //! temp output next to the destination. One test per binary, because it changes the environment.
 
+mod common;
+
 use std::io::Write;
 
-use cloakframe_core::item::{Item, ItemId, PublishPermit, ReviewMode};
 use cloakframe_engine::publish::{TEMP_PREFIX, TempOutput};
+use common::permit;
 
 #[test]
 #[allow(unsafe_code)]
@@ -36,13 +38,7 @@ fn the_system_temp_folder_stays_untouched() {
     assert_eq!(during.len(), 1);
     assert!(during[0].starts_with(TEMP_PREFIX));
 
-    let mut item = Item::new(ItemId(1));
-    item.finish_analysis().unwrap();
-    item.route(ReviewMode::Off, &[]).unwrap();
-    item.start_render().unwrap();
-    item.mark_verified().unwrap();
-    out.publish(&PublishPermit::issue(&item, &[]).unwrap())
-        .unwrap();
+    out.publish(&permit()).unwrap();
 
     assert_eq!(std::fs::read_dir(&private_temp).unwrap().count(), 0);
     let after: Vec<String> = std::fs::read_dir(&out_dir)

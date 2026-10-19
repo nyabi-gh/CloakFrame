@@ -4,25 +4,23 @@
 //! exported with warnings).
 #![cfg(feature = "synthetic")]
 
+mod common;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU32, Ordering};
+
+use common::TestDir;
 
 struct Fixture {
     root: PathBuf,
+    _dir: TestDir,
 }
 
 impl Fixture {
     fn new() -> Self {
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let root = std::env::temp_dir().join(format!(
-            "cloakframe-cli-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("in")).unwrap();
-        Self { root }
+        let dir = TestDir::new();
+        let root = dir.mkdir("in").parent().unwrap().to_path_buf();
+        Self { root, _dir: dir }
     }
 
     fn input(&self, name: &str, bytes: &[u8]) -> PathBuf {
@@ -93,12 +91,6 @@ impl Fixture {
 
     fn sessions(&self) -> usize {
         std::fs::read_dir(self.root.join("sessions")).map_or(0, |d| d.count())
-    }
-}
-
-impl Drop for Fixture {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.root);
     }
 }
 

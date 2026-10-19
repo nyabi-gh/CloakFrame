@@ -1,21 +1,20 @@
 //! Output encoding and metadata against the fixtures: D6 (tests/fixtures/defects/D6), the
 //! allowlist (tests/fixtures/metadata), D9 and the 1.12.1 metadata tests.
 
+mod common;
+
 use std::io::Cursor;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::decode::{Source, decode, read_source};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::{color, encode};
+use common::fixtures;
 use exif::{In, Tag, Value};
 use image::DynamicImage;
 use serde::Deserialize;
-
-fn fixtures() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures")
-}
 
 /// The photo pipeline without masks: read, decode, color policy, encode.
 fn export(path: &Path, policy: MetadataPolicy) -> (Source, DynamicImage, Vec<u8>) {

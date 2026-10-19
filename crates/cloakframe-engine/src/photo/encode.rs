@@ -303,16 +303,11 @@ mod tests {
     use crate::photo::budget::MemoryBudget;
     use crate::photo::color::{EmbeddedIcc, embedded_icc};
     use crate::photo::decode::{decode, read_source};
+    use crate::test_support::fixtures;
     use exif::{In, Tag};
-    use std::path::Path;
 
     fn fixture(path: &str) -> Source {
-        read_source(
-            &Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../tests/fixtures")
-                .join(path),
-        )
-        .unwrap()
+        read_source(&fixtures().join(path)).unwrap()
     }
 
     /// rich-exif.jpg (camera, owner, GPS, XMP, IPTC, comment and "Private" text everywhere), the

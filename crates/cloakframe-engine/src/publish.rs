@@ -255,18 +255,8 @@ fn rename_if_absent(from: &Path, to: &Path) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testdir::TestDir;
-    use cloakframe_core::item::{Item, ItemId, ReviewMode};
+    use crate::test_support::{TestDir, permit};
     use std::io::Write;
-
-    fn permit() -> PublishPermit {
-        let mut item = Item::new(ItemId(1));
-        item.finish_analysis().unwrap();
-        item.route(ReviewMode::Off, &[]).unwrap();
-        item.start_render().unwrap();
-        item.mark_verified().unwrap();
-        PublishPermit::issue(&item, &[]).unwrap()
-    }
 
     fn names(dir: &Path) -> Vec<String> {
         let mut names: Vec<_> = fs::read_dir(dir)

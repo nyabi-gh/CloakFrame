@@ -1,20 +1,13 @@
 //! D4: outputs and the folders made for them follow the umask and the folder's inherited ACL.
 //! One test per binary, because the umask is process-wide.
 
+mod common;
+
 use std::io::Write;
 use std::path::Path;
 
-use cloakframe_core::item::{Item, ItemId, PublishPermit, ReviewMode};
 use cloakframe_engine::publish::TempOutput;
-
-fn permit() -> PublishPermit {
-    let mut item = Item::new(ItemId(1));
-    item.finish_analysis().unwrap();
-    item.route(ReviewMode::Off, &[]).unwrap();
-    item.start_render().unwrap();
-    item.mark_verified().unwrap();
-    PublishPermit::issue(&item, &[]).unwrap()
-}
+use common::permit;
 
 fn publish(destination: &Path) {
     let mut out = TempOutput::create(destination).unwrap();

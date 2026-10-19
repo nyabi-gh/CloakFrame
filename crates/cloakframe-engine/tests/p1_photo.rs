@@ -5,7 +5,9 @@
 //! Needs `CLOAKFRAME_ORT_LIBRARY`, `CLOAKFRAME_TEST_ASSETS` and `ORT_DISABLE_TELEMETRY=1`, as
 //! detect_fixtures.rs does.
 
-use std::path::{Path, PathBuf};
+mod common;
+
+use std::path::PathBuf;
 use std::sync::{Arc, OnceLock};
 
 use cloakframe_core::detection::KindThresholds;
@@ -15,14 +17,9 @@ use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::yolo5face::Yolo5Face;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Job, JobItem, RunReport, Start, start};
+use common::{TestDir, fixtures, required_env};
 
 const CROWD_FACES: usize = 280;
-
-fn required_env(name: &str) -> PathBuf {
-    std::env::var_os(name)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| panic!("{name} is not set (see CONTRIBUTING.md)"))
-}
 
 /// ORT has one environment per process, shared by the tests here.
 fn runtime() -> &'static OrtRuntime {
@@ -46,30 +43,15 @@ fn run_with(item: JobItem, settings: PhotoSettings) -> RunReport {
     start(job, Arc::new(processor), detector()).unwrap().wait()
 }
 
-struct Out(PathBuf);
-
-impl Drop for Out {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
 fn crowd() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/detect/inputs/crowd-280-faces.png")
-}
-
-fn out_dir(name: &str) -> Out {
-    let dir = std::env::temp_dir().join(format!("cloakframe-p1-{name}-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&dir);
-    Out(dir)
+    fixtures().join("detect/inputs/crowd-280-faces.png")
 }
 
 #[test]
 fn every_face_left_after_nms_is_masked() {
     // A loose NMS keeps overlapping boxes, so far more than 1.12.1's 300-per-image limit survive.
-    let out = out_dir("loose");
-    let destination = out.0.join("crowd.png");
+    let out = TestDir::new();
+    let destination = out.path().join("crowd.png");
     let mut settings = PhotoSettings::default();
     settings.thresholds.face = KindThresholds::new(0.1, 0.9).unwrap();
     let report = run_with(
@@ -107,12 +89,12 @@ fn every_face_left_after_nms_is_masked() {
 
 #[test]
 fn the_crowd_photo_has_every_face_and_no_problem() {
-    let out = out_dir("regular");
+    let out = TestDir::new();
     let report = run_with(
         JobItem {
             id: ItemId(0),
             input: crowd(),
-            destination: out.0.join("crowd.png"),
+            destination: out.path().join("crowd.png"),
             start: Start::Fresh {
                 needs_review: false,
             },

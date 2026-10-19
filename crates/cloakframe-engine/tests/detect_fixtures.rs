@@ -10,7 +10,9 @@
 //! - `CLOAKFRAME_TEST_ASSETS`: the folder `tools/fetch_test_assets.py` filled
 //! - `ORT_DISABLE_TELEMETRY=1`
 
-use std::path::{Path, PathBuf};
+mod common;
+
+use std::path::Path;
 
 use cloakframe_core::detection::{KindThresholds, Thresholds};
 use cloakframe_core::geometry::Rect;
@@ -20,6 +22,7 @@ use cloakframe_engine::detect::yolo5face::Yolo5Face;
 use cloakframe_engine::detect::{Detector, Rgb8Image};
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::{color, decode};
+use common::{fixtures, required_env};
 use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
@@ -28,16 +31,6 @@ const MAX_SCORE_DIFF: f32 = 1e-5;
 const MAX_ROLL_DIFF: f32 = 1e-4;
 const CROWD: &str = "crowd-280-faces";
 const CROWD_FACES: usize = 280;
-
-fn fixtures() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures")
-}
-
-fn required_env(name: &str, how: &str) -> PathBuf {
-    std::env::var_os(name)
-        .map(PathBuf::from)
-        .unwrap_or_else(|| panic!("{name} is not set: {how}"))
-}
 
 #[derive(Deserialize)]
 struct Asset {
@@ -94,14 +87,8 @@ fn detection_copy(path: &Path) -> Rgb8Image {
 
 #[test]
 fn yolo5face_matches_the_1_12_1_fixtures() {
-    let library = required_env(
-        "CLOAKFRAME_ORT_LIBRARY",
-        "python -I tools/fetch_native.py onnxruntime <platform> <dir> prints it",
-    );
-    let assets = required_env(
-        "CLOAKFRAME_TEST_ASSETS",
-        "python -I tools/fetch_test_assets.py <dir> fills it",
-    );
+    let library = required_env("CLOAKFRAME_ORT_LIBRARY");
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
     let runtime = OrtRuntime::load(&library).unwrap();
     let mut detector = Yolo5Face::new(&runtime, &model_bytes(&assets)).unwrap();
 

@@ -3,10 +3,11 @@
 //! on published files (D2), the source checks before publishing, and the 1.12.1 worker tests for
 //! photos (tests/fixtures/legacy).
 
+mod common;
+
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{Detection, ModelId, Thresholds};
@@ -22,40 +23,28 @@ use cloakframe_engine::photo::decode::{decode, read_source};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Analysis, Decision, Job, JobItem, Note, RunReport, Start, start};
+use common::{TestDir, bmp_v5_with_profile, fixtures, png_header, rgb, rgb_of};
 use exif::{In, Tag};
 use image::{Rgb, RgbImage};
 
-fn fixtures() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures")
-}
-
-struct Dir(PathBuf);
+/// Inputs in `in/`, outputs in `out/`.
+struct Dir(TestDir);
 
 impl Dir {
     fn new() -> Self {
-        static NEXT: AtomicU32 = AtomicU32::new(0);
-        let root = std::env::temp_dir().join(format!(
-            "cloakframe-photo-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::Relaxed)
-        ));
-        let _ = std::fs::remove_dir_all(&root);
-        std::fs::create_dir_all(root.join("in")).unwrap();
-        Self(root)
+        Self(TestDir::new())
     }
 
     fn input(&self, name: &str, bytes: &[u8]) -> PathBuf {
-        let path = self.0.join("in").join(name);
-        std::fs::write(&path, bytes).unwrap();
-        path
+        self.0.write_bytes(&format!("in/{name}"), bytes)
     }
 
     fn out(&self, name: &str) -> PathBuf {
-        self.0.join("out").join(name)
+        self.0.path().join("out").join(name)
     }
 
     fn outputs(&self) -> Vec<String> {
-        let mut names: Vec<String> = std::fs::read_dir(self.0.join("out"))
+        let mut names: Vec<String> = std::fs::read_dir(self.0.path().join("out"))
             .map(|d| {
                 d.map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
                     .collect()
@@ -63,12 +52,6 @@ impl Dir {
             .unwrap_or_default();
         names.sort();
         names
-    }
-}
-
-impl Drop for Dir {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
     }
 }
 
@@ -167,19 +150,6 @@ fn run(
     };
     let detector = DetectorHandle::spawn(Box::new(detector)).unwrap();
     start(job, Arc::new(processor), detector).unwrap().wait()
-}
-
-/// Through libjpeg-turbo for JPEG, which this build's `image` does not decode.
-fn rgb_of(bytes: &[u8]) -> RgbImage {
-    if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
-        let d = turbojpeg::decompress(bytes, turbojpeg::PixelFormat::RGB).unwrap();
-        return RgbImage::from_raw(d.width as u32, d.height as u32, d.pixels).unwrap();
-    }
-    image::load_from_memory(bytes).unwrap().to_rgb8()
-}
-
-fn rgb(path: &Path) -> RgbImage {
-    rgb_of(&std::fs::read(path).unwrap())
 }
 
 const BLACK: Rgb<u8> = Rgb([0, 0, 0]);
@@ -739,27 +709,6 @@ fn bmp_outputs_are_srgb_and_bmp_profiles_are_read() {
     assert_eq!(rgb(&dir.out("p3.png")), rgb(&input));
 }
 
-/// image's 40-byte BMP header rewritten as a BITMAPV5HEADER that embeds `icc` after the pixels.
-fn bmp_v5_with_profile(bmp: &[u8], icc: &[u8]) -> Vec<u8> {
-    let le32 = |at: usize| u32::from_le_bytes(bmp[at..at + 4].try_into().unwrap());
-    assert_eq!(le32(14), 40);
-    let rest = &bmp[14 + 40..];
-    let mut header = bmp[14..14 + 40].to_vec();
-    header.resize(124, 0);
-    header[0..4].copy_from_slice(&124u32.to_le_bytes());
-    header[56..60].copy_from_slice(b"DEBM");
-    header[112..116].copy_from_slice(&((124 + rest.len()) as u32).to_le_bytes());
-    header[116..120].copy_from_slice(&(icc.len() as u32).to_le_bytes());
-    let mut out = b"BM".to_vec();
-    out.extend(((14 + 124 + rest.len() + icc.len()) as u32).to_le_bytes());
-    out.extend(&bmp[6..10]);
-    out.extend((le32(10) + 84).to_le_bytes());
-    out.extend(header);
-    out.extend(rest);
-    out.extend(icc);
-    out
-}
-
 /// 1.12.1 testWorkerDecodesOnlySupportedContent: the content decides how a file is read, and a
 /// PNG named `.jpg` is written as the JPEG its name says.
 #[test]
@@ -860,40 +809,6 @@ fn a_multi_page_tiff_is_refused() {
             .contains("holds several images")
     );
     assert!(dir.outputs().is_empty());
-}
-
-fn crc32(bytes: &[u8]) -> u32 {
-    let mut crc = !0u32;
-    for &b in bytes {
-        crc ^= u32::from(b);
-        for _ in 0..8 {
-            crc = if crc & 1 == 1 {
-                (crc >> 1) ^ 0xEDB8_8320
-            } else {
-                crc >> 1
-            };
-        }
-    }
-    !crc
-}
-
-/// A PNG with a stub IDAT, as 1.12.1 wrote it: a header that declares the size without the pixels.
-fn png_header(width: u32, height: u32) -> Vec<u8> {
-    let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
-    let mut chunk = |kind: &[u8; 4], data: &[u8]| {
-        out.extend((data.len() as u32).to_be_bytes());
-        let mut body = kind.to_vec();
-        body.extend(data);
-        out.extend(&body);
-        out.extend(crc32(&body).to_be_bytes());
-    };
-    let mut ihdr = width.to_be_bytes().to_vec();
-    ihdr.extend(height.to_be_bytes());
-    ihdr.extend([8, 2, 0, 0, 0]);
-    chunk(b"IHDR", &ihdr);
-    chunk(b"IDAT", &[0x78]);
-    chunk(b"IEND", &[]);
-    out
 }
 
 /// 1.12.1 testWorkerRejectsAnImageLargerThanTheMemoryBudget: refused for the memory it needs,

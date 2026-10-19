@@ -19,4 +19,5 @@ pub mod session;
 pub mod synthetic;
 
 #[cfg(test)]
-mod testdir;
+#[path = "../tests/common/mod.rs"]
+mod test_support;

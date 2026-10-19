@@ -1,23 +1,28 @@
-//! The memory estimate covers what the photo processor really allocates for one image, for the
-//! largest sample format and the most expensive mask, with a profile that is converted. Own
-//! binary, because it counts every allocation of the process.
+//! Memory the photo pipeline allocates, counted through the global allocator: the estimate the
+//! budget uses covers one image, and a compressed color profile cannot expand outside it. Own
+//! binary, because it counts every allocation of the process; the tests take turns.
 
 #![allow(unsafe_code)]
 
+mod common;
+
 use std::alloc::{GlobalAlloc, Layout, System};
 use std::io::Cursor;
-use std::path::PathBuf;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use cloakframe_core::detection::{Detection, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method};
+use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
-use cloakframe_engine::photo::budget::{PixelLayout, estimated_bytes};
+use cloakframe_engine::photo::budget::{MemoryBudget, PixelLayout, estimated_bytes};
+use cloakframe_engine::photo::color::{EmbeddedIcc, embedded_icc};
+use cloakframe_engine::photo::decode::{MAX_ICC_BYTES, decode, read_source};
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Job, JobItem, Start, start};
+use common::{TestDir, fixtures, png_with_icc_of};
 use image::ImageEncoder;
 
 struct Peak;
@@ -50,6 +55,20 @@ unsafe impl GlobalAlloc for Peak {
 #[global_allocator]
 static ALLOCATOR: Peak = Peak;
 
+/// Held for a whole test, so no other test allocates while one measures.
+fn turn() -> MutexGuard<'static, ()> {
+    static TURN: Mutex<()> = Mutex::new(());
+    TURN.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The peak during `run` above what was live when it started.
+fn measure(run: impl FnOnce()) -> usize {
+    let before = LIVE.load(Ordering::Relaxed);
+    PEAK.store(before, Ordering::Relaxed);
+    run();
+    PEAK.load(Ordering::Relaxed) - before
+}
+
 const SIZE: u32 = 1024;
 
 /// One detection over the whole image, so the mask works on every pixel.
@@ -80,11 +99,10 @@ fn png(color: image::ExtendedColorType, bytes_per_pixel: usize, icc: Option<Vec<
 
 #[test]
 fn the_estimate_covers_the_peak_of_one_image() {
-    let d2 = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/defects/D2");
-    let converted = std::fs::read(d2.join("wide-gamma18.icc")).unwrap();
-    let root = std::env::temp_dir().join(format!("cloakframe-memory-{}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&root);
-    std::fs::create_dir_all(&root).unwrap();
+    let _turn = turn();
+    let converted = std::fs::read(fixtures().join("defects/D2/wide-gamma18.icc")).unwrap();
+    let dir = TestDir::new();
+    let root = dir.path();
     let detector = DetectorHandle::spawn(Box::new(WholeImage)).unwrap();
     for (name, color, bpp, channels) in [
         ("rgb8", image::ExtendedColorType::Rgb8, 3, 3),
@@ -114,12 +132,15 @@ fn the_estimate_covers_the_peak_of_one_image() {
                 review: ReviewMode::Off,
                 workers: 1,
             };
-            let before = LIVE.load(Ordering::Relaxed);
-            PEAK.store(before, Ordering::Relaxed);
-            let report = start(job, Arc::new(processor), detector.clone())
-                .unwrap()
-                .wait();
-            let peak = PEAK.load(Ordering::Relaxed) - before;
+            let mut report = None;
+            let peak = measure(|| {
+                report = Some(
+                    start(job, Arc::new(processor), detector.clone())
+                        .unwrap()
+                        .wait(),
+                );
+            });
+            let report = report.unwrap();
             assert_eq!(
                 report.items[0].state,
                 ItemState::Published(PublishBasis::AutomaticUnreviewed),
@@ -141,5 +162,24 @@ fn the_estimate_covers_the_peak_of_one_image() {
             );
         }
     }
-    std::fs::remove_dir_all(root).unwrap();
+}
+
+#[test]
+fn a_compressed_profile_inflates_only_to_its_limit() {
+    let _turn = turn();
+    let inflated = 16 * MAX_ICC_BYTES as usize;
+    let dir = TestDir::new();
+    let path = dir.write_bytes("bomb.png", &png_with_icc_of(inflated));
+    let peak = measure(|| {
+        let source = read_source(&path).unwrap();
+        assert!(source.bytes.len() < 1 << 20, "{} bytes", source.bytes.len());
+        decode(&source, &MemoryBudget::new(1 << 30), &CancelToken::new()).unwrap();
+        assert_eq!(embedded_icc(&source), EmbeddedIcc::Unreadable);
+    });
+    assert!(
+        peak < 3 * MAX_ICC_BYTES as usize,
+        "{} MiB at the peak for a profile of {} MiB",
+        peak >> 20,
+        inflated >> 20
+    );
 }

@@ -4,16 +4,19 @@
 //! every pixel 1.12.1's did; its boundary and the soft ellipse ramp differ by design (core
 //! `mask`). Mosaic (D3) and blur (plan 5) are new methods, checked by their requirements.
 
-use std::path::{Path, PathBuf};
+mod common;
+
+use std::path::PathBuf;
 
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::mask::{MaskStyle, Method, MosaicStrength, Overlay, Padding, Region, Shape};
 use cloakframe_engine::photo::mask::apply;
+use common::fixtures;
 use image::DynamicImage;
 use serde::Deserialize;
 
 fn legacy() -> PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/legacy/tests")
+    fixtures().join("legacy/tests")
 }
 
 #[derive(Deserialize)]
@@ -275,8 +278,7 @@ fn blur_hides_a_one_pixel_thin_region() {
 /// pixels it covers, and every strength gives a different result.
 #[test]
 fn mosaic_strength_sets_the_cell_count() {
-    let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/fixtures/defects/D3/noise-face-600.png");
+    let path = fixtures().join("defects/D3/noise-face-600.png");
     let input = image::open(path).unwrap();
     let source = input.to_rgb8();
     let region = Region {

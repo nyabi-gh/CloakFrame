@@ -2,6 +2,8 @@
 //! encode, publish): nothing is written to the system temp folder. d12_no_source_copy.rs covers
 //! the publish module alone. One test per binary, because it changes the environment.
 
+mod common;
+
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -12,6 +14,7 @@ use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rg
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Job, JobItem, Start, start};
+use common::fixtures;
 
 struct OneFace;
 
@@ -40,7 +43,7 @@ fn photos_are_processed_without_touching_the_system_temp_folder() {
     }
     assert_eq!(std::env::temp_dir(), private_temp);
 
-    let defects = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/defects");
+    let defects = fixtures().join("defects");
     let inputs = [
         "D6/q90-420.jpg",
         "D6/lossless.png",

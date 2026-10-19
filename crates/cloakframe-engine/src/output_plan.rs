@@ -98,7 +98,7 @@ pub fn free_name(name: &str, is_free: impl Fn(&str) -> bool) -> String {
 mod tests {
     use super::*;
     use crate::identity::identity;
-    use crate::testdir::TestDir;
+    use crate::test_support::TestDir;
 
     fn scanned(dir: &TestDir, source: &str, relative: &str, kind: MediaKind) -> ScannedFile {
         let path = dir.write(source);

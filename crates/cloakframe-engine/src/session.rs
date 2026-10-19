@@ -191,7 +191,7 @@ impl SessionStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testdir::TestDir;
+    use crate::test_support::TestDir;
     use cloakframe_core::coverage::Problem;
     use cloakframe_core::detection::ModelId;
     use cloakframe_core::geometry::Rect;

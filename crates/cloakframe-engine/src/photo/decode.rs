@@ -293,15 +293,13 @@ pub fn detection_rgb8(image: &DynamicImage) -> Rgb8Image {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use super::*;
-    use crate::testdir::TestDir;
+    use crate::test_support::{TestDir, png_header};
     use image::{GenericImageView, ImageEncoder, Rgb, RgbImage};
 
     fn fixture(name: &str) -> std::path::PathBuf {
-        Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/decode")
-            .join(name)
+        crate::test_support::fixtures().join("decode").join(name)
     }
 
     fn budget() -> MemoryBudget {
@@ -453,44 +451,10 @@ pub(crate) mod tests {
         assert_eq!(decoded.image.dimensions(), (64, 64));
     }
 
-    /// A PNG of only the signature, IHDR declaring the size, and an empty IDAT: the size is read
-    /// from the header without decoding.
-    fn png_declaring(width: u32, height: u32) -> Vec<u8> {
-        let mut ihdr = b"IHDR".to_vec();
-        ihdr.extend(width.to_be_bytes());
-        ihdr.extend(height.to_be_bytes());
-        ihdr.extend([8, 2, 0, 0, 0]);
-        let chunk = |out: &mut Vec<u8>, body: &[u8]| {
-            out.extend(((body.len() - 4) as u32).to_be_bytes());
-            out.extend(body);
-            out.extend(crc32(body).to_be_bytes());
-        };
-        let mut out = b"\x89PNG\r\n\x1a\n".to_vec();
-        chunk(&mut out, &ihdr);
-        chunk(&mut out, b"IDAT");
-        chunk(&mut out, b"IEND");
-        out
-    }
-
-    fn crc32(bytes: &[u8]) -> u32 {
-        let mut crc = 0xFFFF_FFFFu32;
-        for &b in bytes {
-            crc ^= u32::from(b);
-            for _ in 0..8 {
-                crc = if crc & 1 != 0 {
-                    (crc >> 1) ^ 0xEDB8_8320
-                } else {
-                    crc >> 1
-                };
-            }
-        }
-        !crc
-    }
-
     #[test]
     fn refuses_images_past_the_pixel_limit_or_the_memory_budget_before_decoding() {
         let dir = TestDir::new();
-        let huge = source(&dir, "huge.png", &png_declaring(30_000, 20_000)).unwrap();
+        let huge = source(&dir, "huge.png", &png_header(30_000, 20_000)).unwrap();
         assert_eq!(dimensions(&huge).unwrap(), (30_000, 20_000));
         assert!(matches!(
             decode(&huge, &budget(), &CancelToken::new()),
@@ -499,7 +463,7 @@ pub(crate) mod tests {
                 height: 20_000
             })
         ));
-        let big = source(&dir, "big.png", &png_declaring(10_000, 10_000)).unwrap();
+        let big = source(&dir, "big.png", &png_header(10_000, 10_000)).unwrap();
         assert!(matches!(
             decode(&big, &MemoryBudget::new(1 << 30), &CancelToken::new()),
             Err(ReadError::Memory(BudgetError::TooLarge { .. }))
@@ -543,17 +507,6 @@ pub(crate) mod tests {
             detection_rgb8(&DynamicImage::ImageLuma8(gray)).data,
             [77, 77, 77]
         );
-    }
-
-    /// A PNG whose `iCCP` inflates to `size` zero bytes from a file of about `size / 1000`.
-    pub(crate) fn png_with_icc_of(size: usize) -> Vec<u8> {
-        let mut png = Cursor::new(Vec::new());
-        let mut encoder = image::codecs::png::PngEncoder::new(&mut png);
-        encoder.set_icc_profile(vec![0; size]).unwrap();
-        encoder
-            .write_image(&[0; 16 * 16 * 3], 16, 16, image::ExtendedColorType::Rgb8)
-            .unwrap();
-        png.into_inner()
     }
 
     /// A little-endian TIFF of one strip holding `strip` as is, with the given tags (type SHORT

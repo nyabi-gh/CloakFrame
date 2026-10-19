@@ -359,7 +359,7 @@ mod tests {
     use crate::identity::SourceStamp;
     use crate::output_plan::Conflict;
     use crate::session::FORMAT_VERSION;
-    use crate::testdir::TestDir;
+    use crate::test_support::TestDir;
     use cloakframe_core::coverage::CoverageEvidence;
     use cloakframe_core::detection::{Detection, ModelId};
     use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
