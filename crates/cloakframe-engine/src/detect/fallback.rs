@@ -49,27 +49,39 @@ pub struct ModelBackend {
     pub fallback: Option<Fallback>,
 }
 
-/// Where each model of a run runs, readable while and after it runs.
+#[derive(Debug, Default)]
+struct Record {
+    models: Vec<ModelBackend>,
+    sessions: usize,
+}
+
+/// Where each model of a run runs, and how many sessions the run made, readable while and after
+/// it runs.
 #[derive(Debug, Clone, Default)]
-pub struct Backends(Arc<Mutex<Vec<ModelBackend>>>);
+pub struct Backends(Arc<Mutex<Record>>);
 
 impl Backends {
     pub fn get(&self) -> Vec<ModelBackend> {
-        self.lock().clone()
+        self.lock().models.clone()
     }
 
-    fn lock(&self) -> std::sync::MutexGuard<'_, Vec<ModelBackend>> {
+    /// Every session made for the run's models, on any backend (D7).
+    pub fn sessions_made(&self) -> usize {
+        self.lock().sessions
+    }
+
+    fn lock(&self) -> std::sync::MutexGuard<'_, Record> {
         self.0.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn add(&self, entry: ModelBackend) -> usize {
-        let mut entries = self.lock();
-        entries.push(entry);
-        entries.len() - 1
+        let mut record = self.lock();
+        record.models.push(entry);
+        record.models.len() - 1
     }
 
     fn fell_back(&self, index: usize, fallback: Fallback) {
-        let entry = &mut self.lock()[index];
+        let entry = &mut self.lock().models[index];
         entry.backend = Backend::Cpu;
         entry.fallback = Some(fallback);
     }
@@ -104,6 +116,12 @@ fn with_fallback(
     make: MakeDetector,
     backends: &Backends,
 ) -> Result<Box<dyn Detector>, DetectError> {
+    let counter = backends.clone();
+    let make: MakeDetector = Box::new(move |backend| {
+        let detector = make(backend)?;
+        counter.lock().sessions += 1;
+        Ok(detector)
+    });
     let (detector, backend, fallback) = match make(backend) {
         Ok(detector) => (detector, backend, None),
         Err(DetectError::Failed(reason)) if backend != Backend::Cpu => {
@@ -231,6 +249,10 @@ mod tests {
         let first = d.detect(&image(4), &thresholds()).unwrap();
         assert_eq!((score(&first), first.reran_on_cpu), (0.9, false));
         assert_eq!(backends.get()[0].backend, Backend::CoreMl);
+        for _ in 0..3 {
+            d.detect(&image(4), &thresholds()).unwrap();
+        }
+        assert_eq!(backends.sessions_made(), 1);
 
         let failed = d.detect(&image(13), &thresholds()).unwrap();
         assert_eq!((score(&failed), failed.reran_on_cpu), (0.6, true));
@@ -251,6 +273,7 @@ mod tests {
         let later = d.detect(&image(4), &thresholds()).unwrap();
         assert_eq!((score(&later), later.reran_on_cpu), (0.6, false));
         assert_eq!(made.load(Ordering::SeqCst), 2);
+        assert_eq!(backends.sessions_made(), 2);
     }
 
     #[test]
@@ -273,6 +296,7 @@ mod tests {
             (Backend::DirectMl, true)
         );
         assert_eq!(made.load(Ordering::SeqCst), 2);
+        assert_eq!(backends.sessions_made(), 1);
     }
 
     #[test]

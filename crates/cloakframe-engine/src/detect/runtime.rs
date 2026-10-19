@@ -117,6 +117,37 @@ impl OrtRuntime {
         self
     }
 
+    /// Removes from the CoreML cache folder what no session of this build uses: the folders of
+    /// other ORT builds and, in this build's, of models it does not pin. Another build running at
+    /// the same time loses its compiled models and compiles them again, or starts on the CPU if
+    /// they go while it compiles. Returns how many entries were removed.
+    #[cfg(target_os = "macos")]
+    pub fn remove_unused_coreml_caches(&self) -> std::io::Result<usize> {
+        let Some(root) = &self.coreml_cache else {
+            return Ok(0);
+        };
+        let build = coreml_build_dir(root);
+        let pinned: Vec<PathBuf> = crate::model_files::MODEL_FILES
+            .iter()
+            .map(|f| build.join(f.sha256))
+            .collect();
+        let mut removed = 0;
+        for entry in entries(root)? {
+            if entry == build {
+                for model in entries(&build)? {
+                    if !pinned.contains(&model) {
+                        remove(&model)?;
+                        removed += 1;
+                    }
+                }
+            } else {
+                remove(&entry)?;
+                removed += 1;
+            }
+        }
+        Ok(removed)
+    }
+
     /// A session on `backend` with the named initializers of the graph replaced before it is
     /// optimized. The options are 1.12.1's: on the CPU every graph optimization and one intra-op
     /// thread per logical core; on an accelerator the extended level, whose layout steps beyond
@@ -187,8 +218,35 @@ impl OrtRuntime {
 #[cfg(target_os = "macos")]
 fn coreml_cache_dir(root: &Path, model: &[u8]) -> PathBuf {
     use sha2::{Digest as _, Sha256};
-    let hex = |bytes: &[u8]| bytes.iter().map(|b| format!("{b:02x}")).collect::<String>();
-    let build = Sha256::digest(ort::info().as_bytes());
-    root.join(&hex(&build)[..16])
-        .join(hex(&Sha256::digest(model)))
+    coreml_build_dir(root).join(hex(&Sha256::digest(model)))
+}
+
+#[cfg(target_os = "macos")]
+fn coreml_build_dir(root: &Path) -> PathBuf {
+    use sha2::{Digest as _, Sha256};
+    root.join(&hex(&Sha256::digest(ort::info().as_bytes()))[..16])
+}
+
+#[cfg(target_os = "macos")]
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The paths in `dir`, none if it does not exist.
+#[cfg(target_os = "macos")]
+fn entries(dir: &Path) -> std::io::Result<Vec<PathBuf>> {
+    match std::fs::read_dir(dir) {
+        Ok(entries) => entries.map(|e| e.map(|e| e.path())).collect(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+        Err(e) => Err(e),
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn remove(path: &Path) -> std::io::Result<()> {
+    if std::fs::symlink_metadata(path)?.is_dir() {
+        std::fs::remove_dir_all(path)
+    } else {
+        std::fs::remove_file(path)
+    }
 }

@@ -240,6 +240,19 @@ fn coreml_caches_compiled_models_per_runtime_build_and_model() {
             .next()
             .is_some()
     );
+
+    // What an earlier build or model left is removed; this build's compiled models stay.
+    let other_build = dir.write("0123456789abcdef/model/coremldata.bin");
+    let other_model = builds[0].join("f".repeat(64));
+    std::fs::create_dir(&other_model).unwrap();
+    let stray = dir.write("stray");
+    assert_eq!(cached.remove_unused_coreml_caches().unwrap(), 3);
+    assert!(!other_build.parent().unwrap().parent().unwrap().exists());
+    assert!(!other_model.exists() && !stray.exists());
+    assert!(builds[0].join(yunet::MODEL_SHA256).is_dir());
+    assert_eq!(cached.remove_unused_coreml_caches().unwrap(), 0);
+    let none = runtime().clone();
+    assert_eq!(none.remove_unused_coreml_caches().unwrap(), 0);
 }
 
 /// The plate graph returns at most 100 boxes and suppresses at IoU 0.45. With NMS off here, the
