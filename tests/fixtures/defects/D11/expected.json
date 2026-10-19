@@ -1,7 +1,7 @@
 {
   "id": "D11",
   "requirement": "NMS 후 상한을 넘은 것만 CoverageEvidence(상한으로 잘린 후보)로 센다. NMS 전 후보는 상한을 넉넉히 두고, 넘으면 타일로 나눠 다시 감지한다.",
-  "stage": "M3",
+  "stage": "M2(YOLO5Face), M3",
   "input": "../../detect/inputs/crowd-280-faces.png",
   "expect": [
     {

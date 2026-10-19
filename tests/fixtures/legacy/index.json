@@ -170,8 +170,9 @@
    "plan": ""
   },
   "tests/testDestinationRejectsSymlinkEscape": {
-   "status": "intent",
-   "plan": ""
+   "status": "changed",
+   "plan": "0.1, 4.5",
+   "note": "출력 이름 자리의 링크(끊긴 것 포함)를 기존 파일로 보고 덮지 않는 것은 규범. 출력 폴더 안의 링크된 하위 폴더를 따라 쓰는 것은 허용으로 바뀜(root handle 기준 traversal 제거, CHANGES_FROM_1.12.md)"
   },
   "tests/testDetectorsRejectUnexpectedModelHash": {
    "status": "normative",

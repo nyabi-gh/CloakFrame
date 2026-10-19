@@ -53,10 +53,10 @@ evidence = "docs/M0_EXIF_WRITER.md"
 
 [crates.windows-sys]
 version = "=0.61.2"
-features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_UI_Shell"]
+features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_SystemInformation", "Win32_UI_Shell"]
 targets = ["windows"]
 # 파일 identity(GetFileInformationByHandleEx FileIdInfo), no-replace 이동(MoveFileExW), 앱 데이터 폴더
-# (SHGetKnownFolderPath). 앱 데이터 폴더를 directories crate로 찾지 않는 이유는 그 의존성 option-ext가
+# (SHGetKnownFolderPath), 메모리 예산의 실제 RAM(GlobalMemoryStatusEx). 앱 데이터 폴더를 directories crate로 찾지 않는 이유는 그 의존성 option-ext가
 # MPL-2.0이기 때문(2026-10-18 결정, deny.toml 허용 목록 유지).
 evidence = "crates/cloakframe-engine/src/identity.rs"
 
