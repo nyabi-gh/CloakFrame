@@ -274,6 +274,9 @@ impl ItemProcessor for PhotoProcessor {
         let regions = if request.basis == PublishBasis::ExportedWithoutAnonymization {
             Vec::new()
         } else {
+            if request.analysis.detections.is_empty() {
+                ctx.notes.add(Note::NothingDetected);
+            }
             request.edits.regions(&request.analysis.detections)
         };
         let overlay = self

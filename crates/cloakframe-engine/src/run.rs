@@ -54,6 +54,9 @@ pub enum Note {
     /// The source's color profile could not be used and was dropped; the pixels were treated as
     /// sRGB (D2).
     ColorProfileIgnored,
+    /// The detector found nothing to mask. Not an unresolved problem, but a small face the model
+    /// missed would otherwise go unnoticed (review item 14).
+    NothingDetected,
     /// Published, but the folder could not be flushed to disk (some network and FUSE volumes).
     FolderNotFlushed,
     /// Published, but a temp file was left next to the output; a later run removes it.
@@ -65,6 +68,7 @@ impl fmt::Display for Note {
         f.write_str(match self {
             Self::ColorConverted => "colors converted to sRGB",
             Self::ColorProfileIgnored => "unusable color profile dropped",
+            Self::NothingDetected => "nothing detected",
             Self::FolderNotFlushed => "the output folder could not be flushed to disk",
             Self::TempFileLeft => "a temporary file was left next to the output",
         })

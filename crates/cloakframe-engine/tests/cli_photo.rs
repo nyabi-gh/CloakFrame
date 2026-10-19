@@ -249,7 +249,7 @@ fn only_the_pinned_model_runs() {
 }
 
 /// A photo without faces is published like any other: no detection is not an unresolved problem
-/// (1.12.1 warned). A second run does not replace the first output.
+/// (1.12.1 warned), but the result notes it. A second run does not replace the first output.
 #[test]
 fn a_rerun_keeps_the_earlier_output() {
     let f = Fixture::new();
@@ -261,6 +261,8 @@ fn a_rerun_keeps_the_earlier_output() {
     let r = f.run(&["--review", "off"]);
     assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
     assert!(r.stdout.contains("published (automatic, unreviewed)"));
+    // Published, but said: a missed small face would otherwise go unnoticed (review item 14).
+    assert!(r.stdout.contains("nothing detected"), "{}", r.stdout);
     let first = std::fs::read(f.out("input.png")).unwrap();
 
     let r = f.run(&["--review", "off"]);

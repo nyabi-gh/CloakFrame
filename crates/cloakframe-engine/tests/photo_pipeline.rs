@@ -564,12 +564,16 @@ fn published_photos_follow_the_d2_color_policy() {
         let pixels = rgb(&out);
         match converted {
             Some(tolerance) => {
-                assert_eq!(item.notes, [Note::ColorConverted], "{name}");
+                assert_eq!(
+                    item.notes,
+                    [Note::ColorConverted, Note::NothingDetected],
+                    "{name}"
+                );
                 let diff = max_channel_diff(&pixels, &reference);
                 assert!(diff <= *tolerance, "{name}: {diff} from Little CMS");
             }
             None => {
-                assert!(item.notes.is_empty(), "{name}: {:?}", item.notes);
+                assert_eq!(item.notes, [Note::NothingDetected], "{name}");
                 let source = rgb(&d2.join(name));
                 let tolerance = if name.ends_with(".jpg") {
                     JPEG_REENCODE
@@ -650,7 +654,10 @@ fn unusable_profiles_are_dropped_with_a_note() {
         "{:?}",
         item.failure
     );
-    assert_eq!(item.notes, [Note::ColorProfileIgnored]);
+    assert_eq!(
+        item.notes,
+        [Note::ColorProfileIgnored, Note::NothingDetected]
+    );
     let out = dir.out("damaged.png");
     assert_eq!(embedded_icc(&read_source(&out).unwrap()), EmbeddedIcc::None);
     assert_eq!(rgb(&out), rgb(&d2.join("chart-srgb.png")));
@@ -680,7 +687,7 @@ fn bmp_outputs_are_srgb_and_bmp_profiles_are_read() {
         "{:?}",
         item.failure
     );
-    assert_eq!(item.notes, [Note::ColorConverted]);
+    assert_eq!(item.notes, [Note::ColorConverted, Note::NothingDetected]);
     let bmp = read_source(&dir.out("chart.bmp")).unwrap();
     assert_eq!(embedded_icc(&bmp), EmbeddedIcc::None);
     let reference = rgb(&d2.join("expected-display-p3-as-srgb.png"));
@@ -699,11 +706,7 @@ fn bmp_outputs_are_srgb_and_bmp_profiles_are_read() {
         processor(MetadataPolicy::Strip),
         Scripted::default(),
     );
-    assert!(
-        report.items[0].notes.is_empty(),
-        "{:?}",
-        report.items[0].notes
-    );
+    assert_eq!(report.items[0].notes, [Note::NothingDetected]);
     let png = read_source(&dir.out("p3.png")).unwrap();
     assert_eq!(embedded_icc(&png), EmbeddedIcc::Profile(p3.to_vec()));
     assert_eq!(rgb(&dir.out("p3.png")), rgb(&input));
