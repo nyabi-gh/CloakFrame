@@ -1,6 +1,8 @@
+use std::borrow::Cow;
 use std::fmt;
 use std::io::Cursor;
 
+use cloakframe_core::mask::Overlay;
 use image::{DynamicImage, ImageBuffer, ImageDecoder};
 use moxcms::{
     ColorProfile, DataColorSpace, Layout, RenderingIntent, ToneReprCurve, TransformOptions, Xyzd,
@@ -429,6 +431,26 @@ fn transform_in_place<P: image::Pixel>(
 ) -> Result<(), moxcms::CmsError> {
     let source = buffer.as_raw().clone();
     run(&source, buffer)
+}
+
+/// The user's image, which is sRGB, in the space of a photo whose pixels are kept in Display P3
+/// or Adobe RGB, so it is drawn with the colors it was made with. Alpha is unchanged.
+pub fn overlay_for(
+    overlay: &Overlay,
+    outcome: ColorOutcome,
+) -> Result<Cow<'_, Overlay>, ColorError> {
+    let Some(standard @ (Standard::DisplayP3 | Standard::AdobeRgb)) = outcome.embed() else {
+        return Ok(Cow::Borrowed(overlay));
+    };
+    let t = ColorProfile::new_srgb()
+        .create_transform_8bit(Layout::Rgba, &standard.reference(), Layout::Rgba, options())
+        .map_err(|e| ColorError(e.to_string()))?;
+    let mut rgba = vec![0; overlay.rgba().len()];
+    t.transform(overlay.rgba(), &mut rgba)
+        .map_err(|e| ColorError(e.to_string()))?;
+    Overlay::new(overlay.width(), overlay.height(), rgba)
+        .map(Cow::Owned)
+        .map_err(|e| ColorError(e.to_string()))
 }
 
 /// The detection copy in sRGB. Kept Display P3 and Adobe RGB pixels are converted for the copy

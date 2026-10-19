@@ -12,6 +12,7 @@ use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{Detection, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
+use cloakframe_core::mask::{MaskStyle, Method, Overlay, Padding};
 use cloakframe_core::review::PhotoEdits;
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
@@ -609,6 +610,50 @@ fn published_photos_follow_the_d2_color_policy() {
                 assert!(diff <= tolerance, "{name}: pixels moved by {diff}");
             }
         }
+    }
+}
+
+/// D2 with the user's image: it is sRGB, so on a photo kept in Display P3 it is drawn in P3
+/// values, not as raw numbers that P3 would show more saturated.
+#[test]
+fn the_users_image_is_drawn_in_the_photos_color_space() {
+    let d2 = fixtures().join("defects/D2");
+    let dir = Dir::new();
+    let input = dir.input(
+        "p3.png",
+        &std::fs::read(d2.join("chart-display-p3.png")).unwrap(),
+    );
+    let processor = PhotoProcessor::new(PhotoSettings {
+        style: MaskStyle {
+            method: Method::CustomImage,
+            padding: Padding::new(0.0).unwrap(),
+            ..MaskStyle::default()
+        },
+        overlay: Some(Overlay::new(1, 1, vec![255, 0, 0, 255]).unwrap()),
+        ..PhotoSettings::default()
+    })
+    .unwrap();
+    let report = run(
+        vec![fresh(0, &input, dir.out("p3.png"))],
+        ReviewMode::Off,
+        processor,
+        finds(vec![face(8.0, 8.0, 16.0, 16.0)]),
+    );
+    assert_eq!(
+        report.items[0].state,
+        ItemState::Published(PublishBasis::AutomaticUnreviewed),
+        "{:?}",
+        report.items[0].failure
+    );
+    let out = dir.out("p3.png");
+    assert_eq!(
+        embedded_icc(&read_source(&out).unwrap()),
+        EmbeddedIcc::Profile(Standard::DisplayP3.profile_bytes().to_vec())
+    );
+    // sRGB red in Display P3 (CSS Color 4: color(display-p3 0.9175 0.2003 0.1387)).
+    let drawn = rgb(&out).get_pixel(16, 16).0;
+    for (got, want) in drawn.iter().zip([234u8, 51, 35]) {
+        assert!(got.abs_diff(want) <= 1, "{drawn:?}");
     }
 }
 

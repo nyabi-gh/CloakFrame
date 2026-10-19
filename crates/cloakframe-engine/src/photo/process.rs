@@ -276,14 +276,15 @@ impl ItemProcessor for PhotoProcessor {
         } else {
             request.edits.regions(&request.analysis.detections)
         };
+        let overlay = self
+            .settings
+            .overlay
+            .as_ref()
+            .map(|o| color::overlay_for(o, prepared.color))
+            .transpose()
+            .map_err(failed)?;
         let image = &mut prepared.decoded.image;
-        mask::apply(
-            image,
-            &regions,
-            &self.settings.style,
-            self.settings.overlay.as_ref(),
-        )
-        .map_err(failed)?;
+        mask::apply(image, &regions, &self.settings.style, overlay.as_deref()).map_err(failed)?;
         checkpoint(ctx)?;
         let bytes = encode::encode(
             &prepared.source,
