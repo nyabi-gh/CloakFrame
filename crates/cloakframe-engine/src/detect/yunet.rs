@@ -14,8 +14,6 @@ use super::{DetectError, Detector, Found, Rgb8Image};
 
 const SIZE: usize = 640;
 const STRIDES: [usize; 3] = [8, 16, 32];
-/// `FaceDetectorYN`'s default `top_k`: candidates NMS considers, best first.
-const TOP_K: usize = 5_000;
 
 /// The model file this detector runs (`manifests/native.toml`). Sessions are made only from bytes
 /// with this hash (plan 4.6).
@@ -134,7 +132,10 @@ fn decode_stride(heads: &Heads<'_>, stride: usize, min_score: f32, out: &mut Vec
 }
 
 /// `cv::dnn::NMSBoxes` as `FaceDetectorYN` calls it: on boxes truncated to integers, keeping
-/// scores strictly above the threshold, best first (stable), at most `TOP_K` of them.
+/// scores strictly above the threshold, best first (stable). `FaceDetectorYN` passes only its
+/// `top_k` (5,000) best candidates; that drops faces once a photo holds several hundred people,
+/// as 1.12.1's limit did for YOLO5Face-n (D11), so every candidate goes in. The 8,400 cells of
+/// the three strides bound the count.
 fn nms_int(faces: Vec<Raw>, min_score: f32, max_iou: f32) -> Vec<Raw> {
     let rect = |f: &Raw| f.rect.map(|v| v as i32);
     let iou = |a: [i32; 4], b: [i32; 4]| -> f32 {
@@ -157,7 +158,6 @@ fn nms_int(faces: Vec<Raw>, min_score: f32, max_iou: f32) -> Vec<Raw> {
     };
     let mut order: Vec<Raw> = faces.into_iter().filter(|f| f.score > min_score).collect();
     order.sort_by(|a, b| b.score.total_cmp(&a.score));
-    order.truncate(TOP_K);
     let mut kept: Vec<Raw> = Vec::new();
     for f in order {
         if kept.iter().all(|k| iou(rect(&f), rect(k)) <= max_iou) {
@@ -359,6 +359,18 @@ mod tests {
             0.4,
         );
         assert_eq!(kept.iter().map(|f| f.score).collect::<Vec<_>>(), [0.9, 0.7]);
+    }
+
+    #[test]
+    fn nms_considers_every_candidate() {
+        // 71 x 71 separate faces, more than OpenCV's top_k of 5,000.
+        let faces: Vec<Raw> = (0..71 * 71)
+            .map(|i| {
+                let (x, y) = ((i % 71) as f32 * 30.0, (i / 71) as f32 * 30.0);
+                raw(x, y, 20.0, 20.0, 0.6 + (i % 7) as f32 * 0.05)
+            })
+            .collect();
+        assert_eq!(nms_int(faces, 0.5, 0.4).len(), 71 * 71);
     }
 
     #[test]
