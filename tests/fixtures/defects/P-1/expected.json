@@ -20,7 +20,7 @@
       }
     },
     {
-      "scenario": "사진: NMS 후 감지 수가 상한을 넘음(상한을 테스트용으로 100으로 낮춰 crowd-280-faces.png에 적용)",
+      "scenario": "사진: 출력 수가 제한된 모델이 NMS 후 감지를 다 돌려주지 못함(상한으로 잘린 후보). YOLO5Face-n은 상한이 없어 실제 모델로는 생기지 않으므로 가짜 감지기로 확인(photo_pipeline.rs)",
       "expect": {
         "published": false,
         "state": "NeedsReview",

@@ -42,8 +42,9 @@ impl std::error::Error for DetectError {}
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Found {
     pub detections: Vec<Detection>,
-    /// Detections NMS kept beyond the per-image limit. The caller records them as
-    /// `Problem::CappedCandidates`, the only kind of omission D11 counts.
+    /// Detections NMS kept that a model with a bounded output could not return. The caller
+    /// records them as `Problem::CappedCandidates`, the only kind of omission D11 counts.
+    /// YOLO5Face-n returns every survivor, so this is 0 for it.
     pub over_limit: u32,
 }
 

@@ -1,13 +1,13 @@
 {
   "id": "D11",
-  "requirement": "NMS 후 상한을 넘은 것만 CoverageEvidence(상한으로 잘린 후보)로 센다. NMS 전 후보는 상한을 넉넉히 두고, 넘으면 타일로 나눠 다시 감지한다.",
+  "requirement": "NMS 후 상한을 넘은 것만 CoverageEvidence(상한으로 잘린 후보)로 센다. NMS 전 후보는 자르지 않는다. 출력이 고정된 YOLO5Face-n은 NMS 뒤 상한도 없어 NMS를 통과한 감지를 모두 가린다. 출력 수가 제한된 모델은 넘으면 타일로 나눠 다시 감지한다.",
   "stage": "M2(YOLO5Face), M3",
   "input": "../../detect/inputs/crowd-280-faces.png",
   "expect": [
     {
       "score_threshold": 0.1,
       "capped_candidates": 0,
-      "rule": "NMS 후 감지 수가 상한(300) 미만이므로 0"
+      "rule": "YOLO5Face-n은 NMS 뒤 상한이 없으므로 0"
     },
     {
       "score_threshold": 0.25,
@@ -23,5 +23,5 @@
     }
   ],
   "observed_1121_summary": "NMS 후 259개(상한 300 미만)인데 omitted 4017(0.1)·3030(0.25)·1656(0.5)으로 보고, 사진은 경고와 함께 게시(P-1)",
-  "decided_m2": "YOLO5Face-n은 NMS 전 후보를 자르지 않는다(출력 25,200행이 상한, 2026-10-18). crowd 3건 모두 280개, capped_candidates 0(crates/cloakframe-engine/tests/detect_fixtures.rs, p1_photo.rs). NMS 전 상한과 타일 재탐지는 출력 크기가 고정되지 않은 모델에서 M3에 정한다"
+  "decided_m2": "YOLO5Face-n은 NMS 전 후보를 자르지 않는다(출력 25,200행이 상한, 2026-10-18). crowd 3건 모두 280개, capped_candidates 0(crates/cloakframe-engine/tests/detect_fixtures.rs, p1_photo.rs). NMS 전 상한과 타일 재탐지는 출력 크기가 고정되지 않은 모델에서 M3에 정한다. 2026-10-19(재검토 1번): NMS 뒤 상한 300도 없앴다. 상한을 넘은 감지를 버려 경고 포함 내보내기에서 가리지 못했기 때문이다. NMS 0.9로 crowd에서 601개가 남아도 모두 가리고 capped_candidates 0(p1_photo.rs)"
 }

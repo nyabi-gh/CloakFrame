@@ -15,8 +15,6 @@ const SIZE: usize = 640;
 const ROWS: usize = 25_200;
 const COLS: usize = 16;
 const PAD_VALUE: u8 = 114;
-/// 1.12.1's per-image limit; NMS survivors beyond it are reported as `Found::over_limit`.
-const MAX_DETECTIONS: usize = 300;
 
 /// The model file this detector runs (`manifests/native.toml`). Sessions are made only from bytes
 /// with this hash (plan 4.6).
@@ -28,7 +26,6 @@ pub fn model_digest() -> Digest {
 
 pub struct Yolo5Face {
     session: Session,
-    limit: usize,
 }
 
 impl Yolo5Face {
@@ -43,18 +40,7 @@ impl Yolo5Face {
         }
         check_tensor(inputs[0].dtype(), &[1, 3, SIZE as i64, SIZE as i64])?;
         check_tensor(outputs[0].dtype(), &[1, ROWS as i64, COLS as i64])?;
-        Ok(Self {
-            session,
-            limit: MAX_DETECTIONS,
-        })
-    }
-
-    /// Lowers the per-image limit, as the P-1 fixture does to exercise `over_limit` on a real
-    /// crowd photo.
-    #[must_use]
-    pub fn with_detection_limit(mut self, limit: usize) -> Self {
-        self.limit = limit;
-        self
+        Ok(Self { session })
     }
 }
 
@@ -188,12 +174,11 @@ impl Detector for Yolo5Face {
                 candidates.push(d);
             }
         }
-        let mut detections = non_max_suppression(candidates, thresholds);
-        let over_limit = detections.len().saturating_sub(self.limit) as u32;
-        detections.truncate(self.limit);
+        // No limit after NMS either: 1.12.1 dropped survivors beyond 300, leaving faces it had
+        // found unmasked. Masking cost follows the masked area, not the box count.
         Ok(Found {
-            detections,
-            over_limit,
+            detections: non_max_suppression(candidates, thresholds),
+            over_limit: 0,
         })
     }
 }
