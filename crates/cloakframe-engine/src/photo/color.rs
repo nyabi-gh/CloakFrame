@@ -92,6 +92,9 @@ pub enum EmbeddedIcc {
 
 /// The ICC profile embedded in the source, from the bytes already read.
 pub fn embedded_icc(source: &Source) -> EmbeddedIcc {
+    if source.format == ImageFormat::Bmp {
+        return bmp_icc(&source.bytes);
+    }
     let found = read_icc(source);
     match found {
         Some(profile) => EmbeddedIcc::Profile(profile),
@@ -142,17 +145,12 @@ fn has_icc_chunk(source: &Source) -> bool {
 }
 
 fn read_icc(source: &Source) -> Option<Vec<u8>> {
-    match source.format {
+    let format = match source.format {
         ImageFormat::Jpeg => return jpeg_icc(&source.bytes),
         ImageFormat::Tiff => return tiff_icc(&source.bytes),
-        _ => {}
-    }
-    let format = match source.format {
         ImageFormat::Png => image::ImageFormat::Png,
-        ImageFormat::Bmp => image::ImageFormat::Bmp,
-        ImageFormat::Tiff => image::ImageFormat::Tiff,
         ImageFormat::Webp => image::ImageFormat::WebP,
-        ImageFormat::Jpeg => unreachable!(),
+        ImageFormat::Bmp => unreachable!("BMP profiles are read by bmp_icc"),
     };
     let mut decoder = ImageReader::with_format(Cursor::new(source.bytes.as_slice()), format)
         .into_decoder()
@@ -213,6 +211,42 @@ fn jpeg_icc(bytes: &[u8]) -> Option<Vec<u8>> {
             .flat_map(|(_, data)| data.iter().copied())
             .collect(),
     )
+}
+
+const BMP_FILE_HEADER: usize = 14;
+const BMP_V5_HEADER: usize = 124;
+const BMP_PROFILE_LINKED: u32 = 0x4C49_4E4B;
+const BMP_PROFILE_EMBEDDED: u32 = 0x4D42_4544;
+
+/// The profile a BITMAPV5HEADER embeds. image reads none from BMP. A linked profile names another
+/// file, which is not read (plan 4.3), so it counts as unreadable; the other color space types
+/// (sRGB, Windows default, calibrated endpoints) are treated as sRGB, as 1.12.1 did.
+fn bmp_icc(bytes: &[u8]) -> EmbeddedIcc {
+    let le32 = |at: usize| {
+        bytes
+            .get(at..at + 4)
+            .map(|b| u32::from_le_bytes(b.try_into().unwrap()) as usize)
+    };
+    let header = BMP_FILE_HEADER;
+    if le32(header).is_none_or(|size| size < BMP_V5_HEADER) {
+        return EmbeddedIcc::None;
+    }
+    match le32(header + 56).map(|t| t as u32) {
+        Some(BMP_PROFILE_EMBEDDED) => {}
+        Some(BMP_PROFILE_LINKED) => return EmbeddedIcc::Unreadable,
+        _ => return EmbeddedIcc::None,
+    }
+    let profile = le32(header + 112)
+        .zip(le32(header + 116))
+        .and_then(|(offset, size)| {
+            let start = header.checked_add(offset)?;
+            bytes.get(start..start.checked_add(size)?)
+        })
+        .filter(|p| !p.is_empty());
+    match profile {
+        Some(p) => EmbeddedIcc::Profile(p.to_vec()),
+        None => EmbeddedIcc::Unreadable,
+    }
 }
 
 /// Colorants are compared after D50 adaptation, as profiles store them.
@@ -293,6 +327,22 @@ pub fn apply(source: &Source, image: &mut DynamicImage) -> Result<ColorOutcome, 
     }
     to_srgb(&profile, image)?;
     Ok(ColorOutcome::Converted)
+}
+
+/// Display P3 and Adobe RGB pixels converted to sRGB for a BMP output. A BITMAPV5HEADER can
+/// embed a profile, but macOS ImageIO (Preview, Quick Look) does not open such files, ImageMagick's
+/// included, so BMP outputs stay untagged sRGB.
+pub fn srgb_for_bmp(
+    image: &mut DynamicImage,
+    outcome: ColorOutcome,
+) -> Result<ColorOutcome, ColorError> {
+    match outcome {
+        ColorOutcome::Kept(standard @ (Standard::DisplayP3 | Standard::AdobeRgb)) => {
+            to_srgb(&standard.reference(), image)?;
+            Ok(ColorOutcome::Converted)
+        }
+        other => Ok(other),
+    }
 }
 
 fn options() -> TransformOptions {
@@ -521,6 +571,98 @@ mod tests {
         );
     }
 
+    /// image's 40-byte BMP header rewritten as a BITMAPV5HEADER embedding `icc` after the pixels.
+    fn with_v5_profile(bmp: &[u8], icc: &[u8]) -> Vec<u8> {
+        let le32 = |at: usize| u32::from_le_bytes(bmp[at..at + 4].try_into().unwrap());
+        assert_eq!(le32(BMP_FILE_HEADER), 40);
+        let rest = &bmp[BMP_FILE_HEADER + 40..];
+        let mut header = bmp[BMP_FILE_HEADER..BMP_FILE_HEADER + 40].to_vec();
+        header.resize(BMP_V5_HEADER, 0);
+        header[0..4].copy_from_slice(&(BMP_V5_HEADER as u32).to_le_bytes());
+        header[56..60].copy_from_slice(&BMP_PROFILE_EMBEDDED.to_le_bytes());
+        header[112..116].copy_from_slice(&((BMP_V5_HEADER + rest.len()) as u32).to_le_bytes());
+        header[116..120].copy_from_slice(&(icc.len() as u32).to_le_bytes());
+        let total = BMP_FILE_HEADER + BMP_V5_HEADER + rest.len() + icc.len();
+        let mut out = b"BM".to_vec();
+        out.extend((total as u32).to_le_bytes());
+        out.extend(&bmp[6..10]);
+        out.extend((le32(10) + 84).to_le_bytes());
+        out.extend(header);
+        out.extend(rest);
+        out.extend(icc);
+        out
+    }
+
+    fn bmp_source(icc: Option<&[u8]>) -> (Source, DynamicImage) {
+        let (png, image) = load("chart-display-p3.png");
+        let mut plain = Cursor::new(Vec::new());
+        image.write_to(&mut plain, image::ImageFormat::Bmp).unwrap();
+        let bytes = match icc {
+            Some(p) => with_v5_profile(plain.get_ref(), p),
+            None => plain.into_inner(),
+        };
+        let source = Source {
+            bytes,
+            format: ImageFormat::Bmp,
+            ..png
+        };
+        let decoded = decode(&source, &MemoryBudget::new(1 << 30), &CancelToken::new())
+            .unwrap()
+            .image;
+        assert_eq!(decoded, image);
+        (source, decoded)
+    }
+
+    #[test]
+    fn bmp_v5_embedded_profiles_follow_the_policy() {
+        let p3 = std::fs::read(d2("display-p3.icc")).unwrap();
+        let (source, mut image) = bmp_source(Some(&p3));
+        assert_eq!(embedded_icc(&source), EmbeddedIcc::Profile(p3.clone()));
+        let before = image.clone();
+        assert_eq!(
+            apply(&source, &mut image).unwrap(),
+            ColorOutcome::Kept(Standard::DisplayP3)
+        );
+        assert_eq!(image, before);
+
+        let wide = std::fs::read(d2("wide-gamma18.icc")).unwrap();
+        let (source, mut image) = bmp_source(Some(&wide));
+        assert_eq!(apply(&source, &mut image).unwrap(), ColorOutcome::Converted);
+
+        let (source, mut image) = bmp_source(None);
+        assert_eq!(apply(&source, &mut image).unwrap(), ColorOutcome::Untagged);
+
+        let (mut linked, mut image) = bmp_source(Some(&p3));
+        linked.bytes[14 + 56..14 + 60].copy_from_slice(&BMP_PROFILE_LINKED.to_le_bytes());
+        assert_eq!(
+            apply(&linked, &mut image).unwrap(),
+            ColorOutcome::Ignored(IgnoredProfile::Unreadable)
+        );
+        let (mut cut, _) = bmp_source(Some(&p3));
+        cut.bytes.truncate(cut.bytes.len() - 1);
+        assert_eq!(embedded_icc(&cut), EmbeddedIcc::Unreadable);
+    }
+
+    #[test]
+    fn bmp_outputs_get_srgb_pixels() {
+        for space in ["display-p3", "adobe-rgb"] {
+            let (source, mut image) = load(&format!("chart-{space}.png"));
+            let kept = apply(&source, &mut image).unwrap();
+            assert_eq!(
+                srgb_for_bmp(&mut image, kept).unwrap(),
+                ColorOutcome::Converted
+            );
+            let reference = image::open(d2(&format!("expected-{space}-as-srgb.png"))).unwrap();
+            let diff = max_diff(&image, &reference);
+            assert!(diff <= 2, "{space}: {diff} from Little CMS");
+        }
+        let (source, mut image) = load("chart-srgb.png");
+        let before = image.clone();
+        let kept = apply(&source, &mut image).unwrap();
+        assert_eq!(srgb_for_bmp(&mut image, kept).unwrap(), kept);
+        assert_eq!(image, before);
+    }
+
     #[test]
     fn small_tiffs_keep_their_profile() {
         // 8x8 RGB: image's own TIFF limits would drop the 2.5 KB profile.
@@ -542,6 +684,6 @@ mod tests {
             format: ImageFormat::Tiff,
             ..srgb
         };
-        assert_eq!(embedded_icc(&source), EmbeddedIcc::Profile(p3));
+        assert_eq!(embedded_icc(&source), EmbeddedIcc::Profile(p3.clone()));
     }
 }

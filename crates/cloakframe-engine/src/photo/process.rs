@@ -257,6 +257,11 @@ impl ItemProcessor for PhotoProcessor {
         };
         let pixels = prepared.pixels();
         ctx.progress.set(pixels, 2 * pixels);
+        let format = output_format(ctx.destination, prepared.source.format);
+        if format == ImageFormat::Bmp {
+            prepared.color =
+                color::srgb_for_bmp(&mut prepared.decoded.image, prepared.color).map_err(failed)?;
+        }
         match prepared.color {
             ColorOutcome::Converted => ctx.notes.add(Note::ColorConverted),
             ColorOutcome::Ignored(_) => ctx.notes.add(Note::ColorProfileIgnored),
@@ -277,7 +282,6 @@ impl ItemProcessor for PhotoProcessor {
         )
         .map_err(failed)?;
         checkpoint(ctx)?;
-        let format = output_format(ctx.destination, prepared.source.format);
         let bytes = encode::encode(
             &prepared.source,
             image,

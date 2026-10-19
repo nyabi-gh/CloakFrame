@@ -563,6 +563,80 @@ fn published_photos_follow_the_d2_color_policy() {
     }
 }
 
+/// D2 for BMP, which is written without a profile (`color::srgb_for_bmp`): a Display P3 photo
+/// named `.bmp` is converted to sRGB and noted. A Display P3 BMP keeps its profile in another
+/// format.
+#[test]
+fn bmp_outputs_are_srgb_and_bmp_profiles_are_read() {
+    let d2 = fixtures().join("defects/D2");
+    let dir = Dir::new();
+    let input = dir.input(
+        "chart.png",
+        &std::fs::read(d2.join("chart-display-p3.png")).unwrap(),
+    );
+    let report = run(
+        vec![fresh(0, &input, dir.out("chart.bmp"))],
+        ReviewMode::Off,
+        processor(MetadataPolicy::Strip),
+        Scripted::default(),
+    );
+    let item = &report.items[0];
+    assert_eq!(
+        item.state,
+        ItemState::Published(PublishBasis::AutomaticUnreviewed),
+        "{:?}",
+        item.failure
+    );
+    assert_eq!(item.notes, [Note::ColorConverted]);
+    let bmp = read_source(&dir.out("chart.bmp")).unwrap();
+    assert_eq!(embedded_icc(&bmp), EmbeddedIcc::None);
+    let reference = rgb(&d2.join("expected-display-p3-as-srgb.png"));
+    let diff = max_channel_diff(&rgb(&dir.out("chart.bmp")), &reference);
+    assert!(diff <= 2, "{diff} from Little CMS");
+
+    let p3 = Standard::DisplayP3.profile_bytes();
+    let mut plain = Cursor::new(Vec::new());
+    image::DynamicImage::ImageRgb8(rgb(&input))
+        .write_to(&mut plain, image::ImageFormat::Bmp)
+        .unwrap();
+    let source = dir.input("p3.bmp", &bmp_v5_with_profile(plain.get_ref(), p3));
+    let report = run(
+        vec![fresh(1, &source, dir.out("p3.png"))],
+        ReviewMode::Off,
+        processor(MetadataPolicy::Strip),
+        Scripted::default(),
+    );
+    assert!(
+        report.items[0].notes.is_empty(),
+        "{:?}",
+        report.items[0].notes
+    );
+    let png = read_source(&dir.out("p3.png")).unwrap();
+    assert_eq!(embedded_icc(&png), EmbeddedIcc::Profile(p3.to_vec()));
+    assert_eq!(rgb(&dir.out("p3.png")), rgb(&input));
+}
+
+/// image's 40-byte BMP header rewritten as a BITMAPV5HEADER that embeds `icc` after the pixels.
+fn bmp_v5_with_profile(bmp: &[u8], icc: &[u8]) -> Vec<u8> {
+    let le32 = |at: usize| u32::from_le_bytes(bmp[at..at + 4].try_into().unwrap());
+    assert_eq!(le32(14), 40);
+    let rest = &bmp[14 + 40..];
+    let mut header = bmp[14..14 + 40].to_vec();
+    header.resize(124, 0);
+    header[0..4].copy_from_slice(&124u32.to_le_bytes());
+    header[56..60].copy_from_slice(b"DEBM");
+    header[112..116].copy_from_slice(&((124 + rest.len()) as u32).to_le_bytes());
+    header[116..120].copy_from_slice(&(icc.len() as u32).to_le_bytes());
+    let mut out = b"BM".to_vec();
+    out.extend(((14 + 124 + rest.len() + icc.len()) as u32).to_le_bytes());
+    out.extend(&bmp[6..10]);
+    out.extend((le32(10) + 84).to_le_bytes());
+    out.extend(header);
+    out.extend(rest);
+    out.extend(icc);
+    out
+}
+
 /// 1.12.1 testWorkerDecodesOnlySupportedContent: the content decides how a file is read, and a
 /// PNG named `.jpg` is written as the JPEG its name says.
 #[test]

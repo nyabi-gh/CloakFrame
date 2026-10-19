@@ -28,8 +28,8 @@ pub const WEBP_LOSSY_QUALITY: f32 = 90.0;
 pub enum EncodeError {
     Codec(String),
     Metadata(ContainerError),
-    /// A profile other than sRGB for a BMP, which cannot carry one. Not reached from a decoded
-    /// BMP: image reads no profile from BMP, so its color outcome is always untagged.
+    /// A profile other than sRGB for a BMP. The processor converts such pixels to sRGB first
+    /// ([`super::color::srgb_for_bmp`]).
     ProfileNotEmbeddable,
 }
 

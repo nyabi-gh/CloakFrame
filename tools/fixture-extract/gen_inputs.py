@@ -167,20 +167,26 @@ def gen_icc(root: Path):
             path = out / f"chart-{key}.{ext}"
             chart.save(path, icc_profile=profile, **kwargs)
             cases.append(path.name)
-    # Reference for the "other profile" case, converted by Little CMS (relative colorimetric).
-    from PIL import ImageCms
-    import io
-
-    wide = ImageCms.ImageCmsProfile(io.BytesIO((out / "wide-gamma18.icc").read_bytes()))
-    srgb = ImageCms.ImageCmsProfile(io.BytesIO((out / "srgb.icc").read_bytes()))
-    converted = ImageCms.profileToProfile(
-        chart, wide, srgb, renderingIntent=ImageCms.Intent.RELATIVE_COLORIMETRIC, outputMode="RGB"
-    )
-    converted.save(out / "expected-wide-gamma18-as-srgb.png")
+    # References converted by Little CMS (relative colorimetric): the "other profile" case, and
+    # Display P3 and Adobe RGB written to BMP, which carries no profile.
+    gen_srgb_references(out, chart)
     # The same pixels with no profile at all: treated as sRGB, nothing to attach.
     chart.save(out / "chart-untagged.png")
     cases.append("chart-untagged.png")
     return cases
+
+
+def gen_srgb_references(out: Path, chart):
+    from PIL import ImageCms
+    import io
+
+    srgb = ImageCms.ImageCmsProfile(io.BytesIO((out / "srgb.icc").read_bytes()))
+    for key in ["wide-gamma18", "display-p3", "adobe-rgb"]:
+        source = ImageCms.ImageCmsProfile(io.BytesIO((out / f"{key}.icc").read_bytes()))
+        converted = ImageCms.profileToProfile(
+            chart, source, srgb, renderingIntent=ImageCms.Intent.RELATIVE_COLORIMETRIC, outputMode="RGB"
+        )
+        converted.save(out / f"expected-{key}-as-srgb.png")
 
 
 def gen_mosaic(root: Path):
