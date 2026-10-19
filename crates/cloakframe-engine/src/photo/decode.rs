@@ -212,6 +212,11 @@ fn check_tiff(bytes: &[u8]) -> Result<(), ReadError> {
     if matches!(tag(tiff::tags::Tag::Compression), Some(6 | 7)) {
         return Err(ReadError::Unsupported("a JPEG-compressed TIFF"));
     }
+    // image turns CMYK into RGB with a formula that ignores the profile; CMYK JPEG is refused
+    // for the same reason (the color policy has no CMYK conversion).
+    if tag(tiff::tags::Tag::PhotometricInterpretation) == Some(5) {
+        return Err(ReadError::Unsupported("a CMYK TIFF"));
+    }
     Ok(())
 }
 
@@ -601,6 +606,20 @@ pub(crate) mod tests {
                 "{compression} {photometric}: {error}"
             );
         }
+    }
+
+    /// The color policy has no CMYK conversion, so CMYK is refused in TIFF as in JPEG rather
+    /// than turned into RGB by a formula that ignores the profile.
+    #[test]
+    fn refuses_a_cmyk_tiff() {
+        let dir = TestDir::new();
+        let cmyk = tiff_with_strip((8, 4), 4, 1, 5, &[60; 8 * 4 * 4]);
+        let s = source(&dir, "cmyk.tif", &cmyk).unwrap();
+        let error = decode(&s, &budget(), &CancelToken::new()).unwrap_err();
+        assert!(
+            matches!(error, ReadError::Unsupported("a CMYK TIFF")),
+            "{error}"
+        );
     }
 
     #[test]

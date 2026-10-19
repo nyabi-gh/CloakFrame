@@ -10,7 +10,7 @@ Rust 구현이 1.12.1과 다르게 동작하는 점을 한 줄씩 적는다([계
 | 출력 이름 충돌 | 같은 이름의 기존 파일이나 같은 실행의 중복 이름이 있으면 그 항목을 거부 | 덮어쓰지 않는 것은 같고, 검토 화면에서 빈 이름(`photo (2).jpg`)을 제안 | 거부만 하면 사용자가 폴더를 정리하고 다시 실행해야 했다 |
 | 출력 폴더 안의 링크 | 출력 폴더 안의 링크를 따라 그 밖에 쓰는 것을 거부 | 링크된 하위 폴더를 따라 그 대상에 씀. 출력 이름 자리에 있는 링크는 끊긴 것이라도 기존 파일로 보고 덮지 않음 | 출력 폴더는 사용자가 고른 곳이고 같은 사용자 권한의 링크 조작은 위협 모델 밖이다. root handle 기준 traversal을 없앴다(계획 0.1) |
 | 임시 파일 | 원본 사본을 시스템 임시 폴더의 비공개 stage에 둠(D12) | 원본 사본을 만들지 않고, 출력만 대상 폴더 안의 임시 이름(`.cloakframe-tmp-*`)으로 쓴 뒤 같은 폴더에서 이름을 바꿈. 점으로 시작하는 이름이라 macOS·Linux에서는 숨김 파일이고 Windows에서는 보임. 하루 넘은 남은 임시 파일은 다음 실행이 지움 | 큰 원본에서 디스크 여유 부족 실패가 생기고 사본이 남을 수 있었다 |
-| 사진 입력 | CMYK·YCCK JPEG를 OpenCV의 단순 변환으로 RGB로 바꿔 처리 | 거부("CMYK JPEG는 지원하지 않음") | 색 정책(M2 2단계)은 CMYK를 다루지 않으므로 잘못된 색으로 처리하지 않는다. CMYK TIFF는 아직 단순 변환으로 처리하므로 둘의 처리를 다시 정한다([재검토](M0_M2_REVIEW.md) 6번) |
+| 사진 입력 | CMYK·YCCK JPEG와 CMYK TIFF를 OpenCV의 단순 변환으로 RGB로 바꿔 처리 | 거부("CMYK JPEG/TIFF는 지원하지 않음") | 색 정책(M2 2단계)은 CMYK를 다루지 않으므로 잘못된 색으로 처리하지 않는다. TIFF도 JPEG와 같이 거부한다(2026-10-19, [재검토](M0_M2_REVIEW.md) 6번) |
 | 사진 입력 | JPEG 압축 TIFF(스캐너·Photoshop)를 libtiff로 읽어 처리 | 거부("JPEG 압축 TIFF는 지원하지 않음") | 쓰는 TIFF 디코더가 YCbCr JPEG strip을 읽지 못하고, RGB로 잘못 표기된 파일은 엉뚱한 pixel로 디코드한다([재검토](M0_M2_REVIEW.md) 4번). 지원은 수요를 보고 strip을 libjpeg-turbo로 디코드하는 방식으로 정한다 |
 | 사진 색(D2) | ICC profile을 버리고 pixel을 그대로 써서 wide gamut 사진의 색이 틀어짐 | sRGB·Display P3·Adobe RGB는 pixel을 그대로 두고 번들 표준 profile을 붙임. 그 밖의 profile은 sRGB로(회색 사진의 회색 profile은 sRGB 곡선의 회색으로) 변환하고 결과에 표시. 읽을 수 없는 profile은 버리고 표시 | 결과 사진의 색이 원본과 같게 보이도록 한다 |
 | BMP 색(D2) | BMP의 ICC profile을 읽지도 쓰지도 않음 | BMP V5에 내장된 profile을 읽어 D2를 적용(다른 파일을 가리키는 profile은 버리고 표시). BMP 출력에는 profile을 붙이지 않으므로 Display P3·Adobe RGB 사진은 sRGB로 변환하고 표시 | macOS 미리보기·Quick Look이 profile을 내장한 BMP를 열지 못한다 |
