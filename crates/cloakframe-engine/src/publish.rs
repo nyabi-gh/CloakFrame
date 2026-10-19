@@ -1,4 +1,4 @@
-use std::ffi::OsString;
+use std::ffi::{OsStr, OsString};
 use std::fs::{self, File, OpenOptions};
 use std::hash::{BuildHasher, RandomState};
 use std::io;
@@ -35,34 +35,13 @@ impl TempOutput {
             .filter(|p| !p.as_os_str().is_empty())
             .unwrap_or(Path::new("."));
         fs::create_dir_all(dir)?;
-        let extension = destination.extension().map(|e| {
-            let mut dotted = OsString::from(".");
-            dotted.push(e);
-            dotted
-        });
-        loop {
-            let mut candidate = OsString::from(TEMP_PREFIX);
-            candidate.push(format!(
-                "{:016x}",
-                RandomState::new().hash_one(SystemTime::now())
-            ));
-            if let Some(extension) = &extension {
-                candidate.push(extension);
-            }
-            let temp = dir.join(&candidate);
-            match OpenOptions::new().write(true).create_new(true).open(&temp) {
-                Ok(file) => {
-                    return Ok(Self {
-                        file: Some(file),
-                        temp,
-                        destination: destination.to_path_buf(),
-                        published: false,
-                    });
-                }
-                Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
-                Err(e) => return Err(e),
-            }
-        }
+        let (file, temp) = create_temp(dir, destination.extension())?;
+        Ok(Self {
+            file: Some(file),
+            temp,
+            destination: destination.to_path_buf(),
+            published: false,
+        })
     }
 
     pub fn file(&mut self) -> &mut File {
@@ -136,9 +115,31 @@ impl AfterPublish {
     }
 }
 
+/// A new empty file in `dir` under a hidden temporary name ending in `extension`, with default
+/// permissions (D4).
+pub(crate) fn create_temp(dir: &Path, extension: Option<&OsStr>) -> io::Result<(File, PathBuf)> {
+    loop {
+        let mut candidate = OsString::from(TEMP_PREFIX);
+        candidate.push(format!(
+            "{:016x}",
+            RandomState::new().hash_one(SystemTime::now())
+        ));
+        if let Some(extension) = extension {
+            candidate.push(".");
+            candidate.push(extension);
+        }
+        let temp = dir.join(&candidate);
+        match OpenOptions::new().write(true).create_new(true).open(&temp) {
+            Ok(file) => return Ok((file, temp)),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
+            Err(e) => return Err(e),
+        }
+    }
+}
+
 /// Makes a rename in `dir` survive a crash. Windows has no such call for folders; the rename
 /// itself is written through (`MOVEFILE_WRITE_THROUGH`).
-fn sync_folder(dir: &Path) -> io::Result<()> {
+pub(crate) fn sync_folder(dir: &Path) -> io::Result<()> {
     #[cfg(unix)]
     File::open(dir)?.sync_all()?;
     #[cfg(windows)]

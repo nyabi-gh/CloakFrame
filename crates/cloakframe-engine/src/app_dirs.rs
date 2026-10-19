@@ -12,14 +12,29 @@ pub fn cache_dir() -> Option<PathBuf> {
     platform_cache_dir()
 }
 
+/// The folder for downloaded models. In the data folder rather than the cache, which cleaning
+/// tools empty: each model was downloaded with the user's consent to its terms.
+pub fn model_dir() -> Option<PathBuf> {
+    data_dir().map(|data| data.join("models"))
+}
+
+/// The per-user folder applications keep their data under, which Qt calls GenericDataLocation.
+pub(crate) fn data_home() -> Option<PathBuf> {
+    platform_data_home()
+}
+
 fn absolute(value: Option<OsString>) -> Option<PathBuf> {
     value.map(PathBuf::from).filter(|p| p.is_absolute())
 }
 
 #[cfg(target_os = "macos")]
+fn platform_data_home() -> Option<PathBuf> {
+    absolute(std::env::var_os("HOME")).map(|home| home.join("Library/Application Support"))
+}
+
+#[cfg(target_os = "macos")]
 fn platform_data_dir() -> Option<PathBuf> {
-    absolute(std::env::var_os("HOME"))
-        .map(|home| home.join("Library/Application Support/CloakFrame"))
+    platform_data_home().map(|data| data.join("CloakFrame"))
 }
 
 #[cfg(target_os = "macos")]
@@ -28,10 +43,14 @@ fn platform_cache_dir() -> Option<PathBuf> {
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
-fn platform_data_dir() -> Option<PathBuf> {
+fn platform_data_home() -> Option<PathBuf> {
     absolute(std::env::var_os("XDG_DATA_HOME"))
         .or_else(|| absolute(std::env::var_os("HOME")).map(|home| home.join(".local/share")))
-        .map(|data| data.join("cloakframe"))
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn platform_data_dir() -> Option<PathBuf> {
+    platform_data_home().map(|data| data.join("cloakframe"))
 }
 
 #[cfg(all(unix, not(target_os = "macos")))]
@@ -43,7 +62,7 @@ fn platform_cache_dir() -> Option<PathBuf> {
 
 #[cfg(windows)]
 #[allow(unsafe_code)]
-fn platform_data_dir() -> Option<PathBuf> {
+fn platform_data_home() -> Option<PathBuf> {
     use std::os::windows::ffi::OsStringExt;
     use windows_sys::Win32::System::Com::CoTaskMemFree;
     use windows_sys::Win32::UI::Shell::{FOLDERID_LocalAppData, SHGetKnownFolderPath};
@@ -60,7 +79,12 @@ fn platform_data_dir() -> Option<PathBuf> {
         CoTaskMemFree(path.cast());
         folder
     };
-    absolute(folder).map(|local| local.join("CloakFrame"))
+    absolute(folder)
+}
+
+#[cfg(windows)]
+fn platform_data_dir() -> Option<PathBuf> {
+    platform_data_home().map(|local| local.join("CloakFrame"))
 }
 
 #[cfg(windows)]
@@ -82,6 +106,8 @@ mod tests {
         let app = |c: std::path::Component<'_>| c.as_os_str().eq_ignore_ascii_case("cloakframe");
         assert!(cache.components().any(app), "{}", cache.display());
         assert_ne!(cache, dir);
+        assert_eq!(model_dir(), Some(dir.join("models")));
+        assert_eq!(dir.parent(), data_home().as_deref());
     }
 
     #[test]

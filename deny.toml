@@ -3,6 +3,9 @@
 
 [graph]
 all-features = true
+# 배포하는 세 대상만 본다. 다른 대상 전용 의존성(예: rustls-platform-verifier가 wasm32에서만 쓰는
+# webpki-root-certs, CDLA-Permissive-2.0)은 빌드에 들어오지 않는다.
+targets = ["x86_64-pc-windows-msvc", "aarch64-apple-darwin", "x86_64-unknown-linux-gnu"]
 
 [licenses]
 allow = [

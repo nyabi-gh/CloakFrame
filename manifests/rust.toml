@@ -120,3 +120,19 @@ version = "=0.9.1"
 # ICC 판정과 sRGB 변환에만 쓴다. 출력에 넣는 profile은 assets/icc(tools/icc/make_profiles.py)이며,
 # moxcms의 encode 결과는 libpng 검사(4바이트 정렬)를 통과하지 못해 쓰지 않는다.
 evidence = "crates/cloakframe-engine/src/photo/color.rs"
+
+[crates.ureq]
+version = "=3.4.2"
+default-features = false
+features = ["rustls-no-provider", "platform-verifier"]
+# 모델 다운로드. 동기 API라 Tokio가 없다(2026-10-19, 계획 3장의 reqwest 대신). redirect는 engine이 한 단계씩
+# allowlist로 검사한다. rustls feature는 webpki-roots(CDLA-Permissive-2.0)를 넣으므로 쓰지 않고 OS 인증서
+# 저장소(platform-verifier)로 확인한다. 공개 2주가 안 된 ureq-proto 0.6.5 등 다섯 crate는 Cargo.lock에서 이전 판.
+evidence = "docs/M3_MODELS.md"
+
+[crates.rustls]
+version = "=0.23.46"
+default-features = false
+features = ["ring", "std", "tls12"]
+# ureq에 넘기는 암호 provider(ring). 0.23.45에는 보안 권고 4건(RUSTSEC-2026-0346–0349)이 있어 공개 5일 된 판을 쓴다.
+evidence = "docs/M3_MODELS.md"

@@ -7,6 +7,8 @@ pub mod detect;
 pub mod events;
 pub mod fs_case;
 pub mod identity;
+pub mod legacy;
+pub mod model_files;
 pub mod ordered;
 pub mod output_plan;
 pub mod photo;
