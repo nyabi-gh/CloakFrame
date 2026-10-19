@@ -138,7 +138,7 @@ fn eight_bit(image: &DynamicImage) -> Cow<'_, DynamicImage> {
 }
 
 /// q92 with the source's subsampling (D6); 1.12.1 always wrote q100 4:4:4. A source that is not
-/// a JPEG has full chroma and keeps it. JPEG has no alpha, which is dropped as 1.12.1 did, and no
+/// a JPEG, or whose subsampling libjpeg-turbo cannot write, gets full chroma. JPEG has no alpha, which is dropped as 1.12.1 did, and no
 /// 16-bit samples, which are scaled to 8 bits.
 fn jpeg(source: &Source, image: &DynamicImage) -> Result<Vec<u8>, EncodeError> {
     let source_subsamp = if source.format == ImageFormat::Jpeg {
@@ -164,7 +164,8 @@ fn jpeg(source: &Source, image: &DynamicImage) -> Result<Vec<u8>, EncodeError> {
         ),
         _ => {
             let subsamp = match source_subsamp {
-                turbojpeg::Subsamp::Gray => turbojpeg::Subsamp::None,
+                // Unknown: a combination libjpeg-turbo cannot write, such as 2x1,1x2,1x1.
+                turbojpeg::Subsamp::Gray | turbojpeg::Subsamp::Unknown => turbojpeg::Subsamp::None,
                 other => other,
             };
             let rgb = match image {
@@ -515,5 +516,31 @@ mod tests {
         )
         .unwrap();
         assert!(!is_lossy_webp(&webp));
+    }
+
+    /// libjpeg-turbo writes only the standard subsampling combinations; a source with another one
+    /// (`cjpeg -sample 2x1,1x2,1x1`) gets full chroma, as every output did in 1.12.1.
+    #[test]
+    fn a_source_with_unusual_subsampling_gets_full_chroma() {
+        let source = fixture("decode/mixed-sampling.jpg");
+        assert_eq!(
+            turbojpeg::read_header(&source.bytes).unwrap().subsamp,
+            turbojpeg::Subsamp::Unknown
+        );
+        let image = decode(&source, &MemoryBudget::new(1 << 30), &CancelToken::new())
+            .unwrap()
+            .image;
+        let out = encode(
+            &source,
+            &image,
+            ColorOutcome::Untagged,
+            MetadataPolicy::default(),
+            ImageFormat::Jpeg,
+        )
+        .unwrap();
+        assert_eq!(
+            turbojpeg::read_header(&out).unwrap().subsamp,
+            turbojpeg::Subsamp::None
+        );
     }
 }
