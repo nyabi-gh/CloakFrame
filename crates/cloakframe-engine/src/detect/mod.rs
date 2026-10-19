@@ -1,6 +1,7 @@
 pub mod resize;
 pub mod runtime;
 pub mod yolo5face;
+pub mod yunet;
 
 use std::fmt;
 use std::sync::mpsc;

@@ -2,7 +2,8 @@ name: ORT
 
 # The ONNX Runtime builds pinned in manifests/native.toml, fetched by hash, against the 1.12.1
 # detection fixtures on all three platforms (CPU), through the M0 spike. The engine's own tests
-# (ci.yml) cover YOLO5Face-n from M2; this keeps YuNet and the plate model covered until M3.
+# (ci.yml) cover YOLO5Face-n (M2) and YuNet (M3); this keeps the plate model covered until its
+# adapter lands, and checks the pinned runtimes whenever they change.
 on:
   workflow_dispatch:
   pull_request:

@@ -1,9 +1,10 @@
-//! YOLO5Face-n on the pinned ONNX Runtime against the 1.12.1 detection fixtures
-//! (tests/fixtures/detect/yolo5face, 6 images x 3 score thresholds, NMS 0.4).
+//! The face detectors on the pinned ONNX Runtime against the 1.12.1 detection fixtures
+//! (tests/fixtures/detect/<model>, 6 images x 3 score thresholds, NMS 0.4 each).
 //!
-//! 1.12.1 kept only the 2,000 best candidates before NMS. The crowd fixture exceeds that at every
-//! threshold (defects/D11/observed_1121.json), so there every 1.12.1 detection must still be found
-//! and the result must be all 280 faces (defects/D11/expected.json); elsewhere the results match.
+//! YOLO5Face-n: 1.12.1 kept only the 2,000 best candidates before NMS. The crowd fixture exceeds
+//! that at every threshold (defects/D11/observed_1121.json), so there every 1.12.1 detection must
+//! still be found and the result must be all 280 faces (defects/D11/expected.json); elsewhere the
+//! results match. YuNet matches 1.12.1 everywhere.
 //!
 //! Needs, as CI provides them (plan 9.1: missing assets fail the test rather than skip it):
 //! - `CLOAKFRAME_ORT_LIBRARY`: the library `tools/fetch_native.py` prints for this platform
@@ -13,12 +14,14 @@
 mod common;
 
 use std::path::Path;
+use std::sync::OnceLock;
 
 use cloakframe_core::detection::{KindThresholds, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::yolo5face::Yolo5Face;
+use cloakframe_engine::detect::yunet::YuNet;
 use cloakframe_engine::detect::{Detector, Rgb8Image};
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::{color, decode};
@@ -58,15 +61,17 @@ struct ExpectedDetection {
     has_pose: bool,
 }
 
-fn model_bytes(assets: &Path) -> Vec<u8> {
+/// ORT has one environment per process, shared by the tests here.
+fn runtime() -> &'static OrtRuntime {
+    static RUNTIME: OnceLock<OrtRuntime> = OnceLock::new();
+    RUNTIME.get_or_init(|| OrtRuntime::load(&required_env("CLOAKFRAME_ORT_LIBRARY")).unwrap())
+}
+
+fn model_bytes(assets: &Path, name: &str) -> Vec<u8> {
     let spec: Assets =
         serde_json::from_str(&std::fs::read_to_string(fixtures().join("assets.json")).unwrap())
             .unwrap();
-    let model = spec
-        .models
-        .iter()
-        .find(|m| m.name == "yolov5n_face.onnx")
-        .unwrap();
+    let model = spec.models.iter().find(|m| m.name == name).unwrap();
     let bytes = std::fs::read(assets.join(&model.name)).unwrap();
     let digest: String = Sha256::digest(&bytes)
         .iter()
@@ -87,11 +92,31 @@ fn detection_copy(path: &Path) -> Rgb8Image {
 
 #[test]
 fn yolo5face_matches_the_1_12_1_fixtures() {
-    let library = required_env("CLOAKFRAME_ORT_LIBRARY");
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
-    let runtime = OrtRuntime::load(&library).unwrap();
-    let mut detector = Yolo5Face::new(&runtime, &model_bytes(&assets)).unwrap();
+    let mut detector =
+        Yolo5Face::new(runtime(), &model_bytes(&assets, "yolov5n_face.onnx")).unwrap();
+    compare(&mut detector, "yolo5face", |stem, found_1121| {
+        if stem == CROWD {
+            CROWD_FACES
+        } else {
+            found_1121
+        }
+    });
+}
 
+#[test]
+fn yunet_matches_the_1_12_1_fixtures() {
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    let model = model_bytes(&assets, "face_detection_yunet_2023mar.onnx");
+    let mut detector = YuNet::new(runtime(), &model).unwrap();
+    compare(&mut detector, "yunet", |_, found_1121| found_1121);
+}
+
+/// Runs `detector` on the fixture images at each threshold and compares with
+/// `tests/fixtures/detect/<model>`. `expected` gives the count to find from the image stem and
+/// the count 1.12.1 found.
+fn compare(detector: &mut dyn Detector, model: &str, expected: impl Fn(&str, usize) -> usize) {
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
     let inputs = fixtures().join("detect/inputs");
     let images = [
         assets.join("astronaut.png"),
@@ -109,7 +134,7 @@ fn yolo5face_matches_the_1_12_1_fixtures() {
         let stem = path.file_stem().unwrap().to_str().unwrap();
         for score in [0.1f32, 0.25, 0.5] {
             let case = format!("{name}@{score:.2}");
-            let file = fixtures().join(format!("detect/yolo5face/{stem}@{score:.2}.json"));
+            let file = fixtures().join(format!("detect/{model}/{stem}@{score:.2}.json"));
             let want: Expected =
                 serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
             assert_eq!(want.decoded_size, [image.width, image.height], "{case}");
@@ -122,11 +147,7 @@ fn yolo5face_matches_the_1_12_1_fixtures() {
             if found.over_limit != 0 {
                 failures.push(format!("{case}: {} over the limit", found.over_limit));
             }
-            let expected = if stem == CROWD {
-                CROWD_FACES
-            } else {
-                want.detections.len()
-            };
+            let expected = expected(stem, want.detections.len());
             if found.detections.len() != expected {
                 failures.push(format!(
                     "{case}: {} detections, expected {expected} (1.12.1 found {})",
@@ -172,7 +193,7 @@ fn yolo5face_matches_the_1_12_1_fixtures() {
         }
     }
     println!(
-        "{cases} cases, min IoU {min_iou}, max score diff {max_score:e}, max roll diff {max_roll:e}"
+        "{model}: {cases} cases, min IoU {min_iou}, max score diff {max_score:e}, max roll diff {max_roll:e}"
     );
     assert_eq!(cases, 18);
     assert!(failures.is_empty(), "{failures:#?}");
