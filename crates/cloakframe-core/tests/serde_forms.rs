@@ -35,6 +35,15 @@ fn detections_round_trip_and_invalid_ones_are_rejected() {
         bad[field] = value;
         assert!(serde_json::from_value::<Detection>(bad).is_err(), "{field}");
     }
+
+    // The form before the kind was stored (M1, same session format version) still reads; the
+    // kind comes from the model.
+    let mut without_kind = plate.clone();
+    without_kind.as_object_mut().unwrap().remove("kind");
+    assert_eq!(
+        serde_json::from_value::<Detection>(without_kind).unwrap(),
+        serde_json::from_value::<Detection>(plate).unwrap()
+    );
 }
 
 #[test]

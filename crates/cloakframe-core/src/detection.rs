@@ -67,8 +67,10 @@ pub struct Detection {
 #[derive(Serialize, Deserialize)]
 struct DetectionFields {
     model: ModelId,
-    /// Derived from `model`; stored so results read on their own (P-2).
-    kind: DetectionKind,
+    /// Derived from `model`; stored so results read on their own (P-2). Absent in the M1 form,
+    /// which has the same session format version.
+    #[serde(default)]
+    kind: Option<DetectionKind>,
     score: f32,
     bbox: Rect,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -81,7 +83,7 @@ impl TryFrom<DetectionFields> for Detection {
     type Error = DetectionError;
 
     fn try_from(f: DetectionFields) -> Result<Self, Self::Error> {
-        if f.kind != f.model.kind() {
+        if f.kind.is_some_and(|k| k != f.model.kind()) {
             return Err(DetectionError::KindMismatch);
         }
         Self::new(f.model, f.score, f.bbox, f.landmarks, f.frame)
@@ -92,7 +94,7 @@ impl From<Detection> for DetectionFields {
     fn from(d: Detection) -> Self {
         Self {
             model: d.model,
-            kind: d.kind(),
+            kind: Some(d.kind()),
             score: d.score,
             bbox: d.bbox,
             landmarks: d.landmarks,
