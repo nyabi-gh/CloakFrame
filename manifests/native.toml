@@ -7,7 +7,8 @@
 #
 # use
 #   bundle    패키지에 넣는다
-#   download  앱이 처음 쓸 때 내려받고 해시로 확인한다(저장소·패키지에 넣지 않음)
+#   download  사용자가 받기로 하면 앱이 내려받고 해시로 확인한다(저장소·패키지에 넣지 않음). URL·해시·
+#             크기·license·source는 engine model_files::MODEL_FILES와 같은지 시험한다
 
 schema = 1
 
@@ -170,7 +171,7 @@ url = "https://github.com/yakhyo/yolov5-face-onnx-inference/releases/download/we
 sha256 = "eb244a06e36999db732b317c2b30fa113cd6cfc1a397eaf738f2d6f33c01f640"
 size = 11021477
 # 코드 GPL-3.0(YOLO5Face), 학습 데이터 WIDER FACE는 비상업 연구용. 재배포하지 않고 사용자가 받는다.
-# engine은 이 해시의 바이트로만 세션을 만든다(detect::yolo5face::MODEL_SHA256, 같은 값인지 시험으로 확인).
+# engine은 이 해시의 바이트로만 세션을 만든다(detect::yolo5face::MODEL_SHA256). 비상업 조건이라 CLI는 --accept-terms가 있어야 받는다.
 license = "non-commercial (upstream terms)"
 source = "https://github.com/deepcam-cn/yolov5-face"
 use = "download"

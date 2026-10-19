@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -87,10 +87,10 @@
 | 추론 | `ort` =2.0.0-rc.14(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 `api-27`로 macOS 공식 1.30.0·Windows ML 1.27.1 모두 세 모델의 CPU 결과와 CoreML·DML 결과가 1.12.1과 같음을 확인. `ort`의 세션 빌더는 EP 자동 선택 정책 `MaxEfficiency`를 기본으로 걸어 ORT 1.31이 CPU 세션에도 CoreML을 붙이므로, 세션마다 `with_auto_device(PreferCPU)`로 덮고 EP를 명시한다. RC이므로 정확한 버전으로 고정 |
 | 이미지 | `image` 0.25(PNG·TIFF·BMP·WebP, 필요 codec만), JPEG 디코드·인코드는 libjpeg-turbo(`turbojpeg`, 2026-10-18 결정: `image`의 zune-jpeg 0.5.15가 non-interleaved 4:2:0 JPEG를 조용히 잘못 디코드하고, libjpeg-turbo는 1.12.1의 OpenCV와 pixel까지 같음, [기록](M2_ENCODE_SPIKE.md)), 손실 WebP 인코드는 libwebp(`libwebp-sys`), TIFF 인코드(LZW)와 TIFF ICC 판독은 `tiff`(M2 5단계: `image`의 TIFF 인코더는 압축을 고를 수 없고, `image`는 작은 TIFF의 ICC를 limit 때문에 버림), BMP V5의 내장 ICC는 자체 판독(`image`가 읽지 않음, M2 7단계), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer(`engine::photo::metadata`) | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(`engine::detect::resize`). 정확히 2배 축소일 때 OpenCV가 바꿔 쓰는 `INTER_AREA` 경로까지 옮겼고, x86 OpenCV 5.0.0 일반 경로와 92개 크기 조합에서 바이트 일치를 시험으로 고정했다(M2 3단계, `tests/fixtures/resize`). `fast_image_resize`는 화면 표시용에만 |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
-| 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), Rayon pool(CPU 연산), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 HTTP(M3)와 자식 프로세스 감독(M4)이 들어올 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았다 |
+| 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), Rayon pool(CPU 연산), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 자식 프로세스 감독(M4)에 필요할 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았고, M3 모델 다운로드도 동기 HTTP(ureq)라 쓰지 않는다(2026-10-19) |
 | 설정·로그·오류 | serde + TOML, 앱 데이터 폴더는 자체 구현(`engine::app_dirs`. `directories`는 의존성 `option-ext`가 MPL-2.0이라 쓰지 않음, 2026-10-18), `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
-| 네트워크·무결성 | `reqwest` + rustls, `sha2`, `ed25519-dalek` | 모델·업데이트 URL allowlist |
+| 네트워크·무결성 | `ureq`(동기) + rustls(ring) + `rustls-platform-verifier`(OS 인증서 저장소), `sha2`, `ed25519-dalek` | 모델·업데이트 URL allowlist. reqwest 대신 ureq(2026-10-19 결정: 의존성 114개 → 33개, Tokio 없음, [기록](M3_MODELS.md#http-crate)) |
 | 파일시스템 | `rustix`(Unix), `windows` crate | no-replace rename과 identity 조회에만 사용 |
 | 업데이트·패키징 | Velopack Rust SDK(Windows·Linux), Sparkle(macOS, `objc2` 어댑터) | 기존 feed와 package ID를 이어 써야 1.12.1 사용자가 자동 업데이트로 넘어온다 |
 
@@ -99,7 +99,7 @@
 | 플랫폼 | 가속 → 폴백 | 조건 |
 | --- | --- | --- |
 | Windows x64 | Windows ML self-contained 런타임의 DirectML → CPU | ORT를 따로 번들하지 않고 `Microsoft.Windows.AI.MachineLearning` 2.4.89의 `onnxruntime.dll`(ORT 1.27.1)·`DirectML.dll`을 넣는다. 이 패키지의 최소 OS가 Windows 10 1903(18362)이다(1809는 `Microsoft.WindowsAppSDK.ML`이 필요하므로 지원하지 않음). M0에서 `ort::init_from`으로 이 DLL을 `api-27`로 불러 DML EP가 붙는 것과, 네트워크 없는 Windows 11 Sandbox에서 실행되는 것을 확인했다([기록](M0_ORT_SPIKE.md#windows-ml--directml)). 세션 순차 실행, memory pattern 비활성화. 재배포 약관은 10.1 |
-| macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시. 번호판 end2end 모델은 감지 0건일 때 CoreML이 빈 동적 텐서를 거부하므로 CPU로 돌린다(M0, ORT 1.30·1.31) |
+| macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시하고, 이 빌드가 쓰지 않는 ORT 빌드·모델의 폴더와 1.12.1의 cache는 지운다(M3 4단계). 번호판 end2end 모델은 감지 0건일 때 CoreML이 빈 동적 텐서를 거부하므로 CPU로 돌린다(M0, ORT 1.30·1.31) |
 | Linux x86_64 | CPU | CUDA는 1.3의 후보 |
 
 Windows ML의 **EP 카탈로그**(NVIDIA TensorRT-RTX, Intel OpenVINO, AMD MIGraphX·VitisAI, Qualcomm QNN)는 첫 stable에서 쓰지 않는다. Windows 11 24H2 이상이 필요하고, 첫 실행에 네트워크로 받고 Windows Update로 자동 갱신되어 오프라인 실행·고정 manifest 원칙과 맞지 않는다. 이 앱의 모델은 작아 DML로 충분하다. 필요가 측정되면 사용자가 켜는 opt-in 기능으로 따로 설계한다.
@@ -178,10 +178,11 @@ crates/
 
 ### 4.6 모델
 
-- manifest에 URL·SHA-256·크기·라이선스를 고정한다. 다운로드는 모델 폴더 안 임시 파일로 스트리밍하면서 해시를 계산하고, 일치하면 rename한다.
+- manifest에 URL·SHA-256·크기·라이선스를 고정한다(engine `model_files::MODEL_FILES`가 같은 값인지 시험). 다운로드는 HTTPS로 GitHub와 그 다운로드 호스트에만 가고(redirect마다 allowlist 검사), 모델 폴더 안 임시 파일로 스트리밍하면서 해시를 계산하고, 일치하면 rename한다.
+- 모델 폴더는 앱 데이터 폴더의 `models`다(캐시 폴더가 아님). 폴더 권한은 보지 않는다(D5).
 - 로드: 바이트를 읽고 해시 확인 → 그 바이트로 세션 생성(경로를 다시 열지 않음).
-- 다운로드 전 모델별 이용 조건을 보여 준다(YOLO5Face-n은 비상업 전용). 원본 배포처가 개인 GitHub 릴리스이므로, 라이선스가 허락하면 자체 릴리스 자산으로 미러링한다.
-- 기존 CloakFrame 모델 캐시는 해시를 확인해 새 캐시로 복사한다.
+- 다운로드 전 모델별 이용 조건을 보여 준다(YOLO5Face-n은 비상업 전용, CLI는 `--accept-terms`가 있어야 받음). 원본 배포처가 개인 GitHub 릴리스이므로, 라이선스가 허락하면 자체 릴리스 자산으로 미러링한다(M7).
+- 1.12.1 모델 폴더는 macOS·Windows에서 새 모델 폴더와 같은 경로라 그대로 쓴다. Linux와 옛 Redactly 폴더의 모델은 새 폴더에 없을 때 해시를 확인해 복사하고 원본은 둔다([기록](M3_MODELS.md)).
 
 ### 4.7 자원과 취소
 
@@ -318,7 +319,7 @@ crates/
   1. YuNet 어댑터(`m3-yunet`): engine `detect::yunet`, 감지 fixture 18건을 engine 시험으로 옮김(`ort.yml` spike는 고정 런타임 확인용으로 세 모델을 계속 비교). 이 단계 첫 커밋에 M2 완료 확정 문서. **완료(2026-10-19, PR #33, main `f7def9a`):** OpenCV `FaceDetectorYN` 후처리(정수 box NMS, top-k 5,000, 점수 엄격 비교, 얼굴 하나면 NMS 생략)를 옮겨 18건이 1.12.1과 같음(최소 IoU 0.99999, 점수 차 7e-7). 처리기·CLI의 모델 선택은 2단계 감지 구성에서. 3개 OS CI와 `ort.yml`의 고정 ORT 비교 통과
   2. 번호판 어댑터와 종류별 임계값(`m3-plate`): YOLOv9-t end2end, 얼굴·번호판 모델을 함께 돌리는 감지 구성, 실제 모델의 종류별 기본 임계값, fixture 18건. **완료(2026-10-19, PR #34, main `c4a4544`, [기록](M3_DETECTION.md)):** engine `detect::plate`가 1.12.1 `PlateDetector`의 전처리·해석을 옮겨 18건이 1.12.1과 같음(최소 IoU 0.9999966). 그래프 안 NMS의 상한 100개·IoU 0.45를 initializer 교체로 풀고 core NMS를 번호판 임계값으로 직접 돌림(원래 출력과 9장에서 같음, 100개 넘는 출력 시험). 그래서 고정 모델 중 NMS 뒤 출력이 제한된 모델은 없다. 모델별 기본 임계값은 core `ModelId::default_thresholds`(1.12.1이 실제로 쓴 값: 얼굴 score 0.5·NMS 0.4, 번호판 score 0.5·NMS 0.45). 감지 구성 `detect::models::DetectionModels`(얼굴 모델 하나 또는 없음, 번호판 켬·끔, 둘 다 없으면 거부)가 `PhotoSettings`에 들어가 review key의 `models`가 되고, 선택한 모델은 추론 스레드 하나에서 모델 사이 NMS 없이 합쳐짐(P-2). `Found.over_limit`은 모델별. CLI는 `--face-model` 대신 `--models DIR`·`--faces yolo5face-n|yunet|off`·`--plates on|off`, `review`도 같은 선택을 받음. 결정(2026-10-19): 기본 얼굴 모델 YOLO5Face-n, 번호판 기본 꺼짐(얼굴 없는 사진 179장 중 10장에 score 0.5 이상 번호판 오탐), 임계값은 1.12.1 값을 두고 6단계 벤치마크에서 다시 정함, 번호판 그래프 상한은 풂. 1단계 YuNet이 OpenCV처럼 NMS 전 후보를 5,000개로 잘라 약 440–770명 넘는 사진에서 얼굴을 버릴 수 있던 것을 찾아, 같은 날 결정으로 상한을 없앰(후보는 많아야 8,400개, 최악 NMS 60 ms). 3개 OS CI와 `ort.yml`의 고정 ORT 비교 통과(Windows는 CRLF checkout 때문에 manifest URL 줄 시험이 처음에 실패해 줄 끝에 기대지 않게 고침)
   3. EP 정책과 CPU 폴백(`m3-ep`): macOS CoreML(MLProgram, 번호판은 CPU), Windows DML, GPU 오류 시 그 항목부터 CPU 재실행과 표시(오류 주입 시험). Windows 실기기 GPU 리셋은 장치가 생기면 확인(M7·M8로 옮긴 확인과 같음). **완료(2026-10-19, PR #35, main `76a538f`, [기록](M3_EP.md)):** `detect::runtime::Backend`(CPU·CoreML·DirectML)와 1.12.1 세션 옵션(가속기는 `EXTENDED`·스레드 1, CoreML `MLProgram`·`ALL`, DML memory pattern 끔·순차·device 0). `detect::fallback`: macOS는 YOLO5Face-n·YuNet을 CoreML에, 번호판은 CPU에(후보 0개면 CoreML이 빈 텐서 거부, 그래프 NMS를 풀어도 같음), Windows는 세 모델을 DML에. 가속기에서 세션을 못 만들면 CPU로 시작하고, 사진이 가속기에서 실패하면 같은 사진을 CPU로 다시 분석한 뒤 그 실행의 나머지를 CPU로(모델 오류·CPU 실패는 다시 하지 않음). 그 항목에 note, CLI는 모델별 실행 위치와 폴백 이유를 stderr에. CoreML 컴파일 캐시는 앱 캐시 폴더 아래 ORT 빌드·모델별 폴더. 실행 위치는 review key에 넣지 않음(결과가 같음을 실행 위치마다 fixture로 확인). CLI `--gpu on|off`. 결정(2026-10-19): GPU 기본 켬, YuNet도 CoreML(macOS에서 18건 같고 2.5배 빠름), 표시는 항목 note와 CLI 줄. 실제 가속기 오류(번호판을 CoreML에 강제)로 폴백 시험. Windows runner에는 GPU가 없어 DML 결과와 번호판 0건 입력 확인은 장치가 생기면. 3개 OS CI 통과(Windows runner가 DML로 시작했는지는 시험이 출력을 잡아 로그에 남지 않음)
-  4. 모델 manifest·다운로드·캐시(`m3-models`): URL allowlist, 모델 폴더 안 임시 파일로 받으며 해시 계산 후 rename, (모델, 입력 크기, EP)마다 세션 하나·스캔 뒤 필요한 모델만 로드(D5·D7), 이용 조건 표시 자료. 앞 단계에서 넘어온 것: CLI `--models`의 기본값을 앱 모델 폴더로, 1.12.1 모델 캐시를 해시 확인 후 새 캐시로 복사(4.6), CoreML 컴파일 캐시의 이전 ORT 빌드·모델 폴더 정리
+  4. 모델 manifest·다운로드·캐시(`m3-models`): URL allowlist, 모델 폴더 안 임시 파일로 받으며 해시 계산 후 rename, (모델, 입력 크기, EP)마다 세션 하나·스캔 뒤 필요한 모델만 로드(D5·D7), 이용 조건 표시 자료. 앞 단계에서 넘어온 것: CLI `--models`의 기본값을 앱 모델 폴더로, 1.12.1 모델 캐시를 해시 확인 후 새 캐시로 복사(4.6), CoreML 컴파일 캐시의 이전 ORT 빌드·모델 폴더 정리. **구현(2026-10-19, CI 확인 전, [기록](M3_MODELS.md)):** engine `model_files`: 고정 목록 `MODEL_FILES`(이름·URL·SHA-256·크기·이용 조건, manifest와 같은지 시험), `ModelStore`(모델 폴더 안 `.cloakframe-tmp-*`에 쓰며 해시, 크기·해시가 맞을 때만 rename, 권한 검사 없음), `download`(HTTP 경계 `Fetch`, `Https`는 ureq + rustls(ring) + OS 인증서 저장소, HTTPS·허용 호스트 4개만, redirect마다 검사). 모델 폴더는 `app_dirs::model_dir()`(데이터 폴더의 `models`)이고 macOS·Windows에서는 1.12.1 폴더와 같다. `legacy`: 1.12.1·Redactly 모델 폴더(없는 모델만 해시 확인 후 복사, 원본 둠), 1.12.1 CoreML 캐시 삭제. `OrtRuntime::remove_unused_coreml_caches`. `Backends::sessions_made`로 실행의 세션 수를 셈(D7). CLI: `--models` 생략 시 앱 폴더(1.12.1 모델 복사), `models`(상태·이용 조건), `models fetch yolo5face-n|yunet|plates`(YOLO5Face-n은 `--accept-terms` 필요), 없는 모델은 받을 명령을 안내. 결정(2026-10-19): 다운로드를 CLI 명령으로도 둠·비상업 모델은 동의 플래그, 모델 폴더는 데이터 폴더·1.12.1 모델은 복사(이동 아님), HTTP는 reqwest 대신 ureq(3장), CoreML 캐시는 쓰지 않는 폴더를 바로 지우고 1.12.1 캐시도 지움, 미러는 M7. rustls는 보안 권고 4건 때문에 공개 5일 된 0.23.46. `deny.toml`이 배포 대상 3개만 봄(wasm32 전용 CDLA 의존성 제외). macOS에서 시험 전체 통과, 실제 GitHub 다운로드 포함. D7의 영상 경우는 M5
   5. 타일 모드: 고해상도 사진의 작은 얼굴용 타일 감지와 겹침 병합, 출력 수가 제한된 모델의 상한 초과 시 타일 재감지(D11)
   6. 완료 확인: 소규모 벤치마크 재현율(9.2), D5·D7·D8·D11 시험 표, 문서
 
@@ -339,7 +340,7 @@ crates/
 
 ### M7 — 배포·업데이트·이전
 
-- **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 기존 feed로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, CloakFrame 설정(QSettings 읽기 어댑터 → TOML)과 모델 캐시 이전
+- **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 기존 feed로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, CloakFrame 설정(QSettings 읽기 어댑터 → TOML) 이전(모델 폴더와 CoreML 캐시는 M3 4단계에서 넘어옴), 모델 미러(4.6)
 - **완료 기준:** 깨끗한 최소 지원 OS(Windows 10 1903 VM 포함, M0에서 옮김)에서 설치·오프라인 실행·업데이트·제거, 1.12.1 → Rust 업데이트 경로 확인, 이전 실패 시 기존 데이터 불변. P-7 통과
 
 ### M8 — 검증과 stable 전환
@@ -425,7 +426,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 | 프로세스 내 추론의 GPU driver crash | M3, M8 | 측정되면 `Detector` trait 뒤에서 별도 프로세스로 분리 |
 | FFmpeg 파이프 처리량 | M0(macOS 해소), M4 | 파이프 상한 9.5 GB/s, 병목은 인코더. Windows·Linux 하드웨어 인코더 경로는 같은 spike로 확인 |
 | TIFF EXIF writer | M0·M2(해소) | 네 형식 모두 성공([기록](M0_EXIF_WRITER.md)). M2 5단계에서 ICC 부착과 함께 exiftool `-validate`·exiv2·ImageMagick으로 다시 확인 |
-| 모델 라이선스·배포처 | M3, M7 | 조건 표시, 허용되면 자체 미러, 상업용 대체 모델은 권리와 정확도 평가 후 |
+| 모델 라이선스·배포처 | M3, M7 | 조건 표시(M3 4단계, CLI는 비상업 모델에 동의 플래그), 허용되면 자체 미러(M7), 상업용 대체 모델은 권리와 정확도 평가 후 |
 | 범위 팽창 | 전 단계 | 8장의 시간 예산(32주)과 단계별 125% 점검, 조정 순서, 3개 crate와 headless 우선 유지 |
 
 ## 12. stable 전환 체크리스트
@@ -455,4 +456,5 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 - FFmpeg: CLI <https://ffmpeg.org/ffmpeg.html>, 프로토콜 <https://ffmpeg.org/ffmpeg-protocols.html>, 라이선스 <https://ffmpeg.org/legal.html>, ffmpeg-next <https://github.com/zmwangx/rust-ffmpeg>
 - Velopack Rust: <https://docs.velopack.io/getting-started/rust>, Sparkle: <https://sparkle-project.org/documentation/>
 - Tokio·Rayon: <https://tokio.rs/tokio/topics/bridging>, <https://docs.rs/rayon/latest/rayon/>
+- ureq: <https://docs.rs/ureq/3.4.2/ureq/>, rustls-platform-verifier: <https://github.com/rustls/rustls-platform-verifier>
 - ByteTrack: <https://github.com/FoundationVision/ByteTrack>

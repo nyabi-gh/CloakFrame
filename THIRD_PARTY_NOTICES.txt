@@ -13,13 +13,13 @@ complete notices are in THIRD_PARTY_NOTICES.txt at the v1.12.1 tag:
 https://github.com/nyabi-gh/CloakFrame/blob/v1.12.1/THIRD_PARTY_NOTICES.txt
 
 ================================================================================
-Detection models  (not bundled; downloaded on first use)
+Detection models  (not bundled; downloaded when the user asks)
 --
 The built-in models are not committed to the CloakFrame repository or bundled
-with its packages. The application downloads each one from its pinned upstream
-location on first use, verifies its SHA-256 digest, and caches it locally. Their
-terms are separate from CloakFrame's license; confirm the upstream terms before
-commercial use or redistribution.
+with its packages. CloakFrame shows each model's terms and, when the user asks,
+downloads it from its pinned upstream location, verifies its SHA-256 digest, and
+keeps it in the app's model folder. Their terms are separate from CloakFrame's
+license; confirm the upstream terms before commercial use or redistribution.
 
 YOLO5Face-n (recommended face detector)
   ONNX conversion from the yolov5-face-onnx-inference release:
@@ -193,4 +193,26 @@ constitute direct or contributory patent infringement, or inducement of
 patent infringement, then any patent rights granted to you under this License
 for these implementations of WebM shall terminate as of the date such
 litigation is filed.
+================================================================================
+ring 0.17.14  (statically linked; cryptography for the TLS of model downloads)
+--
+https://github.com/briansmith/ring  Built from the source in the ring crate.
+
+ring's own code is under the ISC license below. Code it took from BoringSSL is
+under the Apache License 2.0 (the text is in LICENSE) or the ISC license; each
+file states which at its top.
+
+Copyright 2015-2025 Brian Smith.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY
+SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION
+OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
+CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ================================================================================
