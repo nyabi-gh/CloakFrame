@@ -8,6 +8,7 @@ use ort::environment::Environment;
 use ort::ep;
 use ort::session::Session;
 use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel, SessionBuilder};
+use ort::value::DynValue;
 
 /// Microsoft's ORT builds send telemetry unless this is `1` when the library creates its
 /// environment; `DisableTelemetryEvents` alone does not stop the upload (docs/M0_ORT_SPIKE.md).
@@ -70,16 +71,29 @@ impl OrtRuntime {
     /// A CPU session with 1.12.1's CPU options: every graph optimization and one intra-op
     /// thread per logical core.
     pub(crate) fn cpu_session(&self, model: &[u8]) -> ort::Result<Session> {
+        self.cpu_session_with(model, Vec::new())
+    }
+
+    /// [`Self::cpu_session`] with the named initializers of the graph replaced before it is
+    /// optimized.
+    pub(crate) fn cpu_session_with(
+        &self,
+        model: &[u8],
+        initializers: Vec<(&str, DynValue)>,
+    ) -> ort::Result<Session> {
         let threads = std::thread::available_parallelism().map_or(1, |n| n.get());
         let option = |r: Result<SessionBuilder, ort::Error<SessionBuilder>>| {
             r.map_err(ort::Error::<()>::from)
         };
-        let builder = Session::builder(&self.env)?;
+        let mut builder = Session::builder(&self.env)?;
         // ort's builder sets the MaxEfficiency policy, under which ORT 1.31 adds CoreML next to an
         // explicit CPU EP. Reset it before naming the EP.
-        let builder = option(builder.with_auto_device(AutoDevicePolicy::PreferCPU))?;
-        let builder = option(builder.with_optimization_level(GraphOptimizationLevel::All))?;
-        let builder = option(builder.with_intra_threads(threads))?;
+        builder = option(builder.with_auto_device(AutoDevicePolicy::PreferCPU))?;
+        builder = option(builder.with_optimization_level(GraphOptimizationLevel::All))?;
+        builder = option(builder.with_intra_threads(threads))?;
+        for (name, value) in initializers {
+            builder = option(builder.with_initializer(name, value))?;
+        }
         let cpu = ep::CPU::default().build().error_on_failure();
         option(builder.with_execution_providers([cpu]))?.commit_from_memory(model)
     }

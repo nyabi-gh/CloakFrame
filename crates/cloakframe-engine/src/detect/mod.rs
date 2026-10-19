@@ -1,3 +1,4 @@
+pub mod plate;
 pub mod resize;
 pub mod runtime;
 pub mod yolo5face;

@@ -1,10 +1,11 @@
-//! The face detectors on the pinned ONNX Runtime against the 1.12.1 detection fixtures
-//! (tests/fixtures/detect/<model>, 6 images x 3 score thresholds, NMS 0.4 each).
+//! The detectors on the pinned ONNX Runtime against the 1.12.1 detection fixtures
+//! (tests/fixtures/detect/<model>, 6 images x 3 score thresholds). The face fixtures used NMS
+//! 0.4; 1.12.1 ignored that setting for plates, whose graph suppressed at 0.45.
 //!
 //! YOLO5Face-n: 1.12.1 kept only the 2,000 best candidates before NMS. The crowd fixture exceeds
 //! that at every threshold (defects/D11/observed_1121.json), so there every 1.12.1 detection must
 //! still be found and the result must be all 280 faces (defects/D11/expected.json); elsewhere the
-//! results match. YuNet matches 1.12.1 everywhere.
+//! results match. YuNet and the plate model match 1.12.1 everywhere.
 //!
 //! Needs, as CI provides them (plan 9.1: missing assets fail the test rather than skip it):
 //! - `CLOAKFRAME_ORT_LIBRARY`: the library `tools/fetch_native.py` prints for this platform
@@ -16,9 +17,10 @@ mod common;
 use std::path::Path;
 use std::sync::OnceLock;
 
-use cloakframe_core::detection::{KindThresholds, Thresholds};
+use cloakframe_core::detection::{DetectionKind, KindThresholds, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_engine::cancel::CancelToken;
+use cloakframe_engine::detect::plate::Plate;
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::yolo5face::Yolo5Face;
 use cloakframe_engine::detect::yunet::YuNet;
@@ -95,7 +97,7 @@ fn yolo5face_matches_the_1_12_1_fixtures() {
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
     let mut detector =
         Yolo5Face::new(runtime(), &model_bytes(&assets, "yolov5n_face.onnx")).unwrap();
-    compare(&mut detector, "yolo5face", |stem, found_1121| {
+    compare(&mut detector, ModelId::Yolo5FaceN, |stem, found_1121| {
         if stem == CROWD {
             CROWD_FACES
         } else {
@@ -109,13 +111,73 @@ fn yunet_matches_the_1_12_1_fixtures() {
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
     let model = model_bytes(&assets, "face_detection_yunet_2023mar.onnx");
     let mut detector = YuNet::new(runtime(), &model).unwrap();
-    compare(&mut detector, "yunet", |_, found_1121| found_1121);
+    compare(&mut detector, ModelId::YuNet, |_, found_1121| found_1121);
+}
+
+#[test]
+fn plate_matches_the_1_12_1_fixtures() {
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    let model = model_bytes(&assets, "yolo-v9-t-512-license-plates-end2end.onnx");
+    let mut detector = Plate::new(runtime(), &model).unwrap();
+    compare(&mut detector, ModelId::PlateYolov9T, |_, found_1121| {
+        found_1121
+    });
+}
+
+/// The plate graph returns at most 100 boxes and suppresses at IoU 0.45. With NMS off here, the
+/// car photo tiled 3x3 gives more than 100 boxes: the graph's limits no longer apply (with them,
+/// 35 come out). With NMS at the graph's 0.45, each tile's plate is found once.
+#[test]
+fn the_plate_graph_limits_are_lifted() {
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    let model = model_bytes(&assets, "yolo-v9-t-512-license-plates-end2end.onnx");
+    let mut detector = Plate::new(runtime(), &model).unwrap();
+    let car = detection_copy(&assets.join("car_image.webp"));
+    let (w, h) = (car.width as usize, car.height as usize);
+    let mut tiled = Rgb8Image {
+        width: car.width * 3,
+        height: car.height * 3,
+        data: Vec::with_capacity(9 * car.data.len()),
+    };
+    for _ in 0..3 {
+        for row in car.data.chunks_exact(w * 3) {
+            for _ in 0..3 {
+                tiled.data.extend_from_slice(row);
+            }
+        }
+    }
+    assert_eq!(tiled.data.len(), 9 * w * h * 3);
+    let thresholds = |plate: KindThresholds| Thresholds { face: plate, plate };
+    let unsuppressed = thresholds(KindThresholds::new(0.001, 1.0).unwrap());
+    let found = detector.detect(&tiled, &unsuppressed).unwrap();
+    assert!(found.detections.len() > 100, "{}", found.detections.len());
+    assert_eq!(found.over_limit, 0);
+
+    let plates = thresholds(KindThresholds::new(0.25, 0.45).unwrap());
+    let found = detector.detect(&tiled, &plates).unwrap();
+    let mut tiles: Vec<(usize, usize)> = found
+        .detections
+        .iter()
+        .map(|d| {
+            let b = d.bbox();
+            let centre = (b.x() + b.width() / 2.0, b.y() + b.height() / 2.0);
+            (centre.0 as usize / w, centre.1 as usize / h)
+        })
+        .collect();
+    tiles.sort_unstable();
+    tiles.dedup();
+    assert_eq!((found.detections.len(), tiles.len()), (9, 9));
 }
 
 /// Runs `detector` on the fixture images at each threshold and compares with
 /// `tests/fixtures/detect/<model>`. `expected` gives the count to find from the image stem and
 /// the count 1.12.1 found.
-fn compare(detector: &mut dyn Detector, model: &str, expected: impl Fn(&str, usize) -> usize) {
+fn compare(detector: &mut dyn Detector, id: ModelId, expected: impl Fn(&str, usize) -> usize) {
+    let model = match id {
+        ModelId::Yolo5FaceN => "yolo5face",
+        ModelId::YuNet => "yunet",
+        ModelId::PlateYolov9T => "plate",
+    };
     let assets = required_env("CLOAKFRAME_TEST_ASSETS");
     let inputs = fixtures().join("detect/inputs");
     let images = [
@@ -138,9 +200,14 @@ fn compare(detector: &mut dyn Detector, model: &str, expected: impl Fn(&str, usi
             let want: Expected =
                 serde_json::from_str(&std::fs::read_to_string(&file).unwrap()).unwrap();
             assert_eq!(want.decoded_size, [image.width, image.height], "{case}");
+            let thresholds = match id.kind() {
+                DetectionKind::Face => KindThresholds::new(score, 0.4),
+                DetectionKind::Plate => KindThresholds::new(score, 0.45),
+            }
+            .unwrap();
             let thresholds = Thresholds {
-                face: KindThresholds::new(score, 0.4).unwrap(),
-                ..Thresholds::default()
+                face: thresholds,
+                plate: thresholds,
             };
             let found = detector.detect(&image, &thresholds).unwrap();
             cases += 1;
