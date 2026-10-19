@@ -563,6 +563,35 @@ fn published_photos_follow_the_d2_color_policy() {
     }
 }
 
+/// D2: a profile that cannot be read is dropped, the pixels are published as sRGB without a
+/// profile, and the result says so.
+#[test]
+fn unusable_profiles_are_dropped_with_a_note() {
+    let d2 = fixtures().join("defects/D2");
+    let mut damaged = std::fs::read(d2.join("chart-srgb.png")).unwrap();
+    let at = damaged.windows(4).position(|w| w == b"iCCP").unwrap();
+    damaged[at + 20] ^= 0xFF;
+    let dir = Dir::new();
+    let input = dir.input("damaged.png", &damaged);
+    let report = run(
+        vec![fresh(0, &input, dir.out("damaged.png"))],
+        ReviewMode::Off,
+        processor(MetadataPolicy::Strip),
+        Scripted::default(),
+    );
+    let item = &report.items[0];
+    assert_eq!(
+        item.state,
+        ItemState::Published(PublishBasis::AutomaticUnreviewed),
+        "{:?}",
+        item.failure
+    );
+    assert_eq!(item.notes, [Note::ColorProfileIgnored]);
+    let out = dir.out("damaged.png");
+    assert_eq!(embedded_icc(&read_source(&out).unwrap()), EmbeddedIcc::None);
+    assert_eq!(rgb(&out), rgb(&d2.join("chart-srgb.png")));
+}
+
 /// D2 for BMP, which is written without a profile (`color::srgb_for_bmp`): a Display P3 photo
 /// named `.bmp` is converted to sRGB and noted. A Display P3 BMP keeps its profile in another
 /// format.

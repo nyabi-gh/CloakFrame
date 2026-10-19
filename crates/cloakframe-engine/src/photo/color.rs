@@ -565,12 +565,22 @@ mod tests {
 
     #[test]
     fn the_detection_copy_is_srgb_without_touching_the_stored_pixels() {
-        let (source, mut image) = load("chart-display-p3.png");
-        let outcome = apply(&source, &mut image).unwrap();
-        let stored = image.clone();
-        let copy = detection_srgb8(&image, outcome).unwrap();
-        assert_eq!(image, stored);
-        assert_ne!(copy.data, detection_rgb8(&image).data);
+        for (name, reference) in [
+            ("chart-display-p3.png", "expected-display-p3-as-srgb.png"),
+            ("chart-adobe-rgb.png", "expected-adobe-rgb-as-srgb.png"),
+        ] {
+            let (source, mut image) = load(name);
+            let outcome = apply(&source, &mut image).unwrap();
+            let stored = image.clone();
+            let copy = detection_srgb8(&image, outcome).unwrap();
+            assert_eq!(image, stored, "{name}");
+            let copy = DynamicImage::ImageRgb8(
+                image::RgbImage::from_raw(copy.width, copy.height, copy.data).unwrap(),
+            );
+            let reference = image::open(d2(reference)).unwrap();
+            let diff = max_diff(&copy, &reference);
+            assert!(diff <= 2, "{name}: {diff} from Little CMS");
+        }
         let (source, mut image) = load("chart-untagged.png");
         let outcome = apply(&source, &mut image).unwrap();
         assert_eq!(

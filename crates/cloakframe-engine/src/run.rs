@@ -534,7 +534,7 @@ mod tests {
 
     /// Behaves according to the input's file name: `ok`, `gap` (reports an unresolved gap),
     /// `fail-analyze`, `fail-render`, `fail-publish`, `panic-analyze`, `panic-render`, `slow`
-    /// (works until cancelled).
+    /// (works until cancelled), `cancel-in-render` (cancelled once its output is rendered).
     #[derive(Default)]
     struct Scripted {
         published: Mutex<Vec<(ItemId, PublishBasis)>>,
@@ -600,6 +600,10 @@ mod tests {
             match name(ctx) {
                 "fail-render" => Err(StepError::Failed(Box::new(Broken("encode failed")))),
                 "panic-render" => panic!("encoder bug"),
+                "cancel-in-render" => {
+                    ctx.cancel.cancel();
+                    Ok(request.basis)
+                }
                 _ => Ok(request.basis),
             }
         }
@@ -798,6 +802,14 @@ mod tests {
         let report = handle.wait();
         assert_eq!(report.items[0].state, ItemState::Cancelled);
         assert_eq!(report.completed(), 2);
+    }
+
+    /// A cancel that arrives while the output is rendered still stops the publish.
+    #[test]
+    fn cancelling_after_render_publishes_nothing() {
+        let (report, published, _) = run(job(&["cancel-in-render", "ok"], ReviewMode::Off, 1));
+        assert_eq!(report.items[0].state, ItemState::Cancelled);
+        assert_eq!(published, [(ItemId(1), PublishBasis::AutomaticUnreviewed)]);
     }
 
     #[test]

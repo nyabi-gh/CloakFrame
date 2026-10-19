@@ -23,8 +23,6 @@ struct Recorded {
 
 #[derive(Deserialize)]
 struct Call {
-    #[serde(rename = "fn")]
-    function: String,
     detections: Vec<RecordedDetection>,
     method: Option<String>,
     padding_ratio: f32,
@@ -57,18 +55,21 @@ fn load(name: &str) -> DynamicImage {
 fn run(test: &str) -> Vec<Case> {
     let file = legacy().join(format!("{test}.json"));
     let recorded: Recorded = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
-    recorded
+    // Every masking call must be understood: one that failed to parse would otherwise drop out
+    // and leave a test checking nothing.
+    let cases: Vec<Case> = recorded
         .calls
         .into_iter()
-        .filter_map(|v| serde_json::from_value::<Call>(v).ok())
-        .filter(|c| c.function.starts_with("apply"))
+        .filter(|v| matches!(v["fn"].as_str(), Some("applyAnonymization" | "applyMosaic")))
+        .map(|v| serde_json::from_value::<Call>(v).unwrap_or_else(|e| panic!("{test}: {e}")))
         .map(|call| {
             let style = MaskStyle {
                 method: match call.method.as_deref().unwrap_or("mosaic") {
                     "fill" => Method::Fill,
                     "blur" => Method::Blur,
                     "custom_image" => Method::CustomImage,
-                    _ => Method::Mosaic,
+                    "mosaic" => Method::Mosaic,
+                    other => panic!("{test}: method {other}"),
                 },
                 shape: match call.shape.as_deref() {
                     Some("ellipse") => Shape::Ellipse,
@@ -81,12 +82,12 @@ fn run(test: &str) -> Vec<Case> {
             let regions: Vec<Region> = call
                 .detections
                 .iter()
-                .filter_map(|d| {
+                .map(|d| {
                     let [x, y, w, h] = d.bbox;
-                    Some(Region {
-                        bbox: Rect::new(x, y, w, h).ok()?,
+                    Region {
+                        bbox: Rect::new(x, y, w, h).unwrap(),
                         roll: d.has_pose.then_some(d.roll),
-                    })
+                    }
                 })
                 .collect();
             let overlay = call.custom_image_png.as_deref().map(|p| {
@@ -102,7 +103,9 @@ fn run(test: &str) -> Vec<Case> {
                 theirs: load(&call.output_png),
             }
         })
-        .collect()
+        .collect();
+    assert!(!cases.is_empty(), "{test} records no masking call");
+    cases
 }
 
 fn rgb(image: &DynamicImage, x: u32, y: u32) -> [u8; 3] {

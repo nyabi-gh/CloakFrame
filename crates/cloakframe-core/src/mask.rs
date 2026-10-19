@@ -1029,6 +1029,36 @@ mod tests {
                     );
                 }
             }
+
+            // The other methods take the same weights: inside the box each one gives exactly
+            // what its hard rectangle over the same padded region gives.
+            let overlay = Overlay::new(2, 1, vec![255, 0, 0, 255, 0, 0, 255, 255]).unwrap();
+            let source: Vec<u8> = (0..w * h * 3).map(|i| (i * 7 % 251) as u8).collect();
+            for method in [Method::Mosaic, Method::Blur, Method::CustomImage] {
+                let shaped = style(method, s.shape, s.padding.ratio(), s.soft_edges);
+                let hard = style(method, Shape::Rectangle, s.padding.ratio(), false);
+                let mut got = source.clone();
+                let mut want = source.clone();
+                for (px, st) in [(&mut got, &shaped), (&mut want, &hard)] {
+                    let mut image = ImageMut::new(w, h, Layout::Rgb, Pixels::U8(px)).unwrap();
+                    render(&mut image, &[r], st, Some(&overlay)).unwrap();
+                }
+                // Blur sums each line in f32 from its window's start, and a soft edge widens the
+                // window, so a blurred value can round one level apart. A weight below 1 would
+                // move a pixel towards its source value, which is far from the blur here.
+                let tolerance = if method == Method::Blur { 1 } else { 0 };
+                for y in detected.y..detected.bottom() {
+                    let row =
+                        (y * w as usize + detected.x) * 3..(y * w as usize + detected.right()) * 3;
+                    let diff = got[row.clone()]
+                        .iter()
+                        .zip(&want[row])
+                        .map(|(a, b)| a.abs_diff(*b))
+                        .max()
+                        .unwrap_or(0);
+                    assert!(diff <= tolerance, "{bbox:?} {shaped:?}: {diff}");
+                }
+            }
         }
     }
 

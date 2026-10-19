@@ -120,11 +120,28 @@ fn first_webp_image_chunk(webp: &[u8]) -> [u8; 4] {
     }
 }
 
+/// libwebp's simple encoder at `quality`, as `cwebp -q` with no other option.
+#[allow(unsafe_code)]
+fn libwebp_rgb(image: &image::RgbImage, quality: f32) -> Vec<u8> {
+    let (w, h) = (image.width() as i32, image.height() as i32);
+    let mut ptr = std::ptr::null_mut();
+    // SAFETY: the buffer is tightly packed RGB8 of w x h; libwebp allocates the output, which is
+    // copied and freed with WebPFree.
+    unsafe {
+        let len = libwebp_sys::WebPEncodeRGB(image.as_ptr(), w, h, w * 3, quality, &mut ptr);
+        assert!(len > 0 && !ptr.is_null());
+        let out = std::slice::from_raw_parts(ptr, len).to_vec();
+        libwebp_sys::WebPFree(ptr.cast());
+        out
+    }
+}
+
 #[test]
 fn d6_lossy_webp_stays_lossy_and_lossless_formats_keep_their_pixels() {
     let d6 = fixtures().join("defects/D6");
-    let (_, _, lossy) = export(&d6.join("lossy-q75.webp"), MetadataPolicy::Strip);
+    let (_, image, lossy) = export(&d6.join("lossy-q75.webp"), MetadataPolicy::Strip);
     assert_eq!(&first_webp_image_chunk(&lossy), b"VP8 ");
+    assert!(lossy == libwebp_rgb(&image.to_rgb8(), 90.0), "not q90");
 
     for name in ["lossless.webp", "lossless.png", "lossless.tif"] {
         let (_, image, out) = export(&d6.join(name), MetadataPolicy::Strip);
