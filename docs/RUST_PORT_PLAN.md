@@ -135,9 +135,9 @@ crates/
 | --- | --- |
 | `Detection` | 종류(Face/Plate), score, 원본 표시 좌표의 box·landmark, 모델 ID, frame |
 | `CoverageEvidence` | 상한으로 잘린 후보, 실패 frame, 미해결 gap, 약한 후보, 사용자 제외·수정 기록 |
-| `ReviewRevision` | 입력·모델·설정·타임라인 해시에 묶인 수정 번호. 오래된 응답은 적용하지 않음 |
+| `ReviewRevision` | 입력·모델·설정·타임라인 해시에 묶인 수정 번호. 오래된 응답은 적용하지 않음. 모델·설정은 검토 결정을 적용할 때, 입력은 렌더할 때 다시 읽은 바이트의 해시로 비교한다(타임라인은 M4) |
 | `TimelineSpec` | 유리수 FPS, 시작점, rotation, SAR, 색 태그, 분석 해상도 변환 |
-| `PublishPermit` | engine 내부에서만 생성. 처리 성공, 미해결 문제 없음, 출력 검증, 취소 여부를 확인한 뒤 발급 |
+| `PublishPermit` | core의 `PublishPermit::issue`만 만들 수 있고, 항목 상태(검증 완료)와 근거(미해결 문제 없음, 또는 명시적 내보내기)를 확인해 발급한다. 발급하는 곳은 engine 실행기 하나로, 처리 성공과 취소 여부를 확인한 뒤다. crate가 나뉘어 있어 "engine에서만"은 타입으로 막지 않는다 |
 
 - **처리 후 검토:** 분석은 검토보다 앞서 진행한다. 검토를 기다리는 결과는 앱 데이터 폴더의 세션(감지 결과와 편집 결정만, pixel 없음)에 두고, 승인되기 전에는 출력 폴더에 아무것도 쓰지 않는다.
 - **자동 모드(검토 끔):** 미해결 문제가 없는 항목만 게시하고 "자동 처리·미검토"로 표시한다. 나머지는 "검토 필요" 목록에 남는다.
@@ -300,15 +300,15 @@ crates/
     | --- | --- |
     | 사진 fixture: 감지·resize·디코드 | `detect_fixtures.rs`(YOLO5Face-n 18건), `detect::resize` 단위(`fixtures/resize`, x86은 `ort.yml`), `photo::decode` 단위(`fixtures/decode`), `decode_fixtures.rs` 5건 |
     | 사진 fixture: 1.12.1 마스크·메타데이터·worker | `mask_fixtures.rs` 9건, `encode_fixtures.rs`의 allowlist·썸네일·EXIF 판독 실패, `photo_pipeline.rs`의 worker 시험 6개, `cli_photo.rs` `a_rerun_keeps_the_earlier_output`, core `geometry`·`detection`의 IoU·NMS·잘못된 감지 |
-    | D2 | `photo::color` 단위 9건(판정·유지·변환·감지 사본·버린 profile·BMP V5 profile·BMP 출력 변환), `photo::encode` `every_container_carries_the_allowlist_and_the_profile`, `photo_pipeline.rs` `published_photos_follow_the_d2_color_policy`(9건의 게시 파일 profile·pixel·note), `bmp_outputs_are_srgb_and_bmp_profiles_are_read`. 버린 profile의 결과 표시와 Adobe RGB 감지 사본은 시험이 없음(재검토 17번), 회색 profile은 버림(재검토 7번) |
-    | D3 | `mask_fixtures.rs` `mosaic_strength_sets_the_cell_count`·`mosaic_touches_only_the_region`, core `mask` 단위(셀 평균, 작은·가장자리 영역) |
-    | D6 | `encode_fixtures.rs` `d6_*` 2건. 손실 WebP는 손실 여부만 보고 q90은 확인하지 않음(재검토 17번), 비표준 서브샘플링 원본은 인코딩 실패(재검토 8번) |
+    | D2 | `photo::color` 단위 11건(판정·번들 profile·유지·변환·회색 profile·Display P3와 Adobe RGB 감지 사본을 Little CMS와 비교·버린 profile·16 MiB 넘는 profile·작은 TIFF의 profile·BMP V5 profile·BMP 출력 변환), `photo::encode` `every_container_carries_the_allowlist_and_the_profile`, `photo_pipeline.rs` `published_photos_follow_the_d2_color_policy`(9건의 게시 파일 profile·pixel·note), `unusable_profiles_are_dropped_with_a_note`, `bmp_outputs_are_srgb_and_bmp_profiles_are_read`, `the_users_image_is_drawn_in_the_photos_color_space` |
+    | D3 | `mask_fixtures.rs` `mosaic_strength_sets_the_cell_count`(강도 4–12)·`mosaic_touches_only_the_region`, core `mask` 단위(셀 평균, 작은·가장자리 영역, 모든 방식에서 감지 box를 가림) |
+    | D6 | `encode_fixtures.rs` `d6_*` 2건(JPEG 양자화 표, 손실 WebP는 libwebp q90 출력과 같음), `photo::encode` `a_source_with_unusual_subsampling_gets_full_chroma` |
     | D9 | `encode_fixtures.rs` `d9_exports_carry_only_what_the_policy_allows`, `photo_pipeline.rs` `exporting_without_anonymization_*`, `cli_photo.rs` `exporting_without_anonymization_keeps_every_pixel` |
     | P-2(타입) | core `detection` 단위(종류별 NMS·임계값, 모델이 정하는 종류, 번호판 landmark 거부), core `serde_forms.rs`, `cli_photo.rs` 결과 JSON의 `kind` |
     | P-1(사진) | `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`(가짜 감지기), `cli.rs`(M1 골격). 실제 모델은 NMS 뒤 상한이 없어 잘린 후보가 생기지 않음: `p1_photo.rs` 2건(crowd 280개, NMS 0.9의 601개를 모두 가림) |
-  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 6단계 판단 확정(2026-10-19): 감지 0건 사진은 미해결 문제가 아니라 정상 게시(1.12.1은 경고), 출력 형식은 이름의 확장자(1.12.1 규범 fixture), CLI 검토 결정은 run과 같은 모델·설정에만 적용. 넓은 색역 사진의 BMP 출력은 실패 대신 sRGB 변환·표시(위)
+  - 결정: CMYK·YCCK JPEG는 거부(1.12.1과 다름, `CHANGES_FROM_1.12.md`). YOLO5Face-n은 NMS 전 후보를 자르지 않음(2026-10-18, 상한 2,000개가 crowd fixture의 얼굴 21개를 버림, 최악의 NMS 약 0.3초). 6단계 판단 확정(2026-10-19): 감지 0건 사진은 미해결 문제가 아니라 정상 게시(1.12.1은 경고), 출력 형식은 이름의 확장자(1.12.1 규범 fixture), CLI 검토 결정은 run과 같은 모델·설정에만 적용. 넓은 색역 사진의 BMP 출력은 실패 대신 sRGB 변환·표시(위). 재검토 결정(2026-10-19): CMYK TIFF와 JPEG 압축 TIFF도 거부, 감지 0건은 결과에 표시
   - **완료(2026-10-19):** 소요 2일(2026-10-18–19, 예산 4주, 125% 점검 기준 5주 안), PR #25–#31과 7단계 `m2-verify`. 위 표의 시험이 macOS arm64(고정 ORT 1.30.0)에서 모두 통과, 3개 OS CI는 `m2-verify` PR에서 확인. 이월: YuNet·번호판 어댑터와 실제 모델의 종류별 임계값(M3)
-  - **재검토(2026-10-19):** M0–M2 전체를 다시 봤다([기록](M0_M2_REVIEW.md)). 결함 10건, 위험 6건, 의심 5건과 문서 불일치를 찾았고, 그중 사실만 바로잡는 문서는 같은 날 고쳤다. M2 범위에 걸리는 항목(1·2·4·6·7·8·12·17번)이 남아 있고 3개 OS CI도 아직 돌지 않았으므로, 위 완료 표시는 이 항목들을 처리하고 CI를 통과한 뒤 확정한다. M1 범위의 항목(5·9·10·15·16·18·19번)도 같은 기록에 있다. 고칠 순서는 메인테이너가 정한다
+  - **재검토(2026-10-19):** M0–M2 전체를 다시 봤다([기록](M0_M2_REVIEW.md)). 결함 10건, 위험 6건, 의심 5건과 문서 불일치를 찾았고, 그중 사실만 바로잡는 문서는 같은 날 고쳤다. 같은 날 1–21번을 메인테이너가 정한 순서로 항목마다 실패하는 시험을 먼저 넣고 고쳤다(`m2-verify`, 항목별 커밋, 처리 내용은 기록의 "처리" 절). 결정: 사진은 NMS 뒤 상한 없이 모두 가림(1번), CMYK TIFF도 거부(6번), 모자이크 강도 4–12(13번), 감지 0건은 표시하고 타일 모드는 범위 조정 목록에서 뺌(14번). macOS arm64에서 시험 216건 통과. 위 완료 표시는 `m2-verify`의 3개 OS CI(Windows FAT32·긴 경로 시험 포함)를 통과하면 확정한다
 
 ### M3 — 모델·GPU·다운로드·타일
 

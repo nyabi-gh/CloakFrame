@@ -1,6 +1,6 @@
 # M0–M2 재검토
 
-실행일: 2026-10-19. 대상: `m2-verify` `adc5678`(main `02dc34f` 위에 M2 7단계 커밋 4개). 장치: Apple M4, macOS 27.0.1, 고정 ORT 1.30.0. [계획](RUST_PORT_PLAN.md) M2를 마친 뒤 M0–M2의 작업과 계획을 다시 보고 회귀·버그·잘못된 판단을 찾은 기록이다. 결과만 적었고 코드는 고치지 않았다. 고칠 순서는 메인테이너가 정한다. 줄 번호는 `adc5678` 기준이다.
+실행일: 2026-10-19. 대상: `m2-verify` `adc5678`(main `02dc34f` 위에 M2 7단계 커밋 4개). 장치: Apple M4, macOS 27.0.1, 고정 ORT 1.30.0. [계획](RUST_PORT_PLAN.md) M2를 마친 뒤 M0–M2의 작업과 계획을 다시 보고 회귀·버그·잘못된 판단을 찾은 기록이다. 결과만 적었고 코드는 고치지 않았다. 고칠 순서는 메인테이너가 정한다. 줄 번호는 `adc5678` 기준이다. 같은 날 처리한 내용은 끝의 [처리](#처리-2026-10-19) 절에 있다.
 
 ## 방법
 
@@ -215,7 +215,7 @@ M2 범위에 걸리는 항목은 1·2·4·6·7·8·12·17번, M1 범위는 5·9�
 | `defects/D11/expected.json` | `stage`가 M3(계획은 "M2(YOLO5Face), M3") | 고침 |
 | 계획 M2 | 3개 OS CI 전에 완료로 기록, 표의 D2·D6·P-1 행이 17번·1번만큼 넓게 적힘 | 재검토 줄과 표 주석 추가 |
 | `manifests/rust.toml` | windows-sys feature에 `Win32_System_SystemInformation`이 없음(Cargo.toml에는 있음) | 고침 |
-| 계획 4.2 | PublishPermit "engine 내부에서만 생성", ReviewRevision "해시에 묶임"이 코드와 다름 | 남김(19·20번과 함께 정함) |
+| 계획 4.2 | PublishPermit "engine 내부에서만 생성", ReviewRevision "해시에 묶임"이 코드와 다름 | 처리 때 고침(19·20번) |
 | THIRD_PARTY_NOTICES | Rust crate와 ORT 고지가 없음. CONTRIBUTING은 런타임 의존성을 들일 때마다 적으라고 함 | 남김(M7에서 생성할지 정함) |
 | README | SCRFD·Redactly·`PATH`의 FFmpeg 안내가 1.12.1 기준 | 남김(배포 중인 1.12.1 설명) |
 | ROADMAP.md | C++ 구현 시절의 내용인데 CONTRIBUTING이 참고하라고 안내함 | 남김 |
@@ -246,3 +246,38 @@ M2 범위에 걸리는 항목은 1·2·4·6·7·8·12·17번, M1 범위는 5·9�
 - BMP V5 profile 판독의 경계 검사(헤더 크기, `checked_add`, `get`, 크기 0, LINK).
 - 9.1: 자산이 없으면 시험이 실패하고 `#[ignore]`가 없다. cargo-deny가 GPL·LGPL·MPL crate를 막는다. ORT는 `ORT_DISABLE_TELEMETRY=1`이 아니면 로드를 거부하고, CLI는 `main` 첫 줄에서 이 값을 설정한다.
 - M2 범위의 1.12.1 사진 시험은 바뀐 항목(위 링크 시험 등)을 빼고 모두 대응하는 Rust 시험이 있다.
+
+## 처리 (2026-10-19)
+
+메인테이너가 정한 순서(1·2·12 → 3·11 → 4·8·7·6 → 17 → 5·9·10·15·16 → 18–21, 이어서 결정한 13·14)로 `m2-verify`에서 고쳤다. 항목마다 실패하는 시험을 먼저 넣어 실패를 확인한 뒤 고쳤고(17번은 mutation을 다시 넣어 잡히는지 확인), 커밋은 항목별로 나눴다. 끝난 뒤 macOS arm64에서 `cargo test --workspace --locked --all-features` 216건, fmt, clippy 두 조합, cargo-deny가 통과했다. Windows·Linux는 `m2-verify`의 3개 OS CI로 확인한다.
+
+결정(메인테이너, 2026-10-19): 1번은 (a), 6번은 CMYK TIFF도 거부, 13번은 강도 4–12, 14번은 감지 0건 표시 + 타일 모드를 범위 조정 목록에서 뺌. 2번은 형식을 유지하는 (a)로, 19번은 해시를 실제로 비교하는 쪽으로 정했다(0.1의 결정은 뒤집지 않음).
+
+| # | 처리 | 커밋 | 시험 |
+| --- | --- | --- | --- |
+| 1 | YOLO5Face-n의 NMS 뒤 상한(300) 제거, 사진은 NMS를 통과한 감지를 모두 가림. `over_limit` 경로는 출력 수가 제한된 M3 모델용으로 남김. D11·P-1 expected, CHANGES, 계획 D11 갱신 | `8034628` | `p1_photo.rs` `every_face_left_after_nms_is_masked`(NMS 0.9, 601개) |
+| 2 | 검토 결정을 평평한 형식으로 받아 모르는 key 거부(형식 그대로) | `c2f8d45` | `review` `unknown_keys_are_refused` |
+| 12 | "수동 마스크로 덮음"은 약한 후보 box를 추가 영역의 합집합이 덮을 때만. 위치가 없는 근거(잘린 후보, 실패 frame, gap)는 기각만 가능(gap은 M5 영상 편집에서 다시 정함) | `7c5d05a` | core `geometry` `coverage_needs_the_union_of_areas_to_hold_the_box`, `review` `a_manual_mask_resolves_only_the_area_it_covers` |
+| 3 | 실행기가 항목 단위로 panic을 잡아 그 항목만 "internal error"로 실패 | `31e18f7` | `run` `a_panicking_step_fails_only_that_item` |
+| 11 | PNG 읽기의 할당 상한 = 파일 크기 + ICC 16 MiB + 디코드 예산. 16 MiB 넘는 profile은 읽을 수 없음으로 표시 | `177f736` | `allocations.rs` `a_compressed_profile_inflates_only_to_its_limit`(256 MiB로 풀리는 iCCP의 최대 할당), `color` `a_profile_over_the_limit_is_unreadable` |
+| 4 | TIFF Compression 6·7을 디코드 전에 명확한 이유로 거부, CHANGES에 추가 | `8544f00` | `decode` `refuses_a_jpeg_compressed_tiff` |
+| 8 | libjpeg-turbo가 쓸 수 없는 서브샘플링(`Unknown`)이면 4:4:4. fixture `decode/mixed-sampling.jpg` | `5a20f97` | `encode` `a_source_with_unusual_subsampling_gets_full_chroma` |
+| 7 | 회색 사진의 회색 profile을 sRGB 곡선의 회색으로 변환, `Converted` 표시. D2 expected·CHANGES 갱신 | `ca17d39` | `color` `gray_profiles_convert_gray_pixels_to_the_srgb_curve` |
+| 6 | CMYK TIFF(Photometric 5) 거부, CHANGES 확정 | `72dd1cb` | `decode` `refuses_a_cmyk_tiff` |
+| 17 | 표의 다섯 mutation과 빈 기록 호출을 잡는 시험 추가: libwebp q90 출력 비교, 버린 profile의 note, 렌더 중 취소, 실제 파이프라인의 D12, Adobe RGB 감지 사본(Little CMS 비교), mask fixture의 엄격한 판독, 모든 방식의 감지 box 가림 property | `7ac3c71` | 같은 커밋. property 확장 중 찾은 것: 블러는 f32 누적합이 창 시작점에 따라 1 단계 다를 수 있어(soft edge가 창을 넓힘) 블러만 허용오차 1 |
+| 5 | 대소문자 판정을 링크를 따라간 폴더 안에서: 기존 항목, 없으면 임시 파일(`.cloakframe-tmp-case-*`) | `d7d0e05` | `fs_case` `the_rule_is_the_folders_own_not_its_parents`(macOS, 대소문자 구분 APFS 이미지를 마운트), `probing_an_empty_folder_leaves_it_empty` |
+| 9 | 폴더 규칙에 정규화 무시 여부를 더해 key를 NFC로. `unicode-normalization` 0.1.25(MIT OR Apache-2.0, 0.1.26은 사흘 전 공개라 피함) | `6499de5` | `output_plan` `duplicates_inside_the_run_follow_the_folder_normalization_rule`, `fs_case` key 시험 |
+| 10 | 세션에서 빠진 항목을 이유와 함께 출력하고 종료 코드 1. 런타임 오류는 종료 코드 1과 오류 문구만, 2는 명령줄 오류에만 | `52986e7` | `batch` `items_left_out_of_the_session_are_reported`, `cli.rs` `runtime_errors_exit_with_one`, `cli_photo.rs` `only_the_pinned_model_runs` |
+| 15 | rename 뒤 폴더 fsync 실패와 hard link 대체의 임시 이름 삭제 실패는 게시 성공 + note | `2335417` | `publish` `a_folder_that_cannot_be_flushed_still_publishes`(fsync 실패 주입) |
+| 16 | `MoveFileExW`에 정규화한 `\\?\` 경로, `FileIdInfo`가 안 되면 `GetFileInformationByHandle` 파일 인덱스. Windows CI가 VHD로 FAT32 볼륨을 만들어 시험 | `d106765` | `publish` `a_destination_past_max_path_publishes`(모든 OS), `windows_fat32.rs`. **Windows에서는 아직 돌려 보지 못함**(CI에서 확인) |
+| 18 | 저장된 Detection의 `kind`를 읽을 때 선택으로: 없으면 모델에서 유도, 있으면 모델과 맞아야 함 | `3cc42cd` | core `serde_forms.rs`(M1 형식) |
+| 19 | 분석이 읽은 바이트의 SHA-256을 `Analysis.input`에 두고 세션 키가 그것을 씀(파일을 다시 읽지 않음). 검토를 렌더할 때 다시 읽은 바이트와 비교. 계획 4.2 문구 갱신 | `1d6c25c` | `photo_pipeline.rs` `a_review_of_other_bytes_with_the_same_stamp_is_not_rendered` |
+| 20 | 재명명은 같은 종류의 확장자(사진은 이미지, 영상은 `.mp4`)와 Windows가 받는 이름만 | `15f3cc3` | `review` `a_taken_name_needs_a_free_rename` |
+| 20 | 메모리 예산을 디코드 형식에서 계산: 2 × pixel 바이트 + 4 × 채널 + 4(블러 f32 창 포함). 측정한 최대치(16-bit RGBA 블러 37 B/px)를 덮음 | `81e05af` | `allocations.rs` `the_estimate_covers_the_peak_of_one_image` |
+| 20 | 넓은 색역을 유지하는 사진에 그리는 사용자 이미지를 그 색 공간으로 변환 | `80a5d95` | `photo_pipeline.rs` `the_users_image_is_drawn_in_the_photos_color_space` |
+| 20 | `PublishPermit::issue`는 crate가 나뉘어 타입으로 막을 수 없어 계획 4.2 문구를 코드에 맞춤. 알파를 버리는 JPEG 출력은 1.12.1과 같고 감지 사본도 같은 RGB를 보므로 유지. Windows 임시 파일의 숨김 속성(CHANGES에 "Windows에서는 보임")과 공유 위반 재시도는 원인 확인 전이라 바꾸지 않음 | 문서 | — |
+| 21 | 시험 helper를 `tests/common`으로 모음(단위 시험은 `src/lib.rs`의 `test_support`로 포함), 할당 측정 시험 두 개는 한 바이너리에서 차례로 | `d54b918` | 시험 수 그대로(216) |
+| 13 | 모자이크 강도 상한 16 → 12. D3 expected·계획 D3·CHANGES 갱신 | `be2ed6b` | core `mask` `invalid_inputs_are_refused`, `mask_fixtures.rs` |
+| 14 | 감지 0건 사진에 "nothing detected" note(게시는 그대로). 계획의 범위 조정 순서에서 타일 모드를 뺌 | `e8889ce` | `cli_photo.rs` `a_rerun_keeps_the_earlier_output`, D2 파이프라인 시험의 note |
+
+남은 것: 3개 OS CI(특히 Windows의 16번), 문서 표의 "남김" 항목(THIRD_PARTY_NOTICES, README, ROADMAP, 로그 정책, 시간 예산 문구).
