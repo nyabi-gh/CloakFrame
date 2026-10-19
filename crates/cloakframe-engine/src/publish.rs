@@ -7,6 +7,8 @@ use std::time::{Duration, SystemTime};
 
 use cloakframe_core::item::PublishPermit;
 
+use crate::run::Note;
+
 pub const TEMP_PREFIX: &str = ".cloakframe-tmp-";
 
 /// Temp files older than this in a folder the run writes to are leftovers of a crashed run.
@@ -78,19 +80,70 @@ impl TempOutput {
 
     /// Flushes the file to disk and moves it to the destination. Taking the permit means no
     /// output becomes visible for an item that was not cleared for publishing (P-1). Fails with
-    /// `io::ErrorKind::AlreadyExists` if anything has appeared under that name.
-    pub fn publish(mut self, _permit: &PublishPermit) -> io::Result<PathBuf> {
+    /// `io::ErrorKind::AlreadyExists` if anything has appeared under that name. Once the output
+    /// is visible under its final name it is published; what fails after that is returned as a
+    /// warning, not an error.
+    pub fn publish(self, permit: &PublishPermit) -> io::Result<Published> {
+        self.publish_with(permit, sync_folder)
+    }
+
+    fn publish_with(
+        mut self,
+        _permit: &PublishPermit,
+        sync_folder: impl FnOnce(&Path) -> io::Result<()>,
+    ) -> io::Result<Published> {
         self.file.take();
         // Reopened so that data written through `temp_path` by another process is flushed too.
         File::options().write(true).open(&self.temp)?.sync_all()?;
-        rename_no_replace(&self.temp, &self.destination)?;
-        self.published = true;
-        #[cfg(unix)]
-        if let Some(dir) = self.destination.parent() {
-            File::open(dir)?.sync_all()?;
+        let mut warnings = Vec::new();
+        if let Some(left) = rename_no_replace(&self.temp, &self.destination)? {
+            warnings.push(AfterPublish::TempNameLeft(left));
         }
-        Ok(self.destination.clone())
+        self.published = true;
+        if let Some(dir) = self.destination.parent()
+            && let Err(e) = sync_folder(dir)
+        {
+            warnings.push(AfterPublish::FolderNotSynced(e));
+        }
+        Ok(Published {
+            path: self.destination.clone(),
+            warnings,
+        })
     }
+}
+
+#[derive(Debug)]
+pub struct Published {
+    pub path: PathBuf,
+    pub warnings: Vec<AfterPublish>,
+}
+
+/// A step after the output became visible that did not complete.
+#[derive(Debug)]
+pub enum AfterPublish {
+    /// The folder could not be flushed, so a crash soon after could still undo the rename.
+    FolderNotSynced(io::Error),
+    /// The exclusive-rename fallback (hard link) could not remove the temp name.
+    TempNameLeft(io::Error),
+}
+
+impl AfterPublish {
+    pub fn note(&self) -> Note {
+        match self {
+            Self::FolderNotSynced(_) => Note::FolderNotFlushed,
+            Self::TempNameLeft(_) => Note::TempFileLeft,
+        }
+    }
+}
+
+/// Makes a rename in `dir` survive a crash. Windows has no such call for folders; the rename
+/// itself is written through (`MOVEFILE_WRITE_THROUGH`).
+fn sync_folder(dir: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    File::open(dir)?.sync_all()?;
+    #[cfg(windows)]
+    let _ = dir;
+    Ok(())
 }
 
 impl Drop for TempOutput {
@@ -125,29 +178,31 @@ pub fn remove_stale_temp_files(dir: &Path, now: SystemTime) -> io::Result<usize>
     Ok(removed)
 }
 
+/// Returns the error of removing the temp name when the hard-link fallback published the file but
+/// could not remove that name.
 #[cfg(unix)]
-fn rename_no_replace(from: &Path, to: &Path) -> io::Result<()> {
+fn rename_no_replace(from: &Path, to: &Path) -> io::Result<Option<io::Error>> {
     use rustix::fs::{CWD, RenameFlags, renameat_with};
     use rustix::io::Errno;
 
     match renameat_with(CWD, from, CWD, to, RenameFlags::NOREPLACE) {
-        Ok(()) => return Ok(()),
+        Ok(()) => return Ok(None),
         // The filesystem or kernel lacks an exclusive rename (FAT, exFAT, some network volumes).
         // NOTSUP and OPNOTSUPP are the same value on Linux but not on macOS.
         Err(e) if [Errno::INVAL, Errno::NOSYS, Errno::NOTSUP, Errno::OPNOTSUPP].contains(&e) => {}
         Err(e) => return Err(e.into()),
     }
     match fs::hard_link(from, to) {
-        Ok(()) => return fs::remove_file(from),
+        Ok(()) => return Ok(fs::remove_file(from).err()),
         Err(e) if e.kind() == io::ErrorKind::AlreadyExists => return Err(e),
         Err(_) => {}
     }
-    rename_if_absent(from, to)
+    rename_if_absent(from, to).map(|()| None)
 }
 
 #[cfg(windows)]
 #[allow(unsafe_code)]
-fn rename_no_replace(from: &Path, to: &Path) -> io::Result<()> {
+fn rename_no_replace(from: &Path, to: &Path) -> io::Result<Option<io::Error>> {
     use std::os::windows::ffi::OsStrExt;
     use windows_sys::Win32::Storage::FileSystem::{MOVEFILE_WRITE_THROUGH, MoveFileExW};
 
@@ -159,7 +214,7 @@ fn rename_no_replace(from: &Path, to: &Path) -> io::Result<()> {
     if ok == 0 {
         return Err(io::Error::last_os_error());
     }
-    Ok(())
+    Ok(None)
 }
 
 /// Leaves a race with another writer of the same name between the check and the rename; that
@@ -208,7 +263,7 @@ mod tests {
         assert!(during[0].starts_with(TEMP_PREFIX) && during[0].ends_with(".png"));
         assert!(!destination.exists());
 
-        assert_eq!(out.publish(&permit()).unwrap(), destination);
+        assert_eq!(out.publish(&permit()).unwrap().path, destination);
         assert_eq!(names(&dir.path().join("nested")), ["result.png"]);
         assert_eq!(fs::read(&destination).unwrap(), b"pixels");
     }
@@ -232,7 +287,7 @@ mod tests {
         let dir = TestDir::new();
         let destination = dir.path().join("result.png");
         let barrier = std::sync::Barrier::new(2);
-        let results: Vec<io::Result<PathBuf>> = std::thread::scope(|s| {
+        let results: Vec<io::Result<Published>> = std::thread::scope(|s| {
             let writers: Vec<_> = [b"first".as_slice(), b"second".as_slice()]
                 .into_iter()
                 .map(|bytes| {
@@ -312,5 +367,26 @@ mod tests {
             rename_if_absent(&again, &to).unwrap_err().kind(),
             io::ErrorKind::AlreadyExists
         );
+    }
+
+    /// A volume that cannot flush folders (some network and FUSE volumes) still gets the output:
+    /// it is visible under its final name, so the item is published and told so.
+    #[test]
+    fn a_folder_that_cannot_be_flushed_still_publishes() {
+        let dir = TestDir::new();
+        let destination = dir.path().join("out/photo.jpg");
+        let mut out = TempOutput::create(&destination).unwrap();
+        out.file().write_all(b"masked").unwrap();
+        let published = out
+            .publish_with(&permit(), |_| {
+                Err(io::Error::other("folder sync not supported"))
+            })
+            .unwrap();
+        assert_eq!(published.path, destination);
+        assert!(matches!(
+            published.warnings[..],
+            [AfterPublish::FolderNotSynced(_)]
+        ));
+        assert_eq!(names(&dir.path().join("out")), ["photo.jpg"]);
     }
 }

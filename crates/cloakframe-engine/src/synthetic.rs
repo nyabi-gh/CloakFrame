@@ -93,7 +93,12 @@ impl ItemProcessor for SyntheticProcessor {
             return Err(failed("the source changed while it was processed"));
         }
         match out.publish(permit) {
-            Ok(_) => Ok(()),
+            Ok(published) => {
+                for w in &published.warnings {
+                    ctx.notes.add(w.note());
+                }
+                Ok(())
+            }
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
                 Err(failed("the output name was taken during the run"))
             }

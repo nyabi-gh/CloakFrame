@@ -310,7 +310,12 @@ impl ItemProcessor for PhotoProcessor {
             return Err(failed(PhotoError::ChangedWhileProcessing));
         }
         match rendered.output.publish(permit) {
-            Ok(_) => Ok(()),
+            Ok(published) => {
+                for w in &published.warnings {
+                    ctx.notes.add(w.note());
+                }
+                Ok(())
+            }
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
                 Err(failed(PhotoError::NameTaken))
             }

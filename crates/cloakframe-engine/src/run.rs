@@ -54,6 +54,10 @@ pub enum Note {
     /// The source's color profile could not be used and was dropped; the pixels were treated as
     /// sRGB (D2).
     ColorProfileIgnored,
+    /// Published, but the folder could not be flushed to disk (some network and FUSE volumes).
+    FolderNotFlushed,
+    /// Published, but a temp file was left next to the output; a later run removes it.
+    TempFileLeft,
 }
 
 impl fmt::Display for Note {
@@ -61,6 +65,8 @@ impl fmt::Display for Note {
         f.write_str(match self {
             Self::ColorConverted => "colors converted to sRGB",
             Self::ColorProfileIgnored => "unusable color profile dropped",
+            Self::FolderNotFlushed => "the output folder could not be flushed to disk",
+            Self::TempFileLeft => "a temporary file was left next to the output",
         })
     }
 }
