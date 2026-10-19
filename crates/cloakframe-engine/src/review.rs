@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::fs_case::NameRule;
 use crate::output_plan::free_name;
+use crate::photo::format::ImageFormat;
 use crate::publish::TEMP_PREFIX;
 use crate::run::{Analysis, Decision, Fingerprint, JobItem, Start};
 use crate::session::{Session, SessionItem};
@@ -156,9 +157,9 @@ impl fmt::Display for Rejection {
             Self::NameTaken { suggestion } => {
                 write!(f, "the output name is taken; free name: {}", suggestion.display())
             }
-            Self::InvalidName => {
-                f.write_str("rename_to must be a plain file name in the same folder")
-            }
+            Self::InvalidName => f.write_str(
+                "rename_to must be a plain file name in the same folder, with an extension of the same kind and no characters or names Windows refuses",
+            ),
         }
     }
 }
@@ -290,7 +291,7 @@ fn check(
         .unwrap_or(Path::new(""))
         .to_path_buf();
     if let Some(name) = &decision.rename_to {
-        if !is_plain_name(name) {
+        if !is_plain_name(name) || !keeps_the_kind(&item.destination, name) {
             return Err(Rejection::InvalidName);
         }
         item.destination = folder.join(name);
@@ -315,12 +316,41 @@ fn check(
     Ok(item)
 }
 
+/// One name in the folder that every system can hold: output folders are often shared with
+/// Windows, which refuses these characters and device names and drops a trailing dot or space.
 fn is_plain_name(name: &str) -> bool {
     let mut components = Path::new(name).components();
+    let stem = name.split('.').next().unwrap_or_default();
+    let reserved = ["CON", "PRN", "AUX", "NUL"]
+        .iter()
+        .any(|r| stem.eq_ignore_ascii_case(r))
+        || ["COM", "LPT"].iter().any(|r| {
+            stem.len() == 4
+                && stem.get(..3).is_some_and(|p| p.eq_ignore_ascii_case(r))
+                && stem.as_bytes()[3].is_ascii_digit()
+        });
     matches!(components.next(), Some(Component::Normal(_)))
         && components.next().is_none()
-        && !name.contains(['/', '\\'])
+        && !name.contains(['/', '\\', '<', '>', ':', '"', '|', '?', '*'])
+        && !name.chars().any(char::is_control)
+        && !name.ends_with(['.', ' '])
+        && !reserved
         && !name.starts_with(TEMP_PREFIX)
+}
+
+/// The output format follows the name's extension, so a photo is renamed only to an image
+/// extension and a video only to `.mp4`; otherwise the data would carry a name that says
+/// otherwise, such as PNG data in `astro.txt`.
+fn keeps_the_kind(destination: &Path, name: &str) -> bool {
+    let is_image = |p: &Path| {
+        p.extension()
+            .and_then(|e| e.to_str())
+            .and_then(ImageFormat::from_extension)
+            .is_some()
+    };
+    let is_video = |p: &Path| p.extension().is_some_and(|e| e.eq_ignore_ascii_case("mp4"));
+    let new = Path::new(name);
+    (is_image(destination) && is_image(new)) || (is_video(destination) && is_video(new))
 }
 
 #[cfg(test)]
@@ -511,11 +541,34 @@ mod tests {
                 }
             )]
         );
-        for bad in ["../a.jpg", "sub/a.jpg", "", ".cloakframe-tmp-x.jpg"] {
+        // Also refused: names whose extension the output format would not follow (the data would
+        // be written under a name that says otherwise) and names Windows cannot hold.
+        for bad in [
+            "../a.jpg",
+            "sub/a.jpg",
+            "",
+            ".cloakframe-tmp-x.jpg",
+            "astro.txt",
+            "a",
+            "a.mp4",
+            "a.jpg:hidden",
+            "a?.jpg",
+            "CON.jpg",
+            "lpt1.png",
+            "a.jpg.",
+            "a.jpg ",
+        ] {
             let mut d = export();
             d.rename_to = Some(bad.into());
             let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
             assert_eq!(applied.rejected[0].1, Rejection::InvalidName, "{bad:?}");
+        }
+        // A four-byte stem that is not a device name, another image format, a name like one.
+        for good in ["a\u{c0ac}.jpg", "a (2).png", "COM.jpg", "console.jpg"] {
+            assert!(
+                is_plain_name(good) && keeps_the_kind(Path::new("a.jpg"), good),
+                "{good}"
+            );
         }
         let mut renamed = export();
         renamed.rename_to = Some("a (2).jpg".into());
