@@ -4,11 +4,21 @@ use std::time::Duration;
 
 use crate::cancel::CancelToken;
 
-/// Working memory one image is expected to need: decoded storage, the detection copy, the render
-/// buffer and the encoder's state, plus the encoded bytes held while it is processed (1.12.1's
-/// estimate, which held up for its pipelines).
-pub fn estimated_bytes(pixels: u64, encoded: u64) -> u64 {
-    pixels.saturating_mul(16).saturating_add(encoded)
+/// How a decoded image stores one pixel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct PixelLayout {
+    pub bytes: u64,
+    pub channels: u64,
+}
+
+/// Working memory one image is expected to need, per pixel: the decoded image and one working
+/// copy of it (a color conversion, or the mask's copy of its region), the blur's f32 window
+/// (4 bytes a channel), and 4 bytes for the detection copy and encoder state; plus the encoded
+/// bytes held while it is processed. Measured through the whole processor in
+/// tests/memory_budget.rs; 1.12.1's flat 16 bytes a pixel fell short for blur and 16-bit images.
+pub fn estimated_bytes(pixels: u64, encoded: u64, layout: PixelLayout) -> u64 {
+    let per_pixel = 2 * layout.bytes + 4 * layout.channels + 4;
+    pixels.saturating_mul(per_pixel).saturating_add(encoded)
 }
 
 /// Shared limit on the memory images in flight may use, so parallel items cannot together exhaust
@@ -157,9 +167,13 @@ mod tests {
 
     #[test]
     fn estimates_like_1121_and_saturates() {
-        assert_eq!(estimated_bytes(4, 100), 164);
-        assert_eq!(estimated_bytes(u64::MAX, 1), u64::MAX);
-        assert_eq!(estimated_bytes(u64::MAX, u64::MAX), u64::MAX);
+        let rgb8 = PixelLayout {
+            bytes: 3,
+            channels: 3,
+        };
+        assert_eq!(estimated_bytes(4, 100, rgb8), 4 * 22 + 100);
+        assert_eq!(estimated_bytes(u64::MAX, 1, rgb8), u64::MAX);
+        assert_eq!(estimated_bytes(u64::MAX, u64::MAX, rgb8), u64::MAX);
     }
 
     #[test]

@@ -4,12 +4,12 @@ use std::io::{self, Cursor, Read};
 use std::path::Path;
 
 use image::metadata::Orientation;
-use image::{DynamicImage, ImageReader, Limits};
+use image::{DynamicImage, ImageDecoder, ImageReader, Limits};
 
 use crate::cancel::CancelToken;
 use crate::detect::Rgb8Image;
 use crate::identity::SourceStamp;
-use crate::photo::budget::{BudgetError, MemoryBudget, MemoryPermit, estimated_bytes};
+use crate::photo::budget::{BudgetError, MemoryBudget, MemoryPermit, PixelLayout, estimated_bytes};
 use crate::photo::format::{ImageFormat, has_several_frames, sniff};
 
 pub const MAX_FILE_BYTES: u64 = 2 << 30;
@@ -150,6 +150,31 @@ pub fn header_dimensions(bytes: &[u8], format: ImageFormat) -> Result<(u32, u32)
         .map_err(|e| ReadError::Decode(e.to_string()))
 }
 
+/// The decoded layout, read from the header.
+fn pixel_layout(source: &Source) -> Result<PixelLayout, ReadError> {
+    if source.format == ImageFormat::Jpeg {
+        let header =
+            turbojpeg::read_header(&source.bytes).map_err(|e| ReadError::Decode(e.to_string()))?;
+        let channels = if header.colorspace == turbojpeg::Colorspace::Gray {
+            1
+        } else {
+            3
+        };
+        return Ok(PixelLayout {
+            bytes: channels,
+            channels,
+        });
+    }
+    let color = reader(&source.bytes, source.format, 0)
+        .into_decoder()
+        .map_err(|e| ReadError::Decode(e.to_string()))?
+        .color_type();
+    Ok(PixelLayout {
+        bytes: u64::from(color.bytes_per_pixel()),
+        channels: u64::from(color.channel_count()),
+    })
+}
+
 pub fn decode(
     source: &Source,
     budget: &MemoryBudget,
@@ -166,7 +191,7 @@ pub fn decode(
     if pixels > MAX_PIXELS {
         return Err(ReadError::TooManyPixels { width, height });
     }
-    let estimate = estimated_bytes(pixels, source.bytes.len() as u64);
+    let estimate = estimated_bytes(pixels, source.bytes.len() as u64, pixel_layout(source)?);
     let permit = budget
         .acquire(estimate, cancel)
         .map_err(ReadError::Memory)?;
