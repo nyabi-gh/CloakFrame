@@ -6,20 +6,59 @@ use super::Rgb8Image;
 const CN: usize = 3;
 const COEF_SCALE: f32 = 2048.0;
 
+/// A rectangle of an image in pixels.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Region {
+    pub x: u32,
+    pub y: u32,
+    pub width: u32,
+    pub height: u32,
+}
+
 /// Resizes to `width` x `height`. Same size copies; an exact 2x reduction in both directions
 /// takes OpenCV's INTER_AREA fast path, as `cv::resize` does for INTER_LINEAR.
 ///
 /// Panics if either image has no pixels.
 pub fn resize_linear(src: &Rgb8Image, width: u32, height: u32) -> Rgb8Image {
-    assert!(src.width > 0 && src.height > 0 && width > 0 && height > 0);
-    let (sw, sh) = (src.width as usize, src.height as usize);
+    let whole = Region {
+        x: 0,
+        y: 0,
+        width: src.width,
+        height: src.height,
+    };
+    resize_region_linear(src, whole, width, height)
+}
+
+/// [`resize_linear`] of `region` as if it were cut out first, without the copy.
+///
+/// Panics if the region or the output has no pixels, or the region is not inside `src`.
+pub fn resize_region_linear(src: &Rgb8Image, region: Region, width: u32, height: u32) -> Rgb8Image {
+    assert!(region.width > 0 && region.height > 0 && width > 0 && height > 0);
+    assert!(
+        region
+            .x
+            .checked_add(region.width)
+            .is_some_and(|r| r <= src.width)
+            && region
+                .y
+                .checked_add(region.height)
+                .is_some_and(|b| b <= src.height)
+    );
+    let view = View {
+        data: &src.data,
+        stride: src.width as usize * CN,
+        x: region.x as usize,
+        y: region.y as usize,
+        width: region.width as usize,
+        height: region.height as usize,
+    };
     let (dw, dh) = (width as usize, height as usize);
-    let data = if (sw, sh) == (dw, dh) {
-        src.data.clone()
-    } else if sw == 2 * dw && sh == 2 * dh {
-        area_half(&src.data, sw, dw, dh)
+    let data = if (view.width, view.height) == (dw, dh) {
+        (0..dh).flat_map(|r| view.row(r)).copied().collect()
+    } else if view.width == 2 * dw && view.height == 2 * dh {
+        area_half(&view, dw, dh)
     } else {
-        linear(&src.data, sw, sh, dw, dh)
+        linear(&view, dw, dh)
     };
     Rgb8Image {
         width,
@@ -28,12 +67,30 @@ pub fn resize_linear(src: &Rgb8Image, width: u32, height: u32) -> Rgb8Image {
     }
 }
 
+struct View<'a> {
+    data: &'a [u8],
+    /// Bytes per row of the whole image.
+    stride: usize,
+    x: usize,
+    y: usize,
+    width: usize,
+    height: usize,
+}
+
+impl View<'_> {
+    fn row(&self, r: usize) -> &[u8] {
+        let start = (self.y + r) * self.stride + self.x * CN;
+        &self.data[start..start + self.width * CN]
+    }
+}
+
 /// `saturate_cast<short>` of an 11-bit coefficient: rounds half to even.
 fn coef(v: f32) -> i32 {
     (v * COEF_SCALE).round_ties_even() as i32
 }
 
-fn linear(src: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
+fn linear(src: &View<'_>, dw: usize, dh: usize) -> Vec<u8> {
+    let (sw, sh) = (src.width, src.height);
     let scale_x = sw as f64 / dw as f64;
     let scale_y = sh as f64 / dh as f64;
 
@@ -54,7 +111,7 @@ fn linear(src: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
         alpha.push([coef(1.0 - fx), coef(fx)]);
     }
     let hrow = |sy: usize, out: &mut Vec<i32>| {
-        let row = &src[sy * sw * CN..(sy + 1) * sw * CN];
+        let row = src.row(sy);
         for (&sx, a) in xofs.iter().zip(&alpha) {
             for c in 0..CN {
                 let p0 = i32::from(row[sx * CN + c]);
@@ -106,12 +163,11 @@ fn linear(src: &[u8], sw: usize, sh: usize, dw: usize, dh: usize) -> Vec<u8> {
 
 /// `resizeAreaFast` for 2x2 blocks. Both the vector loop and `ResizeAreaFastVec`'s scalar tail
 /// round half up, so the generic `saturate_cast` (half to even) path is never reached.
-fn area_half(src: &[u8], sw: usize, dw: usize, dh: usize) -> Vec<u8> {
+fn area_half(src: &View<'_>, dw: usize, dh: usize) -> Vec<u8> {
     let row_len = dw * CN;
     let mut out = vec![0u8; dh * row_len];
     for (dy, dst) in out.chunks_exact_mut(row_len).enumerate() {
-        let s0 = &src[2 * dy * sw * CN..(2 * dy + 1) * sw * CN];
-        let s1 = &src[(2 * dy + 1) * sw * CN..(2 * dy + 2) * sw * CN];
+        let (s0, s1) = (src.row(2 * dy), src.row(2 * dy + 1));
         for (i, d) in dst.iter_mut().enumerate() {
             let (px, c) = (i / CN, i % CN);
             let at = 2 * px * CN + c;
@@ -217,5 +273,45 @@ mod tests {
         // Same size is a copy.
         let row = one_row(vec![1, 2, 3, 4, 5, 6]);
         assert_eq!(resize_linear(&row, 2, 1), row);
+    }
+
+    fn cut(src: &Rgb8Image, r: Region) -> Rgb8Image {
+        let mut data = Vec::new();
+        for y in r.y..r.y + r.height {
+            let start = ((y * src.width + r.x) * CN as u32) as usize;
+            data.extend_from_slice(&src.data[start..start + (r.width * CN as u32) as usize]);
+        }
+        Rgb8Image {
+            width: r.width,
+            height: r.height,
+            data,
+        }
+    }
+
+    #[test]
+    fn a_region_resizes_as_its_cut_out_copy() {
+        let src = pattern(97, 61);
+        let regions = [
+            (0, 0, 97, 61),
+            (5, 3, 40, 30),
+            (57, 31, 40, 30),
+            (1, 1, 2, 2),
+        ];
+        let sizes = [(20, 15), (40, 30), (13, 7), (64, 48), (1, 1), (20, 10)];
+        for (x, y, width, height) in regions {
+            let r = Region {
+                x,
+                y,
+                width,
+                height,
+            };
+            for (w, h) in sizes {
+                assert_eq!(
+                    resize_region_linear(&src, r, w, h),
+                    resize_linear(&cut(&src, r), w, h),
+                    "{r:?} -> {w}x{h}"
+                );
+            }
+        }
     }
 }
