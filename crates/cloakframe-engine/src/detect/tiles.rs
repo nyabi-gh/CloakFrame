@@ -8,6 +8,12 @@
 //! no larger than the overlap always fits in one tile. So a tile's box larger than `MAX_IN_TILE`
 //! is left to the coarser views, where the same thing is wholly seen; the plate model calls a
 //! plain tile one large plate.
+//!
+//! Magnified texture (foam, wire mesh, lettering, fabric) passes for a face or plate in a tile far
+//! more often than at a coarser scale, while a real one is mostly found at both. So a tile's
+//! finding that the next coarser view shows at `MIN_FOUND` or more stands only when a coarser view
+//! found it too or it scores `SURE` above the threshold; smaller ones, which the coarser views
+//! cannot judge, stand as found (docs/M3_TILE_FALSE_DETECTIONS.md).
 
 use cloakframe_core::detection::{
     Detection, DetectionKind, ModelId, Thresholds, non_max_suppression,
@@ -29,6 +35,11 @@ const MIN_FOUND: u32 = OVERLAP / 4;
 const COVERED: f32 = 0.8;
 /// The largest box, in model pixels on either side, a tile's findings keep.
 const MAX_IN_TILE: f32 = (MODEL_SIDE / 2) as f32;
+/// How far above its kind's score threshold a tile's finding stands without a coarser view. Some
+/// clear faces are found at one scale only.
+const SURE: f32 = 0.2;
+/// Boxes of two views that overlap this much are taken for the same thing.
+const SAME_THING: f32 = 0.3;
 
 /// One tile: a region of the image and the size the detector is given it at.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -39,6 +50,10 @@ pub struct Tile {
     /// Whether each side (left, top, right, bottom) lies inside the image rather than on its
     /// border; a box touching such a side may be cut.
     inner: [bool; 4],
+    /// 1 for the coarsest level of tiles; the whole view is 0.
+    level: u32,
+    /// Model pixels per image pixel in the next coarser view: the level before, or the whole view.
+    coarser: f32,
 }
 
 impl Tile {
@@ -94,6 +109,7 @@ pub fn layout(width: u32, height: u32) -> Vec<Tile> {
     let max_ratio = f64::from(OVERLAP / MIN_FOUND);
     let levels = ((1.0 / whole).ln() / max_ratio.ln()).ceil() as u32;
     let mut tiles = Vec::new();
+    let mut coarser = whole;
     for level in 1..=levels {
         let scale = whole.powf(f64::from(levels - level) / f64::from(levels));
         let tile = (side / scale).round() as u32;
@@ -113,9 +129,12 @@ pub fn layout(width: u32, height: u32) -> Vec<Tile> {
                     input_width: input(tile_w).max(1) as u32,
                     input_height: input(tile_h).max(1) as u32,
                     inner: [x > 0, y > 0, x + tile_w < width, y + tile_h < height],
+                    level,
+                    coarser: coarser as f32,
                 });
             }
         }
+        coarser = side / f64::from(tile);
     }
     tiles
 }
@@ -136,44 +155,91 @@ fn starts(len: u32, tile: u32, overlap: u32) -> Vec<(u32, u32)> {
         .collect()
 }
 
+/// A detection in image coordinates and the view it came from.
+struct Finding {
+    detection: Detection,
+    /// Touches a tile side inside the image, so it may be part of something the tile cut.
+    cut: bool,
+    level: u32,
+    /// Its longest side in the next coarser view's model pixels; 0 for the whole view's.
+    coarser_side: f32,
+}
+
+impl Finding {
+    /// Whether a tile's finding stands (see the module comment).
+    fn stands(&self, all: &[Finding], thresholds: &Thresholds) -> bool {
+        let d = &self.detection;
+        self.level == 0
+            || d.score() >= thresholds.of(d.kind()).score() + SURE
+            || self.coarser_side < MIN_FOUND as f32
+            || all.iter().any(|o| {
+                o.level < self.level
+                    && o.detection.kind() == d.kind()
+                    && o.detection.bbox().iou(&d.bbox()) >= SAME_THING
+            })
+    }
+}
+
 /// The whole view's and the tiles' findings as one result. A tile's box larger than
-/// `MAX_IN_TILE` is dropped (see the module comment). A box cut by a tile edge is dropped
-/// when a whole box covers most of it, before NMS: a partial box can outscore the whole one and
-/// NMS would then keep the part. The rest goes through each kind's NMS, faces before plates as
-/// the whole view lists them. Dropped counts of bounded models add up over the views. Without
-/// tiles the whole view is the result as it is.
+/// `MAX_IN_TILE` is dropped, and so is a tile's finding a coarser view should have found and did
+/// not (see the module comment). A box cut by a tile edge is dropped when a whole box covers most
+/// of it, before NMS: a partial box can outscore the whole one and NMS would then keep the part.
+/// The rest goes through each kind's NMS, faces before plates as the whole view lists them.
+/// Dropped counts of bounded models add up over the views. Without tiles the whole view is the
+/// result as it is.
 pub fn merge(whole: Found, tiles: Vec<(Tile, Found)>, thresholds: &Thresholds) -> Found {
     if tiles.is_empty() {
         return whole;
     }
     let mut over_limit = whole.over_limit;
     let mut reran_on_cpu = whole.reran_on_cpu;
-    let mut found: Vec<(Detection, bool)> =
-        whole.detections.into_iter().map(|d| (d, false)).collect();
+    let mut found: Vec<Finding> = whole
+        .detections
+        .into_iter()
+        .map(|detection| Finding {
+            detection,
+            cut: false,
+            level: 0,
+            coarser_side: 0.0,
+        })
+        .collect();
     for (tile, f) in tiles {
         found.extend(
             f.detections
                 .iter()
                 .filter(|d| d.bbox().width().max(d.bbox().height()) <= MAX_IN_TILE)
-                .map(|d| tile.locate(d)),
+                .map(|d| {
+                    let (detection, cut) = tile.locate(d);
+                    let b = detection.bbox();
+                    Finding {
+                        coarser_side: b.width().max(b.height()) * tile.coarser,
+                        detection,
+                        cut,
+                        level: tile.level,
+                    }
+                }),
         );
         over_limit.extend(f.over_limit);
         reran_on_cpu |= f.reran_on_cpu;
     }
-    let complete: Vec<&Detection> = found
+    let standing: Vec<&Finding> = found
         .iter()
-        .filter(|(_, cut)| !cut)
-        .map(|(d, _)| d)
+        .filter(|f| f.stands(&found, thresholds))
+        .collect();
+    let complete: Vec<&Detection> = standing
+        .iter()
+        .filter(|f| !f.cut)
+        .map(|f| &f.detection)
         .collect();
     let covered = |part: &Detection| {
         complete
             .iter()
             .any(|d| d.kind() == part.kind() && share_inside(&part.bbox(), &d.bbox()) >= COVERED)
     };
-    let kept: Vec<Detection> = found
+    let kept: Vec<Detection> = standing
         .iter()
-        .filter(|(d, cut)| !cut || !covered(d))
-        .map(|(d, _)| d.clone())
+        .filter(|f| !f.cut || !covered(&f.detection))
+        .map(|f| f.detection.clone())
         .collect();
     let mut detections = non_max_suppression(kept, thresholds);
     detections.sort_by_key(|d| d.kind() == DetectionKind::Plate);
@@ -262,6 +328,23 @@ mod tests {
         assert_eq!(levels(&layout(1920, 1080)).len(), 1);
         assert_eq!(levels(&layout(4000, 3000)).len(), 2);
         assert_eq!(levels(&layout(24_000, 21_000)).len(), 3);
+    }
+
+    #[test]
+    fn each_tile_knows_its_level_and_the_next_coarser_scale() {
+        for (w, h) in SIZES {
+            let mut coarser = (640.0 / f64::from(w)).min(640.0 / f64::from(h));
+            for (i, level) in levels(&layout(w, h)).iter().enumerate() {
+                for t in level {
+                    assert_eq!(
+                        (t.level, t.coarser),
+                        (i as u32 + 1, coarser as f32),
+                        "{w}x{h}"
+                    );
+                }
+                coarser = scale(&level[0]);
+            }
+        }
     }
 
     #[test]
@@ -375,7 +458,8 @@ mod tests {
         }
     }
 
-    /// Two 1280-pixel tiles at half scale side by side on a 2240x640 image.
+    /// Two 1280-pixel tiles at half scale side by side on a 2240x640 image, whose whole view is at
+    /// 2/7 scale: a box is 4/7 of its tile size there.
     fn halves() -> (Tile, Tile) {
         let tile = |x: u32, inner: [bool; 4]| Tile {
             region: Region {
@@ -387,11 +471,30 @@ mod tests {
             input_width: 640,
             input_height: 320,
             inner,
+            level: 1,
+            coarser: 640.0 / 2240.0,
         };
         (
             tile(0, [false, false, true, false]),
             tile(960, [true, false, false, false]),
         )
+    }
+
+    /// A tile at the image's own pixels over the middle of `halves`.
+    fn finer() -> Tile {
+        Tile {
+            region: Region {
+                x: 960,
+                y: 0,
+                width: 640,
+                height: 640,
+            },
+            input_width: 640,
+            input_height: 640,
+            inner: [true, false, true, false],
+            level: 2,
+            coarser: 0.5,
+        }
     }
 
     #[test]
@@ -490,6 +593,137 @@ mod tests {
         );
         let widths: Vec<f32> = merged.detections.iter().map(|d| d.bbox().width()).collect();
         assert_eq!(widths, [640.0, 900.0]);
+    }
+
+    #[test]
+    fn a_large_tile_finding_the_whole_view_missed_needs_a_sure_score() {
+        let (left, _) = halves();
+        // 100 tile pixels tall: 57 in the whole view.
+        let merged = merge(
+            Found::default(),
+            vec![(
+                left,
+                finds(vec![
+                    face(0.69, 100.0, 100.0, 80.0, 100.0),
+                    face(0.7, 300.0, 100.0, 80.0, 100.0),
+                ]),
+            )],
+            &thresholds(),
+        );
+        let scores: Vec<f32> = merged.detections.iter().map(|d| d.score()).collect();
+        assert_eq!(scores, [0.7]);
+    }
+
+    #[test]
+    fn the_sure_score_follows_the_kinds_threshold() {
+        let (left, _) = halves();
+        let t = Thresholds {
+            face: KindThresholds::new(0.5, 0.4).unwrap(),
+            plate: KindThresholds::new(0.3, 0.45).unwrap(),
+        };
+        let merged = merge(
+            Found::default(),
+            vec![(
+                left,
+                finds(vec![
+                    face(0.6, 100.0, 100.0, 80.0, 100.0),
+                    plate(0.55, 300.0, 100.0, 100.0, 40.0),
+                ]),
+            )],
+            &t,
+        );
+        let kinds: Vec<DetectionKind> = merged.detections.iter().map(|d| d.kind()).collect();
+        assert_eq!(kinds, [DetectionKind::Plate]);
+    }
+
+    #[test]
+    fn a_tile_finding_too_small_for_the_coarser_view_stands_as_found() {
+        let (left, _) = halves();
+        // 66 and 72 tile pixels wide: 38 and 41 in the whole view.
+        let merged = merge(
+            Found::default(),
+            vec![(
+                left,
+                finds(vec![
+                    face(0.55, 100.0, 100.0, 66.0, 50.0),
+                    face(0.55, 300.0, 100.0, 72.0, 50.0),
+                ]),
+            )],
+            &thresholds(),
+        );
+        let widths: Vec<f32> = merged.detections.iter().map(|d| d.bbox().width()).collect();
+        assert_eq!(widths, [132.0]);
+    }
+
+    #[test]
+    fn a_tile_finding_the_whole_view_found_too_stands() {
+        let (left, _) = halves();
+        let merged = merge(
+            finds(vec![
+                face(0.52, 210.0, 190.0, 150.0, 190.0),
+                plate(0.9, 800.0, 200.0, 160.0, 200.0),
+            ]),
+            vec![(
+                left,
+                finds(vec![
+                    face(0.6, 100.0, 100.0, 80.0, 100.0),
+                    // On the plate, which is no face.
+                    face(0.6, 400.0, 100.0, 80.0, 100.0),
+                ]),
+            )],
+            &thresholds(),
+        );
+        assert_eq!(
+            merged.detections,
+            [
+                face(0.6, 200.0, 200.0, 160.0, 200.0),
+                plate(0.9, 800.0, 200.0, 160.0, 200.0)
+            ]
+        );
+    }
+
+    #[test]
+    fn a_dropped_finding_does_not_make_a_cut_part_give_way() {
+        let (left, right) = halves();
+        // The part is the image's (1240, 20, 40, 80); the right tile's box (1200, 0, 160, 200)
+        // around it is 57 in the whole view, which found nothing there.
+        let part = face(0.6, 620.0, 10.0, 20.0, 40.0);
+        let unconfirmed = face(0.6, 120.0, 0.0, 80.0, 100.0);
+        let merged = merge(
+            Found::default(),
+            vec![(left, finds(vec![part])), (right, finds(vec![unconfirmed]))],
+            &thresholds(),
+        );
+        assert_eq!(merged.detections, [face(0.6, 1240.0, 20.0, 40.0, 80.0)]);
+    }
+
+    #[test]
+    fn only_a_coarser_view_confirms_a_finding() {
+        let (left, right) = halves();
+        // The image's (1000, 100, 200, 200), in the overlap of the halves: 57 in the whole view.
+        let in_left = face(0.6, 500.0, 50.0, 100.0, 100.0);
+        let in_right = face(0.6, 20.0, 50.0, 100.0, 100.0);
+        let same_level = merge(
+            Found::default(),
+            vec![
+                (left, finds(vec![in_left.clone()])),
+                (right, finds(vec![in_right])),
+            ],
+            &thresholds(),
+        );
+        assert!(same_level.detections.is_empty());
+        // The halves confirm the finer tile's finding, not the other way round.
+        let in_finer = face(0.55, 40.0, 100.0, 200.0, 200.0);
+        let merged = merge(
+            Found::default(),
+            vec![
+                (left, finds(vec![in_left])),
+                (finer(), finds(vec![in_finer])),
+            ],
+            &thresholds(),
+        );
+        let scores: Vec<f32> = merged.detections.iter().map(|d| d.score()).collect();
+        assert_eq!(scores, [0.55]);
     }
 
     #[test]
