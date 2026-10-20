@@ -334,7 +334,7 @@ crates/
     | D7 | `d7_sessions.rs` 2건(실행 전체에 모델·위치마다 세션 하나, 쓰는 모델만 읽음), `cli_models.rs` `nothing_is_loaded_before_the_scan_finds_media`·`the_plate_model_is_read_only_when_plates_are_on` |
     | D8 | 타입: `ort::Session::run`이 `&mut self`를 받고 `Detector::detect(&mut self)`도 같으며, 감지기는 `DetectorHandle::spawn`이 추론 스레드로 옮겨 그 스레드만 가짐. 시험: `detect` 단위 `serializes_calls_from_many_threads`(동시 호출이면 실패), `detector_errors_reach_the_caller_and_the_thread_keeps_serving`, `a_panicking_detector_makes_the_handle_unavailable` |
     | D11 | `detect_fixtures.rs` crowd 3건(280개 모두), `the_plate_graph_limits_are_lifted`, `p1_photo.rs` 2건, `yunet` 단위 `nms_considers_every_candidate`, `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`, `detect::models` `combined_results_keep_every_kind_and_each_models_limit`, `detect::tiles` `dropped_counts_and_the_cpu_rerun_carry_over` |
-- **완료(2026-10-20):** 소요 2일(2026-10-19–20, 예산 3주), PR #33–#37과 6단계 `m3-verify`. 위 표의 시험이 macOS arm64에서 통과하고 3개 OS CI는 각 단계 PR에서 확인. 남은 확인: Windows DML 결과·번호판 0건 입력·실기기 GPU 리셋(GPU 있는 Windows 장치가 생기면, M7·M8). 이월: 타일에서만 나온 감지의 오탐 줄이기(후속 과제, 벤치마크로 잼)
+- **완료(2026-10-20):** 소요 2일(2026-10-19–20, 예산 3주), PR #33–#37과 6단계 `m3-verify`. 위 표의 시험이 macOS arm64에서 통과하고 3개 OS CI는 각 단계 PR에서 확인. 남은 확인: Windows DML 결과·번호판 0건 입력·실기기 GPU 리셋(GPU 있는 Windows 장치가 생기면, M7·M8). 이월했던 타일 오탐 줄이기는 2026-10-20 완료([기록](M3_TILE_FALSE_DETECTIONS.md)): 성긴 보기에서 40 px 이상인데 거기서 찾지 못한 타일 감지는 임계값 + 0.2 이상일 때만 남김. 원본 세트 재현율 87.1% → 87.2%, 오탐 68 → 47개, S3 세트 88.0% → 87.9%, 46 → 33개
 
 ### M4 — 영상 시간축·인코딩
 
