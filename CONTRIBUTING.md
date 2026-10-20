@@ -64,6 +64,23 @@ downloads them (YOLO5Face-n, which is for non-commercial use only, also needs
 `--accept-terms`). The command-line tests download the two MIT-licensed models
 from GitHub, so they need the network.
 
+Changes to detection also run the detection benchmark: 610 Open Images photos
+(Open Images' own copies, about 160 MB) fetched by hash, scored against their
+labels and compared with CloakFrame 1.12.1's recorded results. CI runs it on pull
+requests that touch detection (`.github/workflows/benchmark.yml`); to run it
+locally:
+
+```bash
+images=$(python3 -I tools/benchmark/fetch.py ~/.cache/cloakframe-benchmark)
+cargo run --release -p cloakframe-engine --example benchmark -- \
+  --ort-library "$CLOAKFRAME_ORT_LIBRARY" --models "$CLOAKFRAME_TEST_ASSETS" \
+  --manifest tests/fixtures/benchmark/manifest.json --images "$images" --out default.json
+python3 -I tools/benchmark/evaluate.py --gate tests/fixtures/benchmark/engine/default.json default.json
+```
+
+See [docs/M3_BENCHMARK.md](docs/M3_BENCHMARK.md) for the set and the other
+settings.
+
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.
 

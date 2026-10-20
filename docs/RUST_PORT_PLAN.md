@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -259,7 +259,7 @@ crates/
 | 단계 | M1 | M2 | M3 | M4 | M5 | M6 | M7 | M8 | 합계 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 예산(주) | 3 | 4 | 3 | 4 | 5 | 7 | 4 | 2 | 32 |
-| 실제 | 2일 | 2일 | | | | | | | |
+| 실제 | 2일 | 2일 | 2일 | | | | | | |
 
 **점검 규칙:** 단계가 끝날 때마다 실제 소요를 이 표 옆에 적는다. 어느 단계든 예산의 125%를 넘으면(예: 4주 예산이 5주를 넘음) 아래 범위 조정 순서에서 아직 미루지 않은 첫 항목을 첫 stable 뒤로 미룬다. M5 끝에는 누적 소요를 전체 예산과 비교해 한 번 더 점검하고, 남은 단계(M6–M8 13주)가 남은 예산에 들어가지 않으면 다음 항목도 미룬다.
 
@@ -311,7 +311,7 @@ crates/
   - **완료(2026-10-19):** 소요 2일(2026-10-18–19, 예산 4주, 125% 점검 기준 5주 안), PR #25–#31과 7단계 `m2-verify`. 위 표의 시험이 macOS arm64(고정 ORT 1.30.0)에서 모두 통과, 3개 OS CI는 `m2-verify` PR에서 확인. 이월: YuNet·번호판 어댑터와 실제 모델의 종류별 임계값(M3)
   - **재검토(2026-10-19):** M0–M2 전체를 다시 봤다([기록](M0_M2_REVIEW.md)). 결함 10건, 위험 6건, 의심 5건과 문서 불일치를 찾았고, 그중 사실만 바로잡는 문서는 같은 날 고쳤다. 같은 날 1–21번을 메인테이너가 정한 순서로 항목마다 실패하는 시험을 먼저 넣고 고쳤다(`m2-verify`, 항목별 커밋, 처리 내용은 기록의 "처리" 절). 결정: 사진은 NMS 뒤 상한 없이 모두 가림(1번), CMYK TIFF도 거부(6번), 모자이크 강도 4–12(13번), 감지 0건은 표시하고 타일 모드는 범위 조정 목록에서 뺌(14번). macOS arm64에서 시험 216건 통과. PR #32(`m2-verify`)에서 Linux·macOS·Windows CI가 모두 통과해(Windows FAT32·긴 경로 시험 포함) 같은 날 완료를 확정하고 main을 `132e4bd`로 fast-forward했다. 남은 것: Windows debug 시험 빌드의 링커 경고 LNK4098은 `turbojpeg-sys`가 libjpeg-turbo의 C 런타임을 Rust와 맞추지 않아 생긴다. 배포 빌드(release, `+crt-static`)는 맞고 드러난 결함은 없다. upstream 수정을 올렸고([honzasp/rust-turbojpeg#44](https://github.com/honzasp/rust-turbojpeg/pull/44)), 그 판이 나오면 올린다([기록](M2_ENCODE_SPIKE.md#windows의-lnk4098-경고-2026-10-19))
 
-### M3 — 모델·GPU·다운로드·타일
+### M3 — 모델·GPU·다운로드·타일 (2026-10-20 완료)
 
 - **작업:** YuNet·번호판 어댑터, 3장 EP 정책과 CPU 폴백, 모델 다운로드·캐시, 타일 모드, 종류별 임계값
 - **완료 기준:** 1.12.1 대비 허용오차 내 결과, 소규모 벤치마크 재현율, GPU 없을 때 CPU로 동작, Windows 실기기에서 GPU 강제 리셋 시 같은 입력을 CPU로 다시 실행(M0에서 옮김). D5·D7·D8·D11 시험 통과
@@ -320,8 +320,21 @@ crates/
   2. 번호판 어댑터와 종류별 임계값(`m3-plate`): YOLOv9-t end2end, 얼굴·번호판 모델을 함께 돌리는 감지 구성, 실제 모델의 종류별 기본 임계값, fixture 18건. **완료(2026-10-19, PR #34, main `c4a4544`, [기록](M3_DETECTION.md)):** engine `detect::plate`가 1.12.1 `PlateDetector`의 전처리·해석을 옮겨 18건이 1.12.1과 같음(최소 IoU 0.9999966). 그래프 안 NMS의 상한 100개·IoU 0.45를 initializer 교체로 풀고 core NMS를 번호판 임계값으로 직접 돌림(원래 출력과 9장에서 같음, 100개 넘는 출력 시험). 그래서 고정 모델 중 NMS 뒤 출력이 제한된 모델은 없다. 모델별 기본 임계값은 core `ModelId::default_thresholds`(1.12.1이 실제로 쓴 값: 얼굴 score 0.5·NMS 0.4, 번호판 score 0.5·NMS 0.45). 감지 구성 `detect::models::DetectionModels`(얼굴 모델 하나 또는 없음, 번호판 켬·끔, 둘 다 없으면 거부)가 `PhotoSettings`에 들어가 review key의 `models`가 되고, 선택한 모델은 추론 스레드 하나에서 모델 사이 NMS 없이 합쳐짐(P-2). `Found.over_limit`은 모델별. CLI는 `--face-model` 대신 `--models DIR`·`--faces yolo5face-n|yunet|off`·`--plates on|off`, `review`도 같은 선택을 받음. 결정(2026-10-19): 기본 얼굴 모델 YOLO5Face-n, 번호판 기본 꺼짐(얼굴 없는 사진 179장 중 10장에 score 0.5 이상 번호판 오탐), 임계값은 1.12.1 값을 두고 6단계 벤치마크에서 다시 정함, 번호판 그래프 상한은 풂. 1단계 YuNet이 OpenCV처럼 NMS 전 후보를 5,000개로 잘라 약 440–770명 넘는 사진에서 얼굴을 버릴 수 있던 것을 찾아, 같은 날 결정으로 상한을 없앰(후보는 많아야 8,400개, 최악 NMS 60 ms). 3개 OS CI와 `ort.yml`의 고정 ORT 비교 통과(Windows는 CRLF checkout 때문에 manifest URL 줄 시험이 처음에 실패해 줄 끝에 기대지 않게 고침)
   3. EP 정책과 CPU 폴백(`m3-ep`): macOS CoreML(MLProgram, 번호판은 CPU), Windows DML, GPU 오류 시 그 항목부터 CPU 재실행과 표시(오류 주입 시험). Windows 실기기 GPU 리셋은 장치가 생기면 확인(M7·M8로 옮긴 확인과 같음). **완료(2026-10-19, PR #35, main `76a538f`, [기록](M3_EP.md)):** `detect::runtime::Backend`(CPU·CoreML·DirectML)와 1.12.1 세션 옵션(가속기는 `EXTENDED`·스레드 1, CoreML `MLProgram`·`ALL`, DML memory pattern 끔·순차·device 0). `detect::fallback`: macOS는 YOLO5Face-n·YuNet을 CoreML에, 번호판은 CPU에(후보 0개면 CoreML이 빈 텐서 거부, 그래프 NMS를 풀어도 같음), Windows는 세 모델을 DML에. 가속기에서 세션을 못 만들면 CPU로 시작하고, 사진이 가속기에서 실패하면 같은 사진을 CPU로 다시 분석한 뒤 그 실행의 나머지를 CPU로(모델 오류·CPU 실패는 다시 하지 않음). 그 항목에 note, CLI는 모델별 실행 위치와 폴백 이유를 stderr에. CoreML 컴파일 캐시는 앱 캐시 폴더 아래 ORT 빌드·모델별 폴더. 실행 위치는 review key에 넣지 않음(결과가 같음을 실행 위치마다 fixture로 확인). CLI `--gpu on|off`. 결정(2026-10-19): GPU 기본 켬, YuNet도 CoreML(macOS에서 18건 같고 2.5배 빠름), 표시는 항목 note와 CLI 줄. 실제 가속기 오류(번호판을 CoreML에 강제)로 폴백 시험. Windows runner에는 GPU가 없어 DML 결과와 번호판 0건 입력 확인은 장치가 생기면. 3개 OS CI 통과(Windows runner가 DML로 시작했는지는 시험이 출력을 잡아 로그에 남지 않음)
   4. 모델 manifest·다운로드·캐시(`m3-models`): URL allowlist, 모델 폴더 안 임시 파일로 받으며 해시 계산 후 rename, (모델, 입력 크기, EP)마다 세션 하나·스캔 뒤 필요한 모델만 로드(D5·D7), 이용 조건 표시 자료. 앞 단계에서 넘어온 것: CLI `--models`의 기본값을 앱 모델 폴더로, 1.12.1 모델 캐시를 해시 확인 후 새 캐시로 복사(4.6), CoreML 컴파일 캐시의 이전 ORT 빌드·모델 폴더 정리. **완료(2026-10-19, PR #36, main `832f829`, [기록](M3_MODELS.md)):** engine `model_files`: 고정 목록 `MODEL_FILES`(이름·URL·SHA-256·크기·이용 조건, manifest와 같은지 시험), `ModelStore`(모델 폴더 안 `.cloakframe-tmp-*`에 쓰며 해시, 크기·해시가 맞을 때만 rename, 권한 검사 없음), `download`(HTTP 경계 `Fetch`, `Https`는 ureq + rustls(ring) + OS 인증서 저장소, HTTPS·허용 호스트 4개만, redirect마다 검사). 모델 폴더는 `app_dirs::model_dir()`(데이터 폴더의 `models`)이고 macOS·Windows에서는 1.12.1 폴더와 같다. `legacy`: 1.12.1·Redactly 모델 폴더(없는 모델만 해시 확인 후 복사, 원본 둠), 1.12.1 CoreML 캐시 삭제. `OrtRuntime::remove_unused_coreml_caches`. `Backends::sessions_made`로 실행의 세션 수를 셈(D7). CLI: `--models` 생략 시 앱 폴더(1.12.1 모델 복사), `models`(상태·이용 조건), `models fetch yolo5face-n|yunet|plates`(YOLO5Face-n은 `--accept-terms` 필요), 없는 모델은 받을 명령을 안내. 결정(2026-10-19): 다운로드를 CLI 명령으로도 둠·비상업 모델은 동의 플래그, 모델 폴더는 데이터 폴더·1.12.1 모델은 복사(이동 아님), HTTP는 reqwest 대신 ureq(3장), CoreML 캐시는 쓰지 않는 폴더를 바로 지우고 1.12.1 캐시도 지움, 미러는 M7. rustls는 보안 권고 4건 때문에 공개 5일 된 0.23.46. `deny.toml`이 배포 대상 3개만 봄(wasm32 전용 CDLA 의존성 제외). 3개 OS CI 통과(Windows·Linux에서도 실제 GitHub 다운로드·D5·D7 시험). D7의 영상 경우는 M5
-  5. 타일 모드(`m3-tiles`): 고해상도 사진의 작은 얼굴용 타일 감지와 겹침 병합, 출력 수가 제한된 모델의 상한 초과 시 타일 재감지(D11). **구현(2026-10-19, [기록](M3_TILES.md)):** engine `detect::tiles`: 전체 보기 배율에서 원본 배율 1까지 층 사이 4배 이하, 640 타일이 160 이상 겹침(원본 40 px 이상 물체는 어느 층에서 통째로 보임, 시험). 타일 입력은 `resize_region_linear`로 사본 없이 줄임. 병합은 타일 절반보다 큰 타일 box를 버리고(번호판 모델이 밋밋한 타일 전체를 번호판으로 봄), 타일 변에 잘린 box는 온전한 box가 80% 이상 덮으면 NMS 전에 버린 뒤 종류별 NMS. 처리기는 타일을 하나씩 요청해 그 사이에 취소·진행률을 확인. `PhotoSettings::tiles`(review key), CLI `--tiles on|off`. 합성 12MP 사진에서 얼굴 96개 중 6–22개 → 60–66개, 얼굴 없는 36MP 13장에서 score 0.5 이상 오탐 0개. 결정(2026-10-19): 피라미드 배치, 기본 켬, 번호판도 타일, D11 재감지는 상한 있는 모델을 들일 때. PR #37(`m3-tiles`), 3개 OS CI 확인 중
-  6. 완료 확인: 소규모 벤치마크 재현율(9.2), D5·D7·D8·D11 시험 표, 문서
+  5. 타일 모드(`m3-tiles`): 고해상도 사진의 작은 얼굴용 타일 감지와 겹침 병합, 출력 수가 제한된 모델의 상한 초과 시 타일 재감지(D11). **구현(2026-10-19, [기록](M3_TILES.md)):** engine `detect::tiles`: 전체 보기 배율에서 원본 배율 1까지 층 사이 4배 이하, 640 타일이 160 이상 겹침(원본 40 px 이상 물체는 어느 층에서 통째로 보임, 시험). 타일 입력은 `resize_region_linear`로 사본 없이 줄임. 병합은 타일 절반보다 큰 타일 box를 버리고(번호판 모델이 밋밋한 타일 전체를 번호판으로 봄), 타일 변에 잘린 box는 온전한 box가 80% 이상 덮으면 NMS 전에 버린 뒤 종류별 NMS. 처리기는 타일을 하나씩 요청해 그 사이에 취소·진행률을 확인. `PhotoSettings::tiles`(review key), CLI `--tiles on|off`. 합성 12MP 사진에서 얼굴 96개 중 6–22개 → 60–66개, 얼굴 없는 36MP 13장에서 score 0.5 이상 오탐 0개(추상 그래픽 위주, 실제 사진은 6단계 벤치마크). 결정(2026-10-19): 피라미드 배치, 기본 켬, 번호판도 타일, D11 재감지는 상한 있는 모델을 들일 때. **완료(2026-10-20):** PR #37(`m3-tiles`), 3개 OS CI 통과
+  6. 완료 확인(`m3-verify`): 소규모 벤치마크 재현율(9.2), D5·D7·D8·D11 시험 표, 문서. **완료(2026-10-20, [기록](M3_BENCHMARK.md)):** Open Images V7에서 고른 610장(Open Images의 S3 사본, 긴 변 1,024 px)과 그중 얼굴 사진 203장의 Flickr 원본으로 재현율·정밀도를 계층별로 잼(`tools/benchmark/`, 자료 `tests/fixtures/benchmark/`). 1.12.1 감지기를 v1.12.1 트리에서 빌드해 같은 사진으로 기록. 같은 설정에서 재현율 차이는 0–0.1%p(합격선 1%p). 남은 차이는 Apple silicon의 Homebrew OpenCV가 KleidiCV로 축소해 x86 OpenCV와 ±1 다르기 때문. 타일 모드는 원본에서 라벨 얼굴 재현율 82.3% → 87.1%, 라벨 밖 실제 얼굴 29 → 53개, 대신 확대한 질감의 오탐이 사진당 약 0.03 → 0.33개, 시간은 사진당 CPU +0.59초·CoreML +0.46초. 측면·각도·라벨 누락은 crop 시트로 손으로 태깅. CI `benchmark.yml`이 감지 관련 PR에서 1.12.1 기록 5가지 설정과 기본 설정의 재현율이 1%p 넘게 떨어지면 실패. 결정(2026-10-20): 라벨 세트는 Open Images V7, 이미지는 S3 사본 + 원본 보조 세트(Flickr가 원본 100–280개마다 429로 1시간 넘게 막음), 측면·각도는 손 태깅, 벤치마크는 도구 + 기록 + CI, YOLO5Face-n 임계값 0.5 유지(0.4·0.3은 재현율 +0.3–1.0%p에 오탐 2–3배), 타일 기본 켬 유지(타일 오탐 줄이기는 후속 과제)
+- **완료 기준 확인(2026-10-20):**
+
+    | 항목 | 확인하는 시험(`crates/cloakframe-engine` 기준, core는 표시) |
+    | --- | --- |
+    | 1.12.1 대비 허용오차 내 결과 | `detect_fixtures.rs` 세 모델 54건(CPU와 실행이 정하는 위치, 최소 IoU 0.99999), `the_plate_graph_limits_are_lifted`, CI `ort.yml`(고정 ORT를 3개 OS에서 비교) |
+    | 소규모 벤치마크 재현율 | [벤치마크 기록](M3_BENCHMARK.md), CI `benchmark.yml`(`tools/benchmark/evaluate.py --gate`) |
+    | GPU 없을 때 CPU로 동작 | `detect::fallback` 단위 4건, `detect_fixtures.rs` `an_image_that_fails_on_coreml_is_analyzed_again_on_the_cpu`, `photo_pipeline.rs` `a_photo_analyzed_again_on_the_cpu_says_so`, `cli_photo.rs` `the_models_run_where_the_gpu_setting_says`, 가속기 없는 Linux CI에서 실제 모델 시험 전부 |
+    | Windows 실기기 GPU 강제 리셋 | 장치 없음. M7·M8 확인으로 옮김(M0에서 옮긴 확인과 같음) |
+    | D5 | `d5_model_folder.rs` 2건(umask 002, 다른 계정이 쓸 수 있는 폴더), `model_files` 단위(해시 확인 뒤에만 이름 붙임, 바뀐 파일 교체), `cli_photo.rs` `only_the_pinned_models_run`(바뀐 모델은 로드에서 거부) |
+    | D7 | `d7_sessions.rs` 2건(실행 전체에 모델·위치마다 세션 하나, 쓰는 모델만 읽음), `cli_models.rs` `nothing_is_loaded_before_the_scan_finds_media`·`the_plate_model_is_read_only_when_plates_are_on` |
+    | D8 | 타입: `ort::Session::run`이 `&mut self`를 받고 `Detector::detect(&mut self)`도 같으며, 감지기는 `DetectorHandle::spawn`이 추론 스레드로 옮겨 그 스레드만 가짐. 시험: `detect` 단위 `serializes_calls_from_many_threads`(동시 호출이면 실패), `detector_errors_reach_the_caller_and_the_thread_keeps_serving`, `a_panicking_detector_makes_the_handle_unavailable` |
+    | D11 | `detect_fixtures.rs` crowd 3건(280개 모두), `the_plate_graph_limits_are_lifted`, `p1_photo.rs` 2건, `yunet` 단위 `nms_considers_every_candidate`, `photo_pipeline.rs` `capped_detections_hold_the_photo_until_it_is_exported_with_warnings`, `detect::models` `combined_results_keep_every_kind_and_each_models_limit`, `detect::tiles` `dropped_counts_and_the_cpu_rerun_carry_over` |
+- **완료(2026-10-20):** 소요 2일(2026-10-19–20, 예산 3주), PR #33–#37과 6단계 `m3-verify`. 위 표의 시험이 macOS arm64에서 통과하고 3개 OS CI는 각 단계 PR에서 확인. 남은 확인: Windows DML 결과·번호판 0건 입력·실기기 GPU 리셋(GPU 있는 Windows 장치가 생기면, M7·M8). 이월: 타일에서만 나온 감지의 오탐 줄이기(후속 과제, 벤치마크로 잼)
 
 ### M4 — 영상 시간축·인코딩
 
@@ -373,7 +386,7 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받고, `cargo-deny`로 의존�
 
 ### 9.2 탐지 품질
 
-사용권을 확인한 소규모 라벨 세트(작은·큰 얼굴, 측면, 군중, 저조도, 번호판 크기·각도별)로 계층별 재현율·정밀도를 잰다. 같은 설정에서 1.12.1 대비 전체 재현율이 1%p 이상 떨어지면 안 된다. 타일 모드는 추가 비용 대비 작은 얼굴 재현율 개선을 따로 보고한다. 영상은 라벨이 있는 짧은 클립에서 노출 프레임 수를 잰다.
+사용권을 확인한 소규모 라벨 세트(작은·큰 얼굴, 측면, 군중, 저조도, 번호판 크기·각도별)로 계층별 재현율·정밀도를 잰다. 같은 설정에서 1.12.1 대비 전체 재현율이 1%p 이상 떨어지면 안 된다. 타일 모드는 추가 비용 대비 작은 얼굴 재현율 개선을 따로 보고한다. 영상은 라벨이 있는 짧은 클립에서 노출 프레임 수를 잰다. 사진 세트는 M3 6단계에서 Open Images V7(CC BY 2.0 사진, CC BY 4.0 라벨)로 만들었고, CI `benchmark.yml`이 감지 관련 변경마다 이 기준을 확인한다([기록](M3_BENCHMARK.md)).
 
 ### 9.3 성능
 
