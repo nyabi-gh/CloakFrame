@@ -3,6 +3,7 @@ pub mod models;
 pub mod plate;
 pub mod resize;
 pub mod runtime;
+pub mod tiles;
 pub mod yolo5face;
 pub mod yunet;
 

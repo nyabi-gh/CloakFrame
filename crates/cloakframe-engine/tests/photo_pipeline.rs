@@ -7,7 +7,7 @@ mod common;
 
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{Detection, ModelId, Thresholds};
@@ -856,5 +856,90 @@ fn an_image_larger_than_the_memory_budget_is_refused() {
     assert_eq!(report.items[0].state, ItemState::Failed);
     let failure = report.items[0].failure.as_deref().unwrap();
     assert!(failure.contains("more than the 64 MiB"), "{failure}");
+    assert!(dir.outputs().is_empty());
+}
+
+/// Records the size of each image it is given; the third call waits for the test to go on.
+struct Recording {
+    sizes: Arc<std::sync::Mutex<Vec<(u32, u32)>>>,
+    third: Option<(mpsc::Sender<()>, mpsc::Receiver<()>)>,
+}
+
+impl Detector for Recording {
+    fn detect(&mut self, image: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+        let mut sizes = self.sizes.lock().unwrap();
+        sizes.push((image.width, image.height));
+        if sizes.len() == 3
+            && let Some((reached, go_on)) = &self.third
+        {
+            reached.send(()).unwrap();
+            go_on.recv().unwrap();
+        }
+        Ok(Found::default())
+    }
+}
+
+fn wide_photo(dir: &Dir) -> PathBuf {
+    dir.input("wide.png", &png(2000, 700))
+}
+
+fn tile_run(tiles: bool) -> Vec<(u32, u32)> {
+    let dir = Dir::new();
+    let input = wide_photo(&dir);
+    let sizes = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let detector = Recording {
+        sizes: sizes.clone(),
+        third: None,
+    };
+    let job = Job {
+        items: vec![fresh(0, &input, dir.out("wide.png"))],
+        review: ReviewMode::Off,
+        workers: 1,
+    };
+    let processor = PhotoProcessor::new(PhotoSettings {
+        tiles,
+        ..PhotoSettings::default()
+    })
+    .unwrap();
+    let handle = DetectorHandle::spawn(Box::new(detector)).unwrap();
+    let report = start(job, Arc::new(processor), handle).unwrap().wait();
+    assert!(matches!(report.items[0].state, ItemState::Published(_)));
+    sizes.lock().unwrap().clone()
+}
+
+#[test]
+fn each_tile_is_its_own_request_and_the_whole_view_comes_last() {
+    // 2000x700 at the source's pixels: four tiles across, two down.
+    let sizes = tile_run(true);
+    assert_eq!(sizes.len(), 9, "{sizes:?}");
+    assert!(sizes[..8].iter().all(|&s| s == (640, 640)), "{sizes:?}");
+    assert_eq!(sizes[8], (2000, 700));
+    assert_eq!(tile_run(false), [(2000, 700)]);
+}
+
+#[test]
+fn a_cancelled_run_stops_between_tiles() {
+    let dir = Dir::new();
+    let input = wide_photo(&dir);
+    let sizes = Arc::new(std::sync::Mutex::new(Vec::new()));
+    let (reached_tx, reached) = mpsc::channel();
+    let (go_on, go_on_rx) = mpsc::channel();
+    let detector = Recording {
+        sizes: sizes.clone(),
+        third: Some((reached_tx, go_on_rx)),
+    };
+    let job = Job {
+        items: vec![fresh(0, &input, dir.out("wide.png"))],
+        review: ReviewMode::Off,
+        workers: 1,
+    };
+    let handle = DetectorHandle::spawn(Box::new(detector)).unwrap();
+    let running = start(job, Arc::new(processor(MetadataPolicy::Strip)), handle).unwrap();
+    reached.recv().unwrap();
+    running.cancel();
+    go_on.send(()).unwrap();
+    let report = running.wait();
+    assert_eq!(report.items[0].state, ItemState::Cancelled);
+    assert_eq!(sizes.lock().unwrap().len(), 3);
     assert!(dir.outputs().is_empty());
 }

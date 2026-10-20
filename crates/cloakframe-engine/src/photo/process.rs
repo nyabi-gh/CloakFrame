@@ -21,6 +21,7 @@ use super::format::{ImageFormat, sniff};
 use super::mask;
 use super::metadata::MetadataPolicy;
 use crate::detect::models::DetectionModels;
+use crate::detect::{Found, Rgb8Image, tiles};
 use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
 use crate::run::{
@@ -34,6 +35,8 @@ pub struct PhotoSettings {
     /// The detector the run is given must load these models.
     pub models: DetectionModels,
     pub thresholds: Thresholds,
+    /// Detect in overlapping tiles as well as the whole view, for faces too small for it.
+    pub tiles: bool,
     pub style: MaskStyle,
     /// The user's image for [`Method::CustomImage`].
     pub overlay: Option<Overlay>,
@@ -46,6 +49,7 @@ impl Default for PhotoSettings {
         Self {
             models,
             thresholds: models.default_thresholds(),
+            tiles: true,
             style: MaskStyle::default(),
             overlay: None,
             metadata: MetadataPolicy::default(),
@@ -70,6 +74,7 @@ impl PhotoSettings {
                 t.nms_iou().to_bits()
             ));
         }
+        h.update(format!("tiles {}\n", self.tiles));
         let s = &self.style;
         h.update(format!(
             "style {:?} {:?} padding {:08x} soft {} mosaic {}\nmetadata {:?}\n",
@@ -220,6 +225,39 @@ fn verify(bytes: &[u8], format: ImageFormat, size: (u32, u32)) -> Result<(), Pho
     Ok(())
 }
 
+impl PhotoProcessor {
+    /// The whole view, and in tile mode the tiles, each a request to the inference thread so the
+    /// run can be cancelled between them. Analysis is the first half of the item's progress.
+    fn detect(
+        &self,
+        ctx: &ItemContext<'_>,
+        copy: Rgb8Image,
+        pixels: u64,
+    ) -> Result<Found, StepError> {
+        let thresholds = self.settings.thresholds;
+        let layout = if self.settings.tiles {
+            tiles::layout(copy.width, copy.height)
+        } else {
+            Vec::new()
+        };
+        let views = layout.len() as u64 + 1;
+        let mut tiled = Vec::with_capacity(layout.len());
+        for (done, tile) in layout.into_iter().enumerate() {
+            checkpoint(ctx)?;
+            let found = ctx
+                .detector
+                .detect(tile.image(&copy), thresholds)
+                .map_err(failed)?;
+            tiled.push((tile, found));
+            ctx.progress
+                .set(pixels * (done as u64 + 1) / views, 2 * pixels);
+        }
+        checkpoint(ctx)?;
+        let whole = ctx.detector.detect(copy, thresholds).map_err(failed)?;
+        Ok(tiles::merge(whole, tiled, &thresholds))
+    }
+}
+
 impl ItemProcessor for PhotoProcessor {
     type Prepared = Prepared;
     type Rendered = Rendered;
@@ -228,15 +266,11 @@ impl ItemProcessor for PhotoProcessor {
         let prepared = self.prepare(ctx)?;
         let copy =
             color::detection_srgb8(&prepared.decoded.image, prepared.color).map_err(failed)?;
-        checkpoint(ctx)?;
-        let found = ctx
-            .detector
-            .detect(copy, self.settings.thresholds)
-            .map_err(failed)?;
+        let pixels = prepared.pixels();
+        let found = self.detect(ctx, copy, pixels)?;
         if found.reran_on_cpu {
             ctx.notes.add(Note::AnalyzedAgainOnCpu);
         }
-        let pixels = prepared.pixels();
         ctx.progress.set(pixels, 2 * pixels);
         let evidence = found
             .over_limit
@@ -429,6 +463,10 @@ mod tests {
             },
             PhotoSettings {
                 overlay: Some(Overlay::new(1, 1, vec![0, 0, 0, 255]).unwrap()),
+                ..base.clone()
+            },
+            PhotoSettings {
+                tiles: false,
                 ..base.clone()
             },
         ];

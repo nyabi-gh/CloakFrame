@@ -209,20 +209,26 @@ fn exporting_without_anonymization_keeps_every_pixel() {
 fn decisions_need_the_settings_the_run_used() {
     let f = Fixture::new();
     f.astronaut();
-    let r = f.run(&["--review", "required", "--keep-metadata"]);
+    let r = f.run(&["--review", "required", "--keep-metadata", "--tiles", "off"]);
     let id = session_id(&r.stdout);
     let decision = r#"{"items": [{"item": 0, "revision": 0, "action": "approve"}]}"#;
-    let r = f.review(&id, decision, &[]);
-    assert_eq!(r.code, 1, "{}{}", r.stdout, r.stderr);
-    assert!(
-        r.stdout.contains("models or settings differ"),
-        "{}",
-        r.stdout
-    );
+    for other in [&[][..], &["--keep-metadata"], &["--tiles", "off"]] {
+        let r = f.review(&id, decision, other);
+        assert_eq!(r.code, 1, "{other:?}: {}{}", r.stdout, r.stderr);
+        assert!(
+            r.stdout.contains("models or settings differ"),
+            "{}",
+            r.stdout
+        );
+    }
     assert!(!f.root.join("out").exists());
 
-    let r = f.review(&id, decision, &["--keep-metadata"]);
+    let r = f.review(&id, decision, &["--keep-metadata", "--tiles", "off"]);
     assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
+
+    let r = f.run(&["--tiles", "maybe"]);
+    assert_eq!(r.code, 2);
+    assert!(r.stderr.contains("--tiles is on or off"), "{}", r.stderr);
 }
 
 #[test]

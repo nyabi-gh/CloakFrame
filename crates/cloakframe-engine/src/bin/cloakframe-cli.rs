@@ -25,12 +25,12 @@ use cloakframe_engine::session::{SessionId, SessionStore};
 const USAGE: &str = "\
 usage:
   cloakframe-cli run --output DIR --ort-library FILE [--models DIR]
-                     [--faces yolo5face-n|yunet|off] [--plates on|off] [--gpu on|off]
-                     [--review required|off] [--keep-metadata [--keep-gps]] [--recursive]
-                     [--workers N] [--sessions DIR] INPUT...
+                     [--faces yolo5face-n|yunet|off] [--plates on|off] [--tiles on|off]
+                     [--gpu on|off] [--review required|off] [--keep-metadata [--keep-gps]]
+                     [--recursive] [--workers N] [--sessions DIR] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
-                        [--plates on|off] [--keep-metadata [--keep-gps]] [--workers N]
-                        [--sessions DIR]
+                        [--plates on|off] [--tiles on|off] [--keep-metadata [--keep-gps]]
+                        [--workers N] [--sessions DIR]
   cloakframe-cli models [--models DIR]
   cloakframe-cli models fetch [--accept-terms] [--models DIR] yolo5face-n|yunet|plates...
   cloakframe-cli sessions [--sessions DIR]
@@ -42,7 +42,8 @@ app's model folder, into which models CloakFrame 1.12.1 downloaded are copied. m
 models with their terms, and models fetch downloads them from their projects on GitHub (nothing
 is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts that.
 --faces picks the face model (default yolo5face-n) and --plates turns license plates on or off
-(default off). --gpu off keeps every model on the CPU; by default each runs on the GPU where this
+(default off). --tiles off detects each photo in one whole view only; by default overlapping
+tiles are detected as well, which finds small faces in large photos at more cost. --gpu off keeps every model on the CPU; by default each runs on the GPU where this
 build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
 settings run was given; decisions on items analyzed with other settings are refused.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
@@ -98,6 +99,7 @@ struct Options {
     models: Option<PathBuf>,
     faces: Option<Option<FaceModel>>,
     plates: Option<bool>,
+    tiles: Option<bool>,
     gpu: Option<Acceleration>,
     keep_metadata: bool,
     keep_gps: bool,
@@ -151,6 +153,13 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
                     "on" => true,
                     "off" => false,
                     other => return Err(format!("--plates is on or off, not {other}")),
+                })
+            }
+            "--tiles" => {
+                o.tiles = Some(match args.value(&arg)?.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    other => return Err(format!("--tiles is on or off, not {other}")),
                 })
             }
             "--gpu" => {
@@ -209,6 +218,7 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
     PhotoProcessor::new(PhotoSettings {
         models,
         thresholds: models.default_thresholds(),
+        tiles: o.tiles.unwrap_or(PhotoSettings::default().tiles),
         metadata,
         ..PhotoSettings::default()
     })
