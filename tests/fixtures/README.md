@@ -25,6 +25,7 @@ macOS에서 1.12.1 빌드 의존성(Homebrew Qt·OpenCV·ONNX Runtime·FFmpeg �
 | `assets.json` | 저장소에 넣지 않고 해시로 받는 외부 입력(모델, 표본 이미지). `tools/fetch_test_assets.py <폴더>`로 받는다 |
 | `resize/` | OpenCV 5.0.0 `cv::resize(INTER_LINEAR)`의 x86 일반 경로 출력 SHA-256(2배 축소의 `INTER_AREA` 경로 포함). 입력은 파일에 적힌 식으로 만드는 잡음 패턴이라 저장하지 않는다. 생성: `tools/resize-reference/make.py`(macOS arm64 pip 판은 KleidiCV HAL 때문에 축소가 ±1 달라 쓰지 않음, CI `ort.yml`이 실제 x86에서 다시 만들어 비교) |
 | `decode/` | 디코더 회귀 입력. `noninterleaved-420.jpg`는 성분마다 scan이 따로인 baseline 4:2:0 JPEG(`cjpeg -quality 92 -sample 2x2 -scans`, 0·1·2 성분 각각 한 scan), `interleaved-420.jpg`는 같은 그림의 일반 JPEG. `*.djpeg.png`는 libjpeg-turbo 3.2.0 `djpeg` 결과로, 기대 pixel이다. 그림은 96×64 수식 패턴([M2 기록](../../docs/M2_ENCODE_SPIKE.md)). `mixed-sampling.jpg`는 같은 그림을 libjpeg-turbo가 쓸 수 없는 서브샘플링으로 만든 것(`cjpeg -quality 92 -sample 2x1,1x2,1x1`, 재검토 8번) |
+| `benchmark/` | 탐지 벤치마크(계획 9.2, [기록](../../docs/M3_BENCHMARK.md)). `manifest.json`은 Open Images V7에서 고른 610장(Open Images가 S3에 둔 사본, 긴 변 1,024 px)의 주소·SHA-256·저자·라이선스와 Open Images 상자(너비·높이 비율), `originals.json`은 그중 얼굴 사진 203장의 Flickr 원본(고해상도, 로컬 측정용), `tags.json`은 손으로 붙인 측면·번호판 각도·라벨 누락 얼굴·번호판과 계산한 어두운 얼굴, `legacy/`는 1.12.1 감지기(CPU, Apple silicon의 Homebrew OpenCV)의 결과, `engine/default.json`은 기본 설정의 기록 결과다. 이미지는 `tools/benchmark/fetch.py <폴더> [manifest]`로 받는다. 만들기: `tools/benchmark/pick.py`(세트), `sheets.py`(태그용 시트와 태그), `run_legacy.sh`(1.12.1 결과) |
 
 `legacy`에 없는 1.12.1 시험 묶음: `custom_model_consent_tests`(사용자 ONNX 제거), `stage_cleanup_tests`(snapshot·stage 제거), `update_cache_tests`(Velopack 사용으로 캐시 권한 검사 제거). Windows 전용 `testScanDoesNotFollowJunctions`는 macOS에서 실행되지 않아 기록이 없다.
 
@@ -63,4 +64,4 @@ macOS에서 1.12.1 빌드 의존성(Homebrew Qt·OpenCV·ONNX Runtime·FFmpeg �
 
 ## 사용 조건
 
-`defects/`, `detect/inputs/`, `metadata/`의 생성 파일은 수식이나 astronaut.png(NASA, public domain)에서 만든 것이고 ICC profile도 primaries에서 직접 계산한 것이라 제3자 권리가 없다. `assets.json`의 OpenCV·open-image-models 표본은 재배포하지 않고 해시로만 받는다.
+`defects/`, `detect/inputs/`, `metadata/`의 생성 파일은 수식이나 astronaut.png(NASA, public domain)에서 만든 것이고 ICC profile도 primaries에서 직접 계산한 것이라 제3자 권리가 없다. `assets.json`의 OpenCV·open-image-models 표본은 재배포하지 않고 해시로만 받는다. `benchmark/`의 이미지는 각 저자의 CC BY 2.0 사진(저자·제목·원래 페이지는 manifest)으로, 재배포하지 않고 Open Images의 사본이나 Flickr 원본을 해시로 받는다. 상자는 Google LLC의 Open Images V7 라벨(CC BY 4.0)을 원본 px로 옮긴 것이고, `tags.json`의 태그는 이 저장소에서 붙였다.

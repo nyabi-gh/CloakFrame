@@ -1,0 +1,6171 @@
+{
+ "comment": "Tags made by hand from tools/benchmark/sheets.py, for manifest.json and originals.json: boxes.<index> of an image's boxes (pose, angle; dark is computed), added: real faces and plates the Open Images labels lack, as fractions of the width and height.",
+ "00ce20081f1e9627.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "00fa7b450b0aa4f7.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "0108f5ae54799130.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "0223302c6dda41c2.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "02a4ba545c91c8a0.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "0314ddca71f7a05e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.613927,
+     0.271701,
+     0.047261,
+     0.087992
+    ]
+   }
+  ]
+ },
+ "038c2de88c11f13c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.208474,
+     0.619179,
+     0.025198,
+     0.041293
+    ]
+   }
+  ]
+ },
+ "03c3d44fe77b6015.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "040d22e91306e905.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "048ef6d608e8de35.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "04cdb317d08d15a4.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "06145d1b37e96fed.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "071f92fabb774f82.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "073be21786470123.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "1": {
+    "dark": true,
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.004114,
+     0.128631,
+     0.047172,
+     0.033802
+    ]
+   }
+  ]
+ },
+ "08b8fc5fb98a7138.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "unclear"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "frontal"
+   },
+   "15": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.500078,
+     0.27163,
+     0.01,
+     0.092732
+    ]
+   }
+  ]
+ },
+ "08ed1ccb53722194.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "08f8d8b95e0e3b52.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.378135,
+     0.484954,
+     0.163274,
+     0.285384
+    ]
+   }
+  ]
+ },
+ "0904df7272bd5a56.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "0a963a30f2a9cc8f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "0be0f7576928eb1a.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.153935,
+     0.356068,
+     0.046378,
+     0.123706
+    ]
+   }
+  ]
+ },
+ "0d7001fe5ee6ab57.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "0df0988922510361.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "2": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "4": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "6": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "10": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "unclear"
+   },
+   "11": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "unclear"
+   },
+   "13": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.452773,
+     0.715819,
+     0.016189,
+     0.092938
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.441776,
+     0.710205,
+     0.030216,
+     0.058404
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.334185,
+     0.739763,
+     0.02601,
+     0.047508
+    ]
+   }
+  ]
+ },
+ "0f4bfc46402a9f52.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "105894faa652acd5.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "11969b45e5ca8a25.jpg": {
+  "boxes": {
+   "4": {
+    "dark": true
+   },
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "profile"
+   }
+  }
+ },
+ "11a4c1e7c453c7d3.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "12af3e2960248132.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "12b7ea40074d3b20.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "13c7d83654e4f3d4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "15002d09874abd95.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "15a6fbbb17c67ee3.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "16e14bf0e45d8fe6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "184ac1358bd6e599.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "185fd6653258d3ed.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "18b6a23e65620410.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.548754,
+     0.394882,
+     0.123426,
+     0.222167
+    ]
+   }
+  ]
+ },
+ "18cf8010092c615e.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.387401,
+     0.172314,
+     0.082949,
+     0.108342
+    ]
+   }
+  ]
+ },
+ "195bd955b9f2dce9.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "195c6ee30e3ddb11.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "1": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "2": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "unclear"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "1a9fd766e3406195.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "1ad2e4465d835f11.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "unclear"
+   },
+   "12": {
+    "pose": "profile"
+   },
+   "13": {
+    "pose": "unclear"
+   },
+   "14": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.436241,
+     0.252459,
+     0.049045,
+     0.057986
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.921181,
+     0.407407,
+     0.063238,
+     0.069213
+    ]
+   }
+  ]
+ },
+ "1b261604d4e831a0.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "1ba558e390fd4259.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "1d58ac3223120699.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "1dcb6c205e456fe6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "1ea67bf7a689c499.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "1ef48040995e65b7.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.085977,
+     0.800529,
+     0.026077,
+     0.043739
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.018011,
+     0.705316,
+     0.021661,
+     0.041542
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.320312,
+     0.765105,
+     0.03875,
+     0.0726
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.064219,
+     0.816628,
+     0.025469,
+     0.050117
+    ]
+   }
+  ]
+ },
+ "1f86d752973811c0.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "2118b9127cb7d52f.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "21db7e9cf0d77a10.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "226de4149b840256.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "23609e5c2d7c7caa.jpg": {
+  "boxes": {
+   "9": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "10": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "25cb3e113a85cc47.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "26192da5ce2afa62.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "2644b24a5f14ded7.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "288a95c01e43cd14.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "28b404db192bc9d9.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "unclear"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "292bbfe276f317ea.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "2a0636b9582aad8a.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.359034,
+     0.226315,
+     0.337969,
+     0.626079
+    ]
+   }
+  ]
+ },
+ "2adddd0b09bb0f17.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "2aeb874070ac901e.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "2b8773c6950ad004.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  }
+ },
+ "2c60896d95d9c149.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.032207,
+     0.426553,
+     0.096555,
+     0.062658
+    ]
+   }
+  ]
+ },
+ "2c6f4e582a3450f3.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "2c9e53880dfe6ccc.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "2cda660d476110ab.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  }
+ },
+ "2d3978dced6636d4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "2d523476c2529432.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "2e3ec3271c61954c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.278179,
+     0.200668,
+     0.007079,
+     0.01214
+    ]
+   }
+  ]
+ },
+ "2f17964456524219.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.649613,
+     0.525141,
+     0.043322,
+     0.040177
+    ]
+   }
+  ]
+ },
+ "302dc1d1765ba325.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "14": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "15": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "unclear"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "unclear"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.720845,
+     0.257916,
+     0.030891,
+     0.066256
+    ]
+   }
+  ]
+ },
+ "3081728323f9c371.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "profile"
+   },
+   "3": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "5": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "6": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "9": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "10": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "11": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "12": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "16": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "profile"
+   },
+   "15": {
+    "pose": "profile"
+   },
+   "17": {
+    "pose": "frontal"
+   },
+   "19": {
+    "pose": "profile"
+   },
+   "20": {
+    "pose": "frontal"
+   },
+   "21": {
+    "pose": "profile"
+   },
+   "22": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.526476,
+     0.404861,
+     0.007812,
+     0.01713
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.514453,
+     0.518441,
+     0.011936,
+     0.034491
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.476259,
+     0.452006,
+     0.007031,
+     0.015046
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.170747,
+     0.346991,
+     0.018446,
+     0.041358
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.544488,
+     0.421373,
+     0.007552,
+     0.016898
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.825738,
+     0.524537,
+     0.022352,
+     0.052392
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.381353,
+     0.623885,
+     0.020885,
+     0.05019
+    ]
+   }
+  ]
+ },
+ "30cf34b03b97f963.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "31050890b074e03d.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "322cdfb32635ba56.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3241f09a8964ddfb.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "33df09bbe8956760.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "34619bc20c3736fe.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "34a89a70b4345a60.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "35379fd065adb97d.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "357fd8448292e0b0.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3590ed015de687c4.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "36404ccad342f03e.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.777549,
+     0.020541,
+     0.067434,
+     0.112573
+    ]
+   }
+  ]
+ },
+ "3721450cca3ed932.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  }
+ },
+ "372b6044aa4fa545.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3767728c5b4e2b4e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.0,
+     0.211333,
+     0.035375,
+     0.084167
+    ]
+   }
+  ]
+ },
+ "377fe9c5109dd72c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "393ec1f81daf8abd.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.43519,
+     0.631712,
+     0.103792,
+     0.065559
+    ]
+   }
+  ]
+ },
+ "396d3711ee0dae1a.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "39af0ad2e28c5300.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "profile"
+   }
+  }
+ },
+ "3acf525a7429a8f2.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3b08c6349cae9d39.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3b0d91e119acaa84.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3c11db8fd0e9bc8d.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "profile"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.386599,
+     0.146299,
+     0.009442,
+     0.058422
+    ]
+   }
+  ]
+ },
+ "3c1cbb8789984ccd.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3caa425417a0db1e.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "3d115e4f2ee1e092.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3d7a305019504c59.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3daac874e2c266c0.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3db19b7e69769af5.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "3de9f43393f0656f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "3decea27461a6932.jpg": {
+  "boxes": {
+   "2": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "3f9816611946eec6.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "3fd0b7c26ba526e1.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "401095e5a4e50186.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "4285819d7ab87d7a.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "4466c7ae5155ce8e.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.267774,
+     0.226953,
+     0.032326,
+     0.035703
+    ]
+   }
+  ]
+ },
+ "44b1d9ea53911b80.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "unclear"
+   },
+   "8": {
+    "pose": "unclear"
+   },
+   "9": {
+    "pose": "profile"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "profile"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "profile"
+   }
+  }
+ },
+ "44be9f3096a54c23.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "unclear"
+   },
+   "5": {
+    "pose": "unclear"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "460cbbe8da5ee0c8.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "463c86e2d4a93d37.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "467622d96075358c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "46a7991da6461831.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "47106ada8ba3ed67.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "unclear"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.134437,
+     0.855795,
+     0.065121,
+     0.086589
+    ]
+   }
+  ]
+ },
+ "4805e1ddefbf71fc.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.356046,
+     0.426144,
+     0.051961,
+     0.072712
+    ]
+   }
+  ]
+ },
+ "4815815de6853d76.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "48fc4fd00fea8bdf.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "492b6010e13e51b7.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "4af16f9ddfd17091.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.0,
+     0.0,
+     0.356603,
+     0.378652
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.119945,
+     0.385514,
+     0.208753,
+     0.341354
+    ]
+   }
+  ]
+ },
+ "4bb0966e8e85dbd0.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "4c0c57f8bd8fa47c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "4dab3e4089e42118.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "4dec4954e037d7f4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.217137,
+     0.245113,
+     0.041809,
+     0.084756
+    ]
+   }
+  ]
+ },
+ "4e409a31ed9b18e3.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "4f359e284f35e595.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "50d1a495e942b809.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "dark": true,
+    "pose": "profile"
+   }
+  }
+ },
+ "5287213f5368a583.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "52d6ffd3e888dd11.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "535d6e0a924247a4.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "53e1d79f98e28d02.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "3": {
+    "pose": "unclear"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "profile"
+   },
+   "9": {
+    "pose": "profile"
+   },
+   "10": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "556076d59b4687f1.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "55f8a34bf30f1e42.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "55fdf470ce4215f9.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.529512,
+     0.667108,
+     0.095377,
+     0.178731
+    ]
+   }
+  ]
+ },
+ "5624e319bc507fea.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "56ba0f67d9ca2363.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "5719755dbdc03929.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "576ffeeaf4366e7e.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "578d7e374691c50e.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "57a2a06b200f9741.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "58cbaaea8bce5227.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "5a0452b69618d37c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "5a3f94aa35766f31.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "oblique"
+   },
+   "2": {
+    "angle": "oblique"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.522303,
+     0.756788,
+     0.086404,
+     0.058281
+    ]
+   }
+  ]
+ },
+ "5c25dc258f21d205.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "5c414796cff585f5.jpg": {
+  "boxes": {
+   "2": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "5df43eb70a556f2a.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "5e54165e90ffe071.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "5f84971e3fe33531.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "604a47bb0ccef2d6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "6069a5676ee1e842.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.595877,
+     0.443409,
+     0.006499,
+     0.010854
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.57292,
+     0.460043,
+     0.006104,
+     0.009746
+    ]
+   }
+  ]
+ },
+ "607ccd3a9df2ddeb.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "62570d2491432cf2.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "62914e5ec77b32bf.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "63a79a56f6d02cce.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "63d3df798bc8840f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "649c81940026b967.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   }
+  }
+ },
+ "64b95985d38a12b6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "66235d2030328e03.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "66771a4870c324f9.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "66eb78320062b0b4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "67114ed7e529ac8c.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "67a612e80b140883.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.034806,
+     0.001952,
+     0.123941,
+     0.308116
+    ]
+   }
+  ]
+ },
+ "67d940c4c54662bb.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "682154503e1f1441.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "691bf17670cff546.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.02958,
+     0.521611,
+     0.061411,
+     0.067651
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.221622,
+     0.581611,
+     0.040991,
+     0.045503
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.14955,
+     0.718523,
+     0.053754,
+     0.061611
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.254354,
+     0.72443,
+     0.054805,
+     0.075705
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.049399,
+     0.59651,
+     0.047297,
+     0.054899
+    ]
+   }
+  ]
+ },
+ "695b63593709a627.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "6a255d214af18554.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "6a309e95ae691574.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "6a70c4bda312051f.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.510815,
+     0.136865,
+     0.02018,
+     0.047702
+    ]
+   }
+  ]
+ },
+ "6a9bb06320a811de.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "profile"
+   }
+  }
+ },
+ "6af230a48ae7b94a.jpg": {
+  "boxes": {
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "6b32ac9e0480997d.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "6bd1c08f75828ef6.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "6c00eba5d56766cc.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "6ca03cee1182006d.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  }
+ },
+ "6d26fd1ef52917cd.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "6d9847542e623710.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "6e9210ed9b9548ac.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   }
+  }
+ },
+ "6fae977d0e9c168d.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "unclear"
+   },
+   "0": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "11": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.410625,
+     0.561719,
+     0.018281,
+     0.024375
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.289687,
+     0.636875,
+     0.029063,
+     0.038594
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.863125,
+     0.524687,
+     0.017656,
+     0.020781
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.767344,
+     0.480469,
+     0.013594,
+     0.016406
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.758437,
+     0.533125,
+     0.015625,
+     0.01875
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.801875,
+     0.545625,
+     0.022344,
+     0.029844
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.563594,
+     0.539375,
+     0.018125,
+     0.024063
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.964844,
+     0.601562,
+     0.021875,
+     0.027656
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.980312,
+     0.560156,
+     0.018438,
+     0.027813
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.874531,
+     0.536719,
+     0.018594,
+     0.024688
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.973437,
+     0.549531,
+     0.021406,
+     0.031406
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.777187,
+     0.525781,
+     0.024688,
+     0.032656
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.96288,
+     0.526354,
+     0.015077,
+     0.0198
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.558079,
+     0.698906,
+     0.042625,
+     0.061727
+    ]
+   }
+  ]
+ },
+ "6fc6e5924bb78011.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "7099333e5bc7b2a1.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "71e23901ffb13451.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "741b81dd385bedf0.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "752f4d6f39f930ea.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "7587f5f90f7b283c.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "758b8d9c310bb94a.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "75db3cc2e63b4337.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "7763b866a6127dca.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "77b2d423fccdc198.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "77fca0f5d5333485.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "781b109443f01a92.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "781c03052d9ff9fa.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "3": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "7853f700cd827d83.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "785b67ba03ccf497.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "79c09ede33d81760.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "79d7e96ac78fa020.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "profile"
+   },
+   "9": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.373262,
+     0.3702,
+     0.006026,
+     0.014
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.668498,
+     0.2837,
+     0.008436,
+     0.0224
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.866648,
+     0.26485,
+     0.009389,
+     0.0255
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.365975,
+     0.40265,
+     0.006194,
+     0.012
+    ]
+   }
+  ]
+ },
+ "7a8b1abec846eeb1.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "unclear"
+   }
+  }
+ },
+ "7afdf90c951393c1.jpg": {
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.133499,
+     0.295974,
+     0.022918,
+     0.018798
+    ]
+   }
+  ]
+ },
+ "7b1778bedfccaec1.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "unclear"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.611426,
+     0.12328,
+     0.02002,
+     0.038799
+    ]
+   }
+  ]
+ },
+ "7b300a676664e707.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "7ba20a35478465d0.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "7bcf6b4ec09f1ea7.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "7d03ec6aa435a569.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "7d9a377ad4b909c8.jpg": {
+  "boxes": {
+   "2": {
+    "angle": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.047508,
+     0.63681,
+     0.019848,
+     0.011011
+    ]
+   }
+  ]
+ },
+ "7dc8447df855e81e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "7e842eb44b202238.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "7f8d8d2d5702725f.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "7f9740e95a74f2b9.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "819af06c720f7104.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "83262497feadb541.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "83e00b63777d56d0.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "unclear"
+   },
+   "5": {
+    "pose": "unclear"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "unclear"
+   },
+   "9": {
+    "pose": "unclear"
+   },
+   "10": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.097559,
+     0.002151,
+     0.048528,
+     0.136795
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.483813,
+     0.204641,
+     0.028105,
+     0.103681
+    ]
+   }
+  ]
+ },
+ "848125875ca6f613.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "8536b5c4f98a3927.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "853c7127397f7403.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "8540f97669ba45e7.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "865b32d01309f871.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "profile"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.5295,
+     0.124167,
+     0.018687,
+     0.033417
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.04075,
+     0.089083,
+     0.085188,
+     0.163833
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.001688,
+     0.236417,
+     0.03525,
+     0.067083
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.322,
+     0.109583,
+     0.057313,
+     0.084917
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.39725,
+     0.545167,
+     0.188188,
+     0.414667
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.08525,
+     0.115833,
+     0.073,
+     0.148583
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.575361,
+     0.169208,
+     0.038401,
+     0.060394
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.532583,
+     0.164268,
+     0.029686,
+     0.059719
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.549745,
+     0.111094,
+     0.029749,
+     0.051145
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.498308,
+     0.552468,
+     0.212259,
+     0.276034
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.559373,
+     0.106017,
+     0.024823,
+     0.044749
+    ]
+   }
+  ]
+ },
+ "88226381ac90d1a8.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "88bf42c1f08a8620.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "88f529d5b1c3db7b.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "8903369ecaee314c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "8a0f9d5ceca29b12.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "8a2bf5327d263dec.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "8a89a683058642aa.jpg": {
+  "boxes": {
+   "7": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "8": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "9": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "unclear"
+   },
+   "4": {
+    "pose": "unclear"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "unclear"
+   },
+   "10": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "8a8b25d0c007616f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "8beed8bb7b960ad4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "8c679ebf14c067b4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "3": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "8cba07a2e3548b9f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "8cdcb833ef1ef049.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "8e5412c133a81825.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "8e5e5661bc30bf2b.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "8ea305dd2c7db616.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "8f1be88d8f8647be.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "8f49b5ebf1e18b9c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.650878,
+     0.947108,
+     0.054565,
+     0.046642
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.188904,
+     0.711381,
+     0.085463,
+     0.076632
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.798876,
+     0.448881,
+     0.045927,
+     0.019403
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.021032,
+     0.858279,
+     0.062395,
+     0.050863
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.198385,
+     0.730434,
+     0.064782,
+     0.048158
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.001334,
+     0.744403,
+     0.080197,
+     0.06847
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.507303,
+     0.078638,
+     0.045119,
+     0.036707
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.0,
+     0.682882,
+     0.074719,
+     0.09312
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.156426,
+     0.850746,
+     0.100667,
+     0.070779
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.156917,
+     0.617164,
+     0.049754,
+     0.038503
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.238308,
+     0.382439,
+     0.053265,
+     0.044543
+    ]
+   }
+  ]
+ },
+ "8facada7e3d01645.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "frontal"
+   },
+   "15": {
+    "pose": "frontal"
+   },
+   "17": {
+    "pose": "frontal"
+   },
+   "19": {
+    "pose": "frontal"
+   },
+   "20": {
+    "pose": "frontal"
+   },
+   "21": {
+    "pose": "frontal"
+   },
+   "22": {
+    "pose": "frontal"
+   },
+   "23": {
+    "pose": "frontal"
+   },
+   "24": {
+    "pose": "frontal"
+   },
+   "25": {
+    "pose": "frontal"
+   },
+   "26": {
+    "pose": "frontal"
+   },
+   "27": {
+    "pose": "frontal"
+   },
+   "28": {
+    "pose": "frontal"
+   },
+   "32": {
+    "pose": "frontal"
+   },
+   "33": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "90552c4fcaf2acf6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "909ac1655b50fabe.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "91800f7037cf38df.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "91b77794630301d5.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "91ba44a1d6d5ba91.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "926e9cf81d74faad.jpg": {
+  "boxes": {
+   "7": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "93775352973e80d4.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "940e335cf9bb61ce.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "941ba1b6aa073ffc.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "9587ddf8962f03e2.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "95e8518048936ca8.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "9655186e11deecf8.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.553144,
+     0.565282,
+     0.168036,
+     0.334478
+    ]
+   }
+  ]
+ },
+ "971f8db741b93381.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "9814f9f828035064.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "989deb55f351bdb3.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "98ffdbf3f572e267.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "99025e4b4cb141a9.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "99fb8f23736d0a23.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.316836,
+     0.098208,
+     0.195971,
+     0.303498
+    ]
+   }
+  ]
+ },
+ "9e525d25b1f5fca7.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a06b6a8936e33705.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a159c5f932b1333b.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a174d75a4f2d3aa2.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.769328,
+     0.514172,
+     0.230672,
+     0.41684
+    ]
+   }
+  ]
+ },
+ "a29a476ea157bc1d.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.490971,
+     0.00172,
+     0.016443,
+     0.039282
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.738624,
+     0.008448,
+     0.020909,
+     0.051163
+    ]
+   }
+  ]
+ },
+ "a31384d5731e76ed.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.150303,
+     0.59723,
+     0.051954,
+     0.045103
+    ]
+   }
+  ]
+ },
+ "a326f53a57952e91.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a50c1e4bea745d6b.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "a51adc5cc79c14ff.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "a5a5fc7a2fd01a3e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a5fd24fe4683492b.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   }
+  }
+ },
+ "a6008186961a148f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "unclear"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "a6dde41d9dd261db.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.928746,
+     0.214069,
+     0.046372,
+     0.081567
+    ]
+   }
+  ]
+ },
+ "a72617533dd0520d.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a7dc3926f2ff1817.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "a8e7601305301188.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.561014,
+     0.606442,
+     0.141194,
+     0.095183
+    ]
+   }
+  ]
+ },
+ "a951ed53d33702ed.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.90098,
+     0.320588,
+     0.01634,
+     0.018627
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.767484,
+     0.322059,
+     0.015686,
+     0.018137
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.764542,
+     0.319444,
+     0.014542,
+     0.017157
+    ]
+   }
+  ]
+ },
+ "aa0b17dce67e0b74.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "aa1e8ed51b679b52.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.553804,
+     0.000631,
+     0.049876,
+     0.029002
+    ]
+   }
+  ]
+ },
+ "aa8eff0c3ac6046a.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "aacadd9f833b7c46.jpg": {
+  "boxes": {
+   "5": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "6": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "7": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "acfbf2c06982482e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ad10c7d29f111692.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ad78ace26a5c4bab.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ad8067a5086f58d5.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ae4f8bdf488e73cf.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ae9b270a6ac4f486.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "aead5912dcc6c7ef.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "af1efe94dd9f3cfa.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "af2c66a081355766.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   },
+   "2": {
+    "angle": "unclear"
+   }
+  }
+ },
+ "b09813a8742277c7.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "unclear"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "b22737782d386723.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "b244503298d55c4c.jpg": {
+  "boxes": {
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "b2910295682b6c73.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "b32671b7cc279583.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.247518,
+     0.218046,
+     0.168684,
+     0.063663
+    ]
+   }
+  ]
+ },
+ "b33faa7b5f9199c6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "b45909fd6ca21a43.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "b5d82289e0a2c83c.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "b6210959faac5b4f.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "b6c1afdbef2cb375.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.944981,
+     0.542657,
+     0.048262,
+     0.022544
+    ]
+   }
+  ]
+ },
+ "b6ece8d06ef5e46e.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "b73b8197942722ee.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "b907f14c3bcf6f4e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "b986f385f7cde593.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "unclear"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.711475,
+     0.201396,
+     0.00625,
+     0.014254
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.690088,
+     0.197502,
+     0.006885,
+     0.013373
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.672803,
+     0.197869,
+     0.005762,
+     0.011021
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.767676,
+     0.19662,
+     0.006104,
+     0.013299
+    ]
+   }
+  ]
+ },
+ "b9f5b9acf1777acf.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "bb422b44e6048b73.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "frontal"
+   },
+   "2": {
+    "angle": "unclear"
+   }
+  }
+ },
+ "bbeb62cababb49c2.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "bc3ca3e8bf4b651b.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "be194f2233940705.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "bf8ae2a6f03dd0e9.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  }
+ },
+ "bfddc7d975245299.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "c010fd32fb3fc53a.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "c094e1472912a079.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "c0965ede70af16aa.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "unclear"
+   }
+  }
+ },
+ "c26f4e4a85427231.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   }
+  }
+ },
+ "c274e026ac907eb9.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "c27fb24f6e783629.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "c3845db14cd45afd.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "unclear"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "c38db672651c0138.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "c43d8e515688b759.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "c5dd90bf902698f2.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "7": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.606936,
+     0.744651,
+     0.091718,
+     0.072947
+    ]
+   }
+  ]
+ },
+ "c72db18c2c27486d.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "c773ec0bbbcf23e4.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "c77b26f950548de8.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "c88925136116750b.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "c91d644fa70e02a0.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.086458,
+     0.416564,
+     0.105015,
+     0.150926
+    ]
+   }
+  ]
+ },
+ "c97388bed52b6016.jpg": {
+  "boxes": {
+   "1": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "c9d0b25627cd798c.jpg": {
+  "boxes": {
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ca8de4484aa70be5.jpg": {
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.342255,
+     0.267354,
+     0.065761,
+     0.128881
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.478289,
+     0.218657,
+     0.030766,
+     0.056843
+    ]
+   }
+  ]
+ },
+ "cb3e75d353f6d5b3.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "cb901062c3813359.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "cca327900ddb957a.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ce6761eb714d3945.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "ce7590484c4b644c.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "cef6f168d0eadb94.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "cf06c34ab14244e5.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "cf10d679a5577e60.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "cf2da01080d55461.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "cfdd3a13861cbd08.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "2": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "3": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "7": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "8": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "9": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "cfe0b35fd6b43d83.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "d021cdfad312bd89.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "d05543534871d341.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "d1b8b35ef312eb92.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "d23e87da605fa643.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "d246fb900c65888c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "d2f7e03433c3f000.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "d4d452ee3eef6f02.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "d598774f0905b89b.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "d59b7a0ff294e3be.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "d68f41b8c244f1f5.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "d6ab4bf5f16ad349.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "d784a7937776bef4.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "profile"
+   },
+   "7": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "8": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.938625,
+     0.476507,
+     0.016125,
+     0.037214
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.66725,
+     0.441996,
+     0.01775,
+     0.040541
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.26275,
+     0.367152,
+     0.0085,
+     0.01684
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.78925,
+     0.427859,
+     0.014625,
+     0.033264
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.281475,
+     0.358721,
+     0.009867,
+     0.019678
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.830194,
+     0.431569,
+     0.02123,
+     0.041285
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.812272,
+     0.441573,
+     0.012461,
+     0.025711
+    ]
+   }
+  ]
+ },
+ "d79ced064afca81f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "unclear"
+   }
+  }
+ },
+ "d831f01e9879ca39.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "d8a2f98baf524c2e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "d9c752846cd9eaf7.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "da402764cc52e02e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "da8186b39f042cdf.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "dae48e8c66576d0c.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "daff6d9b14618c7d.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "db2d4827104ccd7b.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "db617b3512da4079.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "dd9846cab6528f71.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "de025b4ef8d8aa55.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "e03bc9201c5e4420.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "e04b7724f7319907.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.138,
+     0.101667,
+     0.038,
+     0.071667
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.899889,
+     0.9125,
+     0.040111,
+     0.0745
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.973,
+     0.501167,
+     0.027,
+     0.066667
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.014667,
+     0.692,
+     0.036111,
+     0.072
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.060695,
+     0.900486,
+     0.050844,
+     0.090459
+    ]
+   }
+  ]
+ },
+ "e1120bfe48f85c1b.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "e1824cd5d3dc19cd.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "e1971b83a5bb61a3.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "e20b204f3542afdd.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "e2e893cd3d8e16f6.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true
+   },
+   "1": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "2": {
+    "dark": true
+   },
+   "18": {
+    "dark": true,
+    "pose": "profile"
+   },
+   "21": {
+    "dark": true
+   },
+   "22": {
+    "dark": true
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "13": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "frontal"
+   },
+   "15": {
+    "pose": "frontal"
+   },
+   "16": {
+    "pose": "frontal"
+   },
+   "17": {
+    "pose": "frontal"
+   },
+   "20": {
+    "pose": "frontal"
+   },
+   "23": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.134699,
+     0.237353,
+     0.008771,
+     0.018235
+    ]
+   }
+  ]
+ },
+ "e33b36e85cc52c2d.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.046233,
+     0.324492,
+     0.049007,
+     0.041941
+    ]
+   }
+  ]
+ },
+ "e4abb2aaad3ad359.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "e5e2aa59e301672e.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "e6b142886e515efb.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "e6df2154694b19a3.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.047382,
+     0.860311,
+     0.010014,
+     0.017733
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.043639,
+     0.861441,
+     0.009288,
+     0.016217
+    ]
+   }
+  ]
+ },
+ "e7760637f30abb8b.jpg": {
+  "boxes": {
+   "1": {
+    "dark": true
+   },
+   "0": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "e77609fd7302d9a6.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "e7c59d832238f88c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "e7ce843b64da31ba.jpg": {
+  "added": [
+   {
+    "kind": "plate",
+    "box": [
+     0.00167,
+     0.368671,
+     0.018455,
+     0.015246
+    ]
+   }
+  ]
+ },
+ "e84ae19f54c41c00.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "e85f04ad43d0be8b.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ebcb728f5e3db7b4.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ebe1378db627de9f.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ec07654b0bc1eb85.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "profile"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "unclear"
+   },
+   "7": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "unclear"
+   },
+   "6": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ecdb9f64d554efd7.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "ed40d14e0f39eb7e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.74,
+     0.094716,
+     0.072722,
+     0.047867
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.835111,
+     0.090958,
+     0.0605,
+     0.037807
+    ]
+   },
+   {
+    "kind": "face",
+    "box": [
+     0.966167,
+     0.427013,
+     0.033833,
+     0.041961
+    ]
+   }
+  ]
+ },
+ "ed7d99098d4af8e6.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ee146551d28f0d66.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "eee93224b83613ab.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "ef50f32680176a24.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ef642d9a223ea23c.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "ef76312a56e4358b.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "ef8bbdd796b994eb.jpg": {
+  "boxes": {
+   "1": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "7": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "0": {
+    "pose": "profile"
+   },
+   "2": {
+    "pose": "unclear"
+   },
+   "3": {
+    "pose": "unclear"
+   },
+   "4": {
+    "pose": "profile"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "unclear"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.406257,
+     0.419876,
+     0.034267,
+     0.060897
+    ]
+   }
+  ]
+ },
+ "f078a6e3641e9c13.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "f0b2dc422b104b15.jpg": {
+  "boxes": {
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "f0ff6f5df8c9a689.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   }
+  }
+ },
+ "f14846118d3e303b.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "f24d1bab9b70c34e.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "profile"
+   }
+  }
+ },
+ "f27f66644fa4e8b1.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "f32426ed0989d208.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "unclear"
+   }
+  }
+ },
+ "f33f4e45d910fab0.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "oblique"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "f3eb17b5032055dc.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "f43c994fad951ac8.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.442076,
+     0.807268,
+     0.015502,
+     0.02049
+    ]
+   }
+  ]
+ },
+ "f64e7aecd58315db.jpg": {
+  "boxes": {
+   "2": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "0": {
+    "pose": "profile"
+   },
+   "1": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.571583,
+     0.320489,
+     0.164245,
+     0.341588
+    ]
+   }
+  ]
+ },
+ "f700c5b69c973db6.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "f71cf4c32270e3be.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "2": {
+    "pose": "unclear"
+   }
+  }
+ },
+ "f76d43b10ad889aa.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "f823cfc2630fc3c3.jpg": {
+  "boxes": {
+   "1": {
+    "dark": true,
+    "pose": "profile"
+   },
+   "2": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "3": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "4": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "7": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "9": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "profile"
+   },
+   "6": {
+    "pose": "profile"
+   },
+   "8": {
+    "pose": "profile"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.054081,
+     0.72881,
+     0.064812,
+     0.088057
+    ]
+   }
+  ]
+ },
+ "f87e6bc1d555ad4d.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "f890dc83bd3a9126.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "f94f5380b1c4ccd6.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "f9d3c2c1d461f0a5.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.450172,
+     0.231687,
+     0.242182,
+     0.20727
+    ]
+   }
+  ]
+ },
+ "faa7aba16b62d0e6.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "2": {
+    "dark": true,
+    "pose": "profile"
+   },
+   "3": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "4": {
+    "dark": true,
+    "pose": "unclear"
+   },
+   "13": {
+    "dark": true,
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.549121,
+     0.756828,
+     0.007617,
+     0.016006
+    ]
+   }
+  ]
+ },
+ "facdd54821037803.jpg": {
+  "boxes": {
+   "0": {
+    "dark": true,
+    "pose": "profile"
+   }
+  }
+ },
+ "fb55b73f241bf50a.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "fbdc4a16fccaaf3d.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "fd0420759eab58b2.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   },
+   "3": {
+    "pose": "frontal"
+   },
+   "4": {
+    "pose": "frontal"
+   },
+   "5": {
+    "pose": "frontal"
+   },
+   "6": {
+    "pose": "frontal"
+   },
+   "7": {
+    "pose": "frontal"
+   },
+   "8": {
+    "pose": "frontal"
+   },
+   "9": {
+    "pose": "frontal"
+   },
+   "10": {
+    "pose": "frontal"
+   },
+   "11": {
+    "pose": "frontal"
+   },
+   "12": {
+    "pose": "frontal"
+   },
+   "14": {
+    "pose": "frontal"
+   },
+   "15": {
+    "pose": "frontal"
+   },
+   "16": {
+    "pose": "frontal"
+   },
+   "17": {
+    "pose": "frontal"
+   },
+   "18": {
+    "pose": "frontal"
+   },
+   "19": {
+    "pose": "profile"
+   },
+   "20": {
+    "pose": "frontal"
+   }
+  },
+  "added": [
+   {
+    "kind": "face",
+    "box": [
+     0.391005,
+     0.524407,
+     0.030186,
+     0.053628
+    ]
+   }
+  ]
+ },
+ "fd11bfeefa4c7a22.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "fd6193931725ff47.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "frontal"
+   },
+   "1": {
+    "pose": "frontal"
+   },
+   "2": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "fe6139d150a3e2a8.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "fe9d1ed8f5e5f8d6.jpg": {
+  "boxes": {
+   "0": {
+    "pose": "unclear"
+   },
+   "1": {
+    "pose": "frontal"
+   }
+  }
+ },
+ "fed5c0275ff3a440.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   },
+   "1": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "fefb68c6a13c4e6f.jpg": {
+  "boxes": {
+   "0": {
+    "angle": "frontal"
+   }
+  }
+ },
+ "fff2268a1b921e8e.jpg": {
+  "boxes": {
+   "1": {
+    "angle": "oblique"
+   }
+  }
+ }
+}
