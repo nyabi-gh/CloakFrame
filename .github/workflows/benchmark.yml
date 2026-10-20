@@ -1,0 +1,100 @@
+name: Benchmark
+
+# The detection benchmark (plan 9.2, docs/M3_BENCHMARK.md) whenever what decides detections
+# changes: the engine's recall at each setting 1.12.1 has must stay within one point of 1.12.1's
+# recorded result, and the default settings within one point of their recorded result.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/benchmark.yml
+      - Cargo.lock
+      - manifests/native.toml
+      - tests/fixtures/assets.json
+      - tests/fixtures/benchmark/**
+      - tools/benchmark/**
+      - crates/cloakframe-core/src/detection.rs
+      - crates/cloakframe-core/src/geometry.rs
+      - crates/cloakframe-engine/examples/benchmark.rs
+      - crates/cloakframe-engine/src/detect/**
+      - crates/cloakframe-engine/src/photo/**
+      - crates/cloakframe-engine/src/run.rs
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/benchmark.yml
+      - Cargo.lock
+      - manifests/native.toml
+      - tests/fixtures/assets.json
+      - tests/fixtures/benchmark/**
+      - tools/benchmark/**
+      - crates/cloakframe-core/src/detection.rs
+      - crates/cloakframe-core/src/geometry.rs
+      - crates/cloakframe-engine/examples/benchmark.rs
+      - crates/cloakframe-engine/src/detect/**
+      - crates/cloakframe-engine/src/photo/**
+      - crates/cloakframe-engine/src/run.rs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    name: Detection benchmark (ubuntu-24.04, CPU)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Fetch the pinned runtime and models
+        run: |
+          lib=$(python3 -I tools/fetch_native.py onnxruntime linux-x86_64 "$RUNNER_TEMP/native")
+          assets=$(python3 -I tools/fetch_test_assets.py "$RUNNER_TEMP/cloakframe-test-assets")
+          echo "ORT_LIB=$lib" >> "$GITHUB_ENV"
+          echo "ASSETS=$assets" >> "$GITHUB_ENV"
+
+      - name: Cache the benchmark images
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/benchmark-images
+          key: benchmark-images-${{ hashFiles('tests/fixtures/benchmark/manifest.json') }}
+
+      - name: Fetch the benchmark images
+        run: python3 -I tools/benchmark/fetch.py "$RUNNER_TEMP/benchmark-images"
+
+      - name: Run the benchmark
+        run: |
+          cargo build --release --locked -p cloakframe-engine --example benchmark
+          mkdir -p "$RUNNER_TEMP/results"
+          run() {
+            out="$RUNNER_TEMP/results/$1.json"; shift
+            target/release/examples/benchmark --ort-library "$ORT_LIB" --models "$ASSETS" \
+              --manifest tests/fixtures/benchmark/manifest.json \
+              --images "$RUNNER_TEMP/benchmark-images" --out "$out" --gpu off "$@"
+          }
+          run default
+          # The settings tools/benchmark/run_legacy.sh recorded 1.12.1 at.
+          run yolo5face-n@0.30 --tiles off --faces yolo5face-n --plates off --face-score 0.30
+          run yolo5face-n@0.40 --tiles off --faces yolo5face-n --plates off --face-score 0.40
+          run yolo5face-n@0.50 --tiles off --faces yolo5face-n --plates off --face-score 0.50
+          run yunet@0.50 --tiles off --faces yunet --plates off --face-score 0.50
+          run plate@0.50 --tiles off --faces off --plates on --plate-score 0.50
+
+      - name: Compare with 1.12.1 and the recorded default
+        run: |
+          r="$RUNNER_TEMP/results"; f=tests/fixtures/benchmark
+          gates=(--gate "$f/engine/default.json" "$r/default.json")
+          for name in yolo5face-n@0.30 yolo5face-n@0.40 yolo5face-n@0.50 yunet@0.50 plate@0.50; do
+            gates+=(--gate "$f/legacy/$name.json" "$r/$name.json")
+          done
+          python3 -I tools/benchmark/evaluate.py "${gates[@]}" "$r"/*.json
