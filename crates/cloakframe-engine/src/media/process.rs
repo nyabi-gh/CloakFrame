@@ -315,17 +315,19 @@ impl Supervised {
     pub fn wait(mut self) -> Result<(), ToolError> {
         let status = self.reap().map_err(ToolError::Io)?;
         let stderr = self.finish();
+        // A kill can reach a tool that has exited but is not reaped yet; then its own status
+        // stands.
+        if status.success() {
+            return Ok(());
+        }
         if self.shared.lock().killed {
             return Err(ToolError::Cancelled);
         }
-        if !status.success() {
-            return Err(ToolError::Failed {
-                tool: self.tool.clone(),
-                status,
-                stderr,
-            });
-        }
-        Ok(())
+        Err(ToolError::Failed {
+            tool: self.tool.clone(),
+            status,
+            stderr,
+        })
     }
 
     /// Polls rather than blocks, because a blocking wait would reap without the lock that the
@@ -569,6 +571,32 @@ mod tests {
         drop(running);
         assert!(dropped.elapsed() < Duration::from_secs(10));
         assert_ends(grandchild);
+    }
+
+    /// The tool has exited but is not reaped yet when the cancel arrives, so the kill reaches a
+    /// finished process; its own exit status stands.
+    #[cfg(unix)]
+    #[test]
+    fn a_kill_after_the_tool_exited_does_not_make_it_cancelled() {
+        use rustix::process::{Pid, WaitId, WaitIdOptions, waitid};
+
+        let cancel = CancelToken::new();
+        let running = tool("sh", &["-c", "exit 0"])
+            .spawn(Stdio::null(), Stdio::null(), &cancel)
+            .unwrap();
+        let pid = Pid::from_raw(running.id() as i32).unwrap();
+        waitid(
+            WaitId::Pid(pid),
+            WaitIdOptions::EXITED | WaitIdOptions::NOWAIT,
+        )
+        .unwrap();
+        cancel.cancel();
+        let start = std::time::Instant::now();
+        while !running.shared.lock().killed {
+            assert!(start.elapsed() < Duration::from_secs(10));
+            thread::sleep(Duration::from_millis(5));
+        }
+        running.wait().unwrap();
     }
 
     #[test]

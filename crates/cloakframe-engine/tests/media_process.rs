@@ -118,24 +118,6 @@ fn dropping_a_running_tool_kills_it() {
 }
 
 #[test]
-fn a_tool_already_finished_is_not_reported_as_cancelled() {
-    let cancel = CancelToken::new();
-    let mut running = test_source(Some(1))
-        .spawn(Stdio::null(), Stdio::piped(), &cancel)
-        .unwrap();
-    let mut out = Vec::new();
-    running
-        .take_stdout()
-        .unwrap()
-        .read_to_end(&mut out)
-        .unwrap();
-    std::thread::sleep(Duration::from_millis(200));
-    cancel.cancel();
-    running.wait().unwrap();
-    assert_eq!(out.len(), 10 * FRAME);
-}
-
-#[test]
 fn frames_go_through_stdin_and_come_back_on_stdout() {
     let frames: Vec<u8> = (0..3 * 4 * 4 * 3).map(|i| (i * 7 % 251) as u8).collect();
     let mut c = ToolCommand::ffmpeg(&ffmpeg());

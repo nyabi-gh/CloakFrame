@@ -21,6 +21,7 @@
 - **취소:** 도구마다 감시 스레드가 취소 토큰을 50 ms마다 보고 트리를 죽인다. 파이프 읽기·쓰기가 막혀 있어도 취소가 닿는다. 그룹 종료와 회수(reap)는 같은 잠금 아래에서만 해서, 이미 회수한 pid(OS가 다른 프로세스에 줄 수 있음)에 신호를 보내지 않는다. 그래서 회수는 막는 `wait` 대신 짧은 간격(1 → 50 ms)의 `try_wait`다.
 - **stderr:** 끝 8 KiB만 남겨 실패 메시지에 붙인다(4.7의 상한).
 - **drop:** 끝나지 않은 도구를 놓으면 트리를 죽이고 회수한다.
+- **늦은 kill:** 도구가 stdout을 닫고 끝났지만 아직 회수되지 않았을 때 취소가 오면 kill은 끝난 프로세스에 닿는다(macOS에서 좀비에 보낸 SIGKILL은 성공하고 종료 상태는 그대로). 그래서 `wait`는 종료 상태를 먼저 보고, 성공이면 정상 종료로, 아니면서 kill했을 때만 취소로 보고한다. 처음 판은 kill 표시를 먼저 봐서 #41 CI의 macOS runner에서 끝난 도구를 취소로 보고했다(그 시험은 200 ms sleep에 기대고 있었다).
 
 ## CLI Ctrl+C
 
@@ -33,8 +34,8 @@ M1에서 넘어온 항목이다. `ctrlc` 3.5.2(MIT/Apache-2.0, `termination` fea
 
 macOS arm64(2026-10-21): 전체 시험(`--all-features`), clippy 두 조합, cargo-deny 0.20.2 통과. 새 crate(`ctrlc` 3.5.2와 그 의존성 nix·objc2·block2·dispatch2·cfg_aliases·objc2-encode)는 모두 공개 2주가 지났고 허용 목록 라이선스다.
 
-- `media_process.rs` 8건: 끝까지 실행한 출력, 실패 시 stderr 끝, 취소한 도구가 끝남, drop한 도구가 끝남, 끝난 뒤의 취소는 취소로 보고하지 않음, stdin으로 넣은 프레임이 stdout으로 돌아옴, `data:` 세그먼트가 허용 목록에 막힘, ffprobe.
-- `media::process` 단위 4건: 취소·drop이 손자 프로세스까지 끝냄(Unix는 `sh`, Windows는 PowerShell이 띄운 `ping`), 없는 프로그램, stderr 상한.
+- `media_process.rs` 7건: 끝까지 실행한 출력, 실패 시 stderr 끝, 취소한 도구가 끝남, drop한 도구가 끝남, stdin으로 넣은 프레임이 stdout으로 돌아옴, `data:` 세그먼트가 허용 목록에 막힘, ffprobe.
+- `media::process` 단위 5건: 취소·drop이 손자 프로세스까지 끝냄(Unix는 `sh`, Windows는 PowerShell이 띄운 `ping`), 끝났지만 아직 회수되지 않은 도구에 닿은 kill은 취소로 보고하지 않음(Unix, `waitid(WNOWAIT)`로 그 상태를 만듦), 없는 프로그램, stderr 상한.
 - `run` 단위 `cancelling_the_callers_token_cancels_the_run`, `cli.rs` `interrupt` 2건(Unix): 첫 SIGINT에 렌더 중인 항목·대기 항목이 모두 취소되고 임시 파일 없이 130, 취소를 무시하는 항목이 있어도 두 번째 SIGINT에 바로 130.
 - mutation(시험이 잡는지): 그룹 대신 자식만 kill, 허용 목록 뺌, 감시 스레드가 취소를 무시함, CLI가 실행에 토큰을 넘기지 않음 모두 시험이 실패한다. 처음 판의 시험은 앞의 셋을 놓쳤다. 손자가 stderr를 물고 있어 `wait`가 손자 수명만큼 걸린 것을 시간 상한 없이 통과했고, FFmpeg HLS 기본값이 http 세그먼트를 이미 막아 우리 목록과 무관하게 통과했으며, 끝없는 출력을 읽는 시험은 취소가 안 되면 실패 대신 멈췄다. 세 시험을 고쳤다.
 - Windows의 Job Object·`CREATE_NEW_PROCESS_GROUP` 코드와 트리 시험은 이 Mac에서 컴파일할 수 없어 CI가 처음 확인한다. Windows 콘솔 Ctrl+C는 자동 시험이 없다(시험에서 다른 프로세스에 콘솔 Ctrl+C를 보내기 어렵다). Unix 시험이 같은 취소 경로를 확인한다.
