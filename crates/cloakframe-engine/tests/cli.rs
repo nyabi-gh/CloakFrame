@@ -407,6 +407,44 @@ mod interrupt {
         );
     }
 
+    /// `nohup` and background jobs of scripts start the CLI with hangups or interrupts ignored.
+    #[test]
+    fn signals_ignored_at_start_stay_ignored() {
+        let f = Fixture::new();
+        f.input("a-slow.jpg", b"slow");
+        let mut child = Command::new("nohup")
+            .arg(env!("CARGO_BIN_EXE_cloakframe-cli"))
+            .args(["run", "--output"])
+            .arg(f.out())
+            .args(["--review", "off", "--workers", "1", "--sessions"])
+            .arg(f.root.join("sessions"))
+            .arg("--synthetic")
+            .arg(f.root.join("in"))
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap();
+        wait_for_temp_output(&f);
+        let pid = Pid::from_raw(child.id() as i32).unwrap();
+        kill_process(pid, Signal::HUP).unwrap();
+        let after_hangup = exit_within(&mut child, Duration::from_millis(1500));
+        if after_hangup.is_none() {
+            interrupt(&child);
+        }
+        let code = exit_within(&mut child, Duration::from_secs(10));
+        if code.is_none() {
+            let _ = child.kill();
+        }
+        let output = child.wait_with_output().unwrap();
+        assert_eq!(
+            after_hangup,
+            None,
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(code, Some(130));
+    }
+
     #[test]
     fn a_second_ctrl_c_exits_at_once() {
         let f = Fixture::new();

@@ -814,6 +814,8 @@ fn main() -> ExitCode {
 fn cancel_on_interrupt() -> CancelToken {
     let cancel = CancelToken::new();
     let handler = cancel.clone();
+    #[cfg(unix)]
+    let ignored = ignored_signals();
     let installed = ctrlc::set_handler(move || {
         if handler.is_cancelled() {
             std::process::exit(CANCELLED.into());
@@ -824,7 +826,39 @@ fn cancel_on_interrupt() -> CancelToken {
     if let Err(e) = installed {
         eprintln!("warning: Ctrl+C will stop without cleaning up: {e}");
     }
+    #[cfg(unix)]
+    ignore(&ignored);
     cancel
+}
+
+/// The signals this process started with ignored, as `nohup` does with SIGHUP and a script's
+/// background job with SIGINT. ctrlc installs its handler over them, so they are ignored again
+/// after it.
+#[cfg(unix)]
+#[allow(unsafe_code)]
+fn ignored_signals() -> Vec<libc::c_int> {
+    [libc::SIGINT, libc::SIGTERM, libc::SIGHUP]
+        .into_iter()
+        .filter(|&signal| {
+            let mut current = std::mem::MaybeUninit::<libc::sigaction>::zeroed();
+            // SAFETY: with no new action, sigaction only writes the current one into `current`,
+            // which it then holds whole.
+            unsafe {
+                libc::sigaction(signal, std::ptr::null(), current.as_mut_ptr()) == 0
+                    && current.assume_init().sa_sigaction == libc::SIG_IGN
+            }
+        })
+        .collect()
+}
+
+#[cfg(unix)]
+#[allow(unsafe_code)]
+fn ignore(signals: &[libc::c_int]) {
+    for &signal in signals {
+        // SAFETY: ignoring is a valid disposition for these signals, and no handler is replaced
+        // that anything else still relies on.
+        unsafe { libc::signal(signal, libc::SIG_IGN) };
+    }
 }
 
 fn report(result: Result<u8, CliError>) -> ExitCode {
