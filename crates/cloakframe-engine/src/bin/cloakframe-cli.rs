@@ -840,7 +840,7 @@ fn cancel_on_interrupt() -> CancelToken {
     let ignored = ignored_signals();
     let installed = ctrlc::set_handler(move || {
         if handler.is_cancelled() {
-            std::process::exit(CANCELLED.into());
+            exit_now(CANCELLED);
         }
         handler.cancel();
         note("cancelling; press Ctrl+C again to stop at once");
@@ -851,6 +851,25 @@ fn cancel_on_interrupt() -> CancelToken {
     #[cfg(unix)]
     ignore(&ignored);
     cancel
+}
+
+/// Ends the process at once, without exit handlers or static destructors. `std::process::exit`
+/// runs ONNX Runtime's and CoreML's destructors while the inference thread is still working, which
+/// now and then aborted the process ("pure virtual function called") instead of exiting.
+#[allow(unsafe_code)]
+fn exit_now(code: u8) -> ! {
+    #[cfg(unix)]
+    {
+        // SAFETY: _exit ends the process; nothing after it runs.
+        unsafe { libc::_exit(code.into()) }
+    }
+    #[cfg(windows)]
+    {
+        use windows_sys::Win32::System::Threading::{GetCurrentProcess, TerminateProcess};
+        // SAFETY: the pseudo handle of the current process is always valid.
+        unsafe { TerminateProcess(GetCurrentProcess(), code.into()) };
+        unreachable!("terminating this process does not return")
+    }
 }
 
 /// The signals this process started with ignored, as `nohup` does with SIGHUP and a script's
