@@ -115,6 +115,78 @@ fn refused(path: &Path) -> Unsupported {
     }
 }
 
+/// D1: tags ffprobe names as the encoder options do (`bt470bg` for transfer 5) or that the
+/// height rule never assumes (Display P3) stay the source's; a matrix the decoder's scaler cannot
+/// take refuses the video instead of being decoded as another one.
+#[test]
+fn every_tag_ffprobe_reports_is_read_or_refused() {
+    let dir = TestDir::new();
+    let tagged = |name: &str, codes: &str| {
+        generated(
+            &dir,
+            name,
+            &[PATTERN],
+            &[
+                "-c:v",
+                "libx264",
+                "-pix_fmt",
+                "yuv420p",
+                "-bsf:v",
+                &format!("h264_metadata={codes}"),
+            ],
+        )
+    };
+    let pal = probed(&tagged(
+        "pal.mp4",
+        "colour_primaries=5:transfer_characteristics=5:matrix_coefficients=5:video_full_range_flag=0",
+    ))
+    .unwrap();
+    assert_eq!(
+        (
+            pal.color.matrix,
+            pal.color.primaries,
+            pal.color.transfer,
+            pal.color.assumed
+        ),
+        (
+            Matrix::Bt470bg,
+            Primaries::Bt470bg,
+            Transfer::Bt470bg,
+            false
+        )
+    );
+    let p3 = probed(&tagged(
+        "p3.mp4",
+        "colour_primaries=12:transfer_characteristics=1:matrix_coefficients=1:video_full_range_flag=0",
+    ))
+    .unwrap();
+    assert_eq!(
+        (p3.color.primaries, p3.color.assumed),
+        (Primaries::Smpte432, false)
+    );
+    assert_eq!(
+        refused(&tagged("ycgco.mp4", "matrix_coefficients=8")),
+        Unsupported::Color("ycgco".into())
+    );
+}
+
+/// An HD picture cropped wide (1280x544) is BT.709 like the players that guess by size.
+#[test]
+fn an_untagged_wide_hd_crop_is_taken_as_bt709() {
+    let dir = TestDir::new();
+    let path = generated(
+        &dir,
+        "crop.mp4",
+        &["testsrc=s=1280x544:d=0.2"],
+        &["-c:v", "libx264", "-preset", "ultrafast"],
+    );
+    let s = probed(&path).unwrap();
+    assert_eq!(
+        (s.color.matrix, s.color.primaries, s.color.assumed),
+        (Matrix::Bt709, Primaries::Bt709, true)
+    );
+}
+
 #[test]
 fn cover_art_is_not_a_second_video() {
     let dir = TestDir::new();

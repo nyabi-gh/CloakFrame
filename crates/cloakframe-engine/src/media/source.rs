@@ -91,7 +91,7 @@ mod tests {
             container_start_seconds: 0.0,
             duration_seconds,
             estimated_frames: 30,
-            color: ColorTags::default().complete(48),
+            color: ColorTags::default().complete(64, 48),
             audio: Vec::new(),
             other_video_streams: 0,
         }

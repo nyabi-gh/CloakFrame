@@ -80,6 +80,8 @@ fn swscale_matrix(matrix: Matrix) -> &'static str {
         Matrix::Smpte240m => "smpte240m",
         Matrix::Fcc => "fcc",
         Matrix::Bt2020nc => "bt2020",
+        // RGB-coded frames reach the scaler as planar RGB, which takes no matrix.
+        Matrix::Gbr => "bt709",
     }
 }
 

@@ -150,7 +150,7 @@ impl Rotation {
 }
 
 /// The colour description shared by decode and encode (D1). A field the source leaves out is
-/// assumed from the frame height and marked in [`ColorSpec::assumed`].
+/// assumed from the frame size and marked in [`ColorSpec::assumed`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ColorSpec {
     pub matrix: Matrix,
@@ -160,9 +160,10 @@ pub struct ColorSpec {
     pub assumed: bool,
 }
 
-/// The names are FFmpeg's, as ffprobe reports them and the encoder's colour options take them.
+/// The names are FFmpeg's, as ffprobe reports them and the encoder's colour options take them;
+/// the older option names some values also have are read as well.
 macro_rules! ffmpeg_names {
-    ($(#[$doc:meta])* $name:ident { $($variant:ident = $text:literal),+ $(,)? }) => {
+    ($(#[$doc:meta])* $name:ident { $($variant:ident = $text:literal $(| $alias:literal)*),+ $(,)? }) => {
         $(#[$doc])*
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
         pub enum $name {
@@ -178,7 +179,7 @@ macro_rules! ffmpeg_names {
 
             pub fn from_ffmpeg_name(name: &str) -> Option<Self> {
                 match name {
-                    $($text => Some(Self::$variant),)+
+                    $($text $(| $alias)* => Some(Self::$variant),)+
                     _ => None,
                 }
             }
@@ -186,14 +187,19 @@ macro_rules! ffmpeg_names {
     };
 }
 
-ffmpeg_names!(Matrix {
-    Bt709 = "bt709",
-    Bt470bg = "bt470bg",
-    Smpte170m = "smpte170m",
-    Smpte240m = "smpte240m",
-    Fcc = "fcc",
-    Bt2020nc = "bt2020nc",
-});
+ffmpeg_names!(
+    /// The matrices the decoder's scaler takes. `gbr` is RGB-coded video, which reaches it as
+    /// planar RGB and needs no matrix.
+    Matrix {
+        Bt709 = "bt709",
+        Bt470bg = "bt470bg",
+        Smpte170m = "smpte170m",
+        Smpte240m = "smpte240m",
+        Fcc = "fcc",
+        Bt2020nc = "bt2020nc",
+        Gbr = "gbr",
+    }
+);
 
 ffmpeg_names!(Primaries {
     Bt709 = "bt709",
@@ -203,21 +209,29 @@ ffmpeg_names!(Primaries {
     Smpte240m = "smpte240m",
     Film = "film",
     Bt2020 = "bt2020",
+    Smpte428 = "smpte428",
+    Smpte431 = "smpte431",
+    Smpte432 = "smpte432",
+    Ebu3213 = "ebu3213" | "jedec-p22",
 });
 
 ffmpeg_names!(
     /// SDR transfers only; PQ and HLG are refused before a spec is made (until M9).
     Transfer {
         Bt709 = "bt709",
-        Gamma22 = "gamma22",
-        Gamma28 = "gamma28",
+        Bt470m = "bt470m" | "gamma22",
+        Bt470bg = "bt470bg" | "gamma28",
         Smpte170m = "smpte170m",
         Smpte240m = "smpte240m",
         Linear = "linear",
+        Log100 = "log100",
+        Log316 = "log316",
         Iec61966_2_1 = "iec61966-2-1",
         Iec61966_2_4 = "iec61966-2-4",
+        Bt1361e = "bt1361e",
         Bt2020_10 = "bt2020-10",
         Bt2020_12 = "bt2020-12",
+        Smpte428 = "smpte428",
     }
 );
 
@@ -235,13 +249,16 @@ pub struct ColorTags {
     pub range: Option<Range>,
 }
 
-/// Frames this tall or taller are taken as HD (BT.709) when untagged, smaller ones as SD
-/// (SMPTE 170M), in limited range (the D1 fixture's rule).
-pub const HD_MIN_HEIGHT: u32 = 720;
+/// Untagged frames this wide, or taller than [`SD_MAX_HEIGHT`], are taken as HD (BT.709), the
+/// rest as SD (SMPTE 170M), in limited range. Players such as mpv guess the same way, so a wide
+/// crop of HD (1280x544) stays HD.
+pub const HD_MIN_WIDTH: u32 = 1280;
+pub const SD_MAX_HEIGHT: u32 = 576;
 
 impl ColorTags {
-    pub fn complete(self, height: u32) -> ColorSpec {
-        let hd = height >= HD_MIN_HEIGHT;
+    /// The source's tags, with the untagged fields assumed from its coded size.
+    pub fn complete(self, width: u32, height: u32) -> ColorSpec {
+        let hd = width >= HD_MIN_WIDTH || height > SD_MAX_HEIGHT;
         ColorSpec {
             matrix: self
                 .matrix
@@ -600,7 +617,7 @@ mod tests {
             container_start_seconds: 0.0,
             duration_seconds: Some(3.003),
             estimated_frames: 90,
-            color: ColorTags::default().complete(360),
+            color: ColorTags::default().complete(640, 360),
             audio: Vec::new(),
             other_video_streams: 0,
         }
@@ -644,8 +661,8 @@ mod tests {
     }
 
     #[test]
-    fn untagged_fields_follow_the_frame_height() {
-        let hd = ColorTags::default().complete(720);
+    fn untagged_fields_follow_the_frame_size() {
+        let hd = ColorTags::default().complete(1280, 720);
         assert_eq!(
             (hd.matrix, hd.primaries, hd.transfer, hd.range, hd.assumed),
             (
@@ -656,17 +673,27 @@ mod tests {
                 true
             )
         );
-        let sd = ColorTags::default().complete(719);
-        assert_eq!(
-            (sd.matrix, sd.primaries, sd.transfer),
-            (Matrix::Smpte170m, Primaries::Smpte170m, Transfer::Smpte170m)
-        );
+        for (width, height) in [(1280, 544), (960, 720), (1920, 800)] {
+            assert_eq!(
+                ColorTags::default().complete(width, height).matrix,
+                Matrix::Bt709,
+                "{width}x{height}"
+            );
+        }
+        for (width, height) in [(720, 576), (1024, 576), (640, 480)] {
+            let sd = ColorTags::default().complete(width, height);
+            assert_eq!(
+                (sd.matrix, sd.primaries, sd.transfer),
+                (Matrix::Smpte170m, Primaries::Smpte170m, Transfer::Smpte170m),
+                "{width}x{height}"
+            );
+        }
         let partly = ColorTags {
             matrix: Some(Matrix::Bt470bg),
             range: Some(Range::Pc),
             ..ColorTags::default()
         }
-        .complete(1080);
+        .complete(1920, 1080);
         assert_eq!(
             (
                 partly.matrix,
@@ -682,7 +709,7 @@ mod tests {
             transfer: Some(Transfer::Bt709),
             range: Some(Range::Tv),
         }
-        .complete(480);
+        .complete(640, 480);
         assert!(!full.assumed);
     }
 
@@ -695,6 +722,21 @@ mod tests {
             Transfer::from_ffmpeg_name("iec61966-2-1"),
             Some(Transfer::Iec61966_2_1)
         );
+        // ffprobe names transfers 4 and 5 like the primaries; the older option names still read.
+        assert_eq!(
+            Transfer::from_ffmpeg_name("bt470bg"),
+            Some(Transfer::Bt470bg)
+        );
+        assert_eq!(
+            Transfer::from_ffmpeg_name("gamma28"),
+            Some(Transfer::Bt470bg)
+        );
+        assert_eq!(Transfer::Bt470m.ffmpeg_name(), "bt470m");
+        assert_eq!(
+            Primaries::from_ffmpeg_name("smpte432"),
+            Some(Primaries::Smpte432)
+        );
+        assert_eq!(Matrix::from_ffmpeg_name("ycgco"), None);
         assert_eq!(Transfer::from_ffmpeg_name("smpte2084"), None);
         assert_eq!(Range::from_ffmpeg_name("unknown"), None);
     }

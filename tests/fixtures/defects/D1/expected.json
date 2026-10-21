@@ -26,11 +26,8 @@
     },
     {
       "check": "untagged_input",
-      "rule": "태그 없는 입력은 ffprobe가 주는 기본값을 쓰지 않고, 높이 720 이상이면 bt709, 미만이면 smpte170m, range tv로 간주해 출력에 그 값을 명시한다"
+      "rule": "태그 없는 입력은 ffprobe가 주는 기본값을 쓰지 않고, 너비 1280 이상이거나 높이 576을 넘으면 bt709, 아니면 smpte170m, range tv로 간주해 출력에 그 값을 명시한다. 태그가 있는데 읽을 수 없거나 디코드할 수 없는 값이면 기본값으로 바꾸지 않고 거부한다"
     }
   ],
-  "observed_1121_summary": "세 입력 모두 출력 태그 unknown. BT.709 원본 중앙 (201,59,39)가 BT.709로 재생 시 (211,71,35). full range 입력은 limited로 바뀜",
-  "proposed": [
-    "태그 없는 입력의 기본값 규칙(높이 720 이상 bt709, 미만 smpte170m, range tv)은 계획에 없는 세부 사항으로 M4에서 확정"
-  ]
+  "observed_1121_summary": "세 입력 모두 출력 태그 unknown. BT.709 원본 중앙 (201,59,39)가 BT.709로 재생 시 (211,71,35). full range 입력은 limited로 바뀜"
 }

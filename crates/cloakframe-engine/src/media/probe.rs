@@ -34,6 +34,8 @@ pub enum Unsupported {
     Codec(String),
     PixelFormat(String),
     Hdr(String),
+    /// A colour tag this build cannot read or decode with, rather than one it would guess.
+    Color(String),
     Rotation,
     Unreadable,
     Resolution,
@@ -58,6 +60,7 @@ impl fmt::Display for Unsupported {
                 "unsupported pixel format '{format}' (8 bits per sample only, for now)"
             ),
             Self::Hdr(transfer) => write!(f, "HDR video ({transfer}) is not supported yet"),
+            Self::Color(name) => write!(f, "the video's colour tag '{name}' is not supported"),
             Self::Rotation => f.write_str("the video's rotation is not a multiple of 90 degrees"),
             Self::Unreadable => f.write_str("the video stream could not be read"),
             Self::Resolution => f.write_str("the video resolution exceeds the limit"),
@@ -264,19 +267,13 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         .and_then(rational)
         .unwrap_or(Rational::new(1, 1).expect("1:1"));
     let tags = ColorTags {
-        matrix: video
-            .color_space
-            .as_deref()
-            .and_then(Matrix::from_ffmpeg_name),
-        primaries: video
-            .color_primaries
-            .as_deref()
-            .and_then(Primaries::from_ffmpeg_name),
-        transfer: Transfer::from_ffmpeg_name(transfer_name),
-        range: video
-            .color_range
-            .as_deref()
-            .and_then(Range::from_ffmpeg_name),
+        matrix: color_tag(video.color_space.as_deref(), Matrix::from_ffmpeg_name)?,
+        primaries: color_tag(
+            video.color_primaries.as_deref(),
+            Primaries::from_ffmpeg_name,
+        )?,
+        transfer: color_tag(video.color_transfer.as_deref(), Transfer::from_ffmpeg_name)?,
+        range: color_tag(video.color_range.as_deref(), Range::from_ffmpeg_name)?,
     };
     let audio = report
         .streams
@@ -305,10 +302,22 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         container_start_seconds,
         duration_seconds: duration,
         estimated_frames,
-        color: tags.complete(height),
+        color: tags.complete(width, height),
         audio,
         other_video_streams,
     })
+}
+
+/// A colour field as the source tagged it, `None` when untagged. A name this build does not know
+/// refuses the video: taking it as untagged would decode and tag the video as something it is
+/// not (D1).
+fn color_tag<T>(name: Option<&str>, known: fn(&str) -> Option<T>) -> Result<Option<T>, ProbeError> {
+    match name {
+        None | Some("unknown" | "unspecified" | "reserved" | "reserved0") => Ok(None),
+        Some(name) => known(name)
+            .map(Some)
+            .ok_or_else(|| ProbeError::Unsupported(Unsupported::Color(name.into()))),
+    }
 }
 
 /// `30000/1001` or `16:9`; zero or negative parts are not a rate.
@@ -509,6 +518,24 @@ mod tests {
     }
 
     #[test]
+    fn unspecified_colour_is_untagged_and_an_unknown_name_is_refused() {
+        let r = |changes| report(vec![with(video(), changes)]);
+        let s = parsed(&r(
+            json!({"color_space": "reserved", "color_transfer": "unknown"}),
+        ))
+        .unwrap();
+        assert_eq!((s.color.matrix, s.color.assumed), (Matrix::Bt709, true));
+        assert_eq!(
+            refused(&r(json!({"color_primaries": "smpte999"}))),
+            Unsupported::Color("smpte999".into())
+        );
+        assert_eq!(
+            refused(&r(json!({"color_space": "ictcp"}))),
+            Unsupported::Color("ictcp".into())
+        );
+    }
+
+    #[test]
     fn a_report_without_a_duration_still_makes_a_spec() {
         let mut streamed = report(vec![with(
             video(),
@@ -588,7 +615,7 @@ mod tests {
         let c = parsed(&r(json!({"color_space": "bt709", "color_primaries": "bt709", "color_transfer": "bt709", "color_range": "pc"}))).unwrap().color;
         assert_eq!((c.range, c.assumed), (Range::Pc, false));
         let c = parsed(&r(
-            json!({"height": 480, "color_space": "unknown", "color_range": "tv"}),
+            json!({"width": 640, "height": 480, "color_space": "unknown", "color_range": "tv"}),
         ))
         .unwrap()
         .color;
