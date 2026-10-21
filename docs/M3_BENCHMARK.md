@@ -126,7 +126,7 @@ CoreML의 이득이 타일 모드에서 작은 것은 타일마다 영역 축소
 
 ## CI
 
-`.github/workflows/benchmark.yml`(Linux, CPU, 감지·사진·벤치마크 파일이 바뀌는 PR과 main push, 수동 실행). S3 세트를 해시로 받아 캐시하고, 기본 설정과 1.12.1을 기록한 5가지 설정을 타일 끔으로 돌린 뒤 `evaluate.py --gate`로 비교한다. 기준은 `legacy/*.json`(1.12.1)과 `engine/default.json`(기본 설정, 이 Mac의 CPU 결과)이다. x86과 arm64의 ORT CPU 결과는 점수가 조금 달라 경계의 감지가 바뀔 수 있지만, 허용 1%p 안이다.
+`.github/workflows/benchmark.yml`(Linux, CPU, 감지·사진·벤치마크 파일이 바뀌는 PR과 main push, 수동 실행). S3 세트를 해시로 받아 캐시하고, 기본 설정과 1.12.1을 기록한 5가지 설정을 타일 끔으로 돌린 뒤 `evaluate.py --gate`로 비교한다. 기준은 `legacy/*.json`(1.12.1)과 `engine/default.json`(기본 설정, 이 Mac의 CPU 결과)이다. x86과 arm64의 ORT CPU 결과는 점수가 조금 달라 경계의 감지가 바뀔 수 있지만, 허용 1%p 안이다. 첫 실행(PR #38, ubuntu-24.04)에서 여섯 설정의 재현율이 이 Mac의 결과와 모두 같았고, 작업은 4분 35초(이미지 받기 47초, 실행 3분 33초)였다.
 
 ## 재현
 
