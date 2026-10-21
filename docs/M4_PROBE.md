@@ -9,7 +9,7 @@ ffprobe 보고에서 한 번 만들고 분석·미리보기·내보내기가 같
 - 처리할 영상 stream의 색인, 코덱, 코딩된 크기, 회전(시계 방향 0·90·180·270°), SAR.
 - **속도:** 모든 패스가 쓰는 CFR 속도. VFR이면 공칭 속도(`r_frame_rate`)를 써서 원본 프레임을 버리지 않는다. 공칭 속도가 없거나 240 fps를 넘으면 평균 속도.
 - **시작:** 첫 영상 프레임의 표시 시각을 `start_pts × time_base`로 정확히(유리수) 둔다. 음수면 0.
-- **프레임 n의 시각:** `start + n / rate`(정확한 유리수, `TimelineSpec::frame_start`). 2단계의 디코드·미리보기는 이 한 함수로 프레임을 고른다.
+- **프레임 n의 시각:** `start + n / rate`(정확한 유리수, `TimelineSpec::frame_start`). 2단계는 이 시각 대신 칸 가운데 시각(`frame_middle`)에 화면에 있던 원본 프레임을 고른다([M4_DECODE](M4_DECODE.md)).
 - 길이, 추정 프레임 수(CFR이면 `nb_frames`, 아니면 `ceil(길이 × 속도)`; 상한과 진행률용이고 정확한 수는 1패스가 셈).
 - **색(D1):** matrix·primaries·transfer·range. 원본이 태그하지 않은 필드는 높이 720 이상이면 bt709, 미만이면 smpte170m, range는 tv로 채우고 `assumed`로 표시(D1 fixture의 제안). 3단계 인코드가 같은 값을 태그로 쓴다.
 - 오디오 stream(색인, 코덱, 두세 자 소문자 언어 코드만), 처리하지 않는 다른 영상 stream 수.

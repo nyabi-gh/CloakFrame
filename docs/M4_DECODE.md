@@ -23,7 +23,7 @@
 - 파이프는 rgb24(사진·감지기의 `Rgb8Image`와 같은 채널 순서).
 - `scale=…:in_color_matrix=<spec>:in_range=<spec>:out_range=pc:flags=area+accurate_rnd+full_chroma_int+bitexact,format=rgb24`. 원본 태그가 없어도 `TimelineSpec`의 값(1단계 높이 규칙)으로 디코드하고, 색역 변환은 하지 않는다(D1, 3단계 인코드가 같은 matrix·range로 되돌림). swscale 이름은 `Bt470bg` → `bt470`, `Bt2020nc` → `bt2020`.
 - 분석 크기는 긴 변 상한까지 줄이고 각 변 최소 2(1.12.1 규칙). 회전은 FFmpeg 자동 회전이 필터 앞에 넣는다.
-- **CPU와 무관한 pixel:** bt709-tv-1080p를 960×540으로 줄인 15프레임의 SHA-256을 Apple silicon에서 기록하고 시험이 비교한다. x86 Linux·Windows에서 같은지는 CI가 처음 확인한다.
+- **CPU와 무관한 pixel:** bt709-tv-1080p를 960×540으로 줄인 15프레임의 SHA-256을 Apple silicon에서 기록하고 시험이 비교한다. PR #43의 CI(2026-10-21)에서 x86_64 Linux(BtbN 빌드)·x64 Windows(gyan 빌드)·arm64 macOS runner가 모두 같은 해시로 통과했다.
 
 ## 처리량
 
@@ -38,9 +38,19 @@
 | + `bitexact`(선택) | 0.35초 |
 | 선택한 변환, 960×540 | 0.29초 |
 | `area`만, 960×540 | 0.21초 |
-| `FrameReader`로 stdout 파이프까지(debug 시험 빌드, 조사·목록 포함) | 0.69초, 436 fps, 2.7 GB/s |
+| `FrameReader`로 stdout 파이프까지(debug 시험 빌드, 조사·목록 제외) | 0.69초, 436 fps, 2.7 GB/s |
 
-정확도 플래그의 비용은 1080p에서 측정 오차 안, 960×540에서 약 0.08초/300프레임이다. 파이프는 병목이 아니다. 처음 측정은 프레임마다 새 6 MB 버퍼를 만들고 300장을 모두 쌓아 32 fps로 나왔다(시험 코드 문제였고 버퍼 하나를 다시 쓰도록 고침). Windows stdout 파이프의 처리량은 CI `ci.yml`의 "Measure the decode pipe" 단계가 3개 OS에서 출력한다(1.12.1은 Windows에서만 named pipe를 썼고 이유는 남아 있지 않다).
+정확도 플래그의 비용은 1080p에서 측정 오차 안, 960×540에서 약 0.08초/300프레임이다. 파이프는 병목이 아니다. 처음 측정은 프레임마다 새 6 MB 버퍼를 만들고 300장을 모두 쌓아 32 fps로 나왔다(시험 코드 문제였고 버퍼 하나를 다시 쓰도록 고침). 같은 Mac에서 load 3–5일 때 다시 재면 447–479 fps였다.
+
+stdout 파이프의 처리량은 CI `ci.yml`의 "Measure the decode pipe" 단계가 3개 OS에서 출력한다(1.12.1은 Windows에서만 named pipe를 썼고 이유는 남아 있지 않다). 같은 시험, debug 빌드, GitHub runner(PR #43, 2026-10-21):
+
+| runner | 300프레임 | fps | MB/s |
+| --- | --- | --- | --- |
+| macOS 15 arm64 | 1.51초 | 199 | 1,238 |
+| Ubuntu 24.04 x86_64 | 1.76초 | 170 | 1,060 |
+| Windows Server 2025 x64 | 2.41초 | 125 | 775 |
+
+분석 크기(긴 변 960, 프레임당 1.6 MB)는 30 fps에 약 47 MB/s, 4K 원본(프레임당 24.9 MB)은 30 fps에 약 750 MB/s가 오간다. Windows 값은 디코드·변환·파이프를 함께 잰 것이라, 4K 내보내기에서 파이프만의 상한이 걸리는지는 이 측정으로 알 수 없다.
 
 ## 확인
 
@@ -55,4 +65,5 @@ macOS arm64(2026-10-21):
 ## 남은 것
 
 - P-3 `analysis_equals_output`(내보낸 영상의 n번째가 분석의 n번째)은 3단계 인코드 뒤, `cfr_no_loss`·`vfr`의 출력 쪽은 4·5단계 끝까지 내보내기에서.
-- x86에서 축소 해시가 같은지, Windows stdout 파이프 처리량은 이 브랜치의 첫 CI.
+- open GOP를 keyframe에서 edit list 없이 자른 파일은 디코더가 선행 프레임을 버려 디코드 수가 패킷 목록과 달라 항목이 실패한다([재검토](M4_REVIEW.md) 1번).
+- 출력 프레임 수(`SourceFrames::output_frames`)는 패킷 목록의 실제 시각을 따르고, 조사 단계의 상한(86,400초, 300만 프레임)은 컨테이너가 적은 길이로만 잰다. 둘이 다른 파일에서는 원본 30프레임이 출력 29,700프레임이 될 수 있으므로(스크래치 시험), 내보내기가 이 값을 쓰기 시작하는 단계에서 상한과 다시 비교한다.
