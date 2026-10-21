@@ -114,3 +114,10 @@ jobs:
         env:
           ORT_DISABLE_TELEMETRY: "1"
         run: cargo test --workspace --locked --all-features
+
+      # Plan M4 stage 2: the stdout pipe on every OS, measured (1.12.1 used a named pipe on
+      # Windows). The test prints frames per second and MB/s; the log keeps it with --nocapture.
+      - name: Measure the decode pipe
+        env:
+          ORT_DISABLE_TELEMETRY: "1"
+        run: cargo test -p cloakframe-engine --locked --all-features --test media_decode decode_throughput -- --ignored --nocapture

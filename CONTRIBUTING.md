@@ -99,6 +99,11 @@ cargo install cargo-fuzz --version 0.13.2 --locked
 cargo +nightly-2026-10-01 fuzz run --fuzz-dir fuzz probe_fields -s none -- -max_total_time=120
 ```
 
+The video decode pipe's throughput is a test of its own that CI prints on each
+OS; run it locally with
+`cargo test -p cloakframe-engine --test media_decode decode_throughput -- --ignored --nocapture`
+(see [docs/M4_DECODE.md](docs/M4_DECODE.md)).
+
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.
 

@@ -1,0 +1,264 @@
+//! Source frames through the pinned FFmpeg: the P-3 fixtures (every source frame once, in
+//! order; the preview's frame is the pass's frame byte for byte), D1's decode side, and pixels
+//! that do not depend on the CPU.
+
+mod common;
+
+use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
+
+use cloakframe_core::timeline::{Rotation, SourceFrames, TimelineSpec};
+use cloakframe_engine::cancel::CancelToken;
+use cloakframe_engine::detect::Rgb8Image;
+use cloakframe_engine::media::decode::{DecodeError, FrameReader, frame_size, source_frame};
+use cloakframe_engine::media::frames;
+use cloakframe_engine::media::probe::probe;
+use cloakframe_engine::media::process::ToolCommand;
+use common::{TestDir, fixtures, required_env};
+use sha2::{Digest, Sha256};
+
+fn ffmpeg() -> PathBuf {
+    required_env("CLOAKFRAME_FFMPEG")
+}
+
+fn opened(path: &Path) -> (TimelineSpec, SourceFrames) {
+    let ffprobe = required_env("CLOAKFRAME_FFPROBE");
+    let spec = probe(&ffprobe, path, &CancelToken::new()).unwrap();
+    let listed = frames::list(&ffprobe, path, &spec, &CancelToken::new()).unwrap();
+    (spec, listed)
+}
+
+fn all_frames(
+    path: &Path,
+    spec: &TimelineSpec,
+    listed: &SourceFrames,
+    size: (u32, u32),
+) -> Vec<Rgb8Image> {
+    let mut reader =
+        FrameReader::start(&ffmpeg(), path, spec, listed, size, &CancelToken::new()).unwrap();
+    let mut out = Vec::new();
+    loop {
+        let mut frame = Rgb8Image {
+            width: 0,
+            height: 0,
+            data: Vec::new(),
+        };
+        if !reader.next_into(&mut frame).unwrap() {
+            return out;
+        }
+        out.push(frame);
+    }
+}
+
+const P3: [&str; 5] = [
+    "P-3/cfr-23976.mp4",
+    "P-3/cfr-2997-offset-bframes.mp4",
+    "P-3/vfr-30-15.mp4",
+    "P-3/rotated-90.mp4",
+    "P-5/audio-starts-early.mp4",
+];
+
+fn defect(name: &str) -> PathBuf {
+    fixtures().join("defects").join(name)
+}
+
+/// The source frame number the fixture drew into the top-left of its coded frame
+/// (tools/fixture-extract/gen_inputs.py), read back through the display rotation.
+fn drawn_index(frame: &Rgb8Image, rotation: Rotation) -> u32 {
+    let (coded_w, coded_h) = match rotation {
+        Rotation::None => (frame.width, frame.height),
+        Rotation::ThreeQuarters => (frame.height, frame.width),
+        other => panic!("no fixture is turned {other:?}"),
+    };
+    let gray = |x: u32, y: u32| {
+        let (dx, dy) = match rotation {
+            Rotation::None => (x, y),
+            _ => (y, coded_w - 1 - x),
+        };
+        let i = (dy * frame.width + dx) as usize * 3;
+        frame.data[i..i + 3]
+            .iter()
+            .map(|&c| u32::from(c))
+            .sum::<u32>()
+            / 3
+    };
+    let block = (coded_w.min(coded_h) / 12).max(8);
+    (0..16)
+        .filter(|bit| gray((bit % 8) * block + block / 2, (bit / 8) * block + block / 2) > 128)
+        .map(|bit| 1 << bit)
+        .sum()
+}
+
+#[test]
+fn a_pass_gives_every_source_frame_once_in_order() {
+    for name in P3 {
+        let path = defect(name);
+        let (spec, listed) = opened(&path);
+        let decoded = all_frames(&path, &spec, &listed, frame_size(&spec, None));
+        assert_eq!(decoded.len(), listed.len(), "{name}");
+        for (k, frame) in decoded.iter().enumerate() {
+            assert_eq!(
+                drawn_index(frame, spec.rotation),
+                k as u32,
+                "{name} frame {k}"
+            );
+        }
+    }
+}
+
+/// P-3 `vfr`: the 30 → 15 fps fixture keeps all 60 source frames in its constant-rate output.
+#[test]
+fn the_variable_rate_output_shows_every_source_frame() {
+    let (spec, listed) = opened(&defect("P-3/vfr-30-15.mp4"));
+    let mut shown: Vec<usize> = listed.shown(&spec).collect();
+    assert!(shown.len() > listed.len());
+    shown.dedup();
+    assert_eq!(shown, (0..listed.len()).collect::<Vec<_>>());
+}
+
+/// P-3 `analysis_equals_preview`, for every frame of every fixture.
+#[test]
+fn the_preview_of_a_frame_is_the_passs_frame() {
+    for name in P3 {
+        let path = defect(name);
+        let (spec, listed) = opened(&path);
+        let size = frame_size(&spec, Some(320));
+        let pass = all_frames(&path, &spec, &listed, size);
+        for (k, expected) in pass.iter().enumerate() {
+            let preview = source_frame(
+                &ffmpeg(),
+                &path,
+                &spec,
+                &listed,
+                k,
+                size,
+                &CancelToken::new(),
+            )
+            .unwrap();
+            assert!(preview == *expected, "{name} frame {k}");
+        }
+    }
+}
+
+/// D1, decode side: the fixtures' source colour (0xC83C28) comes back through each file's own
+/// matrix and range, tagged or not.
+#[test]
+fn frames_decode_with_the_specs_matrix_and_range() {
+    for name in [
+        "D1/bt709-tv-1080p.mp4",
+        "D1/bt709-pc-1080p.mp4",
+        "D1/bt601-tv-480p.mp4",
+    ] {
+        let path = defect(name);
+        let (spec, listed) = opened(&path);
+        let frame = &all_frames(&path, &spec, &listed, frame_size(&spec, None))[0];
+        let i = ((frame.height / 2 * frame.width + frame.width / 2) * 3) as usize;
+        let center = &frame.data[i..i + 3];
+        for (got, want) in center.iter().zip([200u8, 60, 40]) {
+            assert!(got.abs_diff(want) <= 3, "{name}: {center:?}");
+        }
+    }
+}
+
+/// Recorded on Apple silicon; CI compares it on x86 Linux and Windows.
+const BT709_TV_AT_960: &str = "787491adc129b0abc11c0db3b0aee9a10c023cf42a37b2c4122e5c4e10fa36d3";
+
+#[test]
+fn scaled_frames_are_the_same_on_every_cpu() {
+    let path = defect("D1/bt709-tv-1080p.mp4");
+    let (spec, listed) = opened(&path);
+    let size = frame_size(&spec, Some(960));
+    assert_eq!(size, (960, 540));
+    let frames = all_frames(&path, &spec, &listed, size);
+    let mut digest = Sha256::new();
+    for frame in &frames {
+        digest.update(&frame.data);
+    }
+    let hex: String = digest
+        .finalize()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    assert_eq!(hex, BT709_TV_AT_960);
+}
+
+fn pattern(dir: &TestDir, name: &str, size: &str, seconds: u32) -> PathBuf {
+    let path = dir.path().join(name);
+    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    c.args([
+        "-f",
+        "lavfi",
+        "-i",
+        &format!("testsrc2=s={size}:r=30:d={seconds}"),
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-pix_fmt",
+        "yuv420p",
+    ])
+    .output_file(&path);
+    c.output(&CancelToken::new()).unwrap();
+    path
+}
+
+#[test]
+fn cancelling_stops_a_pass() {
+    let dir = TestDir::new();
+    let path = pattern(&dir, "long.mp4", "320x240", 20);
+    let (spec, listed) = opened(&path);
+    let cancel = CancelToken::new();
+    let mut reader = FrameReader::start(
+        &ffmpeg(),
+        &path,
+        &spec,
+        &listed,
+        frame_size(&spec, None),
+        &cancel,
+    )
+    .unwrap();
+    let mut frame = Rgb8Image {
+        width: 0,
+        height: 0,
+        data: Vec::new(),
+    };
+    assert!(reader.next_into(&mut frame).unwrap());
+    cancel.cancel();
+    let start = Instant::now();
+    let ended = loop {
+        match reader.next_into(&mut frame) {
+            Ok(true) => assert!(start.elapsed() < Duration::from_secs(10)),
+            other => break other,
+        }
+    };
+    assert!(matches!(ended, Err(DecodeError::Cancelled)), "{ended:?}");
+}
+
+/// Plan decision: the stdout pipe on every OS, measured. Run with `--ignored --nocapture`.
+#[test]
+#[ignore = "a measurement, run on its own"]
+fn decode_throughput_1080p() {
+    let dir = TestDir::new();
+    let path = pattern(&dir, "1080p.mp4", "1920x1080", 10);
+    let (spec, listed) = opened(&path);
+    let size = frame_size(&spec, None);
+    let start = Instant::now();
+    let mut reader =
+        FrameReader::start(&ffmpeg(), &path, &spec, &listed, size, &CancelToken::new()).unwrap();
+    let mut frame = Rgb8Image {
+        width: 0,
+        height: 0,
+        data: Vec::new(),
+    };
+    let mut decoded = 0;
+    while reader.next_into(&mut frame).unwrap() {
+        decoded += 1;
+    }
+    let seconds = start.elapsed().as_secs_f64();
+    let bytes = decoded as f64 * f64::from(size.0 * size.1 * 3);
+    println!(
+        "decode 1080p rgb24 through stdout: {decoded} frames in {seconds:.2} s, {:.1} fps, {:.0} MB/s",
+        decoded as f64 / seconds,
+        bytes / seconds / 1e6
+    );
+}

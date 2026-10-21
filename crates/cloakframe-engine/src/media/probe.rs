@@ -111,6 +111,7 @@ struct Report {
 #[derive(Deserialize)]
 struct Format {
     format_name: Option<String>,
+    start_time: Option<String>,
     duration: Option<String>,
 }
 
@@ -208,13 +209,12 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         .and_then(rational)
         .ok_or(ProbeError::Unsupported(Unsupported::Unreadable))?;
     let start = match video.start_pts {
-        Some(pts) if pts > 0 => Seconds::new(
-            i128::from(pts) * i128::from(time_base.num()),
-            u128::from(time_base.den()),
-        )
-        .expect("a positive denominator"),
+        Some(pts) if pts > 0 => Seconds::of_ticks(pts, time_base),
         _ => Seconds::ZERO,
     };
+    let container_start_seconds = number(format.and_then(|f| f.start_time.as_deref()))
+        .unwrap_or(0.0)
+        .max(0.0);
     let duration = number(video.duration.as_deref())
         .filter(|d| *d > 0.0)
         .or_else(|| number(format.and_then(|f| f.duration.as_deref())))
@@ -297,6 +297,8 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         rate,
         variable_rate,
         start,
+        time_base,
+        container_start_seconds,
         duration_seconds: duration,
         estimated_frames,
         color: tags.complete(height),

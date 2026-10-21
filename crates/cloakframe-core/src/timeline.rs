@@ -1,7 +1,9 @@
 //! The one description of a video's timeline that analysis, preview and export all use (plan 4.4,
-//! P-3). It is built once from ffprobe's report; frame `n` of every pass is the frame shown at
-//! [`TimelineSpec::frame_start`]`(n)` on a constant-rate timeline.
+//! P-3). It is built once from ffprobe's report. Passes read the source frames unfiltered, in
+//! presentation order, and [`SourceFrames`] decides which of them each frame `n` of the
+//! constant-rate output shows, so no FFmpeg filter state takes part in matching frames.
 
+use std::cmp::Ordering;
 use std::fmt;
 
 /// A positive fraction such as a frame rate or a sample aspect ratio.
@@ -86,6 +88,27 @@ impl Seconds {
 
     pub fn as_f64(self) -> f64 {
         self.num as f64 / self.den as f64
+    }
+
+    /// `ticks` of `time_base`.
+    pub fn of_ticks(ticks: i64, time_base: Rational) -> Self {
+        Self::new(
+            i128::from(ticks) * i128::from(time_base.num()),
+            u128::from(time_base.den()),
+        )
+        .expect("a positive denominator")
+    }
+}
+
+impl Ord for Seconds {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (self.num * other.den as i128).cmp(&(other.num * self.den as i128))
+    }
+}
+
+impl PartialOrd for Seconds {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
     }
 }
 
@@ -253,6 +276,10 @@ pub struct TimelineSpec {
     pub variable_rate: bool,
     /// When the first video frame is shown, never before zero.
     pub start: Seconds,
+    /// The video stream's time base, in which [`SourceFrames`] holds its timestamps.
+    pub time_base: Rational,
+    /// The container's start time, which FFmpeg adds to a seek position. For seeking only.
+    pub container_start_seconds: f64,
     pub duration_seconds: f64,
     /// For limits and progress only; pass 1 counts the frames.
     pub estimated_frames: u64,
@@ -274,12 +301,134 @@ impl TimelineSpec {
 
     /// When frame `n` starts on the constant-rate timeline.
     pub fn frame_start(&self, n: u64) -> Seconds {
+        self.at(2 * u128::from(n))
+    }
+
+    /// The middle of frame `n`'s time on the constant-rate timeline; the frame shows the source
+    /// frame on screen at that moment.
+    pub fn frame_middle(&self, n: u64) -> Seconds {
+        self.at(2 * u128::from(n) + 1)
+    }
+
+    /// `start + half_frames / (2 * rate)`.
+    fn at(&self, half_frames: u128) -> Seconds {
         let rate_num = u128::from(self.rate.num());
         let rate_den = u128::from(self.rate.den());
-        let den = self.start.den() * rate_num;
-        let num = self.start.num() * rate_num as i128
-            + (u128::from(n) * rate_den * self.start.den()) as i128;
+        let den = self.start.den() * rate_num * 2;
+        let num = self.start.num() * (rate_num * 2) as i128
+            + (half_frames * rate_den * self.start.den()) as i128;
         Seconds::new(num, den).expect("a nonzero denominator")
+    }
+}
+
+/// The processed stream's frames in presentation order, as the packet list gives them without
+/// decoding; frame `k` of an unfiltered pass is the `k`-th.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SourceFrames {
+    time_base: Rational,
+    /// Strictly increasing.
+    pts: Vec<i64>,
+    /// When the last frame stops showing.
+    end: i64,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SourceFramesError {
+    Empty,
+    /// Two frames share a timestamp, so their order cannot be told.
+    SameTime,
+}
+
+impl fmt::Display for SourceFramesError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::Empty => "the video stream has no frames",
+            Self::SameTime => "two video frames have the same timestamp",
+        })
+    }
+}
+
+impl std::error::Error for SourceFramesError {}
+
+impl SourceFrames {
+    /// `pts` in any order (packets come in decoding order); `last_duration` is the duration
+    /// the container gives the last frame in presentation order, if any.
+    pub fn new(
+        time_base: Rational,
+        mut pts: Vec<i64>,
+        last_duration: Option<i64>,
+    ) -> Result<Self, SourceFramesError> {
+        pts.sort_unstable();
+        if pts.windows(2).any(|w| w[0] == w[1]) {
+            return Err(SourceFramesError::SameTime);
+        }
+        let (Some(&last), previous) = (pts.last(), pts.iter().rev().nth(1)) else {
+            return Err(SourceFramesError::Empty);
+        };
+        let shown_for = last_duration
+            .filter(|&d| d > 0)
+            .or_else(|| previous.map(|&p| last - p))
+            .unwrap_or(1);
+        Ok(Self {
+            time_base,
+            pts,
+            end: last.saturating_add(shown_for),
+        })
+    }
+
+    pub fn len(&self) -> usize {
+        self.pts.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.pts.is_empty()
+    }
+
+    pub fn pts(&self, k: usize) -> i64 {
+        self.pts[k]
+    }
+
+    pub fn time(&self, k: usize) -> Seconds {
+        Seconds::of_ticks(self.pts[k], self.time_base)
+    }
+
+    /// How many constant-rate frames the output has: those whose middle falls before the last
+    /// source frame stops showing.
+    pub fn output_frames(&self, spec: &TimelineSpec) -> u64 {
+        let end = Seconds::of_ticks(self.end, self.time_base);
+        if spec.frame_middle(0) >= end {
+            return 0;
+        }
+        // frame_middle(n) < end  <=>  n < (end - start) * rate - 1/2
+        let rate = spec.rate;
+        let span_num = end.num() * spec.start.den() as i128 - spec.start.num() * end.den() as i128;
+        let span_den = end.den() * spec.start.den();
+        let a = 2 * span_num * i128::from(rate.num());
+        let b = (span_den * u128::from(rate.den())) as i128;
+        ((a - b - 1).div_euclid(2 * b) + 1) as u64
+    }
+
+    /// The source frame output frame `n` shows: the last one on screen at its middle, or the
+    /// first one when none has started yet.
+    pub fn shown_at(&self, spec: &TimelineSpec, n: u64) -> usize {
+        let middle = spec.frame_middle(n);
+        let started = self
+            .pts
+            .partition_point(|&p| Seconds::of_ticks(p, self.time_base) <= middle);
+        started.saturating_sub(1)
+    }
+
+    /// [`Self::shown_at`] for every output frame in order, in one pass.
+    pub fn shown(&self, spec: &TimelineSpec) -> impl Iterator<Item = usize> + '_ {
+        let spec = spec.clone();
+        let mut k = 0;
+        (0..self.output_frames(&spec)).map(move |n| {
+            let middle = spec.frame_middle(n);
+            while k + 1 < self.pts.len() && self.time(k + 1) <= middle {
+                k += 1;
+            }
+            k
+        })
     }
 }
 
@@ -298,6 +447,8 @@ mod tests {
             rate,
             variable_rate: false,
             start,
+            time_base: Rational::new(1, 90_000).unwrap(),
+            container_start_seconds: 0.0,
             duration_seconds: 3.003,
             estimated_frames: 90,
             color: ColorTags::default().complete(360),
@@ -397,5 +548,105 @@ mod tests {
         );
         assert_eq!(Transfer::from_ffmpeg_name("smpte2084"), None);
         assert_eq!(Range::from_ffmpeg_name("unknown"), None);
+    }
+
+    fn tb(den: u32) -> Rational {
+        Rational::new(1, den).unwrap()
+    }
+
+    fn at(rate: Rational, start: Seconds, time_base: Rational) -> TimelineSpec {
+        TimelineSpec {
+            time_base,
+            ..spec(rate, start)
+        }
+    }
+
+    fn every_shown(frames: &SourceFrames, s: &TimelineSpec) -> Vec<usize> {
+        let one_by_one: Vec<_> = (0..frames.output_frames(s))
+            .map(|n| frames.shown_at(s, n))
+            .collect();
+        assert_eq!(frames.shown(s).collect::<Vec<_>>(), one_by_one);
+        one_by_one
+    }
+
+    #[test]
+    fn a_constant_rate_source_maps_one_to_one() {
+        let ticks = tb(30000);
+        let pts: Vec<i64> = (0..90).map(|k| 37_500 + k * 1001).rev().collect();
+        let frames = SourceFrames::new(ticks, pts, Some(1001)).unwrap();
+        let s = at(
+            Rational::new(30000, 1001).unwrap(),
+            Seconds::new(5, 4).unwrap(),
+            ticks,
+        );
+        assert_eq!(frames.output_frames(&s), 90);
+        assert_eq!(every_shown(&frames, &s), (0..90).collect::<Vec<_>>());
+        assert_eq!(frames.time(1), Seconds::new(38_501, 30000).unwrap());
+    }
+
+    #[test]
+    fn a_variable_rate_source_shows_every_frame_and_repeats_the_slow_ones() {
+        let ticks = tb(15360);
+        let mut pts: Vec<i64> = (0..30).map(|k| k * 512).collect();
+        pts.extend((1..=30).map(|k| 29 * 512 + k * 1024));
+        let frames = SourceFrames::new(ticks, pts, Some(1024)).unwrap();
+        let s = at(Rational::new(30, 1).unwrap(), Seconds::ZERO, ticks);
+        let shown = every_shown(&frames, &s);
+        let mut distinct = shown.clone();
+        distinct.dedup();
+        assert_eq!(distinct, (0..60).collect::<Vec<_>>());
+        assert!(shown.len() > 60);
+        assert!(shown.windows(2).all(|w| w[1] == w[0] || w[1] == w[0] + 1));
+    }
+
+    /// Timestamps a little off the nominal grid still give each frame its own output frame.
+    #[test]
+    fn jittered_timestamps_keep_every_frame() {
+        let ticks = tb(90_000);
+        let pts: Vec<i64> = (0..300)
+            .map(|k| k * 3000 + [0, 40, -40, 15][k as usize % 4])
+            .collect();
+        let frames = SourceFrames::new(ticks, pts, None).unwrap();
+        let s = at(Rational::new(30, 1).unwrap(), Seconds::ZERO, ticks);
+        assert_eq!(every_shown(&frames, &s), (0..300).collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn frames_before_the_start_show_only_until_a_later_one_starts() {
+        let ticks = tb(1000);
+        let frames = SourceFrames::new(ticks, vec![-40, 0, 40, 80], Some(40)).unwrap();
+        let s = at(Rational::new(25, 1).unwrap(), Seconds::ZERO, ticks);
+        assert_eq!(every_shown(&frames, &s), [1, 2, 3]);
+        let late = at(
+            Rational::new(25, 1).unwrap(),
+            Seconds::new(1, 1).unwrap(),
+            ticks,
+        );
+        assert_eq!(frames.output_frames(&late), 0);
+    }
+
+    #[test]
+    fn frame_lists_need_distinct_timestamps() {
+        assert_eq!(
+            SourceFrames::new(tb(1000), vec![0, 40, 40], None),
+            Err(SourceFramesError::SameTime)
+        );
+        assert_eq!(
+            SourceFrames::new(tb(1000), Vec::new(), None),
+            Err(SourceFramesError::Empty)
+        );
+        let one = SourceFrames::new(tb(1000), vec![0], None).unwrap();
+        let s = at(Rational::new(1000, 1).unwrap(), Seconds::ZERO, tb(1000));
+        assert_eq!(one.output_frames(&s), 1);
+    }
+
+    #[test]
+    fn seconds_compare_across_denominators() {
+        assert!(Seconds::new(1, 3).unwrap() < Seconds::new(34, 100).unwrap());
+        assert!(Seconds::new(-1, 2).unwrap() < Seconds::ZERO);
+        assert_eq!(
+            Seconds::of_ticks(37_500, tb(30000)),
+            Seconds::new(5, 4).unwrap()
+        );
     }
 }
