@@ -209,3 +209,19 @@ fn a_file_ffprobe_cannot_read_fails_to_probe() {
     let path = dir.write_bytes("broken.mp4", b"not a video");
     assert!(matches!(probed(&path), Err(ProbeError::Tool(_))));
 }
+
+/// The fuzz seeds are these fixtures' reports; a seed the parser refuses would leave the fuzzer
+/// exploring only the error paths.
+#[test]
+fn the_fuzz_seeds_are_reports_the_parser_takes() {
+    let seeds =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fuzz/seeds/probe_report");
+    let mut count = 0;
+    for entry in std::fs::read_dir(seeds).unwrap() {
+        let path = entry.unwrap().path();
+        let spec = cloakframe_engine::media::probe::parse(&std::fs::read(&path).unwrap());
+        assert!(spec.is_ok(), "{}: {spec:?}", path.display());
+        count += 1;
+    }
+    assert_eq!(count, 9);
+}

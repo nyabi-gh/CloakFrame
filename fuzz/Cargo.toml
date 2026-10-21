@@ -1,0 +1,35 @@
+# libFuzzer targets for the parsers that read input files (plan 9.1). Outside the workspace and
+# never shipped: it needs a nightly toolchain, and libfuzzer-sys carries LLVM's NCSA licence.
+# Run from the repository root: cargo +nightly-2026-10-01 fuzz run --fuzz-dir fuzz probe_report -s none
+# fuzz/corpus/probe_report fuzz/seeds/probe_report -- -dict=fuzz/probe_report.dict, and probe_fields alike.
+[package]
+name = "cloakframe-fuzz"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "=0.4.13"
+serde_json = "=1.0.154"
+cloakframe-core = { path = "../crates/cloakframe-core" }
+cloakframe-engine = { path = "../crates/cloakframe-engine" }
+
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "probe_report"
+path = "fuzz_targets/probe_report.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "probe_fields"
+path = "fuzz_targets/probe_fields.rs"
+test = false
+doc = false
+bench = false

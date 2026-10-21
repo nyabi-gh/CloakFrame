@@ -1,0 +1,63 @@
+name: Fuzz
+
+# libFuzzer on the parsers that read input files (plan 9.1, fuzz/). The toolchain is a pinned
+# nightly because cargo-fuzz needs one; release builds never use it.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/fuzz.yml
+      - fuzz/**
+      - crates/cloakframe-core/src/timeline.rs
+      - crates/cloakframe-engine/src/media/probe.rs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  NIGHTLY: nightly-2026-10-01
+  CARGO_FUZZ: 0.13.2
+
+jobs:
+  fuzz:
+    name: Fuzz ffprobe report parser
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install the pinned nightly and cargo-fuzz
+        run: |
+          rustup toolchain install "$NIGHTLY" --profile minimal
+          cargo install cargo-fuzz --version "$CARGO_FUZZ" --locked
+
+      - name: Build the targets
+        run: cargo "+$NIGHTLY" fuzz build --fuzz-dir fuzz -s none
+
+      # Raw bytes find what breaks the parser; drawn field values reach what it has to judge.
+      - name: Fuzz the raw report (150 s)
+        run: |
+          mkdir -p fuzz/corpus/probe_report
+          cargo "+$NIGHTLY" fuzz run --fuzz-dir fuzz probe_report -s none \
+            fuzz/corpus/probe_report fuzz/seeds/probe_report -- \
+            -dict=fuzz/probe_report.dict -max_total_time=150
+
+      - name: Fuzz drawn field values (150 s)
+        run: |
+          mkdir -p fuzz/corpus/probe_fields
+          cargo "+$NIGHTLY" fuzz run --fuzz-dir fuzz probe_fields -s none \
+            fuzz/corpus/probe_fields -- -max_total_time=150
+
+      - name: Keep the failing input
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: fuzz-artifacts
+          path: fuzz/artifacts

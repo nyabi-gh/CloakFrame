@@ -87,6 +87,18 @@ A change meant to move the default result records the new one into
 and says why in its record. See [docs/M3_BENCHMARK.md](docs/M3_BENCHMARK.md) for
 the set and the other settings.
 
+The parser of ffprobe's report has libFuzzer targets in `fuzz/`, a separate
+Cargo project on a pinned nightly (CI's `fuzz.yml` runs them when the parser
+changes). `probe_report` mutates raw reports from `fuzz/seeds/`; `probe_fields`
+draws the field values and builds the report around them, which reaches the
+limits and rules that raw mutation rarely does:
+
+```bash
+rustup toolchain install nightly-2026-10-01 --profile minimal
+cargo install cargo-fuzz --version 0.13.2 --locked
+cargo +nightly-2026-10-01 fuzz run --fuzz-dir fuzz probe_fields -s none -- -max_total_time=120
+```
+
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.
 
