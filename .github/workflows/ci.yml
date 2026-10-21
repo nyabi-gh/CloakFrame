@@ -53,12 +53,15 @@ jobs:
         include:
           - os: ubuntu-24.04
             runtime: onnxruntime linux-x86_64
+            platform: linux-x86_64
             python: python3
           - os: macos-15
             runtime: onnxruntime macos-arm64
+            platform: macos-arm64
             python: python3
           - os: windows-2025
             runtime: windows-ml windows-x64
+            platform: windows-x64
             python: python
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
@@ -69,13 +72,22 @@ jobs:
         run: rustup toolchain install
 
       # The detector tests run the pinned ONNX Runtime (manifests/native.toml) on the hashed
-      # models and images of tests/fixtures/assets.json.
-      - name: Fetch ONNX Runtime, models and sample images
+      # models and images of tests/fixtures/assets.json; the media tests run the pinned FFmpeg.
+      - name: Fetch ONNX Runtime, FFmpeg, models and sample images
         shell: bash
         run: |
           lib=$(${{ matrix.python }} -I tools/fetch_native.py ${{ matrix.runtime }} "$RUNNER_TEMP/native")
+          ffmpeg=$(${{ matrix.python }} -I tools/fetch_native.py ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")
+          # macOS has ffprobe as its own artifact; the other builds carry it next to ffmpeg.
+          if [ "${{ matrix.platform }}" = macos-arm64 ]; then
+            ffprobe=$(${{ matrix.python }} -I tools/fetch_native.py ffprobe ${{ matrix.platform }} "$RUNNER_TEMP/native")
+          else
+            ffprobe="${ffmpeg%ffmpeg*}ffprobe${ffmpeg##*ffmpeg}"
+          fi
           assets=$(${{ matrix.python }} -I tools/fetch_test_assets.py "$RUNNER_TEMP/cloakframe-test-assets")
           echo "CLOAKFRAME_ORT_LIBRARY=$lib" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_FFMPEG=$ffmpeg" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_FFPROBE=$ffprobe" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_TEST_ASSETS=$assets" >> "$GITHUB_ENV"
 
       # tests/windows_fat32.rs: camera cards are FAT32, which has no 128-bit file IDs.

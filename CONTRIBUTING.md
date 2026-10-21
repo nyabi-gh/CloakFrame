@@ -33,12 +33,16 @@ cargo test --workspace
 ```
 
 The detector tests, the photo P-1 tests and the command-line photo tests run
-the pinned ONNX Runtime on hashed models and sample images, which are not in
-the repository. Fetch them once and point the tests at them (use `linux-x86_64`, or `windows-ml windows-x64`, on other platforms):
+the pinned ONNX Runtime on hashed models and sample images, and the media tests
+run the pinned FFmpeg; none of them are in the repository. Fetch them once and
+point the tests at them (use `linux-x86_64`, or `windows-ml windows-x64`, on other platforms; there
+FFmpeg is `ffmpeg <platform>` and ffprobe sits next to it):
 
 ```bash
 export CLOAKFRAME_ORT_LIBRARY=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 ~/.cache/cloakframe-native)
 export CLOAKFRAME_TEST_ASSETS=$(python3 -I tools/fetch_test_assets.py ~/.cache/cloakframe-test-assets)
+export CLOAKFRAME_FFMPEG=$(python3 -I tools/fetch_native.py ffmpeg macos-arm64 ~/.cache/cloakframe-native)
+export CLOAKFRAME_FFPROBE=$(python3 -I tools/fetch_native.py ffprobe macos-arm64 ~/.cache/cloakframe-native)
 export ORT_DISABLE_TELEMETRY=1
 ```
 

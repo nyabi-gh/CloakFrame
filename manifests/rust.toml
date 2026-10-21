@@ -53,19 +53,19 @@ evidence = "docs/M0_EXIF_WRITER.md"
 
 [crates.windows-sys]
 version = "=0.61.2"
-features = ["Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_SystemInformation", "Win32_UI_Shell"]
+features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_SystemInformation", "Win32_UI_Shell"]
 targets = ["windows"]
 # 파일 identity(GetFileInformationByHandleEx FileIdInfo), no-replace 이동(MoveFileExW), 앱 데이터 폴더
-# (SHGetKnownFolderPath), 메모리 예산의 실제 RAM(GlobalMemoryStatusEx). 앱 데이터 폴더를 directories crate로 찾지 않는 이유는 그 의존성 option-ext가
+# (SHGetKnownFolderPath), 메모리 예산의 실제 RAM(GlobalMemoryStatusEx), FFmpeg 프로세스 트리를 묶는 Job Object. 앱 데이터 폴더를 directories crate로 찾지 않는 이유는 그 의존성 option-ext가
 # MPL-2.0이기 때문(2026-10-18 결정, deny.toml 허용 목록 유지).
 evidence = "crates/cloakframe-engine/src/identity.rs"
 
 [crates.rustix]
 version = "=1.1.5"
-features = ["fs"]
-dev-features = ["process"]
+features = ["fs", "process"]
 targets = ["linux", "macos"]
 # no-replace rename(Linux renameat2 NOREPLACE, macOS renameatx_np RENAME_EXCL). 계획 3장의 파일시스템 항목.
+# process는 FFmpeg 프로세스 그룹 종료.
 evidence = "crates/cloakframe-engine/src/publish.rs"
 
 [crates.serde]
