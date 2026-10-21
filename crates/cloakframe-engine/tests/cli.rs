@@ -325,3 +325,101 @@ fn usage_errors_exit_with_two() {
     assert_eq!(f.cli(&["frobnicate"]).0, 2);
     assert_eq!(f.cli(&["review", "--session", "../x"]).0, 2);
 }
+
+#[cfg(unix)]
+mod interrupt {
+    use std::process::{Child, Command, Stdio};
+    use std::time::{Duration, Instant};
+
+    use rustix::process::{Pid, Signal, kill_process};
+
+    use super::Fixture;
+
+    fn start(f: &Fixture) -> Child {
+        Command::new(env!("CARGO_BIN_EXE_cloakframe-cli"))
+            .args(["run", "--output"])
+            .arg(f.out())
+            .args(["--review", "off", "--workers", "1", "--sessions"])
+            .arg(f.root.join("sessions"))
+            .arg("--synthetic")
+            .arg(f.root.join("in"))
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .unwrap()
+    }
+
+    fn interrupt(child: &Child) {
+        let pid = Pid::from_raw(child.id() as i32).unwrap();
+        kill_process(pid, Signal::INT).unwrap();
+    }
+
+    /// Waits until the item is rendering, which is when its temp output exists.
+    fn wait_for_temp_output(f: &Fixture) {
+        let start = Instant::now();
+        loop {
+            let names: Vec<_> = std::fs::read_dir(f.out())
+                .into_iter()
+                .flatten()
+                .flatten()
+                .map(|e| e.file_name().to_string_lossy().into_owned())
+                .collect();
+            if names.iter().any(|n| n.starts_with(".cloakframe-tmp-")) {
+                return;
+            }
+            assert!(start.elapsed() < Duration::from_secs(30), "{names:?}");
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    fn exit_within(child: &mut Child, limit: Duration) -> Option<i32> {
+        let start = Instant::now();
+        while start.elapsed() < limit {
+            if let Some(status) = child.try_wait().unwrap() {
+                return Some(status.code().unwrap());
+            }
+            std::thread::sleep(Duration::from_millis(20));
+        }
+        None
+    }
+
+    #[test]
+    fn ctrl_c_cancels_the_run_and_publishes_nothing() {
+        let f = Fixture::new();
+        f.input("a-slow.jpg", b"slow");
+        f.input("b.jpg", b"later");
+        let mut child = start(&f);
+        wait_for_temp_output(&f);
+        interrupt(&child);
+        let code = exit_within(&mut child, Duration::from_secs(10));
+        if code.is_none() {
+            let _ = child.kill();
+        }
+        let output = child.wait_with_output().unwrap();
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        assert_eq!(code, Some(130), "{stdout}");
+        assert!(stdout.contains("cancelled"), "{stdout}");
+        assert_eq!(super::files(&f.out()), Vec::<String>::new());
+        assert!(
+            String::from_utf8_lossy(&output.stderr).contains("press Ctrl+C again"),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    #[test]
+    fn a_second_ctrl_c_exits_at_once() {
+        let f = Fixture::new();
+        f.input("a-stuck.jpg", b"stuck");
+        let mut child = start(&f);
+        wait_for_temp_output(&f);
+        interrupt(&child);
+        assert_eq!(exit_within(&mut child, Duration::from_millis(500)), None);
+        interrupt(&child);
+        let code = exit_within(&mut child, Duration::from_secs(10));
+        if code.is_none() {
+            let _ = child.kill();
+        }
+        assert_eq!(code, Some(130));
+    }
+}

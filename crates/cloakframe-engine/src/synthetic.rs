@@ -1,8 +1,11 @@
 //! A processor that exercises the whole run without a media pipeline. It reads the input once,
 //! "renders" the bytes reversed (never a copy of the source, D9) and reports problems named in the
 //! file stem: `gap` gives an unresolved gap, `capped` capped candidates, `fail` a decode failure.
+//! `slow` keeps its temp output open until cancelled and `stuck` for a minute regardless, for the
+//! CLI's Ctrl+C tests.
 
 use std::io::{self, Write};
+use std::time::{Duration, Instant};
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::ModelId;
@@ -25,16 +28,19 @@ fn io_failed(e: io::Error) -> StepError {
     StepError::Failed(Box::new(e))
 }
 
+fn stem(ctx: &ItemContext<'_>) -> String {
+    ctx.input
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_lowercase())
+        .unwrap_or_default()
+}
+
 impl ItemProcessor for SyntheticProcessor {
     type Prepared = ();
     type Rendered = (TempOutput, SourceStamp);
 
     fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, ()), StepError> {
-        let stem = ctx
-            .input
-            .file_stem()
-            .map(|s| s.to_string_lossy().to_lowercase())
-            .unwrap_or_default();
+        let stem = stem(ctx);
         if stem.contains("fail") {
             return Err(failed("synthetic decode failure"));
         }
@@ -85,6 +91,16 @@ impl ItemProcessor for SyntheticProcessor {
         bytes.reverse();
         let mut out = TempOutput::create(ctx.destination).map_err(io_failed)?;
         out.file().write_all(&bytes).map_err(io_failed)?;
+        let stem = stem(ctx);
+        if stem.contains("slow") || stem.contains("stuck") {
+            let started = Instant::now();
+            while started.elapsed() < Duration::from_secs(60) {
+                if stem.contains("slow") && ctx.cancel.is_cancelled() {
+                    return Err(StepError::Cancelled);
+                }
+                std::thread::sleep(Duration::from_millis(10));
+            }
+        }
         ctx.progress.set(1, 1);
         Ok((out, stamp))
     }

@@ -18,7 +18,7 @@ use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::publish::remove_stale_temp_files;
 use cloakframe_engine::review::{ReviewDecisions, apply};
-use cloakframe_engine::run::{ItemProcessor, Job, RunReport, start};
+use cloakframe_engine::run::{ItemProcessor, Job, RunReport, start_under};
 use cloakframe_engine::scan::{ScanRequest, scan};
 use cloakframe_engine::session::{SessionId, SessionStore};
 
@@ -48,13 +48,17 @@ build can, and a model the GPU fails moves to the CPU for the rest of the run. r
 settings run was given; decisions on items analyzed with other settings are refused.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
 
+Ctrl+C cancels: items in progress stop and nothing more is published. A second Ctrl+C exits at
+once.
+
 exit status: 0 done, 1 failed or refused items or a failed run, 2 usage error, 3 items wait for
-review";
+review, 130 cancelled";
 
 const DONE: u8 = 0;
 const FAILED: u8 = 1;
 const USAGE_ERROR: u8 = 2;
 const NEEDS_REVIEW: u8 = 3;
+const CANCELLED: u8 = 130;
 
 enum CliError {
     /// The command line itself is wrong; the usage text follows the message.
@@ -437,8 +441,9 @@ fn execute<P: ItemProcessor>(
     job: Job,
     processor: Arc<P>,
     detector: DetectorHandle,
+    cancel: &CancelToken,
 ) -> Result<RunReport, CliError> {
-    let handle = start(job, processor, detector)
+    let handle = start_under(job, processor, detector, cancel)
         .map_err(|e| failed(format!("cannot start the run: {e}")))?;
     Ok(handle.wait())
 }
@@ -456,7 +461,7 @@ fn clean_stale(job: &Job) {
     }
 }
 
-fn run(o: Options) -> Result<u8, CliError> {
+fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
     let output = o
         .output
         .clone()
@@ -467,7 +472,7 @@ fn run(o: Options) -> Result<u8, CliError> {
     #[cfg(feature = "synthetic")]
     if o.synthetic {
         let processor = cloakframe_engine::synthetic::SyntheticProcessor;
-        return run_with(&o, &output, processor, without_models);
+        return run_with(&o, &output, processor, without_models, cancel);
     }
     let processor = photo_processor(&o)?;
     let models = detection_models(&o)?;
@@ -477,9 +482,13 @@ fn run(o: Options) -> Result<u8, CliError> {
         .ok_or_else(|| usage("run needs --ort-library FILE"))?;
     let store = model_store(&o)?;
     let acceleration = o.gpu.unwrap_or_default();
-    run_with(&o, &output, processor, || {
-        detector(&library, &store, models, acceleration)
-    })
+    run_with(
+        &o,
+        &output,
+        processor,
+        || detector(&library, &store, models, acceleration),
+        cancel,
+    )
 }
 
 /// The detector is made only once the scan found something to analyze.
@@ -488,6 +497,7 @@ fn run_with<P: ItemProcessor>(
     output: &Path,
     processor: P,
     detector: impl FnOnce() -> Result<Started, CliError>,
+    cancel: &CancelToken,
 ) -> Result<u8, CliError> {
     let store = session_store(o)?;
     let scanned = scan(
@@ -497,7 +507,7 @@ fn run_with<P: ItemProcessor>(
             include_videos: o.videos,
             output: Some(output.to_path_buf()),
         },
-        &CancelToken::new(),
+        cancel,
     )
     .map_err(|_| failed("scan cancelled"))?;
     for issue in &scanned.issues {
@@ -527,7 +537,7 @@ fn run_with<P: ItemProcessor>(
     } else {
         detector()?
     };
-    let report = execute(job, Arc::new(processor), started.handle)?;
+    let report = execute(job, Arc::new(processor), started.handle, cancel)?;
     print_report(&report);
     print_fallbacks(&started.backends.get());
     let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
@@ -548,16 +558,20 @@ fn run_with<P: ItemProcessor>(
     Ok(code)
 }
 
-fn review(o: Options) -> Result<u8, CliError> {
+fn review(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
     #[cfg(feature = "synthetic")]
     if o.synthetic {
-        return review_with(&o, cloakframe_engine::synthetic::SyntheticProcessor);
+        return review_with(&o, cloakframe_engine::synthetic::SyntheticProcessor, cancel);
     }
     let processor = photo_processor(&o)?;
-    review_with(&o, processor)
+    review_with(&o, processor, cancel)
 }
 
-fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, CliError> {
+fn review_with<P: ItemProcessor>(
+    o: &Options,
+    processor: P,
+    cancel: &CancelToken,
+) -> Result<u8, CliError> {
     let id = o
         .session
         .as_deref()
@@ -592,7 +606,12 @@ fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, CliErr
         };
         clean_stale(&job);
         // Resumed items are not analyzed again, so no model is loaded.
-        let report = execute(job, Arc::new(processor), spawn(Box::new(NoDetections))?)?;
+        let report = execute(
+            job,
+            Arc::new(processor),
+            spawn(Box::new(NoDetections))?,
+            cancel,
+        )?;
         print_report(&report);
         let finished: Vec<_> = report
             .items
@@ -618,7 +637,7 @@ fn review_with<P: ItemProcessor>(o: &Options, processor: P) -> Result<u8, CliErr
     Ok(code)
 }
 
-fn models(o: Options) -> Result<u8, CliError> {
+fn models(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
     let words: Vec<String> = o
         .inputs
         .iter()
@@ -628,7 +647,7 @@ fn models(o: Options) -> Result<u8, CliError> {
     match words.split_first() {
         None => list_models(&store, app_folder),
         Some((command, names)) if command == "fetch" => {
-            fetch_models(&store, app_folder, names, o.accept_terms)
+            fetch_models(&store, app_folder, names, o.accept_terms, cancel)
         }
         Some((other, _)) => Err(usage(format!("models takes fetch or nothing, not {other}"))),
     }
@@ -668,6 +687,7 @@ fn fetch_models(
     app_folder: bool,
     names: &[String],
     accept_terms: bool,
+    cancel: &CancelToken,
 ) -> Result<u8, CliError> {
     if names.is_empty() {
         return Err(usage("models fetch needs yolo5face-n, yunet or plates"));
@@ -731,7 +751,7 @@ fn fetch_models(
             megabytes(file.size),
             file.terms.summary
         );
-        download(store, model, &https, &CancelToken::new(), &mut |_| {})
+        download(store, model, &https, cancel, &mut |_| {})
             .map_err(|e| failed(format!("cannot download {}: {e}", model_name(model))))?;
         println!("{}\t{}", fetch_name(model), store.path(model).display());
     }
@@ -763,6 +783,7 @@ fn main() -> ExitCode {
     unsafe {
         cloakframe_engine::detect::runtime::disable_telemetry()
     };
+    let cancel = cancel_on_interrupt();
     let mut args = std::env::args().skip(1);
     let command = args.next();
     let rest: Vec<String> = args.collect();
@@ -773,14 +794,40 @@ fn main() -> ExitCode {
         }
         Some(c @ ("run" | "review" | "models" | "sessions")) => {
             parse(rest).map_err(usage).and_then(|o| match c {
-                "run" => run(o),
-                "review" => review(o),
-                "models" => models(o),
+                "run" => run(o, &cancel),
+                "review" => review(o, &cancel),
+                "models" => models(o, &cancel),
                 _ => sessions(o),
             })
         }
         _ => Err(usage("")),
     };
+    let code = report(result);
+    if cancel.is_cancelled() {
+        return ExitCode::from(CANCELLED);
+    }
+    code
+}
+
+/// The first Ctrl+C (or SIGTERM) cancels; work in progress stops, temp outputs are removed and
+/// nothing more is published. A second one exits at once.
+fn cancel_on_interrupt() -> CancelToken {
+    let cancel = CancelToken::new();
+    let handler = cancel.clone();
+    let installed = ctrlc::set_handler(move || {
+        if handler.is_cancelled() {
+            std::process::exit(CANCELLED.into());
+        }
+        handler.cancel();
+        eprintln!("cancelling; press Ctrl+C again to stop at once");
+    });
+    if let Err(e) = installed {
+        eprintln!("warning: Ctrl+C will stop without cleaning up: {e}");
+    }
+    cancel
+}
+
+fn report(result: Result<u8, CliError>) -> ExitCode {
     match result {
         Ok(code) => ExitCode::from(code),
         Err(CliError::Failed(message)) => {

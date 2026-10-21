@@ -68,6 +68,12 @@ targets = ["linux", "macos"]
 # process는 FFmpeg 프로세스 그룹 종료.
 evidence = "crates/cloakframe-engine/src/publish.rs"
 
+[crates.ctrlc]
+version = "=3.5.2"
+features = ["termination"]
+# CLI의 Ctrl+C·SIGTERM 취소(M1에서 M4로 넘어옴). 첫 신호는 실행 취소, 두 번째는 바로 종료(2026-10-21 결정).
+evidence = "docs/M4_PROCESS.md"
+
 [crates.serde]
 version = "=1.0.229"
 features = ["derive"]

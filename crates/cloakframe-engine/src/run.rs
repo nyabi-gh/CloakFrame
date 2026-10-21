@@ -268,9 +268,19 @@ pub fn start<P: ItemProcessor>(
     processor: Arc<P>,
     detector: DetectorHandle,
 ) -> std::io::Result<RunHandle> {
+    start_under(job, processor, detector, &CancelToken::new())
+}
+
+/// Like [`start`], and cancelling `parent` cancels the run.
+pub fn start_under<P: ItemProcessor>(
+    job: Job,
+    processor: Arc<P>,
+    detector: DetectorHandle,
+    parent: &CancelToken,
+) -> std::io::Result<RunHandle> {
     let (sender, events) = mpsc::sync_channel(EVENT_CAPACITY);
     let progress = ProgressBoard::default();
-    let cancel = CancelToken::new();
+    let cancel = parent.child();
     let items: BTreeMap<ItemId, CancelToken> =
         job.items.iter().map(|i| (i.id, cancel.child())).collect();
 
@@ -848,6 +858,27 @@ mod tests {
         let report = handle.wait();
         assert_eq!(report.items.len(), 10);
         assert_eq!(report.count(|s| s == ItemState::Cancelled), 10);
+        assert!(processor.published.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn cancelling_the_callers_token_cancels_the_run() {
+        let processor = Arc::new(Scripted::default());
+        let detector = DetectorHandle::spawn(Box::new(NoFaces)).unwrap();
+        let parent = CancelToken::new();
+        let handle = start_under(
+            job(&["slow"; 4], ReviewMode::Off, 2),
+            processor.clone(),
+            detector,
+            &parent,
+        )
+        .unwrap();
+        while handle.progress().snapshot().len() < 2 {
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        parent.cancel();
+        let report = handle.wait();
+        assert_eq!(report.count(|s| s == ItemState::Cancelled), 4);
         assert!(processor.published.lock().unwrap().is_empty());
     }
 

@@ -27,6 +27,7 @@ tiff.workspace = true
 unicode-normalization.workspace = true
 ureq = { version = "=3.4.2", default-features = false, features = ["rustls-no-provider", "platform-verifier"] }
 rustls = { version = "=0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+ctrlc = { version = "=3.5.2", features = ["termination"] }
 
 [features]
 # The synthetic processor for exercising the whole run without a media pipeline (M1 tests and
