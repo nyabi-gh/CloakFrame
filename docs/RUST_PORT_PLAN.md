@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -340,6 +340,14 @@ crates/
 
 - **작업:** `TimelineSpec`, 디코드·인코드 프로세스 관리, 색 태그, pad, 오디오 정책, 하드웨어→소프트웨어 재시도, 출력 검증, 고정 수동 마스크로 끝까지 내보내기
 - **완료 기준:** 프레임 번호와 오디오 임펄스를 넣은 합성 영상에서 frame 일치·A/V 동기 확인. D1·P-3·P-4·P-5 시험 통과
+- **단계(2026-10-21 계획):** 단계마다 main에서 브랜치·PR 하나.
+  0. 외부 프로세스 감독(`m4-process`): FFmpeg·ffprobe 판을 다시 고정하고 CI가 해시로 받음, 자식 프로세스 감독(취소하면 프로세스 트리 종료, stderr는 끝부분만 보관, 입력은 `file`·`pipe` 프로토콜만), M1에서 넘어온 CLI Ctrl+C 취소. **구현(2026-10-21, [기록](M4_PROCESS.md)):** 세 OS FFmpeg 9.0.2(Windows essentials), engine `media::process`(`ToolCommand`·`Supervised`: Unix 프로세스 그룹·Windows Job Object, 감시 스레드가 취소 토큰을 보고 트리를 죽임, 회수와 종료를 같은 잠금 아래에), `run::start_under`, CLI `ctrlc`(첫 신호 취소·두 번째 즉시 종료, 종료 코드 130). CI가 고정 FFmpeg를 받아 시험
+  1. 조사(`m4-probe`): ffprobe 결과로 `TimelineSpec`(크기·회전·SAR·시간 기준·frame 수·색 matrix·range·primaries·transfer·오디오 stream). 10비트·HDR은 이유와 함께 거부(M9 전까지), 입력 상한(4.7). frame 색인과 PTS 정규화 규칙을 한 곳에 둠(P-3)
+  2. 디코드(`m4-decode`): 원시 프레임 reader와 같은 규칙의 frame 조회(미리보기). P-3 fixture(CFR 오프셋·B-frame·23.976·VFR·회전·오디오 선행), 디코드 쪽 D1(matrix·range 명시)
+  3. 인코드(`m4-encode`): writer, 하드웨어 인코더 우선·실패 시 소프트웨어로 2패스만 재시도, D1 태그와 같은 matrix, P-5 홀수 크기 pad와 오디오 정확한 trim(오디오 정책은 1.12.1 유지)
+  4. 영상 처리기(`m4-video`): 원본 identity 비교(1패스 전·패스 사이·게시 직전), P-4 출력 검사(stream·duration·frame 수·metadata·전체 decode), 고정 수동 마스크로 CLI 끝까지 내보내기
+  5. 완료 확인(`m4-verify`): 프레임 번호와 오디오 임펄스를 넣은 합성 영상으로 frame 일치·A/V 동기, D1·P-3·P-4·P-5 시험 표, 문서
+- **결정(2026-10-21):** CLI Ctrl+C는 첫 번째에 실행을 취소하고(자식 프로세스 종료·임시 파일 정리, 종료 코드 130) 두 번째에 바로 끝냄. 파이프 형식은 bgr24로 시작하고 yuv420p·YUV 마스킹은 5단계 측정에서 필요가 보일 때만. Windows FFmpeg는 gyan essentials(NVENC·QSV·AMF·libx264 포함 확인)
 
 ### M5 — 영상 감지·추적·검토 결정
 
