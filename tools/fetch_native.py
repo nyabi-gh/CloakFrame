@@ -55,6 +55,12 @@ def main() -> None:
         elif name.endswith((".zip", ".nupkg")):
             with zipfile.ZipFile(archive) as z:
                 z.extractall(staging)
+                # extractall drops Unix modes, which leaves the macOS FFmpeg zips' tools
+                # unexecutable.
+                for info in z.infolist():
+                    mode = info.external_attr >> 16
+                    if info.create_system == 3 and mode & 0o111 and not info.is_dir():
+                        (staging / info.filename).chmod(mode & 0o777)
         else:
             (staging / name.split("-", 1)[1]).write_bytes(archive.read_bytes())
         staging.replace(unpacked)
