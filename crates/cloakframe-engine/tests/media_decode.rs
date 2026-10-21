@@ -150,6 +150,69 @@ fn a_faster_stretch_after_the_first_seconds_keeps_every_frame() {
     assert_eq!(shown, (0..listed.len()).collect::<Vec<_>>());
 }
 
+/// An open GOP cut at a later keyframe without an edit list: the decoder drops the leading
+/// pictures that refer to the GOP before, which the packet list still has.
+#[test]
+fn leading_pictures_the_decoder_drops_are_not_listed() {
+    let dir = TestDir::new();
+    for (codec, params) in [
+        (
+            "libx264",
+            [
+                "-x264-params",
+                "keyint=30:min-keyint=30:open-gop=1:bframes=3:scenecut=0",
+            ],
+        ),
+        (
+            "libx265",
+            [
+                "-x265-params",
+                "keyint=30:min-keyint=30:open-gop=1:bframes=4:scenecut=0:log-level=error",
+            ],
+        ),
+    ] {
+        let whole = dir.path().join(format!("{codec}-open-gop.mp4"));
+        let mut c = ToolCommand::ffmpeg(&ffmpeg());
+        c.args([
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=64x48:r=30:d=4",
+            "-c:v",
+            codec,
+        ])
+        .args(params)
+        .args(["-pix_fmt", "yuv420p"])
+        .output_file(&whole);
+        c.output(&CancelToken::new()).unwrap();
+        let cut = dir.path().join(format!("{codec}-cut.mp4"));
+        let mut c = ToolCommand::ffmpeg(&ffmpeg());
+        c.args(["-ss", "1"])
+            .input_file(&whole)
+            .args(["-c", "copy", "-use_editlist", "0"])
+            .output_file(&cut);
+        c.output(&CancelToken::new()).unwrap();
+
+        let (spec, listed) = opened(&cut);
+        let size = frame_size(&spec, None);
+        let pass = all_frames(&cut, &spec, &listed, size);
+        assert_eq!(pass.len(), 90, "{codec}");
+        for k in [0, listed.len() - 1] {
+            let preview = source_frame(
+                &ffmpeg(),
+                &cut,
+                &spec,
+                &listed,
+                k,
+                size,
+                &CancelToken::new(),
+            )
+            .unwrap();
+            assert!(preview == pass[k], "{codec} frame {k}");
+        }
+    }
+}
+
 /// P-3 `analysis_equals_preview`, for every frame of every fixture.
 #[test]
 fn the_preview_of_a_frame_is_the_passs_frame() {

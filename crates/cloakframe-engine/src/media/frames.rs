@@ -1,6 +1,8 @@
 //! The processed stream's frame timestamps from ffprobe's packet list, read as it streams in.
-//! Listing packets reads the file but decodes nothing.
+//! Listing packets reads the file but decodes nothing, except the first group of pictures when the
+//! decoder may drop some of it.
 
+use std::collections::HashSet;
 use std::fmt;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -74,11 +76,25 @@ pub fn list(
     }
     let waited = running.wait().map_err(FramesError::Tool);
     // The read's error comes first: after it, the wait reports the kill above.
-    let (pts, last_duration) = match (read, waited) {
+    let (mut kept, last_duration) = match (read, waited) {
         (Err(e), _) | (Ok(_), Err(e)) => return Err(e),
         (Ok(read), Ok(())) => read,
     };
+    if let Some(end) = unclean_start(&kept) {
+        let decoded = decoded_timestamps(ffprobe, input, spec.stream, end, cancel)?;
+        kept.retain(|p| p.place >= end || decoded.contains(&p.pts));
+    }
+    let pts = kept.into_iter().map(|p| p.pts).collect();
     SourceFrames::new(spec.time_base, pts, last_duration).map_err(FramesError::Frames)
+}
+
+/// A packet of the processed stream that the container keeps, in decoding order.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Kept {
+    pts: i64,
+    key: bool,
+    /// Its place among all of the stream's packets, the discarded ones too.
+    place: u64,
 }
 
 /// The packets of the processed stream, without the ones the container marks discarded
@@ -87,8 +103,9 @@ pub fn list(
 fn collect(
     lines: impl Iterator<Item = Result<String, FramesError>>,
     spec: &TimelineSpec,
-) -> Result<(Vec<i64>, Option<i64>), FramesError> {
-    let mut pts = Vec::new();
+) -> Result<(Vec<Kept>, Option<i64>), FramesError> {
+    let mut kept = Vec::new();
+    let mut place = 0;
     let mut last: Option<(i64, Option<i64>)> = None;
     for line in lines {
         let line = line?;
@@ -96,25 +113,96 @@ fn collect(
             continue;
         }
         let packet = Packet::parse(&line).ok_or_else(|| FramesError::Malformed(line.clone()))?;
-        if packet.stream != spec.stream || packet.discarded {
+        if packet.stream != spec.stream {
             continue;
         }
-        let time = packet.pts.ok_or(FramesError::NoTimestamp)?;
-        if pts.len() as u64 >= MAX_FRAMES {
+        place += 1;
+        if packet.discarded {
+            continue;
+        }
+        let pts = packet.pts.ok_or(FramesError::NoTimestamp)?;
+        if kept.len() as u64 >= MAX_FRAMES {
             return Err(FramesError::TooMany);
         }
-        pts.push(time);
-        if last.is_none_or(|(t, _)| time > t) {
-            last = Some((time, packet.duration));
+        kept.push(Kept {
+            pts,
+            key: packet.key,
+            place: place - 1,
+        });
+        if last.is_none_or(|(t, _)| pts > t) {
+            last = Some((pts, packet.duration));
         }
     }
-    Ok((pts, last.and_then(|(_, d)| d)))
+    Ok((kept, last.and_then(|(_, d)| d)))
+}
+
+/// Where the first group of pictures ends, as a count of the stream's packets (`u64::MAX` when
+/// no second keyframe follows), if the decoder may drop some of it: the stream does not open on
+/// a keyframe, or packets after the first keyframe come before it in presentation order. Those
+/// are an open GOP's leading pictures, which refer to a GOP the file no longer has once it was
+/// cut there without an edit list to hide them.
+fn unclean_start(kept: &[Kept]) -> Option<u64> {
+    let first_key = kept.iter().position(|p| p.key)?;
+    let end = kept[first_key + 1..]
+        .iter()
+        .find(|p| p.key)
+        .map_or(u64::MAX, |p| p.place);
+    let leading = kept[first_key + 1..]
+        .iter()
+        .take_while(|p| p.place < end)
+        .any(|p| p.pts < kept[first_key].pts);
+    (first_key > 0 || leading).then_some(end)
+}
+
+/// The presentation timestamps of the frames the decoder gives for the stream's first `packets`
+/// packets (all of them for `u64::MAX`).
+fn decoded_timestamps(
+    ffprobe: &Path,
+    input: &Path,
+    stream: u32,
+    packets: u64,
+    cancel: &CancelToken,
+) -> Result<HashSet<i64>, FramesError> {
+    let mut command = ToolCommand::ffprobe(ffprobe);
+    command.args(["-select_streams", &stream.to_string()]);
+    if packets != u64::MAX {
+        command.args(["-read_intervals", &format!("%+#{packets}")]);
+    }
+    command
+        .args([
+            "-show_entries",
+            "frame=best_effort_timestamp",
+            "-print_format",
+            "compact=print_section=0",
+        ])
+        .input_file(input);
+    let out = command.output(cancel).map_err(FramesError::Tool)?;
+    let mut decoded = HashSet::new();
+    for line in String::from_utf8_lossy(&out).lines() {
+        if line.is_empty() {
+            continue;
+        }
+        let malformed = || FramesError::Malformed(line.to_owned());
+        let (key, value) = line
+            .split('|')
+            .find(|f| !f.is_empty())
+            .and_then(|f| f.split_once('='))
+            .ok_or_else(malformed)?;
+        if key != "best_effort_timestamp" {
+            return Err(malformed());
+        }
+        if value != "N/A" {
+            decoded.insert(value.parse().map_err(|_| malformed())?);
+        }
+    }
+    Ok(decoded)
 }
 
 struct Packet {
     stream: u32,
     pts: Option<i64>,
     duration: Option<i64>,
+    key: bool,
     discarded: bool,
 }
 
@@ -134,11 +222,13 @@ impl Packet {
                 _ => {}
             }
         }
+        let flags = flags?;
         Some(Self {
             stream: stream?,
             pts,
             duration,
-            discarded: flags?.contains('D'),
+            key: flags.contains('K'),
+            discarded: flags.contains('D'),
         })
     }
 }
@@ -174,6 +264,32 @@ mod tests {
 
     fn read(lines: &[&str], stream: u32) -> Result<(Vec<i64>, Option<i64>), FramesError> {
         collect(lines.iter().map(|l| Ok((*l).to_owned())), &spec(stream))
+            .map(|(kept, last)| (kept.into_iter().map(|p| p.pts).collect(), last))
+    }
+
+    fn packets(list: &[(i64, bool)]) -> Vec<Kept> {
+        list.iter()
+            .enumerate()
+            .map(|(place, &(pts, key))| Kept {
+                pts,
+                key,
+                place: place as u64,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_start_with_leading_pictures_or_without_a_keyframe_is_unclean() {
+        // Closed GOP: the B-frames after the keyframe come after it on screen too.
+        let closed = packets(&[(0, true), (3, false), (1, false), (2, false), (4, true)]);
+        assert_eq!(unclean_start(&closed), None);
+        // Open GOP cut at a recovery point: pictures shown before the keyframe follow it.
+        let open = packets(&[(3, true), (1, false), (2, false), (6, false), (7, true)]);
+        assert_eq!(unclean_start(&open), Some(4));
+        let late_key = packets(&[(0, false), (1, true), (2, false)]);
+        assert_eq!(unclean_start(&late_key), Some(u64::MAX));
+        assert_eq!(unclean_start(&packets(&[(0, false), (1, false)])), None);
+        assert_eq!(unclean_start(&[]), None);
     }
 
     #[test]
