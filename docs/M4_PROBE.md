@@ -23,7 +23,7 @@ ffprobe 보고에서 한 번 만들고 분석·미리보기·내보내기가 같
 - **코덱:** H.264·HEVC·VP8·VP9.
 - **pixel 형식:** 디코더가 내는 8비트 형식 목록(yuv420p·yuvj420p·yuv422p·yuvj422p·yuv444p·yuvj444p·yuv440p·yuvj440p·yuv411p·yuva420p·gray·gbrp·nv12·nv21). 1.12.1처럼 이름 끝 숫자로 비트 수를 읽으면 `nv12`·`rgb24`도 거부된다.
 - **HDR:** transfer가 `smpte2084`(PQ)·`arib-std-b67`(HLG)이면 거부(M9 전까지).
-- **회전:** display matrix의 `rotation`(마지막 것), 없으면 옛 `rotate` 태그. ffprobe 값은 화면이 그림을 반시계로 돌리는 각도다. 90°의 배수에서 1° 넘게 벗어나면 거부. `rotated-90.mp4`를 FFmpeg 자동 회전으로 디코드해 원래 좌상단의 프레임 번호 블록이 좌하단(x 0–59, y 400–639)에 오는 것으로 방향을 확인했다(시계 방향 270°).
+- **회전:** FFmpeg가 디코드할 때 쓰는 규칙(fftools)을 따른다: 표시 행렬(ffprobe의 `displaymatrix` 9개 값)에서 각도를 구해 정수로 반올림하고, 정확히 90°의 배수일 때만 돌린다(시계 방향 90°·180°·270°). ffprobe의 `rotation`은 반시계 각도를 정수로 잘라 보여 주므로 90.6°도 90으로 나오지만 FFmpeg는 이를 임의 각도로 돌리며 크기를 그대로 둔다. 그런 각도와 좌우·상하 반전이 있는 행렬(행렬식이 음수, ffprobe에는 −180으로 보임)은 이유와 함께 거부한다. 옛 `rotate` 태그는 FFmpeg 9가 적용하지 않으므로 읽지 않는다(처음 판은 태그를 읽고 ±1°를 허용해 spec과 디코드 크기가 어긋날 수 있었다, [재검토](M4_REVIEW.md) 8번). `rotated-90.mp4`를 FFmpeg 자동 회전으로 디코드해 원래 좌상단의 프레임 번호 블록이 좌하단(x 0–59, y 400–639)에 오는 것으로 방향을 확인했다(시계 방향 270°).
 - **상한(1.12.1과 같음, 4.7):** 한 변 16,384, 3,600만 pixel, 240 fps, 86,400초, 추정 300만 프레임. 파일 크기 상한은 없다(파이프로 흘려 읽음). 길이와 프레임 수는 패킷 목록을 읽은 뒤 다시 잰다: 컨테이너 헤더의 길이는 프레임과 다를 수 있다(mdhd 길이를 1로 고친 파일, 재검토 7번).
 - ffprobe 인자: `-v error -hide_banner -print_format json -show_streams -show_format -protocol_whitelist file -i file:<경로>`(0단계 `ToolCommand`).
 

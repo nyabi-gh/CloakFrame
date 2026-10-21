@@ -34,6 +34,8 @@ pub enum Unsupported {
     Codec(String),
     PixelFormat(String),
     Hdr(String),
+    /// The display matrix mirrors the picture.
+    Mirrored,
     /// A colour tag this build cannot read or decode with, rather than one it would guess.
     Color(String),
     Rotation,
@@ -62,6 +64,7 @@ impl fmt::Display for Unsupported {
             Self::Hdr(transfer) => write!(f, "HDR video ({transfer}) is not supported yet"),
             Self::Color(name) => write!(f, "the video's colour tag '{name}' is not supported"),
             Self::Rotation => f.write_str("the video's rotation is not a multiple of 90 degrees"),
+            Self::Mirrored => f.write_str("mirrored video is not supported"),
             Self::Unreadable => f.write_str("the video stream could not be read"),
             Self::Resolution => f.write_str("the video resolution exceeds the limit"),
             Self::FrameRate => f.write_str("the video frame rate exceeds the limit"),
@@ -154,12 +157,13 @@ struct Disposition {
 #[derive(Deserialize)]
 struct SideData {
     rotation: Option<f64>,
+    /// The nine values of a display matrix, three to a line after an offset label.
+    displaymatrix: Option<String>,
 }
 
 #[derive(Deserialize, Default)]
 struct Tags {
     language: Option<String>,
-    rotate: Option<String>,
 }
 
 /// Reads ffprobe's `-print_format json -show_streams -show_format` report. Every value comes from
@@ -260,7 +264,7 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         return unsupported(Unsupported::Hdr(transfer_name.into()));
     }
 
-    let rotation = rotation(video).ok_or(ProbeError::Unsupported(Unsupported::Rotation))?;
+    let rotation = rotation(video).map_err(ProbeError::Unsupported)?;
     let sample_aspect = video
         .sample_aspect_ratio
         .as_deref()
@@ -337,31 +341,60 @@ const EIGHT_BIT_FORMATS: [&str; 14] = [
     "yuv411p", "yuva420p", "gray", "gbrp", "nv12", "nv21",
 ];
 
-/// The display matrix's rotation, else the older `rotate` tag. ffprobe reports how far the display
-/// turns the picture counter-clockwise; [`Rotation`] counts clockwise turns.
-fn rotation(stream: &Stream) -> Option<Rotation> {
-    let degrees = stream
+/// The turn FFmpeg gives the picture when decoding (fftools' display matrix rule): the matrix's
+/// angle rounded to whole degrees, transposing only on an exact quarter turn. Any other angle
+/// gets an arbitrary rotation that keeps the frame size, and a mirroring matrix a flip, neither of
+/// which [`Rotation`] describes, so both refuse the video. FFmpeg no longer applies the old
+/// `rotate` tag, so neither does this.
+fn rotation(stream: &Stream) -> Result<Rotation, Unsupported> {
+    let Some(side) = stream
         .side_data_list
         .iter()
         .rev()
-        .find_map(|d| d.rotation)
-        .filter(|d| *d != 0.0)
-        .or_else(|| stream.tags.rotate.as_deref().and_then(|r| r.parse().ok()))
-        .unwrap_or(0.0);
-    if !degrees.is_finite() {
-        return None;
+        .find(|d| d.displaymatrix.is_some() || d.rotation.is_some())
+    else {
+        return Ok(Rotation::None);
+    };
+    // How far the display turns the picture counter-clockwise (av_display_rotation_get).
+    let counter_clockwise = match side.displaymatrix.as_deref() {
+        Some(text) => {
+            let [a, b, c, d] = display_matrix(text).ok_or(Unsupported::Rotation)?;
+            if a * d - b * c < 0.0 {
+                return Err(Unsupported::Mirrored);
+            }
+            let (scale_x, scale_y) = (a.hypot(c), b.hypot(d));
+            if scale_x == 0.0 || scale_y == 0.0 {
+                return Err(Unsupported::Rotation);
+            }
+            -(b / scale_y).atan2(a / scale_x).to_degrees()
+        }
+        None => side.rotation.unwrap_or(0.0),
+    };
+    // ffprobe reports at most half a turn either way; anything else did not come from a matrix.
+    if !(-360.0..=360.0).contains(&counter_clockwise) {
+        return Err(Unsupported::Rotation);
     }
-    let quarter_turns = (degrees / 90.0).round();
-    if (degrees - quarter_turns * 90.0).abs() > 1.0 {
-        return None;
+    match (-counter_clockwise.round()).rem_euclid(360.0) as u16 {
+        0 => Ok(Rotation::None),
+        90 => Ok(Rotation::Quarter),
+        180 => Ok(Rotation::Half),
+        270 => Ok(Rotation::ThreeQuarters),
+        _ => Err(Unsupported::Rotation),
     }
-    // Reduced while still a float: the value comes from the file and may be far past i64.
-    Some(match (-quarter_turns).rem_euclid(4.0) as u8 {
-        0 => Rotation::None,
-        1 => Rotation::Quarter,
-        2 => Rotation::Half,
-        _ => Rotation::ThreeQuarters,
-    })
+}
+
+/// The 2x2 rotation and scale part of ffprobe's display matrix text, in 16.16 fixed point.
+fn display_matrix(text: &str) -> Option<[f64; 4]> {
+    let values: Vec<i64> = text
+        .lines()
+        .filter_map(|line| line.split_once(':'))
+        .flat_map(|(_, row)| row.split_whitespace().map(str::parse))
+        .collect::<Result<_, _>>()
+        .ok()?;
+    let [a, b, _, c, d, ..] = values[..] else {
+        return None;
+    };
+    (values.len() == 9).then(|| [a, b, c, d].map(|v| v as f64 / 65536.0))
 }
 
 fn language(tag: &str) -> Option<String> {
@@ -572,40 +605,57 @@ mod tests {
         assert_eq!(s.start, Seconds::ZERO);
     }
 
+    /// ffprobe's text for a display matrix with these 16.16 values in its first two rows.
+    fn matrix(a: i64, b: i64, c: i64, d: i64) -> Value {
+        json!({"side_data_list": [{
+            "side_data_type": "Display Matrix",
+            "displaymatrix": format!(
+                "\n00000000: {a:>12} {b:>11} {:>11}\n00000001: {c:>12} {d:>11} {:>11}\n00000002: {:>12} {:>11} {:>11}\n",
+                0, 0, 0, 0, 1 << 30
+            ),
+            "rotation": 0
+        }]})
+    }
+
     #[test]
-    fn rotation_comes_from_the_display_matrix_or_the_old_tag() {
+    fn rotation_follows_the_display_matrix_as_ffmpeg_applies_it() {
         let r = |changes| report(vec![with(video(), changes)]);
         let turned = |changes| parsed(&r(changes)).unwrap().rotation;
+        const ONE: i64 = 65536;
+        // ffprobe's 90 (counter-clockwise), as the P-3 fixture has it.
+        assert_eq!(turned(matrix(0, -ONE, ONE, 0)), Rotation::ThreeQuarters);
+        assert_eq!(turned(matrix(0, ONE, -ONE, 0)), Rotation::Quarter);
+        assert_eq!(turned(matrix(-ONE, 0, 0, -ONE)), Rotation::Half);
+        // 90.4 degrees rounds to a quarter turn; 90.6 does not, and FFmpeg keeps the frame size.
         assert_eq!(
-            turned(
-                json!({"side_data_list": [{"side_data_type": "DisplayMatrix", "rotation": 90}]})
-            ),
+            turned(matrix(-457, -65534, 65534, -457)),
             Rotation::ThreeQuarters
         );
         assert_eq!(
+            refused(&r(matrix(-686, -65532, 65532, -686))),
+            Unsupported::Rotation
+        );
+        // A flip alone shows as -180 but FFmpeg only mirrors the picture.
+        assert_eq!(refused(&r(matrix(-ONE, 0, 0, ONE))), Unsupported::Mirrored);
+        assert_eq!(refused(&r(matrix(0, 0, 0, 0))), Unsupported::Rotation);
+        // Without the matrix text, the reported angle.
+        assert_eq!(
             turned(json!({"side_data_list": [{"rotation": -90}]})),
-            Rotation::Quarter
-        );
-        assert_eq!(
-            turned(json!({"side_data_list": [{"rotation": 180}]})),
-            Rotation::Half
-        );
-        assert_eq!(
-            turned(json!({"tags": {"rotate": "270"}})),
             Rotation::Quarter
         );
         assert_eq!(
             refused(&r(json!({"side_data_list": [{"rotation": 45}]}))),
             Unsupported::Rotation
         );
+        assert_eq!(turned(json!({"tags": {"rotate": "270"}})), Rotation::None);
         // Found by fuzzing: a turn count past i64 overflowed when negated.
         assert_eq!(
-            turned(json!({"side_data_list": [{"rotation": 1e300}]})),
-            Rotation::None
+            refused(&r(json!({"side_data_list": [{"rotation": 1e300}]}))),
+            Unsupported::Rotation
         );
         assert_eq!(
-            turned(json!({"side_data_list": [{"rotation": -8.3e20}]})),
-            Rotation::None
+            refused(&r(json!({"side_data_list": [{"rotation": -8.3e20}]}))),
+            Unsupported::Rotation
         );
     }
 

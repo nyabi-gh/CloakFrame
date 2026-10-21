@@ -187,6 +187,43 @@ fn an_untagged_wide_hd_crop_is_taken_as_bt709() {
     );
 }
 
+/// The spec turns the picture only as FFmpeg will when decoding: by the display matrix rounded to
+/// whole degrees, and only for an exact quarter turn; the old `rotate` tag FFmpeg no longer
+/// applies.
+#[test]
+fn rotation_follows_what_ffmpeg_applies() {
+    let dir = TestDir::new();
+    let plain = generated(&dir, "plain.mp4", &[PATTERN], &["-c:v", "libx264"]);
+    let turned = |name: &str, options: &[&str]| {
+        let path = dir.path().join(name);
+        let mut c = ToolCommand::ffmpeg(&required_env("CLOAKFRAME_FFMPEG"));
+        c.args(options)
+            .input_file(&plain)
+            .args(["-c", "copy"])
+            .output_file(&path);
+        c.output(&CancelToken::new()).unwrap();
+        path
+    };
+    let nearly = probed(&turned("90.4.mp4", &["-display_rotation", "90.4"])).unwrap();
+    assert_eq!(nearly.display_size(), (48, 64));
+    assert_eq!(
+        refused(&turned("90.6.mp4", &["-display_rotation", "90.6"])),
+        Unsupported::Rotation
+    );
+    assert_eq!(
+        refused(&turned("hflip.mp4", &["-display_hflip"])),
+        Unsupported::Mirrored
+    );
+    let tagged = generated(
+        &dir,
+        "tagged.webm",
+        &[PATTERN],
+        &["-c:v", "libvpx", "-metadata:s:v:0", "rotate=90"],
+    );
+    let s = probed(&tagged).unwrap();
+    assert_eq!((s.rotation, s.display_size()), (Rotation::None, (64, 48)));
+}
+
 #[test]
 fn cover_art_is_not_a_second_video() {
     let dir = TestDir::new();
