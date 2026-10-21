@@ -1,0 +1,58 @@
+# M4 2단계: 디코드와 프레임 대응
+
+작성 2026-10-21. [Rust 포팅 계획](RUST_PORT_PLAN.md) 8장 M4 2단계(`m4-decode`)의 기록이다. 코드는 core `timeline`(`SourceFrames`와 대응 규칙), engine `media::frames`(패킷 목록), `media::decode`(reader·미리보기), 시험은 `crates/cloakframe-engine/tests/media_decode.rs`다.
+
+## 왜 FFmpeg `fps` 필터를 쓰지 않는가
+
+1.12.1은 분석이 `setpts=PTS-STARTPTS,fps=…`, 미리보기가 `-copyts`·`-ss` + `fps=…:start_time=…,select=between(t,…)`로 두 필터 경로를 맞췄다. 같은 규칙을 한 경로로 만들어 보려고(`-copyts` + `fps=R:start_time=S`, 미리보기는 앞쪽 탐색 + 출력 번호로 고르기) P-3 fixture에서 모든 프레임을 비교했더니 두 곳에서 틀렸다(2026-10-21, FFmpeg 9.0.2).
+
+- **시작 오프셋(1.25초) 파일:** `-copyts`에서 `-ss`가 컨테이너 시작 시각만큼 밀려 모든 프레임이 32–38장 뒤였다. `-seek_timestamp 1`로도 같았다.
+- **VFR 파일:** `fps` 필터는 느린 구간을 앞 프레임 반복으로 채우므로 탐색 지점이 원본 프레임 간격보다 가까우면 다른 원본 프레임을 골랐다(앞당김 0초에서 29곳, 0.2초에서는 맞음). 화면 녹화처럼 몇 초씩 프레임이 없는 영상에서는 어떤 고정 앞당김도 보장이 아니다.
+
+그래서 대응을 Rust 규칙 하나로 옮겼다(2026-10-21 결정).
+
+## 원본 프레임과 대응 규칙
+
+- **목록:** `ffprobe -show_entries packet=stream_index,pts,duration,flags -print_format compact=print_section=0`를 줄 단위로 흘려 읽는다(디코드 없음, 300만 프레임 상한). 처리할 stream의 패킷 중 컨테이너가 버림(`D`, edit list 앞부분 등)으로 표시한 것을 빼고 pts를 정렬한다. pts가 없는 프레임이나 같은 pts가 둘이면 거부. 마지막 프레임의 표시 길이는 그 패킷의 duration, 없으면 바로 앞 간격.
+- **분석·내보내기 패스:** 필터 없이(`-fps_mode passthrough`) 원본 프레임을 표시 순서대로 하나씩 읽는다. 디코드한 수가 목록과 다르면 항목 실패(1.12.1의 패스 간 프레임 수 확인과 같은 성격). `-xerror`로 손상된 프레임도 실패.
+- **CFR 번호 n ↔ 원본 프레임:** n은 칸의 가운데 시각(`start + (n + ½) / rate`, 정확한 유리수)에 화면에 있던 원본 프레임, 즉 그때까지 시작한 마지막 원본 프레임을 보여 준다. 출력 프레임 수는 가운데 시각이 마지막 원본 프레임이 끝나기 전인 칸의 수. 공칭 속도가 원본의 가장 빠른 속도 이상이면 원본 간격이 칸 하나 이상이라 모든 원본 프레임이 적어도 한 칸에 나온다(VFR 반복은 같은 원본 결과를 다시 씀, 감지는 원본마다 한 번). 가운데 시각을 쓰는 이유: 칸의 시작 시각을 쓰면 몇 tick 앞당겨 찍힌 프레임이 한 칸 늦게 나와 다른 프레임을 가린다(지터 시험이 잡음).
+- **미리보기:** 원본 프레임 k의 시각에서 컨테이너 시작을 빼고 1 ms 여유를 둔 위치로 `-copyts -ss` 탐색한 뒤 `select=eq(pts,P)`로 그 프레임만 꺼낸다. 미리보기 요청마다 FFmpeg 프로세스 하나(연속 재생은 M6).
+
+## 색과 크기
+
+- 파이프는 rgb24(사진·감지기의 `Rgb8Image`와 같은 채널 순서).
+- `scale=…:in_color_matrix=<spec>:in_range=<spec>:out_range=pc:flags=area+accurate_rnd+full_chroma_int+bitexact,format=rgb24`. 원본 태그가 없어도 `TimelineSpec`의 값(1단계 높이 규칙)으로 디코드하고, 색역 변환은 하지 않는다(D1, 3단계 인코드가 같은 matrix·range로 되돌림). swscale 이름은 `Bt470bg` → `bt470`, `Bt2020nc` → `bt2020`.
+- 분석 크기는 긴 변 상한까지 줄이고 각 변 최소 2(1.12.1 규칙). 회전은 FFmpeg 자동 회전이 필터 앞에 넣는다.
+- **CPU와 무관한 pixel:** bt709-tv-1080p를 960×540으로 줄인 15프레임의 SHA-256을 Apple silicon에서 기록하고 시험이 비교한다. x86 Linux·Windows에서 같은지는 CI가 처음 확인한다.
+
+## 처리량
+
+1080p H.264(ultrafast) 300프레임, Apple M4(2026-10-21, load average 약 28: Discord·Parsec·WindowServer):
+
+| 구성 | 시간 |
+| --- | --- |
+| FFmpeg 디코드만(`-f null`) | 0.12초 |
+| rgb24 기본 변환 | 0.28초 |
+| matrix·range 명시, `area` | 0.39초 |
+| + `accurate_rnd`·`full_chroma_int` | 0.40초 |
+| + `bitexact`(선택) | 0.35초 |
+| 선택한 변환, 960×540 | 0.29초 |
+| `area`만, 960×540 | 0.21초 |
+| `FrameReader`로 stdout 파이프까지(debug 시험 빌드, 조사·목록 포함) | 0.69초, 436 fps, 2.7 GB/s |
+
+정확도 플래그의 비용은 1080p에서 측정 오차 안, 960×540에서 약 0.08초/300프레임이다. 파이프는 병목이 아니다. 처음 측정은 프레임마다 새 6 MB 버퍼를 만들고 300장을 모두 쌓아 32 fps로 나왔다(시험 코드 문제였고 버퍼 하나를 다시 쓰도록 고침). Windows stdout 파이프의 처리량은 CI `ci.yml`의 "Measure the decode pipe" 단계가 3개 OS에서 출력한다(1.12.1은 Windows에서만 named pipe를 썼고 이유는 남아 있지 않다).
+
+## 확인
+
+macOS arm64(2026-10-21):
+
+- core `timeline` 단위 11건(CFR 1:1, VFR가 모든 원본 프레임을 보이고 느린 구간을 반복, 지터, 시작 전 프레임, 같은 pts·빈 목록 거부, 비교).
+- engine `media::frames` 단위 2건(다른 stream·버림 패킷·끝의 빈 필드, pts 없음·이상한 줄).
+- `media_decode.rs` 6건(+ 측정 1건): P-3 다섯 fixture에서 원본 프레임이 순서대로 하나씩(회전 fixture는 블록을 되돌려 읽음), VFR 출력이 원본 60프레임을 모두 보임, 모든 k에서 미리보기와 패스의 프레임이 바이트까지 같음(P-3 `analysis_equals_preview`), D1 세 파일의 중앙 색이 (200, 60, 40) ±3, 축소 해시, 취소.
+- mutation: 탐색이 컨테이너 시작을 무시, 칸의 시작 시각으로 대응, BT.709를 BT.601로 디코드 — 모두 시험이 실패. 미리보기의 `eq(pts)`를 `gte(pts)`로 바꾸면 통과한다: FFmpeg의 정확 탐색이 목표 이전 프레임을 이미 버려 두 식이 같은 프레임을 낸다. 정확한 일치는 탐색이 어긋날 때의 이중 장치로 둔다.
+- 첫 실행에서 찾아 고친 것: 패킷 목록 줄이 side data가 있으면 `|`로 끝나 빈 필드를 거부했다(오디오 priming 패킷 `flags=KD_|`). 읽기 오류 뒤 ffprobe를 끝내고 기다린 결과(취소)를 읽기 오류보다 앞세워 원인을 가렸다.
+
+## 남은 것
+
+- P-3 `analysis_equals_output`(내보낸 영상의 n번째가 분석의 n번째)은 3단계 인코드 뒤, `cfr_no_loss`·`vfr`의 출력 쪽은 4·5단계 끝까지 내보내기에서.
+- x86에서 축소 해시가 같은지, Windows stdout 파이프 처리량은 이 브랜치의 첫 CI.
