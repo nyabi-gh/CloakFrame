@@ -92,4 +92,6 @@ fuzz_target!(|data: &[u8]| {
         spec.duration_seconds
             .is_none_or(|d| (0.0..=86_400.0).contains(&d))
     );
+    assert!(spec.frame_start(1) > spec.frame_start(0));
+    assert!(spec.frame_start(spec.estimated_frames) >= spec.start);
 });

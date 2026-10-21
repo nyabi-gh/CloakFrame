@@ -325,9 +325,17 @@ fn color_tag<T>(name: Option<&str>, known: fn(&str) -> Option<T>) -> Result<Opti
 }
 
 /// `30000/1001` or `16:9`; zero or negative parts are not a rate.
+/// ffprobe prints each part as a C `int`; a larger one did not come from it, and would take the
+/// timeline's exact arithmetic past `i128`.
 fn rational(text: &str) -> Option<Rational> {
     let (num, den) = text.split_once('/').or_else(|| text.split_once(':'))?;
-    Rational::new(num.trim().parse().ok()?, den.trim().parse().ok()?)
+    let part = |p: &str| {
+        p.trim()
+            .parse::<i32>()
+            .ok()
+            .and_then(|p| u32::try_from(p).ok())
+    };
+    Rational::new(part(num)?, part(den)?)
 }
 
 fn number(text: Option<&str>) -> Option<f64> {
@@ -544,6 +552,10 @@ mod tests {
             Unsupported::FrameCount
         );
         assert_eq!(refused(&r(json!({"width": 0}))), Unsupported::Unreadable);
+        assert_eq!(
+            refused(&r(json!({"time_base": "4294967295/1"}))),
+            Unsupported::Unreadable
+        );
         assert_eq!(
             refused(&r(json!({"r_frame_rate": "0/0", "avg_frame_rate": "0/0"}))),
             Unsupported::Unreadable

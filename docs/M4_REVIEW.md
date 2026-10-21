@@ -185,3 +185,6 @@ debug 시험이라 Rust 쪽이 대부분이고, macOS 백그라운드 QoS에서�
 - 5번(무시된 신호): CLI가 ctrlc 처리기를 걸기 전에 SIGINT·SIGTERM·SIGHUP의 설정을 읽고, 무시였던 것은 건 뒤 다시 무시로 둔다. 시험: `cli.rs` `interrupt::signals_ignored_at_start_stay_ignored`(`nohup`으로 띄운 실행에 SIGHUP을 보내도 1.5초 안에 끝나지 않고 SIGINT에는 130; 고치기 전에는 SIGHUP에 취소되어 130).
 - 6번(터미널이 닫힌 실행): `run`과 `review`가 세션을 결과보다 먼저 저장하고, 결과·안내는 쓰기 실패를 버리는 함수로 쓴다(`println!`처럼 panic하지 않음). 시험: `cli.rs` `a_closed_output_still_keeps_the_review_session`(stdout을 바로 닫아도 종료 코드 3과 세션 1개; 고치기 전에는 101). M4_PROCESS의 "Windows 콘솔 닫기도 받음"도 고쳤다.
 - 9번(두 번째 Ctrl+C): 즉시 종료를 `exit_now`(Unix `_exit`, Windows `TerminateProcess`)로 바꿨다. 경쟁이라 결정적인 시험은 없고, `cli.rs` `interrupt::a_second_ctrl_c_exits_at_once`가 종료 코드 130을 확인한다. Windows 쪽 코드는 CI가 처음 컴파일한다.
+- 문서의 fuzz 불변식과 7번의 u32 유리수: 두 fuzz 대상이 길이 상한과 프레임 시각이 늘어나는지를 보게 하고, `media::probe`의 유리수는 ffprobe처럼 int 범위만 받는다. 시험: `media::probe` 단위(시간 기준 `4294967295/1`은 읽을 수 없음).
+
+처리하지 않은 것: 10번(Windows 파이프 상한)은 3단계 CI와 실기기 측정, 11번(읽지 않는 stdout)은 3단계 writer에서 주의, 12번(Windows Job·콘솔 창)은 M6 GUI 전에, 13번(ORT spin)은 M5 측정, 7번의 중간 해상도 변경, 문서 항목 끝의 1단계 자잘한 것(오류 문구 등).

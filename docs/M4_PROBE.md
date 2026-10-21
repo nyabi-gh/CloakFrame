@@ -31,8 +31,8 @@ ffprobe 보고에서 한 번 만들고 분석·미리보기·내보내기가 같
 
 계획 9.1의 fuzz 대상 두 곳 중 하나(다른 하나 EXIF는 같은 틀에 나중에). cargo-fuzz 0.13.2, libFuzzer, nightly-2026-10-01(공개 2주 넘은 날짜), `-s none`(파서가 안전한 Rust라 sanitizer 대신 빠른 실행). `fuzz/`는 workspace 밖이고 배포하지 않는다. libfuzzer-sys에는 LLVM의 NCSA 라이선스가 들어 있어 workspace의 cargo-deny 대상이 아니다. lockfile은 workspace의 판을 그대로 쓰고 libfuzzer-sys 0.4.13·arbitrary 1.5.0만 더한다.
 
-- `probe_report`: fixture 9개의 ffprobe 보고(경로만 지움, `fuzz/seeds/`)와 JSON 키 사전으로 원시 바이트를 변형. 파서가 panic하지 않는지와 결과의 불변식(상한, 시작 ≥ 0, 시각 단조)을 본다.
-- `probe_fields`: 필드값(크기·속도·시작 PTS·회전·형식 이름 등)을 `arbitrary`로 뽑아 문법이 맞는 보고를 만든다. 같은 불변식을 본다.
+- `probe_report`: fixture 9개의 ffprobe 보고(경로만 지움, `fuzz/seeds/`)와 JSON 키 사전으로 원시 바이트를 변형. 파서가 panic하지 않는지와 결과의 불변식(상한, 시작 ≥ 0, 길이 상한, 프레임 시각이 늘어남)을 본다.
+- `probe_fields`: 필드값(크기·속도·시작 PTS·회전·형식 이름 등)을 `arbitrary`로 뽑아 문법이 맞는 보고를 만든다. 같은 불변식을 본다. 처음 판은 두 대상 모두 문서의 불변식을 다 보지 않았다(`probe_fields`는 시각을 보지 않음). 프레임 시각을 보게 하면서, ffprobe가 C `int`로 출력하는 유리수를 u32 범위까지 받던 것도 int 범위로 줄였다: 시간 기준 `4294967295/1`이면 `frame_start`가 i128을 넘었다([재검토](M4_REVIEW.md) 7번).
 - **왜 둘인가:** 해상도 상한 검사를 지운 mutation을 `probe_report`는 사전이 있어도 2분(약 230만 번) 안에 찾지 못했다. 바이트 변형은 대부분 JSON을 깨뜨려 판단할 값에 닿지 않는다. `probe_fields`는 같은 mutation을 바로 찾았다.
 - **찾은 결함:** `probe_fields`가 첫 실행에서 회전값이 아주 클 때(`1e300` 등) 회전 횟수를 i64로 바꾼 뒤 부호를 뒤집다 overflow로 panic하는 것을 찾았다. 값은 입력 파일이 정하므로 조작된 영상 하나로 처리 스레드가 죽을 수 있었다. 실수 상태에서 4로 나눈 나머지를 구하도록 고치고 단위 시험을 넣었다.
 - CI(`fuzz.yml`): 파서·timeline·fuzz 파일이 바뀌는 main 대상 PR에서 Linux가 두 대상을 150초씩. 실패하면 입력을 artifact로 남긴다.

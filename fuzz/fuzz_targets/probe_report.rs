@@ -13,6 +13,10 @@ fuzz_target!(|report: &[u8]| {
     assert!(spec.rate.as_f64() <= MAX_RATE);
     assert!(spec.estimated_frames <= MAX_FRAMES);
     assert!(spec.start.num() >= 0);
-    let last = spec.frame_start(spec.estimated_frames);
-    assert!(last.as_f64() >= spec.start.as_f64());
+    assert!(
+        spec.duration_seconds
+            .is_none_or(|d| (0.0..=86_400.0).contains(&d))
+    );
+    assert!(spec.frame_start(1) > spec.frame_start(0));
+    assert!(spec.frame_start(spec.estimated_frames) >= spec.start);
 });
