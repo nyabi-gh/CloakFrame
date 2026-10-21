@@ -295,6 +295,8 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         rotation,
         sample_aspect,
         rate,
+        nominal_rate: nominal,
+        average_rate: average,
         variable_rate,
         start,
         time_base,

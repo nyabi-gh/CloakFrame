@@ -7,13 +7,12 @@ mod common;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use cloakframe_core::timeline::{Rotation, SourceFrames, TimelineSpec};
+use cloakframe_core::timeline::{Rational, Rotation, SourceFrames, TimelineSpec};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::Rgb8Image;
 use cloakframe_engine::media::decode::{DecodeError, FrameReader, frame_size, source_frame};
-use cloakframe_engine::media::frames;
-use cloakframe_engine::media::probe::probe;
 use cloakframe_engine::media::process::ToolCommand;
+use cloakframe_engine::media::source;
 use common::{TestDir, fixtures, required_env};
 use sha2::{Digest, Sha256};
 
@@ -22,10 +21,13 @@ fn ffmpeg() -> PathBuf {
 }
 
 fn opened(path: &Path) -> (TimelineSpec, SourceFrames) {
-    let ffprobe = required_env("CLOAKFRAME_FFPROBE");
-    let spec = probe(&ffprobe, path, &CancelToken::new()).unwrap();
-    let listed = frames::list(&ffprobe, path, &spec, &CancelToken::new()).unwrap();
-    (spec, listed)
+    let source = source::open(
+        &required_env("CLOAKFRAME_FFPROBE"),
+        path,
+        &CancelToken::new(),
+    )
+    .unwrap();
+    (source.spec, source.frames)
 }
 
 fn all_frames(
@@ -112,6 +114,38 @@ fn the_variable_rate_output_shows_every_source_frame() {
     let (spec, listed) = opened(&defect("P-3/vfr-30-15.mp4"));
     let mut shown: Vec<usize> = listed.shown(&spec).collect();
     assert!(shown.len() > listed.len());
+    shown.dedup();
+    assert_eq!(shown, (0..listed.len()).collect::<Vec<_>>());
+}
+
+/// FFmpeg guesses 15/1 as this file's rate from its first seconds, which would drop half the
+/// frames of the 30 fps stretch after them.
+#[test]
+fn a_faster_stretch_after_the_first_seconds_keeps_every_frame() {
+    let dir = TestDir::new();
+    let path = dir.path().join("15-then-30.mp4");
+    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    c.args([
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=s=64x48:r=30:d=11",
+        "-vf",
+        "select='lt(t\\,10)*not(mod(n\\,2))+gte(t\\,10)'",
+        "-fps_mode",
+        "vfr",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+    ])
+    .output_file(&path);
+    c.output(&CancelToken::new()).unwrap();
+    let (spec, listed) = opened(&path);
+    assert_eq!(spec.nominal_rate, Rational::new(15, 1));
+    assert_eq!(spec.rate, Rational::new(30000, 1001).unwrap());
+    assert_eq!(listed.len(), 180);
+    let mut shown: Vec<usize> = listed.shown(&spec).collect();
     shown.dedup();
     assert_eq!(shown, (0..listed.len()).collect::<Vec<_>>());
 }

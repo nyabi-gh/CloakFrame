@@ -158,6 +158,8 @@ mod tests {
             rotation: Rotation::None,
             sample_aspect: Rational::new(1, 1).unwrap(),
             rate: Rational::new(30, 1).unwrap(),
+            nominal_rate: Rational::new(30, 1),
+            average_rate: Rational::new(30, 1),
             variable_rate: false,
             start: Seconds::ZERO,
             time_base: Rational::new(1, 15360).unwrap(),

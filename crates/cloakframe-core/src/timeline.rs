@@ -37,6 +37,19 @@ impl Rational {
     }
 }
 
+impl Ord for Rational {
+    fn cmp(&self, other: &Self) -> Ordering {
+        (u64::from(self.num) * u64::from(other.den))
+            .cmp(&(u64::from(other.num) * u64::from(self.den)))
+    }
+}
+
+impl PartialOrd for Rational {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
 impl fmt::Display for Rational {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}/{}", self.num, self.den)
@@ -270,9 +283,12 @@ pub struct TimelineSpec {
     pub coded_height: u32,
     pub rotation: Rotation,
     pub sample_aspect: Rational,
-    /// The constant rate of every pass. A variable-rate source gets its nominal rate, so no
-    /// source frame is dropped and slower stretches repeat frames.
+    /// The constant rate of every pass. ffprobe's report alone gives a provisional one for the
+    /// limits; [`SourceFrames::constant_rate`] gives the final one from the frame list.
     pub rate: Rational,
+    /// `r_frame_rate`: FFmpeg's guess from the first frames, not a rate the file declares.
+    pub nominal_rate: Option<Rational>,
+    pub average_rate: Option<Rational>,
     pub variable_rate: bool,
     /// When the first video frame is shown, never before zero.
     pub start: Seconds,
@@ -319,6 +335,30 @@ impl TimelineSpec {
             + (half_frames * rate_den * self.start.den()) as i128;
         Seconds::new(num, den).expect("a nonzero denominator")
     }
+}
+
+/// Rates an output may take besides the source's own, lowest first. The last is also the input
+/// limit.
+const STANDARD_RATES: [(u32, u32); 14] = [
+    (24000, 1001),
+    (24, 1),
+    (25, 1),
+    (30000, 1001),
+    (30, 1),
+    (48, 1),
+    (50, 1),
+    (60000, 1001),
+    (60, 1),
+    (90, 1),
+    (100, 1),
+    (120, 1),
+    (144, 1),
+    (240, 1),
+];
+
+/// The integer rate next to an NTSC one (30 for 29.97).
+fn integer_twin(rate: Rational) -> Option<Rational> {
+    (rate.den() == 1001).then(|| Rational::new(rate.num() / 1000, 1).expect("a positive rate"))
 }
 
 /// The processed stream's frames in presentation order, as the packet list gives them without
@@ -418,6 +458,106 @@ impl SourceFrames {
         started.saturating_sub(1)
     }
 
+    /// The rate of the constant-rate output (plan 8 M4, review decision): the lowest of the
+    /// standard rates and the source's nominal and average rates at which every source frame
+    /// shows in at least one output frame. Of 29.97 and 30 (and the other NTSC pairs) both doing
+    /// so, the one the source names as its nominal rate, else the one nearer its average. Where
+    /// no rate up to 240 shows every frame (frames milliseconds apart), the lowest that shows the
+    /// most.
+    pub fn constant_rate(
+        &self,
+        start: Seconds,
+        nominal: Option<Rational>,
+        average: Option<Rational>,
+    ) -> Rational {
+        let (fastest_num, fastest_den) = STANDARD_RATES[STANDARD_RATES.len() - 1];
+        let fastest = Rational::new(fastest_num, fastest_den).expect("a positive rate");
+        let mut candidates: Vec<Rational> = STANDARD_RATES
+            .iter()
+            .map(|&(num, den)| Rational::new(num, den).expect("a positive rate"))
+            .chain(nominal)
+            .chain(average)
+            .filter(|&rate| rate <= fastest)
+            .collect();
+        candidates.sort();
+        candidates.dedup();
+        let every = self.pts.len();
+        let shows_every = |rate| self.frames_shown(start, rate, true) == Some(every);
+        let (most, lowest) = match candidates.iter().find(|&&rate| shows_every(rate)) {
+            Some(&rate) => (every, rate),
+            None => {
+                let counts: Vec<usize> = candidates
+                    .iter()
+                    .map(|&rate| self.frames_shown(start, rate, false).unwrap_or(0))
+                    .collect();
+                let most = counts.iter().copied().max().expect("standard rates");
+                let lowest = counts.iter().position(|&n| n == most).expect("a maximum");
+                (most, candidates[lowest])
+            }
+        };
+        let Some(twin) = integer_twin(lowest) else {
+            return lowest;
+        };
+        if self.frames_shown(start, twin, false) != Some(most) {
+            return lowest;
+        }
+        let twin_nearer = match nominal {
+            Some(rate) if rate == twin => true,
+            Some(rate) if rate == lowest => false,
+            _ => average.is_some_and(|average| {
+                (average.as_f64() - twin.as_f64()).abs()
+                    < (average.as_f64() - lowest.as_f64()).abs()
+            }),
+        };
+        if twin_nearer { twin } else { lowest }
+    }
+
+    /// How many source frames show in at least one output frame at `rate` from `start`. With
+    /// `stop_at_missing` the count stops at the first frame that shows in none. `None` where the
+    /// arithmetic would overflow.
+    fn frames_shown(&self, start: Seconds, rate: Rational, stop_at_missing: bool) -> Option<usize> {
+        let slots = self.first_slot_from(self.end, start, rate)?.max(0);
+        let mut shown = 0;
+        // Output frames before the first source frame starts show it as well.
+        let mut from = 0;
+        for k in 0..self.pts.len() {
+            let to = match self.pts.get(k + 1) {
+                Some(&next) => self.first_slot_from(next, start, rate)?.clamp(0, slots),
+                None => slots,
+            };
+            if to > from {
+                shown += 1;
+            } else if stop_at_missing {
+                return Some(shown);
+            }
+            from = to;
+        }
+        Some(shown)
+    }
+
+    /// The first output frame, on the timeline at `rate` from `start`, whose middle comes at or
+    /// after `ticks`: the least n with `rate * (ticks * time_base - start) - 1/2 <= n`. Negative
+    /// before the timeline starts.
+    fn first_slot_from(&self, ticks: i64, start: Seconds, rate: Rational) -> Option<i128> {
+        let (tb_num, tb_den) = (
+            i128::from(self.time_base.num()),
+            i128::from(self.time_base.den()),
+        );
+        let (rate_num, rate_den) = (i128::from(rate.num()), i128::from(rate.den()));
+        let start_den = i128::try_from(start.den()).ok()?;
+        let since_start = i128::from(ticks)
+            .checked_mul(tb_num)?
+            .checked_mul(start_den)?
+            .checked_sub(start.num().checked_mul(tb_den)?)?;
+        let unit = tb_den.checked_mul(start_den)?.checked_mul(rate_den)?;
+        let p = since_start
+            .checked_mul(rate_num)?
+            .checked_mul(2)?
+            .checked_sub(unit)?;
+        let q = unit.checked_mul(2)?;
+        Some(p.div_euclid(q) + i128::from(p.rem_euclid(q) != 0))
+    }
+
     /// [`Self::shown_at`] for every output frame in order, in one pass.
     pub fn shown(&self, spec: &TimelineSpec) -> impl Iterator<Item = usize> + '_ {
         let spec = spec.clone();
@@ -445,6 +585,8 @@ mod tests {
             rotation: Rotation::Quarter,
             sample_aspect: Rational::new(1, 1).unwrap(),
             rate,
+            nominal_rate: Some(rate),
+            average_rate: Some(rate),
             variable_rate: false,
             start,
             time_base: Rational::new(1, 90_000).unwrap(),
@@ -638,6 +780,116 @@ mod tests {
         let one = SourceFrames::new(tb(1000), vec![0], None).unwrap();
         let s = at(Rational::new(1000, 1).unwrap(), Seconds::ZERO, tb(1000));
         assert_eq!(one.output_frames(&s), 1);
+    }
+
+    fn rational(num: u32, den: u32) -> Rational {
+        Rational::new(num, den).unwrap()
+    }
+
+    fn shows_every_frame(frames: &SourceFrames, rate: Rational) -> bool {
+        let s = at(rate, Seconds::ZERO, frames.time_base);
+        let mut shown: Vec<usize> = frames.shown(&s).collect();
+        shown.dedup();
+        shown == (0..frames.len()).collect::<Vec<_>>()
+    }
+
+    /// Ten seconds at 15 fps, then one at 30: FFmpeg guesses 15/1 from the start.
+    #[test]
+    fn the_output_rate_is_the_lowest_that_shows_every_frame() {
+        let ticks = tb(15360);
+        let mut pts: Vec<i64> = (0..150).map(|k| k * 1024).collect();
+        pts.extend((0..30).map(|k| 150 * 1024 + k * 512));
+        let frames = SourceFrames::new(ticks, pts, Some(512)).unwrap();
+        let rate = frames.constant_rate(
+            Seconds::ZERO,
+            Some(rational(15, 1)),
+            Some(rational(180, 11)),
+        );
+        assert_eq!(rate, rational(30000, 1001));
+        assert!(shows_every_frame(&frames, rate));
+        assert!(!shows_every_frame(&frames, rational(15, 1)));
+    }
+
+    /// Timestamps FFmpeg reads as 200/1 and 120/1 (timescale 600) are 30 and 24–30 fps.
+    #[test]
+    fn jitter_and_mixed_rates_keep_their_real_rate() {
+        let ticks = tb(600);
+        let stepped = |steps: &dyn Fn(usize) -> i64, n: usize| {
+            let mut t = 0;
+            (0..n)
+                .map(|k| {
+                    let at = t;
+                    t += steps(k);
+                    at
+                })
+                .collect::<Vec<i64>>()
+        };
+        let jitter =
+            SourceFrames::new(ticks, stepped(&|k| [21, 21, 18][k % 3], 300), Some(20)).unwrap();
+        let rate = jitter.constant_rate(
+            Seconds::ZERO,
+            Some(rational(200, 1)),
+            Some(rational(180_000, 5999)),
+        );
+        assert_eq!(rate, rational(30, 1));
+        assert!(shows_every_frame(&jitter, rate));
+
+        let mixed = SourceFrames::new(
+            ticks,
+            stepped(&|k| if k < 60 { 20 } else { 25 }, 132),
+            Some(25),
+        )
+        .unwrap();
+        let rate = mixed.constant_rate(
+            Seconds::ZERO,
+            Some(rational(120, 1)),
+            Some(rational(132, 5)),
+        );
+        assert_eq!(rate, rational(30000, 1001));
+        assert!(shows_every_frame(&mixed, rate));
+    }
+
+    /// 29.97 fps slots show all of a short 30 fps clip too; the source's own rate wins.
+    #[test]
+    fn constant_rate_sources_keep_their_rate() {
+        for (num, den, count) in [
+            (24000, 1001, 72),
+            (30000, 1001, 90),
+            (30, 1, 100),
+            (15, 1, 45),
+        ] {
+            let frames = SourceFrames::new(
+                tb(num),
+                (0..count).map(|k| k * i64::from(den)).collect(),
+                Some(i64::from(den)),
+            )
+            .unwrap();
+            let own = rational(num, den);
+            assert_eq!(
+                frames.constant_rate(Seconds::ZERO, Some(own), Some(own)),
+                own
+            );
+        }
+    }
+
+    /// One frame a millisecond after another shows at no rate up to 240.
+    #[test]
+    fn frames_too_close_for_any_rate_take_the_lowest_rate_that_shows_the_most() {
+        let mut pts: Vec<i64> = (0..60).map(|k| k * 1000 / 30).collect();
+        pts.push(67);
+        let frames = SourceFrames::new(tb(1000), pts, Some(33)).unwrap();
+        let rate =
+            frames.constant_rate(Seconds::ZERO, Some(rational(30, 1)), Some(rational(30, 1)));
+        assert_eq!(rate, rational(30, 1));
+        assert!(!shows_every_frame(&frames, rational(240, 1)));
+
+        // Two pairs a millisecond apart: 144 fps shows one more of them than 240 does.
+        let mut pts: Vec<i64> = (0..30).map(|k| (k * 1000 + 15) / 30).collect();
+        pts.extend([1, 2, 17, 18]);
+        let frames = SourceFrames::new(tb(1000), pts, Some(33)).unwrap();
+        let rate =
+            frames.constant_rate(Seconds::ZERO, Some(rational(30, 1)), Some(rational(30, 1)));
+        assert_eq!(rate, rational(144, 1));
     }
 
     #[test]

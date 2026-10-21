@@ -176,3 +176,5 @@ debug 시험이라 Rust 쪽이 대부분이고, macOS 백그라운드 QoS에서�
 ## 처리 (2026-10-21)
 
 메인테이너가 추천대로 정했다(계획 8장 M4의 "결정(2026-10-21, 재검토)"). #43을 main `c70f2f6`에 넣은 뒤 `m4-review`에서 항목마다 실패하는 시험을 먼저 넣고 고친다.
+
+- 2번(VFR 속도): core `SourceFrames::constant_rate`가 패킷 목록으로 출력 속도를 고르고, engine `media::source::open`(조사 + 목록 + 속도)이 앞으로 패스들의 진입점이다. `TimelineSpec`은 원본의 공칭·평균 속도를 따로 담는다. 시험: core 4건, `media_decode.rs` `a_faster_stretch_after_the_first_seconds_keeps_every_frame`(고치기 전에는 30 fps 구간의 15프레임이 빠져 실패). "없으면 240"은 "가장 많이 보이는 가장 낮은 속도"로 바꿨다([M4_DECODE](M4_DECODE.md)).
