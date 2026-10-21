@@ -1,3 +1,5 @@
+use std::fmt;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
@@ -360,14 +362,26 @@ fn detector(
 fn print_fallbacks(backends: &[ModelBackend]) {
     for m in backends {
         if let Some(f) = m.fallback.as_ref().filter(|f| !f.at_start) {
-            eprintln!(
+            note(format_args!(
                 "{} moved to the CPU for the rest of the run: {} failed ({})",
                 model_name(m.model),
                 f.from,
                 f.reason
-            );
+            ));
         }
     }
+}
+
+/// A line of the results. Once the terminal is gone (a hangup) or the reader stops reading, the
+/// line has nowhere to go; `println!` would panic there, before the session is saved and the exit
+/// code returned, so a failed write is dropped instead.
+fn out(line: impl fmt::Display) {
+    let _ = writeln!(io::stdout().lock(), "{line}");
+}
+
+/// A message on stderr, dropped like [`out`] when stderr is gone.
+fn note(line: impl fmt::Display) {
+    let _ = writeln!(io::stderr().lock(), "{line}");
 }
 
 fn state_label(state: ItemState) -> &'static str {
@@ -423,7 +437,7 @@ fn print_report(report: &RunReport) {
         for note in &o.notes {
             line.push_str(&format!("\t{note}"));
         }
-        println!("{line}");
+        out(line);
     }
 }
 
@@ -538,18 +552,20 @@ fn run_with<P: ItemProcessor>(
         detector()?
     };
     let report = execute(job, Arc::new(processor), started.handle, cancel)?;
+    // Saved before anything is written, which can fail once the terminal is gone.
+    let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
+    let saved = session.map(|session| {
+        let id = SessionId::generate();
+        store.save(&id, &session).map(|()| id)
+    });
     print_report(&report);
     print_fallbacks(&started.backends.get());
-    let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
     for (item, reason) in &left_out {
-        println!("{}\tnot kept for review\t{reason}", item.0);
+        out(format_args!("{}\tnot kept for review\t{reason}", item.0));
     }
-    if let Some(session) = session {
-        let id = SessionId::generate();
-        store
-            .save(&id, &session)
-            .map_err(|e| failed(format!("cannot save the review session: {e}")))?;
-        println!("session\t{}", id.as_str());
+    if let Some(saved) = saved {
+        let id = saved.map_err(|e| failed(format!("cannot save the review session: {e}")))?;
+        out(format_args!("session\t{}", id.as_str()));
     }
     let mut code = exit_for(&report);
     if !scanned.issues.is_empty() || !left_out.is_empty() {
@@ -591,13 +607,14 @@ fn review_with<P: ItemProcessor>(
 
     let applied = apply(&mut session, &decisions, processor.fingerprint());
     for (item, rejection) in &applied.rejected {
-        println!("{}\trefused\t{rejection}", item.0);
+        out(format_args!("{}\trefused\t{rejection}", item.0));
     }
     let mut code = if applied.rejected.is_empty() {
         DONE
     } else {
         FAILED
     };
+    let mut resumed = None;
     if !applied.jobs.is_empty() {
         let job = Job {
             items: applied.jobs,
@@ -612,7 +629,6 @@ fn review_with<P: ItemProcessor>(
             spawn(Box::new(NoDetections))?,
             cancel,
         )?;
-        print_report(&report);
         let finished: Vec<_> = report
             .items
             .iter()
@@ -621,19 +637,25 @@ fn review_with<P: ItemProcessor>(
             .collect();
         session.items.retain(|i| !finished.contains(&i.item));
         code = code.max(exit_for(&report));
+        resumed = Some(report);
     }
-    if session.items.is_empty() {
+    // Stored before the report is written, which can fail once the terminal is gone.
+    let stored = if session.items.is_empty() {
         store
             .remove(&id)
-            .map_err(|e| failed(format!("cannot remove the finished session: {e}")))?;
+            .map_err(|e| failed(format!("cannot remove the finished session: {e}")))
     } else {
-        store
-            .save(&id, &session)
-            .map_err(|e| failed(format!("cannot save the review session: {e}")))?;
         if code == DONE {
             code = NEEDS_REVIEW;
         }
+        store
+            .save(&id, &session)
+            .map_err(|e| failed(format!("cannot save the review session: {e}")))
+    };
+    if let Some(report) = &resumed {
+        print_report(report);
     }
+    stored?;
     Ok(code)
 }
 
@@ -821,7 +843,7 @@ fn cancel_on_interrupt() -> CancelToken {
             std::process::exit(CANCELLED.into());
         }
         handler.cancel();
-        eprintln!("cancelling; press Ctrl+C again to stop at once");
+        note("cancelling; press Ctrl+C again to stop at once");
     });
     if let Err(e) = installed {
         eprintln!("warning: Ctrl+C will stop without cleaning up: {e}");
@@ -865,7 +887,7 @@ fn report(result: Result<u8, CliError>) -> ExitCode {
     match result {
         Ok(code) => ExitCode::from(code),
         Err(CliError::Failed(message)) => {
-            eprintln!("error: {message}");
+            note(format_args!("error: {message}"));
             ExitCode::from(FAILED)
         }
         Err(CliError::Usage(message)) => {

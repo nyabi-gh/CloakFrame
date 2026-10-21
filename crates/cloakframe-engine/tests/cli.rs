@@ -326,6 +326,36 @@ fn usage_errors_exit_with_two() {
     assert_eq!(f.cli(&["review", "--session", "../x"]).0, 2);
 }
 
+/// A terminal that went away (or a reader that stopped reading) must not cost the run its review
+/// session: writing the result fails, and the CLI used to panic before saving it.
+#[test]
+fn a_closed_output_still_keeps_the_review_session() {
+    let f = Fixture::new();
+    f.input("clip-gap.jpg", b"gap");
+    f.input("clean.jpg", b"clean");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_cloakframe-cli"))
+        .args(["run", "--output"])
+        .arg(f.out())
+        .args(["--review", "off", "--sessions"])
+        .arg(f.root.join("sessions"))
+        .arg("--synthetic")
+        .arg(f.root.join("in"))
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
+        .spawn()
+        .unwrap();
+    drop(child.stdout.take());
+    let output = child.wait_with_output().unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(3),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(f.sessions(), 1);
+    assert_eq!(files(&f.out()), ["clean.jpg"]);
+}
+
 #[cfg(unix)]
 mod interrupt {
     use std::process::{Child, Command, Stdio};
