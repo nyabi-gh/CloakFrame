@@ -188,3 +188,5 @@ debug 시험이라 Rust 쪽이 대부분이고, macOS 백그라운드 QoS에서�
 - 문서의 fuzz 불변식과 7번의 u32 유리수: 두 fuzz 대상이 길이 상한과 프레임 시각이 늘어나는지를 보게 하고, `media::probe`의 유리수는 ffprobe처럼 int 범위만 받는다. 시험: `media::probe` 단위(시간 기준 `4294967295/1`은 읽을 수 없음).
 
 처리하지 않은 것: 10번(Windows 파이프 상한)은 3단계 CI와 실기기 측정, 11번(읽지 않는 stdout)은 3단계 writer에서 주의, 12번(Windows Job·콘솔 창)은 M6 GUI 전에, 13번(ORT spin)은 M5 측정, 7번의 중간 해상도 변경, 문서 항목 끝의 1단계 자잘한 것(오류 문구 등).
+
+PR #44(2026-10-21). 문서만 바꾼 첫 커밋을 뺀 아홉 커밋을 하나씩 스크래치 worktree에서 확인했다: fmt, clippy 두 조합, core 시험, engine lib 시험과 `media_decode`·`media_probe`·`media_process`·`cli` 시험이 모두 통과(286 → 298개).
