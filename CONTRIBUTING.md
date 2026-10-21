@@ -78,8 +78,10 @@ cargo run --release -p cloakframe-engine --example benchmark -- \
 python3 -I tools/benchmark/evaluate.py --gate tests/fixtures/benchmark/engine/default.json default.json
 ```
 
-See [docs/M3_BENCHMARK.md](docs/M3_BENCHMARK.md) for the set and the other
-settings.
+A change meant to move the default result records the new one into
+`tests/fixtures/benchmark/engine/default.json` with `--gpu off`, as CI runs it,
+and says why in its record. See [docs/M3_BENCHMARK.md](docs/M3_BENCHMARK.md) for
+the set and the other settings.
 
 The `spikes/` folders are separate Cargo projects that reproduce the M0
 measurements; see their records in `docs/M0_*.md`.
