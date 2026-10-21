@@ -215,10 +215,10 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
     let container_start_seconds = number(format.and_then(|f| f.start_time.as_deref()))
         .unwrap_or(0.0)
         .max(0.0);
+    // WebM written as it streams has none; the frame list gives it then (`media::source`).
     let duration = number(video.duration.as_deref())
         .filter(|d| *d > 0.0)
-        .or_else(|| number(format.and_then(|f| f.duration.as_deref())))
-        .ok_or(ProbeError::Unsupported(Unsupported::Unreadable))?;
+        .or_else(|| number(format.and_then(|f| f.duration.as_deref())));
 
     if width > MAX_SIDE || height > MAX_SIDE || u64::from(width) * u64::from(height) > MAX_PIXELS {
         return unsupported(Unsupported::Resolution);
@@ -226,7 +226,7 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
     if rate.as_f64() > MAX_RATE {
         return unsupported(Unsupported::FrameRate);
     }
-    if !(0.0..=MAX_DURATION_SECONDS).contains(&duration) {
+    if duration.is_some_and(|d| !(0.0..=MAX_DURATION_SECONDS).contains(&d)) {
         return unsupported(Unsupported::Duration);
     }
     let counted = video
@@ -234,7 +234,9 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         .as_deref()
         .and_then(|n| n.parse::<u64>().ok())
         .filter(|&n| n > 0 && !variable_rate);
-    let estimated_frames = counted.unwrap_or_else(|| (duration * rate.as_f64()).ceil() as u64);
+    let estimated_frames = counted
+        .or_else(|| duration.map(|d| (d * rate.as_f64()).ceil() as u64))
+        .unwrap_or(0);
     if estimated_frames > MAX_FRAMES {
         return unsupported(Unsupported::FrameCount);
     }
@@ -504,6 +506,17 @@ mod tests {
             refused(&r(json!({"r_frame_rate": "0/0", "avg_frame_rate": "0/0"}))),
             Unsupported::Unreadable
         );
+    }
+
+    #[test]
+    fn a_report_without_a_duration_still_makes_a_spec() {
+        let mut streamed = report(vec![with(
+            video(),
+            json!({"duration": null, "nb_frames": null}),
+        )]);
+        streamed["format"]["duration"] = Value::Null;
+        let s = parsed(&streamed).unwrap();
+        assert_eq!((s.duration_seconds, s.estimated_frames), (None, 0));
     }
 
     #[test]

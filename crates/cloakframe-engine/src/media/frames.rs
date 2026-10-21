@@ -254,7 +254,7 @@ mod tests {
             start: Seconds::ZERO,
             time_base: Rational::new(1, 15360).unwrap(),
             container_start_seconds: 0.0,
-            duration_seconds: 1.0,
+            duration_seconds: Some(1.0),
             estimated_frames: 30,
             color: ColorTags::default().complete(48),
             audio: Vec::new(),

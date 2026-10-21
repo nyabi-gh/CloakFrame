@@ -296,8 +296,10 @@ pub struct TimelineSpec {
     pub time_base: Rational,
     /// The container's start time, which FFmpeg adds to a seek position. For seeking only.
     pub container_start_seconds: f64,
-    pub duration_seconds: f64,
-    /// For limits and progress only; pass 1 counts the frames.
+    /// `None` when the report gives none (WebM written as it streams) until the frame list does.
+    pub duration_seconds: Option<f64>,
+    /// For limits and progress: estimated from the report, then the output's own count once the
+    /// frame list is read.
     pub estimated_frames: u64,
     pub color: ColorSpec,
     pub audio: Vec<AudioStream>,
@@ -430,6 +432,11 @@ impl SourceFrames {
 
     pub fn time(&self, k: usize) -> Seconds {
         Seconds::of_ticks(self.pts[k], self.time_base)
+    }
+
+    /// When the last frame stops showing.
+    pub fn end(&self) -> Seconds {
+        Seconds::of_ticks(self.end, self.time_base)
     }
 
     /// How many constant-rate frames the output has: those whose middle falls before the last
@@ -591,7 +598,7 @@ mod tests {
             start,
             time_base: Rational::new(1, 90_000).unwrap(),
             container_start_seconds: 0.0,
-            duration_seconds: 3.003,
+            duration_seconds: Some(3.003),
             estimated_frames: 90,
             color: ColorTags::default().complete(360),
             audio: Vec::new(),

@@ -213,6 +213,33 @@ fn leading_pictures_the_decoder_drops_are_not_listed() {
     }
 }
 
+/// WebM written as it streams (`-f webm pipe:1`, a browser's recorder) gives no duration.
+#[test]
+fn webm_without_a_duration_opens_from_its_frames() {
+    let dir = TestDir::new();
+    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    c.args([
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc2=s=64x48:r=30:d=2",
+        "-c:v",
+        "libvpx",
+        "-f",
+        "webm",
+    ])
+    .output_pipe();
+    let path = dir.path().join("streamed.webm");
+    std::fs::write(&path, c.output(&CancelToken::new()).unwrap()).unwrap();
+    let (spec, listed) = opened(&path);
+    assert_eq!(listed.len(), 60);
+    assert_eq!(listed.output_frames(&spec), 60);
+    assert!(
+        spec.duration_seconds
+            .is_some_and(|d| (d - 2.0).abs() < 0.05)
+    );
+}
+
 /// P-3 `analysis_equals_preview`, for every frame of every fixture.
 #[test]
 fn the_preview_of_a_frame_is_the_passs_frame() {

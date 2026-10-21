@@ -10,7 +10,7 @@ ffprobe 보고에서 한 번 만들고 분석·미리보기·내보내기가 같
 - **속도:** 조사 단계는 공칭 속도(`r_frame_rate`, 없거나 240 fps를 넘으면 평균 속도)를 임시 속도로 두고 상한과 추정 프레임 수에 쓴다. 모든 패스가 쓰는 CFR 속도는 2단계가 패킷 목록으로 정한다([M4_DECODE](M4_DECODE.md)). `r_frame_rate`는 파일이 적은 값이 아니라 FFmpeg가 앞부분 타임스탬프로 추정한 값이라, 그대로 쓰면 원본 프레임을 버리거나 CFR이 부풀었다([재검토](M4_REVIEW.md) 2번).
 - **시작:** 첫 영상 프레임의 표시 시각을 `start_pts × time_base`로 정확히(유리수) 둔다. 음수면 0.
 - **프레임 n의 시각:** `start + n / rate`(정확한 유리수, `TimelineSpec::frame_start`). 2단계는 이 시각 대신 칸 가운데 시각(`frame_middle`)에 화면에 있던 원본 프레임을 고른다([M4_DECODE](M4_DECODE.md)).
-- 길이, 추정 프레임 수(CFR이면 `nb_frames`, 아니면 `ceil(길이 × 속도)`; 상한과 진행률용이고 정확한 수는 1패스가 셈).
+- 길이, 추정 프레임 수(CFR이면 `nb_frames`, 아니면 `ceil(길이 × 속도)`; 상한과 진행률용). 흘려 쓴 WebM(`-f webm pipe:1`, 브라우저 녹화)은 stream·format 길이가 모두 없어 비워 두고, 2단계 `media::source::open`이 패킷 목록으로 길이와 출력 프레임 수를 정한다(처음 판은 이런 파일을 "읽을 수 없음"으로 거부했다, [재검토](M4_REVIEW.md) 3번).
 - **색(D1):** matrix·primaries·transfer·range. 원본이 태그하지 않은 필드는 높이 720 이상이면 bt709, 미만이면 smpte170m, range는 tv로 채우고 `assumed`로 표시(D1 fixture의 제안). 3단계 인코드가 같은 값을 태그로 쓴다.
 - 오디오 stream(색인, 코덱, 두세 자 소문자 언어 코드만), 처리하지 않는 다른 영상 stream 수.
 
@@ -24,7 +24,7 @@ ffprobe 보고에서 한 번 만들고 분석·미리보기·내보내기가 같
 - **pixel 형식:** 디코더가 내는 8비트 형식 목록(yuv420p·yuvj420p·yuv422p·yuvj422p·yuv444p·yuvj444p·yuv440p·yuvj440p·yuv411p·yuva420p·gray·gbrp·nv12·nv21). 1.12.1처럼 이름 끝 숫자로 비트 수를 읽으면 `nv12`·`rgb24`도 거부된다.
 - **HDR:** transfer가 `smpte2084`(PQ)·`arib-std-b67`(HLG)이면 거부(M9 전까지).
 - **회전:** display matrix의 `rotation`(마지막 것), 없으면 옛 `rotate` 태그. ffprobe 값은 화면이 그림을 반시계로 돌리는 각도다. 90°의 배수에서 1° 넘게 벗어나면 거부. `rotated-90.mp4`를 FFmpeg 자동 회전으로 디코드해 원래 좌상단의 프레임 번호 블록이 좌하단(x 0–59, y 400–639)에 오는 것으로 방향을 확인했다(시계 방향 270°).
-- **상한(1.12.1과 같음, 4.7):** 한 변 16,384, 3,600만 pixel, 240 fps, 86,400초, 추정 300만 프레임. 파일 크기 상한은 없다(파이프로 흘려 읽음).
+- **상한(1.12.1과 같음, 4.7):** 한 변 16,384, 3,600만 pixel, 240 fps, 86,400초, 추정 300만 프레임. 파일 크기 상한은 없다(파이프로 흘려 읽음). 길이와 프레임 수는 패킷 목록을 읽은 뒤 다시 잰다: 컨테이너 헤더의 길이는 프레임과 다를 수 있다(mdhd 길이를 1로 고친 파일, 재검토 7번).
 - ffprobe 인자: `-v error -hide_banner -print_format json -show_streams -show_format -protocol_whitelist file -i file:<경로>`(0단계 `ToolCommand`).
 
 ## fuzz
