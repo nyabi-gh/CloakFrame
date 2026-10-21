@@ -494,6 +494,7 @@ mod tests {
         tool("sh", &["-c", "sleep 60 & echo $!; wait"])
     }
 
+    /// The grandchild shares the console and its stdout, so it must print nothing before the pid.
     #[cfg(windows)]
     fn tool_with_grandchild() -> ToolCommand {
         tool(
@@ -501,8 +502,9 @@ mod tests {
             &[
                 "-NoProfile",
                 "-Command",
-                "$p = Start-Process -FilePath ping -ArgumentList '-n','60','127.0.0.1' \
-                 -PassThru -NoNewWindow; $p.Id; [Console]::Out.Flush(); $p.WaitForExit()",
+                "$p = Start-Process -FilePath powershell \
+                 -ArgumentList '-NoProfile','-Command','Start-Sleep 60' -PassThru -NoNewWindow; \
+                 $p.Id; [Console]::Out.Flush(); $p.WaitForExit()",
             ],
         )
     }
