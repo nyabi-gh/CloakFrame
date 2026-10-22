@@ -190,3 +190,5 @@ debug 시험이라 Rust 쪽이 대부분이고, macOS 백그라운드 QoS에서�
 처리하지 않은 것: 10번(Windows 파이프 상한)은 3단계 CI와 실기기 측정, 11번(읽지 않는 stdout)은 3단계 writer에서 주의, 12번(Windows Job·콘솔 창)은 M6 GUI 전에, 13번(ORT spin)은 M5 측정, 7번의 중간 해상도 변경, 문서 항목 끝의 1단계 자잘한 것(오류 문구 등).
 
 PR #44(2026-10-21). 문서만 바꾼 첫 커밋을 뺀 아홉 커밋을 하나씩 스크래치 worktree에서 확인했다: fmt, clippy 두 조합, core 시험, engine lib 시험과 `media_decode`·`media_probe`·`media_process`·`cli` 시험이 모두 통과(286 → 298개).
+
+마지막 커밋 `99a557c`에서 CI가 모두 통과했다. Windows에서는 9번의 `TerminateProcess` 코드가 처음 컴파일되었고, gyan 빌드 FFmpeg로 만드는 시험 입력(`leading_pictures_the_decoder_drops_are_not_listed`의 open GOP, `webm_without_a_duration_opens_from_its_frames`, 색 태그 시험 셋)도 통과했다. fuzz workflow는 원시 보고 2,540만 번, 구조화 165만 번(각 151초)에 crash가 없었다. Windows 디코드 파이프는 100 fps(625 MB/s)로 #43의 125 fps보다 낮았는데, 이 PR은 디코드 경로를 바꾸지 않아 runner 편차로 본다. 2026-10-21 사용자 지시로 main을 `99a557c`로 fast-forward했다.
