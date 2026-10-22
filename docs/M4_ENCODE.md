@@ -53,5 +53,4 @@ FFmpeg MP4 muxer는 세 글자 코드(`eng`·`ger`·`deu`·`qaa`)는 남기고 �
 
 - 완료: PR #45(2026-10-22, main `2e35d1f`), 3개 OS CI와 fuzz workflow 통과.
 
-- NVENC·QSV의 색 태그와 full range, 하드웨어 인코드 실패 뒤 소프트웨어 재시도 흐름: 장치 없음(인자는 단위 시험). 재시도 흐름은 4단계 처리기에서 시험한다.
-- 4단계: 원본 identity 비교, P-4 출력 검사, 게시(임시 파일 → fsync → no-replace rename), 고정 수동 마스크로 CLI 끝까지 내보내기.
+- NVENC·QSV의 색 태그와 full range: 장치 없음(인자는 단위 시험). 하드웨어 인코드 실패 뒤 소프트웨어 재시도, P-4, 게시, CLI 끝까지 내보내기는 4단계([기록](M4_VIDEO.md)).
