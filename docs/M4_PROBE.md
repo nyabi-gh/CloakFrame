@@ -12,7 +12,7 @@ ffprobe 보고에서 한 번 만들고 분석·미리보기·내보내기가 같
 - **프레임 n의 시각:** `start + n / rate`(정확한 유리수, `TimelineSpec::frame_start`). 2단계는 이 시각 대신 칸 가운데 시각(`frame_middle`)에 화면에 있던 원본 프레임을 고른다([M4_DECODE](M4_DECODE.md)).
 - 길이, 추정 프레임 수(CFR이면 `nb_frames`, 아니면 `ceil(길이 × 속도)`; 상한과 진행률용). 흘려 쓴 WebM(`-f webm pipe:1`, 브라우저 녹화)은 stream·format 길이가 모두 없어 비워 두고, 2단계 `media::source::open`이 패킷 목록으로 길이와 출력 프레임 수를 정한다(처음 판은 이런 파일을 "읽을 수 없음"으로 거부했다, [재검토](M4_REVIEW.md) 3번).
 - **색(D1):** matrix·primaries·transfer·range를 ffprobe가 출력하는 이름으로 읽는다(transfer 4·5는 `bt470m`·`bt470bg`, 옛 옵션 이름 `gamma22`·`gamma28`도 읽음). 인코더 옵션도 같은 이름을 받는다(고정 FFmpeg로 확인). 원본이 태그하지 않은 필드(없음, `unknown`·`reserved`)는 너비 1280 이상이거나 높이 576을 넘으면 bt709, 아니면 smpte170m, range는 tv로 채우고 `assumed`로 표시한다(mpv와 같은 크기 판정, 1280×544 같은 HD 크롭도 HD). 태그가 있는데 이 빌드가 모르는 이름이거나 디코드할 수 없는 matrix(`ycgco`·`bt2020c`·`ictcp` 등)이면 기본값으로 바꾸지 않고 이유와 함께 거부한다. `gbr`은 RGB로 코딩된 영상이라 디코드에 matrix가 필요 없다. 3단계 인코드가 같은 값을 태그로 쓴다. 처음 판은 높이 720 기준이었고, 모르는 이름을 태그 없음으로 봤다([재검토](M4_REVIEW.md) 4·14번).
-- 오디오 stream(색인, 코덱, 두세 자 소문자 언어 코드만), 처리하지 않는 다른 영상 stream 수.
+- 오디오 stream(색인, 코덱, 소문자 언어 코드만: 두 글자는 3단계부터 세 글자로 바꿈, [기록](M4_ENCODE.md#언어)), 처리하지 않는 다른 영상 stream 수.
 
 ## 받는 입력과 거부
 

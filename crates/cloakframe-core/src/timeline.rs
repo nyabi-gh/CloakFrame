@@ -258,7 +258,7 @@ pub const SD_MAX_HEIGHT: u32 = 576;
 impl ColorTags {
     /// The source's tags, with the untagged fields assumed from its coded size.
     pub fn complete(self, width: u32, height: u32) -> ColorSpec {
-        let hd = width >= HD_MIN_WIDTH || height > SD_MAX_HEIGHT;
+        let hd = is_hd(width, height);
         ColorSpec {
             matrix: self
                 .matrix
@@ -280,6 +280,10 @@ impl ColorTags {
                 || self.range.is_none(),
         }
     }
+}
+
+fn is_hd(width: u32, height: u32) -> bool {
+    width >= HD_MIN_WIDTH || height > SD_MAX_HEIGHT
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -331,6 +335,16 @@ impl TimelineSpec {
             (self.coded_height, self.coded_width)
         } else {
             (self.coded_width, self.coded_height)
+        }
+    }
+
+    /// The matrix the output is encoded with. RGB-coded video becomes 4:2:0 YUV, which takes the
+    /// matrix an untagged source of its size is assumed to have.
+    pub fn output_matrix(&self) -> Matrix {
+        match self.color.matrix {
+            Matrix::Gbr if is_hd(self.coded_width, self.coded_height) => Matrix::Bt709,
+            Matrix::Gbr => Matrix::Smpte170m,
+            matrix => matrix,
         }
     }
 
@@ -711,6 +725,21 @@ mod tests {
         }
         .complete(640, 480);
         assert!(!full.assumed);
+    }
+
+    #[test]
+    fn rgb_coded_video_is_encoded_with_the_matrix_its_size_suggests() {
+        let encoded = |matrix, (width, height)| {
+            let mut s = spec(Rational::new(30, 1).unwrap(), Seconds::ZERO);
+            (s.coded_width, s.coded_height) = (width, height);
+            s.color.matrix = matrix;
+            s.output_matrix()
+        };
+        assert_eq!(encoded(Matrix::Gbr, (1920, 1080)), Matrix::Bt709);
+        assert_eq!(encoded(Matrix::Gbr, (1280, 544)), Matrix::Bt709);
+        assert_eq!(encoded(Matrix::Gbr, (720, 576)), Matrix::Smpte170m);
+        assert_eq!(encoded(Matrix::Bt470bg, (1920, 1080)), Matrix::Bt470bg);
+        assert_eq!(encoded(Matrix::Bt709, (640, 480)), Matrix::Bt709);
     }
 
     #[test]

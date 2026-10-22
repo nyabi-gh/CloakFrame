@@ -72,7 +72,7 @@ pub fn frame_size(spec: &TimelineSpec, long_edge: Option<u32>) -> (u32, u32) {
 }
 
 /// swscale's names for the matrix; `bt470` is BT.470 BG's, which SMPTE 170M shares.
-fn swscale_matrix(matrix: Matrix) -> &'static str {
+pub(super) fn swscale_matrix(matrix: Matrix) -> &'static str {
     match matrix {
         Matrix::Bt709 => "bt709",
         Matrix::Bt470bg => "bt470",

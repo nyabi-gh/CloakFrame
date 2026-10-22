@@ -121,3 +121,10 @@ jobs:
         env:
           ORT_DISABLE_TELEMETRY: "1"
         run: cargo test -p cloakframe-engine --locked --all-features --test media_decode decode_throughput -- --ignored --nocapture
+
+      # Plan M4 stage 3: the stdin pipe into the software encoder an export uses, measured the
+      # same way.
+      - name: Measure the encode pipe
+        env:
+          ORT_DISABLE_TELEMETRY: "1"
+        run: cargo test -p cloakframe-engine --locked --all-features --test media_encode encode_throughput -- --ignored --nocapture
