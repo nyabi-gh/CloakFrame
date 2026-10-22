@@ -26,6 +26,7 @@ use cloakframe_engine::review::{ReviewDecisions, apply};
 use cloakframe_engine::run::{ItemProcessor, Job, RunReport, start_under};
 use cloakframe_engine::scan::{ScanRequest, scan};
 use cloakframe_engine::session::{SessionId, SessionStore};
+use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 
 const USAGE: &str = "\
@@ -287,8 +288,8 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
     .map_err(|e| failed(e.to_string()))
 }
 
-/// Photos, and with --videos videos masked with the given areas.
-fn media_processor(o: &Options) -> Result<MediaProcessor, CliError> {
+/// Photos, and with --videos videos masked with the given areas, their records in `records`.
+fn media_processor(o: &Options, records: PathBuf) -> Result<MediaProcessor, CliError> {
     let photo = photo_processor(o)?;
     let video_flags = o.ffmpeg.is_some()
         || o.ffprobe.is_some()
@@ -308,10 +309,11 @@ fn media_processor(o: &Options) -> Result<MediaProcessor, CliError> {
             "--videos needs --review off: videos cannot be reviewed yet",
         ));
     }
-    // Without detection an unmasked video would be published as if it had been checked.
+    // Until the second pass masks what was tracked, an item with tracks fails and the given
+    // areas are all a video is masked with.
     if o.masks.is_empty() {
         return Err(usage(
-            "--videos needs at least one --mask: videos are not analyzed yet",
+            "--videos needs at least one --mask: detected subjects are not masked in videos yet",
         ));
     }
     let tools = Tools {
@@ -325,16 +327,22 @@ fn media_processor(o: &Options) -> Result<MediaProcessor, CliError> {
             .ok_or_else(|| usage("--videos needs --ffprobe FILE"))?,
     };
     let default = VideoSettings::default();
+    let photo_settings = photo.settings();
     let settings = VideoSettings {
         codec: o.video_codec.unwrap_or(default.codec),
         quality: o.video_quality.unwrap_or(default.quality),
         hardware_encode: o.hardware_encode.unwrap_or(default.hardware_encode),
         masks: o.masks.clone(),
+        analysis: AnalysisSettings {
+            models: photo_settings.models,
+            thresholds: photo_settings.thresholds,
+            tiles: photo_settings.tiles,
+        },
         ..default
     };
     Ok(MediaProcessor::new(
         photo,
-        Some(VideoProcessor::new(tools, settings)),
+        Some(VideoProcessor::new(tools, settings, records)),
     ))
 }
 
@@ -599,37 +607,48 @@ fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
     if o.inputs.is_empty() {
         return Err(usage("run needs at least one input"));
     }
+    let store = session_store(&o)?;
+    let session = SessionId::generate();
     #[cfg(feature = "synthetic")]
     if o.synthetic {
         let processor = cloakframe_engine::synthetic::SyntheticProcessor;
-        return run_with(&o, &output, processor, without_models, cancel);
+        return run_with(
+            &o,
+            &output,
+            processor,
+            without_models,
+            (store, session),
+            cancel,
+        );
     }
-    let processor = media_processor(&o)?;
+    let processor = media_processor(&o, store.records_dir(&session))?;
     let models = detection_models(&o)?;
     let library = o
         .ort_library
         .clone()
         .ok_or_else(|| usage("run needs --ort-library FILE"))?;
-    let store = model_store(&o)?;
+    let models_store = model_store(&o)?;
     let acceleration = o.gpu.unwrap_or_default();
     run_with(
         &o,
         &output,
         processor,
-        || detector(&library, &store, models, acceleration),
+        || detector(&library, &models_store, models, acceleration),
+        (store, session),
         cancel,
     )
 }
 
-/// The detector is made only once the scan found something to analyze.
+/// The detector is made only once the scan found something to analyze. The session's id is
+/// chosen up front, as its records folder holds the videos' analysis during the run.
 fn run_with<P: ItemProcessor>(
     o: &Options,
     output: &Path,
     processor: P,
     detector: impl FnOnce() -> Result<Started, CliError>,
+    (store, id): (SessionStore, SessionId),
     cancel: &CancelToken,
 ) -> Result<u8, CliError> {
-    let store = session_store(o)?;
     let scanned = scan(
         &ScanRequest {
             inputs: o.inputs.clone(),
@@ -670,10 +689,7 @@ fn run_with<P: ItemProcessor>(
     let report = execute(job, Arc::new(processor), started.handle, cancel)?;
     // Saved before anything is written, which can fail once the terminal is gone.
     let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
-    let saved = session.map(|session| {
-        let id = SessionId::generate();
-        store.save(&id, &session).map(|()| id)
-    });
+    let saved = session.map(|session| store.save(&id, &session).map(|()| &id));
     print_report(&report);
     print_fallbacks(&started.backends.get());
     for (item, reason) in &left_out {
@@ -686,6 +702,18 @@ fn run_with<P: ItemProcessor>(
     let mut code = exit_for(&report);
     if !scanned.issues.is_empty() || !left_out.is_empty() {
         code = code.max(FAILED);
+    }
+    // Videos are not kept for review yet, so none of their records outlives the run.
+    let records = store.records_dir(&id);
+    match std::fs::remove_dir_all(&records) {
+        Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
+            eprintln!(
+                "cannot remove the video analysis records in {}: {e}",
+                records.display()
+            );
+            code = code.max(FAILED);
+        }
+        _ => {}
     }
     Ok(code)
 }

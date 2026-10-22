@@ -1,5 +1,6 @@
 //! Memory the photo pipeline allocates, counted through the global allocator: the estimate the
-//! budget uses covers one image, and a compressed color profile cannot expand outside it. Own
+//! budget uses covers one image, and a compressed color profile cannot expand outside it. And
+//! video tracking, which does not grow with the video's length. Own
 //! binary, because it counts every allocation of the process; the tests take turns.
 
 #![allow(unsafe_code)]
@@ -11,10 +12,12 @@ use std::io::Cursor;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use cloakframe_core::detection::{Detection, ModelId, Thresholds};
+use cloakframe_core::detection::{Detection, DetectionKind, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method};
+use cloakframe_core::timeline::Rational;
+use cloakframe_core::tracking::Observation;
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::photo::budget::{MemoryBudget, PixelLayout, estimated_bytes};
@@ -22,6 +25,8 @@ use cloakframe_engine::photo::color::{EmbeddedIcc, embedded_icc};
 use cloakframe_engine::photo::decode::{MAX_ICC_BYTES, decode, read_source};
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Job, JobItem, Start, start};
+use cloakframe_engine::video::record::{Detected, Order, Record, RecordWriter, TrackRegion};
+use cloakframe_engine::video::tracking::{self, KindTracking};
 use common::{TestDir, fixtures, png_with_icc_of};
 use image::ImageEncoder;
 
@@ -182,4 +187,92 @@ fn a_compressed_profile_inflates_only_to_its_limit() {
         peak >> 20,
         inflated >> 20
     );
+}
+
+/// A synthetic record of `minutes` at 30 frames per second: four people at a time moving across
+/// the frame, each replaced by a new one every 20 seconds, missed every seventh frame, with a
+/// scene cut every two minutes.
+fn synthetic_record(path: &std::path::Path, minutes: u64) -> u64 {
+    let frames = minutes * 60 * 30;
+    let mut writer = RecordWriter::<Detected>::create(path, Order::Ascending).unwrap();
+    let mut entries = Vec::new();
+    for k in 0..frames {
+        entries.clear();
+        for slot in 0..4u64 {
+            if (k + slot) % 7 == 0 {
+                continue;
+            }
+            let age = (k + slot * 150) % 600;
+            let x = 50.0 + age as f32 * 2.0;
+            let y = 100.0 + slot as f32 * 200.0;
+            entries.push(Detected {
+                model: ModelId::Yolo5FaceN,
+                observation: Observation {
+                    bbox: Rect::new(x, y, 60.0, 70.0).unwrap(),
+                    score: if age % 5 == 0 { 0.3 } else { 0.8 },
+                    roll: Some(0.1),
+                },
+            });
+        }
+        writer.frame(k, &entries).unwrap();
+    }
+    let cuts: Vec<u64> = (1..minutes / 2 + 1)
+        .map(|i| i * 3600)
+        .filter(|&c| c < frames)
+        .collect();
+    writer.finish(&cuts).unwrap();
+    frames
+}
+
+/// Plan 9.3: memory does not grow with the video. Tracking a record and reading its regions back
+/// holds the open tracks and a summary of each track: an hour peaks where ten minutes do, but for
+/// the summaries of its six times as many tracks.
+#[test]
+fn tracking_an_hour_peaks_where_ten_minutes_do() {
+    let _turn = turn();
+    let dir = TestDir::new();
+    let kinds = [KindTracking::new(
+        DetectionKind::Face,
+        0.4,
+        Rational::new(30, 1).unwrap(),
+    )];
+    let mut peaks = Vec::new();
+    for minutes in [10, 60] {
+        let detections = dir.path().join(format!("detections-{minutes}"));
+        let frames = synthetic_record(&detections, minutes);
+        let regions = dir.path().join(format!("regions-{minutes}"));
+        let mut tracks = 0;
+        let mut boxes = 0u64;
+        let peak = measure(|| {
+            let record = Record::<Detected>::open(&detections).unwrap();
+            let tracked = tracking::track(
+                &record,
+                &dir.path().join("backward"),
+                &regions,
+                &kinds,
+                &CancelToken::new(),
+            )
+            .unwrap();
+            tracks = tracked.tracks.len();
+            let regions = Record::<TrackRegion>::open(&regions).unwrap();
+            let mut read = regions.ascending().unwrap();
+            let mut entries = Vec::new();
+            while read.next_into(&mut entries).unwrap().is_some() {
+                boxes += entries.len() as u64;
+            }
+        });
+        assert!(boxes > frames * 3, "{boxes} boxes in {frames} frames");
+        let size = std::fs::metadata(&detections).unwrap().len();
+        println!("{minutes} min: record {size} bytes, {tracks} tracks, peak {peak} bytes");
+        peaks.push((peak, tracks));
+    }
+    let [(short, short_tracks), (long, long_tracks)] = peaks[..] else {
+        unreachable!()
+    };
+    assert!(
+        long_tracks >= 5 * short_tracks,
+        "{short_tracks} → {long_tracks} tracks"
+    );
+    let per_track = 512 * (long_tracks - short_tracks);
+    assert!(long <= short + per_track, "{short} → {long} bytes");
 }

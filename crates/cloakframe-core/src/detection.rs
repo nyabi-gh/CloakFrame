@@ -207,7 +207,7 @@ impl Detection {
 
 /// The largest roll the masks follow. 1.12.1's `kMaximumSupportedRoll` (1.0471975512F) is the
 /// same f32.
-pub(crate) const MAX_ROLL: f32 = std::f32::consts::FRAC_PI_3;
+pub const MAX_ROLL: f32 = std::f32::consts::FRAC_PI_3;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ThresholdError;

@@ -82,18 +82,26 @@ impl Merger {
     pub fn finish(mut self, next_id: TrackId) -> Joins {
         self.alone.sort_unstable();
         let mut target = self.joined;
+        let after = next_id + self.alone.len() as TrackId;
         for (i, b) in self.alone.into_iter().enumerate() {
             target.insert(b, next_id + i as TrackId);
         }
-        Joins { target }
+        Joins { target, after }
     }
 }
 
 pub struct Joins {
     target: BTreeMap<TrackId, TrackId>,
+    after: TrackId,
 }
 
 impl Joins {
+    /// The number after the last of the joined tracks: the forward pass's next number and the
+    /// backward tracks of their own counted on from it.
+    pub fn next_id(&self) -> TrackId {
+        self.after
+    }
+
     /// The tracks' boxes in one frame: every forward box, then for each backward box in backward
     /// track order the box of the track it joined, where that track has none yet. At most one
     /// box per track, sorted by track.
@@ -243,6 +251,7 @@ mod tests {
             merger.frame(&frames[k], &forward[k], &backward[k]);
         }
         let joins = merger.finish(2);
+        assert_eq!(joins.next_id(), 3);
         let boxes: Vec<Vec<(TrackId, f32)>> = (0..3)
             .map(|k| {
                 joins

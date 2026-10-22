@@ -262,6 +262,7 @@ fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -
             ffprobe: ffprobe(),
         },
         settings,
+        input.parent().unwrap().join("records"),
     ));
     let detector = DetectorHandle::spawn(Box::new(NoDetections)).unwrap();
     let report = run::start(job, processor, detector).unwrap().wait();

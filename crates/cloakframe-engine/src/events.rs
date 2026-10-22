@@ -30,7 +30,7 @@ impl ProgressBoard {
         self.0.lock().unwrap_or_else(|e| e.into_inner()).clone()
     }
 
-    pub(crate) fn reporter(&self, item: ItemId) -> ProgressReporter {
+    pub fn reporter(&self, item: ItemId) -> ProgressReporter {
         ProgressReporter {
             board: self.clone(),
             item,

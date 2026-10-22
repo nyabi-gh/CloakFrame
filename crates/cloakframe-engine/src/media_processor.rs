@@ -31,7 +31,7 @@ fn is_video(ctx: &ItemContext<'_>) -> bool {
 
 pub enum Prepared {
     Photo(photo::Prepared),
-    Video(crate::media::source::Source),
+    Video(video::Analyzed),
 }
 
 pub enum Rendered {

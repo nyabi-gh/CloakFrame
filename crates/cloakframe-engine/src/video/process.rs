@@ -1,22 +1,26 @@
-//! The video pipeline as the runner's item processor (plan 4.4). Until detection and tracking
-//! arrive (M5) a video is masked with fixed areas the user gives: analysis reads the timeline,
-//! and the second pass decodes every source frame at full size, masks it, encodes, and checks
-//! the output (P-4) before it waits for its publish permit. The source is never copied; its
-//! identity is compared before the first pass, between the passes, after the second and right
-//! before publishing (plan 0.1).
+//! The video pipeline as the runner's item processor (plan 4.4). Analysis reads the timeline,
+//! detects in every frame and tracks into the item's records; the second pass decodes every
+//! source frame at full size, masks it, encodes, and checks the output (P-4) before it waits for
+//! its publish permit. Until the second pass masks the tracked regions (M5 stage 2), it masks the
+//! fixed areas the user gives and refuses a video in which anything was tracked. The source is
+//! never copied; its identity is compared before the first pass, after it, between the passes,
+//! after the second and right before publishing (plan 0.1).
 
 use std::fmt;
 use std::io;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use cloakframe_core::geometry::Rect;
-use cloakframe_core::item::{PublishBasis, PublishPermit};
+use cloakframe_core::item::{ItemId, PublishBasis, PublishPermit};
 use cloakframe_core::mask::{MaskStyle, Region};
 use cloakframe_core::review::Digest;
 use image::{DynamicImage, RgbImage};
 use sha2::{Digest as _, Sha256};
 
+use super::analysis::{self, AnalysisError, AnalysisSettings};
+use super::record::{Detected, Record};
+use super::tracking::{self, KindTracking, TrackSummary, TrackingError};
 use crate::detect::Rgb8Image;
 use crate::identity::SourceStamp;
 use crate::media::decode::{DecodeError, FrameReader, frame_size};
@@ -47,6 +51,7 @@ pub struct VideoSettings {
     /// Areas masked in every frame, in display pixels.
     pub masks: Vec<Rect>,
     pub style: MaskStyle,
+    pub analysis: AnalysisSettings,
 }
 
 impl Default for VideoSettings {
@@ -57,6 +62,7 @@ impl Default for VideoSettings {
             hardware_encode: true,
             masks: Vec::new(),
             style: MaskStyle::default(),
+            analysis: AnalysisSettings::default(),
         }
     }
 }
@@ -76,6 +82,7 @@ impl VideoSettings {
             s.soft_edges,
             s.mosaic_strength.cells(),
         ));
+        h.update(self.analysis.digest().0);
         for m in &self.masks {
             h.update(format!(
                 "mask {:08x} {:08x} {:08x} {:08x}\n",
@@ -101,6 +108,10 @@ pub enum VideoError {
         mask: usize,
         size: (u32, u32),
     },
+    /// Something was tracked, and the second pass cannot mask tracks yet (M5 stage 2).
+    TracksNotMasked {
+        tracks: usize,
+    },
 }
 
 impl fmt::Display for VideoError {
@@ -117,6 +128,10 @@ impl fmt::Display for VideoError {
                 mask + 1,
                 size.0,
                 size.1
+            ),
+            Self::TracksNotMasked { tracks } => write!(
+                f,
+                "{tracks} detected subjects cannot be masked in videos yet"
             ),
         }
     }
@@ -148,6 +163,77 @@ fn unchanged(ctx: &ItemContext<'_>, stamp: SourceStamp) -> Result<(), StepError>
     }
 }
 
+fn analysis_failed(e: AnalysisError) -> StepError {
+    match e {
+        AnalysisError::Cancelled => StepError::Cancelled,
+        e => failed(e),
+    }
+}
+
+fn tracking_failed(e: TrackingError) -> StepError {
+    match e {
+        TrackingError::Cancelled => StepError::Cancelled,
+        e => failed(e),
+    }
+}
+
+/// An item's analysis files in a folder of its own, removed with the item.
+pub struct ItemRecords {
+    dir: PathBuf,
+}
+
+impl ItemRecords {
+    fn create(records: &Path, item: ItemId) -> io::Result<Self> {
+        std::fs::create_dir_all(records)?;
+        let dir = records.join(format!("item-{}", item.0));
+        std::fs::create_dir(&dir)?;
+        Ok(Self { dir })
+    }
+
+    pub fn detections(&self) -> PathBuf {
+        self.dir.join("detections")
+    }
+
+    fn backward(&self) -> PathBuf {
+        self.dir.join("backward")
+    }
+
+    pub fn regions(&self) -> PathBuf {
+        self.dir.join("regions")
+    }
+}
+
+impl Drop for ItemRecords {
+    fn drop(&mut self) {
+        // Nothing can report a failure here. What is left is in the app's data folder, which the
+        // run's own cleanup of its records folder reports.
+        let _ = std::fs::remove_dir_all(&self.dir);
+    }
+}
+
+/// A video's analysis waiting for its second pass.
+pub struct Analyzed {
+    source: Source,
+    records: ItemRecords,
+    tracks: Vec<TrackSummary>,
+}
+
+impl Analyzed {
+    pub fn records(&self) -> &ItemRecords {
+        &self.records
+    }
+
+    pub fn tracks(&self) -> &[TrackSummary] {
+        &self.tracks
+    }
+}
+
+/// The rate the tracking windows are counted at: the source's own, frames per second on average,
+/// or the output's when the source gives none.
+fn source_rate(source: &Source) -> cloakframe_core::timeline::Rational {
+    source.spec.average_rate.unwrap_or(source.spec.rate)
+}
+
 /// The verified output under its temporary name and the source it was made from.
 pub struct Rendered {
     output: TempOutput,
@@ -157,6 +243,8 @@ pub struct Rendered {
 pub struct VideoProcessor {
     tools: Tools,
     settings: VideoSettings,
+    /// The run's folder for its items' records.
+    records: PathBuf,
     /// Held for a whole second pass, so videos render one at a time: the encoder already keeps
     /// every core busy, and two 1080p encodes at once finished only 2–8% sooner than one after
     /// the other (M4 stage 4) while holding twice the memory.
@@ -164,11 +252,13 @@ pub struct VideoProcessor {
 }
 
 impl VideoProcessor {
-    pub fn new(tools: Tools, settings: VideoSettings) -> Self {
+    /// Each item's records go in a folder of its own under `records`, made when it is analyzed.
+    pub fn new(tools: Tools, settings: VideoSettings, records: PathBuf) -> Self {
         let encoders = Mutex::new(Encoders::new(settings.hardware_encode));
         Self {
             tools,
             settings,
+            records,
             encoders,
         }
     }
@@ -285,7 +375,8 @@ impl VideoProcessor {
             data: Vec::new(),
         };
         let mut read = 0;
-        for (n, k) in frames.shown(spec).enumerate() {
+        let listed = frames.len() as u64;
+        for k in frames.shown(spec) {
             // Each source frame is masked once, however many output frames show it.
             while read <= k {
                 if !reader.next_into(&mut frame).map_err(PassError::Decode)? {
@@ -296,9 +387,9 @@ impl VideoProcessor {
                 }
                 mask_frame(&mut frame, regions, &self.settings.style).map_err(PassError::Mask)?;
                 read += 1;
+                ctx.progress.set(listed + read as u64, 2 * listed);
             }
             writer.write(&frame).map_err(PassError::Encode)?;
-            ctx.progress.set(n as u64 + 1, total);
         }
         // The reader checks the decoded count against the list once it reaches the end.
         while reader.next_into(&mut frame).map_err(PassError::Decode)? {}
@@ -340,34 +431,88 @@ impl VideoProcessor {
 }
 
 impl ItemProcessor for VideoProcessor {
-    type Prepared = Source;
+    type Prepared = Analyzed;
     type Rendered = Rendered;
 
-    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Source), StepError> {
+    /// The first half of the item's progress is the first pass, a unit per source frame.
+    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Analyzed), StepError> {
         let before = SourceStamp::of(ctx.input).map_err(failed)?;
         let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
             .map_err(|e| failed_unless_cancelled(ctx, e))?;
         unchanged(ctx, before)?;
         self.regions(source.spec.display_size()).map_err(failed)?;
+        let records = ItemRecords::create(&self.records, ctx.item).map_err(failed)?;
+        let settings = &self.settings.analysis;
+        let listed = source.frames.len() as u64;
+        let first = analysis::first_pass(
+            &self.tools.ffmpeg,
+            ctx.input,
+            &source,
+            ctx.detector,
+            settings,
+            &records.detections(),
+            ctx.cancel,
+            |done| ctx.progress.set(done, 2 * listed),
+        )
+        .map_err(analysis_failed)?;
+        unchanged(ctx, before)?;
+        let record = Record::<Detected>::open(&records.detections()).map_err(failed)?;
+        let rate = source_rate(&source);
+        let kinds: Vec<KindTracking> = settings
+            .kinds()
+            .into_iter()
+            .map(|kind| KindTracking::new(kind, settings.track_score(kind), rate))
+            .collect();
+        let tracked = tracking::track(
+            &record,
+            &records.backward(),
+            &records.regions(),
+            &kinds,
+            ctx.cancel,
+        )
+        .map_err(tracking_failed)?;
+        if first.reran_on_cpu {
+            ctx.notes.add(Note::AnalyzedAgainOnCpu);
+        }
+        if tracked.tracks.is_empty() {
+            ctx.notes.add(Note::NothingDetected);
+        }
+        let mut evidence = first.capped;
+        evidence.extend(tracked.gaps);
         let analysis = Analysis {
+            evidence,
             source: Some(before),
             ..Analysis::default()
         };
-        Ok((analysis, source))
+        Ok((
+            analysis,
+            Analyzed {
+                source,
+                records,
+                tracks: tracked.tracks,
+            },
+        ))
     }
 
     fn render(
         &self,
         ctx: &ItemContext<'_>,
         request: &RenderRequest<'_>,
-        prepared: Option<Source>,
+        prepared: Option<Analyzed>,
     ) -> Result<Rendered, StepError> {
-        let source = prepared.ok_or_else(|| failed(VideoError::NotResumable))?;
+        let analyzed = prepared.ok_or_else(|| failed(VideoError::NotResumable))?;
+        let unmasked = request.basis != PublishBasis::ExportedWithoutAnonymization;
+        if unmasked && !analyzed.tracks.is_empty() {
+            return Err(failed(VideoError::TracksNotMasked {
+                tracks: analyzed.tracks.len(),
+            }));
+        }
+        let source = &analyzed.source;
         let stamp = request
             .analysis
             .source
             .expect("analysis records the source");
-        let regions = if request.basis == PublishBasis::ExportedWithoutAnonymization {
+        let regions = if !unmasked {
             Vec::new()
         } else {
             self.regions(source.spec.display_size()).map_err(failed)?
@@ -385,7 +530,7 @@ impl ItemProcessor for VideoProcessor {
                     ctx.cancel,
                 )
             },
-            |encoder| self.pass(ctx, &source, &regions, encoder),
+            |encoder| self.pass(ctx, source, &regions, encoder),
         )
         .map_err(|e| failed_unless_cancelled(ctx, e))?;
         drop(encoders);
@@ -422,10 +567,9 @@ impl ItemProcessor for VideoProcessor {
         }
     }
 
-    /// No model decides a video's output yet (M5); the models' half is that of no models.
     fn fingerprint(&self) -> Fingerprint {
         Fingerprint {
-            models: Digest(Sha256::digest(b"").into()),
+            models: self.settings.analysis.models.digest(),
             settings: self.settings.digest(),
         }
     }
@@ -494,6 +638,7 @@ mod tests {
                 masks: vec![Rect::new(0.0, 0.0, 8.0, 8.0).unwrap()],
                 ..VideoSettings::default()
             },
+            dir.path().join("records"),
         );
         let edits = PhotoEdits::default();
         let out = dir.path().join("out");
@@ -643,6 +788,7 @@ mod tests {
                     masks,
                     ..VideoSettings::default()
                 },
+                PathBuf::new(),
             )
         };
         let rect = |x, y, w, h| Rect::new(x, y, w, h).unwrap();

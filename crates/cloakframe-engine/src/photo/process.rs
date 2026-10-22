@@ -180,6 +180,10 @@ impl PhotoProcessor {
         })
     }
 
+    pub fn settings(&self) -> &PhotoSettings {
+        &self.settings
+    }
+
     /// Shares `budget` instead of a quarter of this computer's memory.
     #[must_use]
     pub fn with_budget(mut self, budget: MemoryBudget) -> Self {

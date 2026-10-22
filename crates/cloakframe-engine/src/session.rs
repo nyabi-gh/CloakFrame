@@ -186,6 +186,11 @@ impl SessionStore {
     pub fn dir(&self) -> &Path {
         &self.dir
     }
+
+    /// The folder for the analysis records of the session's videos, beside its file.
+    pub fn records_dir(&self, id: &SessionId) -> PathBuf {
+        self.dir.join(&id.0)
+    }
 }
 
 #[cfg(test)]

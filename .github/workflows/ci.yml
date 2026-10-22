@@ -128,3 +128,10 @@ jobs:
         env:
           ORT_DISABLE_TELEMETRY: "1"
         run: cargo test -p cloakframe-engine --locked --all-features --test media_encode encode_throughput -- --ignored --nocapture
+
+      # Plan M5 stage 1: a video's first pass with ORT's CPU sessions not spinning, as they run,
+      # against spinning, as 1.12.1 ran them. The test prints frames per second of each.
+      - name: Measure the first pass
+        env:
+          ORT_DISABLE_TELEMETRY: "1"
+        run: cargo test -p cloakframe-engine --locked --all-features --test video_detect first_pass_throughput -- --ignored --nocapture
