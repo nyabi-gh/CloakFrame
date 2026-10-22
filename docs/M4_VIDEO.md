@@ -52,6 +52,7 @@
 
 ## 남은 것
 
+- 완료: PR #46(2026-10-22, main `8c9aa21`), 3개 OS CI와 탐지 벤치마크 통과. Windows·Linux에서는 이 PR이 영상 처리기·P-4·`cli_video.rs`의 첫 실행이었고, 하드웨어 인코더가 없는 runner라 소프트웨어로 골라졌다. 같은 실행의 1080p 파이프(debug 시험): 디코드 Linux 179 fps(1,116 MB/s)·macOS runner 236(1,470)·Windows 101(631), 인코드 Linux 164(1,017)·macOS runner 151(942)·Windows 82(507). 3단계 때(인코드 Linux 99·macOS 113·Windows 84)보다 Linux·macOS가 높은데 인코드 경로는 그대로라 runner 편차로 본다.
 - 1패스 중(조사·목록 사이)에 원본이 바뀌는 경우는 같은 비교 함수를 쓰지만 따로 시험하지 않았다.
 - 영상 검토 세션, 분석 디코드와 감지, 트랙별 모자이크 격자: M5.
 - 5단계(`m4-verify`): 프레임 번호·오디오 임펄스 합성 영상으로 frame 일치·A/V 동기, D1·P-3·P-4·P-5 시험 표, P-3 `analysis_equals_output`.
