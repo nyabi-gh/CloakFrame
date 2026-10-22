@@ -601,9 +601,9 @@
    "note": "내부 데이터 상한 제거. 입력 경계 상한만 둔다"
   },
   "tracking_tests/testTrackingWindowsFollowTheFrameRate": {
-   "status": "normative",
+   "status": "changed",
    "plan": "M5",
-   "note": "새 구현은 유리수 FPS. 23.976·29.97에서 같은 프레임 수가 나와야 함"
+   "note": "새 구현은 유리수 FPS. 23.976·29.97에서 같은 프레임 수가 나와야 함. 보간 창은 2/3초 대신 다시 잇는 창과 같은 1초(M5 결정, docs/M5_PLAN.md): 30 fps에서 20 → 30, 60 fps에서 40 → 60, 24 fps에서 16 → 24. 나머지 창은 1.12.1과 같음"
   },
   "update_signature_tests/testAnUnpinnedBuildSaysSoInsteadOfPassing": {
    "status": "changed",

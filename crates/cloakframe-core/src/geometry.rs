@@ -119,6 +119,68 @@ impl Rect {
         intersection / (a + b - intersection)
     }
 
+    /// For coordinates computed from finite boxes (means, unions, interpolations), which stay
+    /// finite and non-negative in size as cv::Rect2f arithmetic did in 1.12.1.
+    pub(crate) fn from_parts(x: f32, y: f32, width: f32, height: f32) -> Self {
+        debug_assert!(Self::new(x, y, width, height).is_ok());
+        Self {
+            x,
+            y,
+            width,
+            height,
+        }
+    }
+
+    pub fn center(&self) -> Point {
+        Point {
+            x: self.x + self.width * 0.5,
+            y: self.y + self.height * 0.5,
+        }
+    }
+
+    /// The same size with its centre moved to `center`.
+    pub fn centered_at(&self, center: Point) -> Self {
+        Self::from_parts(
+            center.x - self.width * 0.5,
+            center.y - self.height * 0.5,
+            self.width,
+            self.height,
+        )
+    }
+
+    /// The smallest box holding both, empty boxes included (cv::Rect2f's `|`).
+    pub fn union(&self, other: &Rect) -> Self {
+        let left = self.x.min(other.x);
+        let top = self.y.min(other.y);
+        let right = self.right().max(other.right());
+        let bottom = self.bottom().max(other.bottom());
+        Self::from_parts(left, top, right - left, bottom - top)
+    }
+
+    pub fn intersection_area(&self, other: &Rect) -> f32 {
+        let w = (self.right().min(other.right()) - self.x.max(other.x)).max(0.0);
+        let h = (self.bottom().min(other.bottom()) - self.y.max(other.y)).max(0.0);
+        w * h
+    }
+
+    /// Each side moved `t` of the way to `to`'s.
+    pub fn lerp(&self, to: &Rect, t: f32) -> Self {
+        Self::from_parts(
+            self.x + (to.x - self.x) * t,
+            self.y + (to.y - self.y) * t,
+            self.width + (to.width - self.width) * t,
+            self.height + (to.height - self.height) * t,
+        )
+    }
+
+    /// Whether `inner` lies inside this box, with `slack` pixels allowed on each side.
+    pub fn contains(&self, inner: &Rect, slack: f32) -> bool {
+        self.x <= inner.x + slack
+            && self.y <= inner.y + slack
+            && self.right() >= inner.right() - slack
+            && self.bottom() >= inner.bottom() - slack
+    }
+
     /// Whether every point of this box lies in at least one of `areas`.
     pub fn is_covered_by(&self, areas: &[Rect]) -> bool {
         // The areas' edges cut the box into cells that are each wholly inside or outside every

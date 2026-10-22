@@ -4,7 +4,7 @@
   "stage": "M1, M2, M5",
   "cases": [
     {
-      "scenario": "영상: 얼굴 감지가 30–54프레임에서 끊김, 검토 끔",
+      "scenario": "영상(30 fps): 얼굴 감지가 30–64프레임에서 끊김, 검토 끔. 보간 한도가 1초(30프레임)로 바뀌어(M5 결정) 1.12.1 재현의 30–54(25프레임)보다 늘림",
       "expect": {
         "published": false,
         "state": "NeedsReview",
@@ -13,7 +13,7 @@
             "kind": "unresolved_gap",
             "frames": [
               30,
-              54
+              64
             ]
           }
         ]
