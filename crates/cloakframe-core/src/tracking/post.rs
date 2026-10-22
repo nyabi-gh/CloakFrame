@@ -10,13 +10,15 @@ use crate::geometry::Rect;
 
 use super::scene::SceneCuts;
 use super::tracker::size_jump_too_large;
-use super::{PostProcessConfig, Track, TrackedBox, usable_roll};
+use super::{PostProcessConfig, Track, TrackId, TrackedBox, usable_roll};
 
-/// Frames where a subject stayed unmasked, both ends included.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Frames where a subject stayed unmasked, both ends included, and the tracks either side of
+/// the hole, ascending: where review shows the subjects to look for.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UncoveredSpan {
     pub first: FrameIndex,
     pub last: FrameIndex,
+    pub tracks: Vec<TrackId>,
 }
 
 impl UncoveredSpan {
@@ -100,6 +102,7 @@ pub fn interpolate_gaps(track: &mut Track, max_gap: u64, cuts: &SceneCuts) -> Ve
             uncovered.push(UncoveredSpan {
                 first: a.frame + 1,
                 last: b.frame - 1,
+                tracks: vec![track.id],
             });
             continue;
         }
@@ -202,15 +205,22 @@ pub(crate) fn is_low_confidence(strong: u32, real: u32, config: &PostProcessConf
     !clean_short_burst
 }
 
-/// Merges spans that touch or overlap, ascending.
+/// Merges spans that touch or overlap, ascending, with the tracks of all of them.
 pub(crate) fn merge_spans(mut spans: Vec<UncoveredSpan>) -> Vec<UncoveredSpan> {
     spans.sort_by_key(|s| (s.first, s.last));
     let mut merged: Vec<UncoveredSpan> = Vec::with_capacity(spans.len());
     for span in spans {
         match merged.last_mut() {
-            Some(m) if span.first <= m.last + 1 => m.last = m.last.max(span.last),
+            Some(m) if span.first <= m.last + 1 => {
+                m.last = m.last.max(span.last);
+                m.tracks.extend(span.tracks);
+            }
             _ => merged.push(span),
         }
+    }
+    for m in &mut merged {
+        m.tracks.sort_unstable();
+        m.tracks.dedup();
     }
     merged
 }
@@ -296,6 +306,7 @@ pub fn post_process_tracks(
                 spans.push(UncoveredSpan {
                     first: end.frame + 1,
                     last: start.frame - 1,
+                    tracks: vec![tracks[before].id, tracks[after].id],
                 });
             }
             break;
@@ -314,4 +325,29 @@ pub fn post_process_tracks(
         .map(UncoveredSpan::frame_count)
         .sum();
     report
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn span(first: FrameIndex, last: FrameIndex, tracks: &[TrackId]) -> UncoveredSpan {
+        UncoveredSpan {
+            first,
+            last,
+            tracks: tracks.to_vec(),
+        }
+    }
+
+    /// Review is shown every subject lost in a merged span, each once.
+    #[test]
+    fn merged_spans_keep_the_tracks_of_every_hole() {
+        let merged = merge_spans(vec![
+            span(50, 60, &[4]),
+            span(10, 20, &[3]),
+            span(21, 25, &[1, 3]),
+            span(15, 30, &[2]),
+        ]);
+        assert_eq!(merged, [span(10, 30, &[1, 2, 3]), span(50, 60, &[4])]);
+    }
 }

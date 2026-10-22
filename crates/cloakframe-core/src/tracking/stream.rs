@@ -176,6 +176,7 @@ impl PostProcessor {
                         self.spans.push(UncoveredSpan {
                             first: a.frame + 1,
                             last: b.frame - 1,
+                            tracks: vec![id],
                         });
                     } else {
                         for f in fill(&a, &b, gap) {
@@ -414,6 +415,7 @@ impl PostProcessor {
                 self.spans.push(UncoveredSpan {
                     first: end.frame + 1,
                     last: start.frame - 1,
+                    tracks: vec![before, after],
                 });
             }
         }

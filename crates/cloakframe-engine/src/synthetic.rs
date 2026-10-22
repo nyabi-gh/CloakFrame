@@ -8,7 +8,7 @@ use std::io::{self, Write};
 use std::time::{Duration, Instant};
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
-use cloakframe_core::detection::ModelId;
+use cloakframe_core::detection::{DetectionKind, ModelId};
 use cloakframe_core::item::PublishPermit;
 use cloakframe_core::review::Digest;
 use sha2::{Digest as _, Sha256};
@@ -47,9 +47,10 @@ impl ItemProcessor for SyntheticProcessor {
         let mut evidence = Vec::new();
         if stem.contains("gap") {
             evidence.push(CoverageEvidence::unresolved(Problem::UnresolvedGap {
-                track: 1,
+                detection: DetectionKind::Face,
+                tracks: vec![1],
                 first: 30,
-                last: 54,
+                last: 64,
             }));
         }
         if stem.contains("capped") {

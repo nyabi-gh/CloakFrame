@@ -549,7 +549,7 @@ mod tests {
     use crate::detect::models::DetectionModels;
     use crate::detect::{DetectError, Detector, Found, Rgb8Image};
     use cloakframe_core::coverage::Problem;
-    use cloakframe_core::detection::Thresholds;
+    use cloakframe_core::detection::{DetectionKind, Thresholds};
     use std::sync::Mutex;
     use std::time::Duration;
 
@@ -678,9 +678,10 @@ mod tests {
 
     fn gap() -> CoverageEvidence {
         CoverageEvidence::unresolved(Problem::UnresolvedGap {
-            track: 1,
+            detection: DetectionKind::Face,
+            tracks: vec![1],
             first: 30,
-            last: 54,
+            last: 64,
         })
     }
 

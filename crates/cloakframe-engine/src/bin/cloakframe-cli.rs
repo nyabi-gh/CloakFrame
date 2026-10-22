@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
-use cloakframe_core::detection::ModelId;
+use cloakframe_core::detection::{DetectionKind, ModelId};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::batch::{job_from_scan, session_from_report};
@@ -518,8 +518,17 @@ fn describe(e: &CoverageEvidence) -> String {
             format!("detection limit reached: {kept} of {found} kept")
         }
         Problem::FailedFrame { frame } => format!("frame {frame} could not be analyzed"),
-        Problem::UnresolvedGap { track, first, last } => {
-            format!("track {track} lost in frames {first}–{last}")
+        Problem::UnresolvedGap {
+            detection,
+            first,
+            last,
+            ..
+        } => {
+            let subject = match detection {
+                DetectionKind::Face => "face",
+                DetectionKind::Plate => "license plate",
+            };
+            format!("{subject} lost in frames {first}–{last}")
         }
         Problem::WeakCandidate { score, .. } => format!("weak candidate (score {score:.2})"),
     }

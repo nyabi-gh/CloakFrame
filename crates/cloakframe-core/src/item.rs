@@ -268,13 +268,14 @@ impl PublishPermit {
 mod tests {
     use super::*;
     use crate::coverage::{Problem, Resolution};
-    use crate::detection::ModelId;
+    use crate::detection::{DetectionKind, ModelId};
 
     fn gap() -> CoverageEvidence {
         CoverageEvidence::unresolved(Problem::UnresolvedGap {
-            track: 1,
+            detection: DetectionKind::Face,
+            tracks: vec![1],
             first: 30,
-            last: 54,
+            last: 64,
         })
     }
 

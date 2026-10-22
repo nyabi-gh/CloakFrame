@@ -361,7 +361,7 @@ mod tests {
     use crate::session::FORMAT_VERSION;
     use crate::test_support::TestDir;
     use cloakframe_core::coverage::CoverageEvidence;
-    use cloakframe_core::detection::{Detection, ModelId};
+    use cloakframe_core::detection::{Detection, DetectionKind, ModelId};
     use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
 
     const FINGERPRINT: Fingerprint = Fingerprint {
@@ -375,9 +375,10 @@ mod tests {
 
     fn gap() -> CoverageEvidence {
         CoverageEvidence::unresolved(Problem::UnresolvedGap {
-            track: 1,
+            detection: DetectionKind::Face,
+            tracks: vec![1],
             first: 30,
-            last: 54,
+            last: 64,
         })
     }
 

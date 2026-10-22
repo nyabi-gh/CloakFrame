@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use crate::detection::{FrameIndex, ModelId};
+use crate::detection::{DetectionKind, FrameIndex, ModelId};
 use crate::geometry::Rect;
 
 pub type TrackId = u32;
@@ -19,9 +19,12 @@ pub enum Problem {
     FailedFrame {
         frame: FrameIndex,
     },
-    /// A track disappeared and came back without detections in between.
+    /// Subjects of one kind disappeared and came back without detections in between, for longer
+    /// than tracking fills. Holes that touch are one gap; `tracks` are those either side of it,
+    /// for review to show where to look.
     UnresolvedGap {
-        track: TrackId,
+        detection: DetectionKind,
+        tracks: Vec<TrackId>,
         first: FrameIndex,
         last: FrameIndex,
     },
@@ -75,9 +78,10 @@ mod tests {
 
     fn gap() -> CoverageEvidence {
         CoverageEvidence::unresolved(Problem::UnresolvedGap {
-            track: 1,
+            detection: DetectionKind::Face,
+            tracks: vec![1],
             first: 30,
-            last: 54,
+            last: 64,
         })
     }
 
@@ -93,9 +97,10 @@ mod tests {
             },
             Problem::FailedFrame { frame: 7 },
             Problem::UnresolvedGap {
-                track: 1,
+                detection: DetectionKind::Face,
+                tracks: vec![1, 2],
                 first: 30,
-                last: 54,
+                last: 64,
             },
             Problem::WeakCandidate {
                 model: ModelId::YuNet,

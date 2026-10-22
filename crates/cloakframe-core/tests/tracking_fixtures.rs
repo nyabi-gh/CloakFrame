@@ -85,15 +85,17 @@ fn cuts(v: &Value) -> SceneCuts {
     SceneCuts::new(v.as_array().unwrap().iter().map(u))
 }
 
-fn spans(v: &Value) -> Vec<UncoveredSpan> {
+/// 1.12.1 recorded where the spans are, not whose.
+fn spans(v: &Value) -> Vec<(u64, u64)> {
     v.as_array()
         .unwrap()
         .iter()
-        .map(|s| UncoveredSpan {
-            first: u(&s[0]),
-            last: u(&s[1]),
-        })
+        .map(|s| (u(&s[0]), u(&s[1])))
         .collect()
+}
+
+fn ends(spans: &[UncoveredSpan]) -> Vec<(u64, u64)> {
+    spans.iter().map(|s| (s.first, s.last)).collect()
 }
 
 fn tracker_config(v: &Value) -> TrackerConfig {
@@ -214,7 +216,7 @@ fn replay(call: &Value, context: &str) {
             let mut t = track(&call["track_before"]);
             let got = interpolate_gaps(&mut t, u(&call["max_gap"]), &cuts(&call["scene_cuts"]));
             assert_track(&t, &track(&call["track_after"]), context);
-            assert_eq!(got, spans(&call["uncovered_spans"]), "{context}");
+            assert_eq!(ends(&got), spans(&call["uncovered_spans"]), "{context}");
         }
         "smoothTrack" => {
             let mut t = track(&call["track_before"]);
@@ -242,7 +244,7 @@ fn replay(call: &Value, context: &str) {
             assert_tracks(&t, &tracks(&call["tracks_after"]), context);
             let want = &call["report"];
             assert_eq!(
-                report.uncovered_spans,
+                ends(&report.uncovered_spans),
                 spans(&want["uncovered_spans"]),
                 "{context}"
             );

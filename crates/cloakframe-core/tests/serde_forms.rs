@@ -2,7 +2,7 @@
 //! these shapes change only together with a session format version.
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem, Resolution};
-use cloakframe_core::detection::{Detection, ModelId};
+use cloakframe_core::detection::{Detection, DetectionKind, ModelId};
 use cloakframe_core::geometry::{Point, Rect};
 use cloakframe_core::review::{Digest, PhotoEdits, ReviewKey, ReviewRevision};
 use serde_json::json;
@@ -49,14 +49,15 @@ fn detections_round_trip_and_invalid_ones_are_rejected() {
 #[test]
 fn coverage_evidence_uses_the_fixture_kinds() {
     let gap = CoverageEvidence::unresolved(Problem::UnresolvedGap {
-        track: 1,
+        detection: DetectionKind::Face,
+        tracks: vec![1, 2],
         first: 30,
-        last: 54,
+        last: 64,
     });
     let stored = serde_json::to_value(&gap).unwrap();
     assert_eq!(
         stored,
-        json!({"kind": "unresolved_gap", "track": 1, "first": 30, "last": 54, "resolution": "unresolved"})
+        json!({"kind": "unresolved_gap", "detection": "face", "tracks": [1, 2], "first": 30, "last": 64, "resolution": "unresolved"})
     );
     let mut capped =
         serde_json::to_value(CoverageEvidence::unresolved(Problem::CappedCandidates {
