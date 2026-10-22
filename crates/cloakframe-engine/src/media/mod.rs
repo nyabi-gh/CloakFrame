@@ -7,3 +7,4 @@ pub mod language;
 pub mod probe;
 pub mod process;
 pub mod source;
+pub mod verify;
