@@ -83,6 +83,7 @@ impl fmt::Display for Backend {
 #[derive(Debug, Clone)]
 pub struct OrtRuntime {
     env: Environment,
+    cpu_spinning: bool,
     #[cfg(target_os = "macos")]
     coreml_cache: Option<PathBuf>,
 }
@@ -103,6 +104,7 @@ impl OrtRuntime {
             .map_err(|e| load(e.to_string()))?;
         Ok(Self {
             env,
+            cpu_spinning: false,
             #[cfg(target_os = "macos")]
             coreml_cache: None,
         })
@@ -114,6 +116,17 @@ impl OrtRuntime {
     #[must_use]
     pub fn with_coreml_cache(mut self, dir: PathBuf) -> Self {
         self.coreml_cache = Some(dir);
+        self
+    }
+
+    /// Lets CPU sessions' idle threads spin while they wait for work, as ORT does by default and
+    /// 1.12.1 did. Off otherwise: the spinning threads took the cores the FFmpeg decode of a
+    /// video's analysis and a photo worker's decode and encode run on, which made video
+    /// detection 1.6–2 times and photo runs about 40% slower for the same results
+    /// (docs/M5_PLAN.md). Kept to measure that on every platform.
+    #[must_use]
+    pub fn with_cpu_spinning(mut self, spinning: bool) -> Self {
+        self.cpu_spinning = spinning;
         self
     }
 
@@ -149,8 +162,8 @@ impl OrtRuntime {
     }
 
     /// A session on `backend` with the named initializers of the graph replaced before it is
-    /// optimized. The options are 1.12.1's: on the CPU every graph optimization and one intra-op
-    /// thread per logical core; on an accelerator the extended level, whose layout steps beyond
+    /// optimized. The options are 1.12.1's but for spinning: on the CPU every graph optimization
+    /// and one intra-op thread per logical core; on an accelerator the extended level, whose layout steps beyond
     /// it help only CPU nodes and can turn nodes into forms the accelerator no longer takes, and
     /// one thread.
     pub(crate) fn session(
@@ -175,6 +188,10 @@ impl OrtRuntime {
         };
         builder = option(builder.with_optimization_level(level))?;
         builder = option(builder.with_intra_threads(threads))?;
+        if backend == Backend::Cpu {
+            builder = option(builder.with_intra_op_spinning(self.cpu_spinning))?;
+            builder = option(builder.with_inter_op_spinning(self.cpu_spinning))?;
+        }
         // A replaced initializer leaves the graph's structure as it was, so CoreML would load the
         // compiled model of the graph as published; such sessions are not cached.
         #[cfg(target_os = "macos")]
