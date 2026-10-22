@@ -108,12 +108,12 @@ PR #47의 첫 CI에서 3개 OS 시험은 통과했고, `timeline.rs`가 바뀌�
 ## M4 완료 기준
 
 - **합성 영상의 frame 일치·A/V 동기:** `video_export.rs` 11건(위). CFR·VFR·시작 오프셋·회전을 포함한다.
-- **D1·P-3·P-4·P-5 시험 통과:** 위 표. 로컬 전체 시험(`cargo test --workspace --locked --all-features`, macOS)은 414개 통과(4단계 402개), 시작 상한을 고친 뒤 415개, fmt·clippy 두 조합 통과. 3개 OS CI는 이 단계의 PR에서.
+- **D1·P-3·P-4·P-5 시험 통과:** 위 표. 로컬 전체 시험(`cargo test --workspace --locked --all-features`, macOS)은 414개 통과(4단계 402개), 시작 상한을 고친 뒤 415개, fmt·clippy 두 조합 통과. 3개 OS CI는 PR #47에서 통과.
 - **소요:** 2026-10-21–22, 2일(예산 4주).
 
 ## 남은 것
 
-- 이 단계의 PR CI: 첫 실행(`4adaa2b`)에서 3개 OS 시험·lint는 통과, fuzz는 위 결함으로 실패. 고친 커밋의 CI는 진행 중
+- 완료: PR #47(2026-10-22, main `a6d1193`). 첫 실행(`4adaa2b`)에서 3개 OS 시험·lint는 통과하고 fuzz가 위 결함으로 실패했다. 고친 `a6d1193`에서 5개 검사가 모두 통과했다: fuzz 원시 보고 4,757만 번·필드값 317만 번, 1080p 파이프 디코드 Linux 95.5 fps·macOS runner 186·Windows 101, 인코드 Linux 77·macOS runner 107·Windows 82(Linux는 4단계의 179·164보다 낮지만 파이프 경로는 그대로라 runner 편차로 봄). Windows·Linux에서는 이 PR이 `video_export.rs`의 첫 실행이었다(하드웨어 인코더가 없어 H.264도 libx264).
 - M4 밖으로 넘어간 것:
   - NVENC·QSV 실제 인코드와 Windows 4K 파이프 상한: M7·M8 실기기
   - 영상 검토 세션, 분석 해상도 디코드와 감지, ORT spin 측정: M5
