@@ -11,7 +11,7 @@ use cloakframe_core::item::{Item, ItemId, ItemState, PublishBasis, PublishPermit
 use cloakframe_core::review::{Digest, PhotoEdits};
 
 use crate::cancel::CancelToken;
-use crate::detect::DetectorHandle;
+use crate::detect::{DetectError, DetectorHandle};
 use crate::events::{Event, ProgressBoard, ProgressReporter};
 use crate::identity::SourceStamp;
 use crate::ordered::process_ordered;
@@ -34,6 +34,12 @@ impl fmt::Display for StepError {
 }
 
 impl std::error::Error for StepError {}
+
+impl From<DetectError> for StepError {
+    fn from(e: DetectError) -> Self {
+        Self::Failed(Box::new(e))
+    }
+}
 
 pub struct ItemContext<'a> {
     pub item: ItemId,

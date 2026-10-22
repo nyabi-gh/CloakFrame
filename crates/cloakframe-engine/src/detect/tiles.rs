@@ -21,7 +21,7 @@ use cloakframe_core::detection::{
 use cloakframe_core::geometry::{Point, Rect};
 
 use super::resize::{Region, resize_region_linear};
-use super::{Found, Rgb8Image};
+use super::{DetectError, DetectorHandle, Found, Rgb8Image};
 
 /// A tile's side in model pixels: the largest input of the pinned models. The plate model scales
 /// it to its 512.
@@ -180,6 +180,34 @@ impl Finding {
     }
 }
 
+/// Detects `image` whole and, with `tiled`, in its tiles, each a request to the inference thread,
+/// and merges the views as [`merge_judged`] does. `before` runs before each request with how many
+/// of the views are done and how many there are, so the caller can stop or report progress
+/// between them.
+pub fn detect_views<E: From<DetectError>>(
+    detector: &DetectorHandle,
+    image: Rgb8Image,
+    thresholds: Thresholds,
+    masking: &Thresholds,
+    tiled: bool,
+    mut before: impl FnMut(u64, u64) -> Result<(), E>,
+) -> Result<Found, E> {
+    let tiles = if tiled {
+        layout(image.width, image.height)
+    } else {
+        Vec::new()
+    };
+    let views = tiles.len() as u64 + 1;
+    let mut found = Vec::with_capacity(tiles.len());
+    for (done, tile) in tiles.into_iter().enumerate() {
+        before(done as u64, views)?;
+        found.push((tile, detector.detect(tile.image(&image), thresholds)?));
+    }
+    before(views - 1, views)?;
+    let whole = detector.detect(image, thresholds)?;
+    Ok(merge_judged(whole, found, &thresholds, masking))
+}
+
 /// The whole view's and the tiles' findings as one result. A tile's box larger than
 /// `MAX_IN_TILE` is dropped, and so is a tile's finding a coarser view should have found and did
 /// not (see the module comment). A box cut by a tile edge is dropped when a whole box covers most
@@ -188,6 +216,18 @@ impl Finding {
 /// Dropped counts of bounded models add up over the views. Without tiles the whole view is the
 /// result as it is.
 pub fn merge(whole: Found, tiles: Vec<(Tile, Found)>, thresholds: &Thresholds) -> Found {
+    merge_judged(whole, tiles, thresholds, thresholds)
+}
+
+/// [`merge`] of views detected below the masking thresholds, as a video's are for tracking: NMS
+/// keeps what reaches `thresholds`, and a tile's finding stands on its score alone only `SURE`
+/// above `masking`, as in a photo.
+pub fn merge_judged(
+    whole: Found,
+    tiles: Vec<(Tile, Found)>,
+    thresholds: &Thresholds,
+    masking: &Thresholds,
+) -> Found {
     if tiles.is_empty() {
         return whole;
     }
@@ -222,10 +262,7 @@ pub fn merge(whole: Found, tiles: Vec<(Tile, Found)>, thresholds: &Thresholds) -
         over_limit.extend(f.over_limit);
         reran_on_cpu |= f.reran_on_cpu;
     }
-    let standing: Vec<&Finding> = found
-        .iter()
-        .filter(|f| f.stands(&found, thresholds))
-        .collect();
+    let standing: Vec<&Finding> = found.iter().filter(|f| f.stands(&found, masking)).collect();
     let complete: Vec<&Detection> = standing
         .iter()
         .filter(|f| !f.cut)
@@ -608,6 +645,31 @@ mod tests {
                     face(0.7, 300.0, 100.0, 80.0, 100.0),
                 ]),
             )],
+            &thresholds(),
+        );
+        let scores: Vec<f32> = merged.detections.iter().map(|d| d.score()).collect();
+        assert_eq!(scores, [0.7]);
+    }
+
+    /// A video detects down to the floor but judges tile findings as a photo does: 0.69 needs a
+    /// coarser view at the default threshold, not 0.3 above the floor.
+    #[test]
+    fn tile_findings_below_the_masking_threshold_are_judged_by_it() {
+        let (left, _) = halves();
+        let floor = KindThresholds::new(0.1, 0.4).unwrap();
+        let merged = merge_judged(
+            Found::default(),
+            vec![(
+                left,
+                finds(vec![
+                    face(0.69, 100.0, 100.0, 80.0, 100.0),
+                    face(0.7, 300.0, 100.0, 80.0, 100.0),
+                ]),
+            )],
+            &Thresholds {
+                face: floor,
+                plate: floor,
+            },
             &thresholds(),
         );
         let scores: Vec<f32> = merged.detections.iter().map(|d| d.score()).collect();

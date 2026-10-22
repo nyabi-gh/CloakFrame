@@ -235,26 +235,20 @@ impl PhotoProcessor {
         pixels: u64,
     ) -> Result<Found, StepError> {
         let thresholds = self.settings.thresholds;
-        let layout = if self.settings.tiles {
-            tiles::layout(copy.width, copy.height)
-        } else {
-            Vec::new()
-        };
-        let views = layout.len() as u64 + 1;
-        let mut tiled = Vec::with_capacity(layout.len());
-        for (done, tile) in layout.into_iter().enumerate() {
-            checkpoint(ctx)?;
-            let found = ctx
-                .detector
-                .detect(tile.image(&copy), thresholds)
-                .map_err(failed)?;
-            tiled.push((tile, found));
-            ctx.progress
-                .set(pixels * (done as u64 + 1) / views, 2 * pixels);
-        }
-        checkpoint(ctx)?;
-        let whole = ctx.detector.detect(copy, thresholds).map_err(failed)?;
-        Ok(tiles::merge(whole, tiled, &thresholds))
+        tiles::detect_views(
+            ctx.detector,
+            copy,
+            thresholds,
+            &thresholds,
+            self.settings.tiles,
+            |done, views| {
+                checkpoint(ctx)?;
+                if done > 0 {
+                    ctx.progress.set(pixels * done / views, 2 * pixels);
+                }
+                Ok(())
+            },
+        )
     }
 }
 
