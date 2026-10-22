@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md), [조사와 TimelineSpec](M4_PROBE.md), [디코드와 프레임 대응](M4_DECODE.md), [0–2단계 재검토](M4_REVIEW.md), [인코드](M4_ENCODE.md), [영상 처리기](M4_VIDEO.md), [완료 확인](M4_VERIFY.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md), [조사와 TimelineSpec](M4_PROBE.md), [디코드와 프레임 대응](M4_DECODE.md), [0–2단계 재검토](M4_REVIEW.md), [인코드](M4_ENCODE.md), [영상 처리기](M4_VIDEO.md), [완료 확인](M4_VERIFY.md). M5 기록: [단계 계획 실험](M5_PLAN.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -373,6 +373,14 @@ crates/
 
 - **작업:** 매 프레임 감지, 레코드 파일, 종류별 양방향 추적, 장면 전환, `CoverageEvidence`·gap, 검토 결정(track 제외·keyframe·gap 해결) 적용, 미리보기 조회 API
 - **완료 기준:** 추적 fixture 통과, 1시간 영상에서 RAM이 길이에 비례하지 않음, 미해결 문제가 게시를 막음. P-1(영상)·P-2(추적)·P-6 시험 통과. 범위 조정 점검 시점
+- **단계(2026-10-22 계획, [기록](M5_PLAN.md)):** 단계마다 main에서 브랜치·PR 하나.
+  0. core 추적(`m5-track`): 장면 전환 판정(1.12.1 `SceneCutDetector`, 확인 대기 중 들어온 새 spike도 평가: P-6 b), 종류별 ByteTrack(high/low 2단계, IoU·크기 gating, 프레임 안 할당은 Hungarian을 core에 직접 구현), 양방향 병합, 후처리(보간·평활화·끝 연장·장면 전환 경계, 보간 한도는 다시 잇는 한도와 같은 1초), 미해결 gap의 `CoverageEvidence`, 추적 창을 유리수 FPS로. 파일·FFmpeg 없이 프레임을 차례로 넣고 끝난 track을 내보내는 API로 만들어 1단계가 레코드 파일을 앞·뒤로 읽으며 그대로 쓴다. 시험: 1.12.1 추적 시험 46개(`tests/fixtures/legacy/tracking_tests`, normative는 값까지·intent는 의도·changed는 P-6과 보간 한도), P-6 a·b, P-2(얼굴·번호판이 겹쳐도 track 둘), 평활화·보간이 box를 줄이지 않는 property
+  1. 분석 1패스(`m5-analysis`): 분석 해상도(긴 변 960) 디코드와 감지를 디코드 스레드·bounded 채널로 겹침, 매 프레임 장면 전환 썸네일과 감지(score 하한 0.1, 종류별 임계값, 타일은 사진과 같은 설정), frame 색인이 있는 append-only 레코드 파일(버전 헤더, 앞·뒤로 읽기)을 앱 데이터 폴더의 세션 폴더에, 레코드에서 추적 → 프레임별 영역 파일·track 요약·gap evidence. ORT CPU 세션 spin 끔, CI가 3개 OS에서 감지 처리량(spin 켬·끔)을 출력. M4에서 넘어온 1패스 중 원본 변경 시험과 중간에 해상도가 바뀌는 스트림 조사. 10분·60분 합성 레코드로 추적·영역 읽기의 peak heap이 같음을 할당 시험으로. D7의 영상 경우(사진·영상이 같은 세션)
+  2. 2패스와 게시 게이트(`m5-render`): 영역 파일을 프레임 순서로 읽어 core 렌더러로 마스크(roll 반영, 트랙별 고정 모자이크 격자). P-1(영상): 미해결 gap이 있으면 게시하지 않고 `NeedsReview`, 경고 포함 내보내기·익명화 없이 내보내기. CLI `--videos`가 감지 모델로 동작하고 `--mask`는 선택 사항(모든 프레임의 고정 영역)으로 남김. 결과 JSON의 track·gap에 kind(P-2). `video_export.rs`·`cli_video.rs`는 고정 box를 내는 가짜 감지기 경로로 바꿔 프레임·소리 기준을 그대로 확인
+  3. 검토 세션과 결정(`m5-review`): ReviewKey의 timeline(`TimelineSpec`과 원본 프레임 목록의 해시), 세션 형식 2(영상 항목은 레코드·영역 파일과 track 요약, gap evidence), 영상 편집(track 제외, 수동 track의 keyframe 보간: 1.12.1 `materializeManualVideoTrack`·`manualTrackRectAtFrame` 시험, gap의 "수동 마스크로 덮음"은 gap의 모든 프레임에 수동 track이 있을 때만), CLI `review`로 결정 적용과 세션에서 2패스 재개(원본 identity·timeline 비교), 미리보기 조회 API(프레임 k의 pixel, 그 프레임의 영역과 track, 마스크 미리보기), 끝난 세션의 레코드 정리
+  4. 영상 탐지 품질(`m5-benchmark`): CC 클립 몇 개(manifest·해시로 받고 저장소에 넣지 않음)에서 손으로 확인한 기준 track으로 노출 프레임 수(9.2)를 재고 1.12.1(v1.12.1 트리 빌드)과 비교
+  5. 완료 확인(`m5-verify`): 추적 fixture 표, 1시간 영상의 RAM(실제 클립을 이어 붙인 1시간 영상으로 로컬 전체 실행, CI는 1단계 할당 시험), P-1(영상)·P-2·P-6 시험 표, 분석·2패스 처리량(9.3, 타일 끔으로 1.12.1과 비교하고 타일 켬은 따로), 범위 조정 점검(누적 소요와 예산), 문서
+- **결정(2026-10-22, [기록](M5_PLAN.md)):** 영상의 보간 한도는 추적기가 track을 다시 잇는 한도와 같은 1초(1.12.1은 다시 잇기 1초·보간 2/3초라 그 사이 길이의 구멍이 모두 미해결 gap이 됨: CC 영상 4개의 gap 94곳이 모두 0.68–0.98초였고 1초로 맞추면 0곳. P-1 fixture의 영상 gap은 1초를 넘게 늘림). 영상 분석도 사진과 같은 타일 설정(기본 켬, 군중에서 강한 track 841 → 1,391개, 분석 약 3배 느림). ORT CPU 세션은 사진·영상 모두 spin을 끔(결과는 같고 영상 감지 1.6–2배·사진 실행 약 40% 빠름, 스레드 수는 그대로). 영상 탐지 품질 측정은 M5 4단계. 함께 정한 것: 감지 하한 0.1과 track 시작 임계값 `min(t, max(0.35, t − 0.1))`을 종류별로, "낮은 신뢰" track은 1.12.1처럼 가리고 표시만(게시를 막지 않음), 다른 track으로 다시 시작한 끊김은 1.12.1처럼 gap으로 보지 않음
 
 ### M6 — desktop 앱
 
