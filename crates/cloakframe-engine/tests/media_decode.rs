@@ -143,7 +143,7 @@ fn a_faster_stretch_after_the_first_seconds_keeps_every_frame() {
     c.output(&CancelToken::new()).unwrap();
     let (spec, listed) = opened(&path);
     assert_eq!(spec.nominal_rate, Rational::new(15, 1));
-    assert_eq!(spec.rate, Rational::new(30000, 1001).unwrap());
+    assert_eq!(spec.rate, Rational::new(30, 1).unwrap());
     assert_eq!(listed.len(), 180);
     let mut shown: Vec<usize> = listed.shown(&spec).collect();
     shown.dedup();

@@ -499,9 +499,10 @@ impl SourceFrames {
     /// The rate of the constant-rate output (plan 8 M4, review decision): the lowest of the
     /// standard rates and the source's nominal and average rates at which every source frame
     /// shows in at least one output frame. Of 29.97 and 30 (and the other NTSC pairs) both doing
-    /// so, the one the source names as its nominal rate, else the one nearer its average. Where
-    /// no rate up to 240 shows every frame (frames milliseconds apart), the lowest that shows the
-    /// most.
+    /// so, the one the source names as its nominal rate, else the one whose output frames start
+    /// nearer the source frames they show: a variable rate's average is below its fastest, so it
+    /// would always point to the lower. Where no rate up to 240 shows every frame (frames
+    /// milliseconds apart), the lowest that shows the most.
     pub fn constant_rate(
         &self,
         start: Seconds,
@@ -542,12 +543,43 @@ impl SourceFrames {
         let twin_nearer = match nominal {
             Some(rate) if rate == twin => true,
             Some(rate) if rate == lowest => false,
-            _ => average.is_some_and(|average| {
-                (average.as_f64() - twin.as_f64()).abs()
-                    < (average.as_f64() - lowest.as_f64()).abs()
-            }),
+            _ => self.starts_nearer(start, twin, lowest),
         };
         if twin_nearer { twin } else { lowest }
+    }
+
+    /// Whether output frames at `a` start nearer the source frames they first show than those at
+    /// `b`, on average; not when they are as near or the arithmetic would overflow.
+    fn starts_nearer(&self, start: Seconds, a: Rational, b: Rational) -> bool {
+        let (Some(at_a), Some(at_b)) = (self.start_offsets(start, a), self.start_offsets(start, b))
+        else {
+            return false;
+        };
+        // The sums are in units of 1 / (2 * rate.num() * the time base's and start's
+        // denominators), which differ only in rate.num().
+        match (
+            at_a.checked_mul(i128::from(b.num())),
+            at_b.checked_mul(i128::from(a.num())),
+        ) {
+            (Some(nearer), Some(than)) => nearer < than,
+            _ => false,
+        }
+    }
+
+    /// How far each source frame starts from the first output frame at `rate` from `start` whose
+    /// middle comes at or after it, summed in units of
+    /// `1 / (2 * rate.num() * time_base.den() * start.den())`: `|n * q - p - q / 2|` for
+    /// [`Self::slot_ratio`]'s `p / q` and that frame `n`.
+    fn start_offsets(&self, start: Seconds, rate: Rational) -> Option<i128> {
+        let mut total: i128 = 0;
+        for &ticks in &self.pts {
+            let (p, q) = self.slot_ratio(ticks, start, rate)?;
+            // Output frames before the first source frame starts show it as well.
+            let n = (p.div_euclid(q) + i128::from(p.rem_euclid(q) != 0)).max(0);
+            let offset = n.checked_mul(q)?.checked_sub(p)?.checked_sub(q / 2)?;
+            total = total.checked_add(offset.checked_abs()?)?;
+        }
+        Some(total)
     }
 
     /// How many source frames show in at least one output frame at `rate` from `start`. With
@@ -577,6 +609,12 @@ impl SourceFrames {
     /// after `ticks`: the least n with `rate * (ticks * time_base - start) - 1/2 <= n`. Negative
     /// before the timeline starts.
     fn first_slot_from(&self, ticks: i64, start: Seconds, rate: Rational) -> Option<i128> {
+        let (p, q) = self.slot_ratio(ticks, start, rate)?;
+        Some(p.div_euclid(q) + i128::from(p.rem_euclid(q) != 0))
+    }
+
+    /// `p / q = rate * (ticks * time_base - start) - 1/2`, with `q` even.
+    fn slot_ratio(&self, ticks: i64, start: Seconds, rate: Rational) -> Option<(i128, i128)> {
         let (tb_num, tb_den) = (
             i128::from(self.time_base.num()),
             i128::from(self.time_base.den()),
@@ -593,7 +631,7 @@ impl SourceFrames {
             .checked_mul(2)?
             .checked_sub(unit)?;
         let q = unit.checked_mul(2)?;
-        Some(p.div_euclid(q) + i128::from(p.rem_euclid(q) != 0))
+        Some((p, q))
     }
 
     /// [`Self::shown_at`] for every output frame in order, in one pass.
@@ -872,20 +910,45 @@ mod tests {
     }
 
     /// Ten seconds at 15 fps, then one at 30: FFmpeg guesses 15/1 from the start.
-    #[test]
-    fn the_output_rate_is_the_lowest_that_shows_every_frame() {
-        let ticks = tb(15360);
+    fn fifteen_then_thirty() -> SourceFrames {
         let mut pts: Vec<i64> = (0..150).map(|k| k * 1024).collect();
         pts.extend((0..30).map(|k| 150 * 1024 + k * 512));
-        let frames = SourceFrames::new(ticks, pts, Some(512)).unwrap();
+        SourceFrames::new(tb(15360), pts, Some(512)).unwrap()
+    }
+
+    #[test]
+    fn the_output_rate_is_the_lowest_that_shows_every_frame() {
+        let frames = fifteen_then_thirty();
         let rate = frames.constant_rate(
             Seconds::ZERO,
             Some(rational(15, 1)),
             Some(rational(180, 11)),
         );
-        assert_eq!(rate, rational(30000, 1001));
+        assert_eq!(rate, rational(30, 1));
         assert!(shows_every_frame(&frames, rate));
         assert!(!shows_every_frame(&frames, rational(15, 1)));
+    }
+
+    /// 29.97 fps shows every frame of a variable-rate source on a 30 fps grid, and 30 fps every
+    /// frame of one on a 29.97 grid, when the fast stretches are short. Neither rate is nominal
+    /// here, and the average of either source is nearer 29.97 than 30.
+    #[test]
+    fn of_two_ntsc_twins_the_one_on_the_sources_grid_is_taken() {
+        let on_thirty = fifteen_then_thirty();
+        assert!(shows_every_frame(&on_thirty, rational(30000, 1001)));
+        assert_eq!(
+            on_thirty.constant_rate(Seconds::ZERO, None, Some(rational(180, 11))),
+            rational(30, 1)
+        );
+
+        let mut pts: Vec<i64> = (0..30).map(|k| k * 1001).collect();
+        pts.extend((0..60).map(|k| 30 * 1001 + k * 2002));
+        let on_ntsc = SourceFrames::new(tb(30000), pts, Some(2002)).unwrap();
+        assert!(shows_every_frame(&on_ntsc, rational(30, 1)));
+        assert_eq!(
+            on_ntsc.constant_rate(Seconds::ZERO, None, Some(rational(18000, 1001))),
+            rational(30000, 1001)
+        );
     }
 
     /// Timestamps FFmpeg reads as 200/1 and 120/1 (timescale 600) are 30 and 24–30 fps.
@@ -923,7 +986,7 @@ mod tests {
             Some(rational(120, 1)),
             Some(rational(132, 5)),
         );
-        assert_eq!(rate, rational(30000, 1001));
+        assert_eq!(rate, rational(30, 1));
         assert!(shows_every_frame(&mixed, rate));
     }
 
