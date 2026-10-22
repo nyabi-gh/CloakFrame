@@ -8,6 +8,7 @@
 - **인코더:** 입력마다 두 번 내보낸다. H.264는 하드웨어 우선(기본값: 이 Mac은 VideoToolbox, 하드웨어 인코더가 없는 CI runner는 libx264), HEVC는 libx265.
 - **허용오차:** 프레임 번호는 모든 출력 프레임에서 정확히 같아야 한다. 오디오는 영상 시작 기준 1 ms 안. 영상은 클릭이 난 원본 프레임을 처음 보이는 출력 프레임의 시작이 원본 시각과 반 출력 프레임 안(대응 규칙이 프레임을 옮기는 최대).
 - **NTSC 짝:** VFR에서 29.97·30처럼 짝이 둘 다 모든 프레임을 보이면, 공칭 속도인 쪽을 고르고 아니면 원본 프레임 시작과 출력 칸 시작의 평균 차이가 작은 쪽을 고른다(아래 [찾은 것](#찾은-것-ntsc-짝)). 이 단계에서 별도 커밋으로 고친다.
+- **시작 상한(PR CI 뒤):** fuzz가 찾은 시각 계산 overflow는 영상 시작 2^31초 상한과, 길이를 첫 프레임과 시작 중 이른 쪽부터 재는 것으로 고친다(아래 [CI fuzz가 찾은 것](#ci-fuzz가-찾은-것-시작-시각)). 이 단계에서 별도 커밋.
 
 ## 입력
 
@@ -62,6 +63,10 @@
 
 최대 차이는 어느 속도든 반 프레임 아래로 묶여 있어 평균을 쓴다(30 → 24 혼합은 최대로 보면 29.97이 14.6 ms·30이 16.7 ms로 뒤집힌다). 바뀐 기대값: core `the_output_rate_is_the_lowest_that_shows_every_frame`·`jitter_and_mixed_rates_keep_their_real_rate`의 혼합 목록, `media_decode.rs` `a_faster_stretch_after_the_first_seconds_keeps_every_frame`(29.97 → 30). 새 단위 시험 `of_two_ntsc_twins_the_one_on_the_sources_grid_is_taken`은 양쪽 방향(30 격자 → 30, 29.97 격자 → 29.97)을 공칭 속도 없이 본다. 기대값을 먼저 바꿔 세 시험이 실패하는 것을 확인한 뒤 고쳤다.
 
+## CI fuzz가 찾은 것: 시작 시각
+
+PR #47의 첫 CI에서 3개 OS 시험은 통과했고, `timeline.rs`가 바뀌어 돈 fuzz workflow의 `probe_fields`가 panic을 찾았다. 시간 기준 1577058301/2926592와 시작 PTS 약 4×10¹⁶이면 시작이 약 2.1×10¹⁹초가 되고, `frame_start`끼리 비교하는 `Seconds::cmp`의 교차 곱셈이 i128을 넘었다. 이번 변경과 무관하게 1단계부터 있던 결함이다(main `8c9aa21`에서 같은 입력으로 재현). 원인은 시작에 상한이 없던 것이다. 다른 상한(int 범위 유리수, 86,400초, 300만 프레임) 아래에서 비교의 곱은 시작 2^31초일 때 최대 125비트이고, 약 2^34초에서 넘친다(약분되지 않는 시간 기준 1/2147483647, 240 fps 바로 아래의 2147483629/8947849로 계산). 고친 것과 시험은 [조사 기록](M4_PROBE.md#fuzz)에 있다. 실패하는 단위 시험 둘을 먼저 넣었고, 고친 뒤 찾은 입력과 두 대상 150초씩이 통과했다.
+
 ## mutation
 
 스크래치 복사본(별도 `CARGO_TARGET_DIR`)에서 한 곳씩 바꾸고 `video_export.rs`·`media_decode.rs`·core `timeline` 단위 시험을 돌렸다.
@@ -103,12 +108,12 @@
 ## M4 완료 기준
 
 - **합성 영상의 frame 일치·A/V 동기:** `video_export.rs` 11건(위). CFR·VFR·시작 오프셋·회전을 포함한다.
-- **D1·P-3·P-4·P-5 시험 통과:** 위 표. 로컬 전체 시험(`cargo test --workspace --locked --all-features`, macOS)은 414개 통과(4단계 402개), fmt·clippy 두 조합 통과. 3개 OS CI는 이 단계의 PR에서.
+- **D1·P-3·P-4·P-5 시험 통과:** 위 표. 로컬 전체 시험(`cargo test --workspace --locked --all-features`, macOS)은 414개 통과(4단계 402개), 시작 상한을 고친 뒤 415개, fmt·clippy 두 조합 통과. 3개 OS CI는 이 단계의 PR에서.
 - **소요:** 2026-10-21–22, 2일(예산 4주).
 
 ## 남은 것
 
-- 이 단계의 PR CI(3개 OS)
+- 이 단계의 PR CI: 첫 실행(`4adaa2b`)에서 3개 OS 시험·lint는 통과, fuzz는 위 결함으로 실패. 고친 커밋의 CI는 진행 중
 - M4 밖으로 넘어간 것:
   - NVENC·QSV 실제 인코드와 Windows 4K 파이프 상한: M7·M8 실기기
   - 영상 검토 세션, 분석 해상도 디코드와 감지, ORT spin 측정: M5
