@@ -53,11 +53,14 @@ pub fn open(ffprobe: &Path, input: &Path, cancel: &CancelToken) -> Result<Source
 /// limits again on it: the report's duration and frame count come from container headers, which
 /// need not match the frames.
 fn finish(mut spec: TimelineSpec, frames: SourceFrames) -> Result<Source, Unsupported> {
-    spec.rate = frames.constant_rate(spec.start, spec.nominal_rate, spec.average_rate);
-    let length = frames.end().as_f64() - spec.start.as_f64();
-    if length > MAX_DURATION_SECONDS {
+    let start = spec.start.as_f64();
+    let length = frames.end().as_f64() - start;
+    // Frames listed before the start count too, which keeps every frame time as near the start
+    // as the exact timeline arithmetic needs.
+    if frames.end().as_f64() - frames.time(0).as_f64().min(start) > MAX_DURATION_SECONDS {
         return Err(Unsupported::Duration);
     }
+    spec.rate = frames.constant_rate(spec.start, spec.nominal_rate, spec.average_rate);
     let output_frames = frames.output_frames(&spec);
     if output_frames > MAX_FRAMES {
         return Err(Unsupported::FrameCount);
@@ -115,6 +118,10 @@ mod tests {
         let a_day_later = 86_401 * 1000;
         assert_eq!(
             finish(spec(Some(1.0)), frames(vec![0, 33, a_day_later])).err(),
+            Some(Unsupported::Duration)
+        );
+        assert_eq!(
+            finish(spec(Some(1.0)), frames(vec![-86_401 * 1000, 0, 33])).err(),
             Some(Unsupported::Duration)
         );
         // Frames 4 ms apart show only at 240 fps; three and a half hours of it is 3,024,000.

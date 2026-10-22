@@ -19,6 +19,9 @@ pub const MAX_PIXELS: u64 = 36_000_000;
 pub const MAX_RATE: f64 = 240.0;
 pub const MAX_DURATION_SECONDS: f64 = 86_400.0;
 pub const MAX_FRAMES: u64 = 3_000_000;
+/// 2^31 s, about 68 years: no recording starts that far into its timeline, and exact frame times
+/// stay within i128 up to about 2^34 s with time bases and rates in ffprobe's int range.
+pub const MAX_START_SECONDS: u32 = 1 << 31;
 
 #[derive(Debug)]
 pub enum ProbeError {
@@ -45,6 +48,7 @@ pub enum Unsupported {
     FrameRate,
     Duration,
     FrameCount,
+    Start,
 }
 
 impl fmt::Display for Unsupported {
@@ -71,6 +75,7 @@ impl fmt::Display for Unsupported {
             Self::FrameRate => f.write_str("the video frame rate exceeds the limit"),
             Self::Duration => f.write_str("the video duration exceeds the limit"),
             Self::FrameCount => f.write_str("the video frame count exceeds the limit"),
+            Self::Start => f.write_str("the video's start time exceeds the limit"),
         }
     }
 }
@@ -236,6 +241,9 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
     }
     if duration.is_some_and(|d| !(0.0..=MAX_DURATION_SECONDS).contains(&d)) {
         return unsupported(Unsupported::Duration);
+    }
+    if start > Seconds::new(MAX_START_SECONDS.into(), 1).expect("a positive denominator") {
+        return unsupported(Unsupported::Start);
     }
     let counted = video
         .nb_frames
@@ -611,6 +619,34 @@ mod tests {
         assert_eq!(s.start, Seconds::new(5, 4).unwrap());
         let s = parsed(&r(json!({"start_pts": -1024}))).unwrap();
         assert_eq!(s.start, Seconds::ZERO);
+    }
+
+    /// `probe_fields` drew a start of about 2e19 s, past which exact frame times overflow i128.
+    /// At the latest start taken, with an int-range time base and rate that do not reduce,
+    /// they still compare.
+    #[test]
+    fn a_start_past_the_limit_is_refused() {
+        let r = |changes| report(vec![with(video(), changes)]);
+        let drawn =
+            json!({"time_base": "1577058301/2926592", "start_pts": 39_687_971_712_466_943_i64});
+        assert_eq!(refused(&r(drawn)), Unsupported::Start);
+        let tick = 2_147_483_647_i64;
+        let late = json!({"time_base": "1/2147483647", "start_pts": (1_i64 << 31) * tick + 1});
+        assert_eq!(refused(&r(late)), Unsupported::Start);
+
+        let s = parsed(&r(json!({
+            "time_base": "1/2147483647",
+            "start_pts": (1_i64 << 31) * tick - 1,
+            "r_frame_rate": "2147483629/8947849",
+            "avg_frame_rate": "2147483629/8947849",
+            "duration": "12000",
+            "nb_frames": null
+        })))
+        .unwrap();
+        assert!(s.start < Seconds::new(MAX_START_SECONDS.into(), 1).unwrap());
+        assert_eq!(s.estimated_frames, 2_880_000);
+        assert!(s.frame_start(1) > s.frame_start(0));
+        assert!(s.frame_start(s.estimated_frames) > s.start);
     }
 
     /// ffprobe's text for a display matrix with these 16.16 values in its first two rows.

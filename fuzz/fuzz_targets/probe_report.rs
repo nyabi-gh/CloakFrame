@@ -1,6 +1,9 @@
 #![no_main]
 
-use cloakframe_engine::media::probe::{MAX_FRAMES, MAX_PIXELS, MAX_RATE, MAX_SIDE, parse};
+use cloakframe_core::timeline::Seconds;
+use cloakframe_engine::media::probe::{
+    MAX_FRAMES, MAX_PIXELS, MAX_RATE, MAX_SIDE, MAX_START_SECONDS, parse,
+};
 use libfuzzer_sys::fuzz_target;
 
 fuzz_target!(|report: &[u8]| {
@@ -13,6 +16,7 @@ fuzz_target!(|report: &[u8]| {
     assert!(spec.rate.as_f64() <= MAX_RATE);
     assert!(spec.estimated_frames <= MAX_FRAMES);
     assert!(spec.start.num() >= 0);
+    assert!(spec.start <= Seconds::new(MAX_START_SECONDS.into(), 1).unwrap());
     assert!(
         spec.duration_seconds
             .is_none_or(|d| (0.0..=86_400.0).contains(&d))
