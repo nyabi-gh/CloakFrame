@@ -2,6 +2,7 @@
 
 pub mod decode;
 pub mod frames;
+pub mod language;
 pub mod probe;
 pub mod process;
 pub mod source;

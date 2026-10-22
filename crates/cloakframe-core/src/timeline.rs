@@ -287,7 +287,7 @@ pub struct AudioStream {
     /// The stream's index in the container.
     pub index: u32,
     pub codec: String,
-    /// An ISO 639 code of two or three lowercase letters; `und` and anything else is dropped.
+    /// An ISO 639-2 code, the form MP4 stores; `und` and anything else is dropped.
     pub language: Option<String>,
 }
 

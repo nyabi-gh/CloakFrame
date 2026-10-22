@@ -11,6 +11,7 @@ use cloakframe_core::timeline::{
 use serde::Deserialize;
 
 use crate::cancel::CancelToken;
+use crate::media::language;
 use crate::media::process::{ToolCommand, ToolError};
 
 pub const MAX_SIDE: u32 = 16_384;
@@ -286,7 +287,7 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
         .map(|s| AudioStream {
             index: s.index,
             codec: s.codec_name.clone().unwrap_or_else(|| "unknown".into()),
-            language: s.tags.language.as_deref().and_then(language),
+            language: s.tags.language.as_deref().and_then(language::mp4_language),
         })
         .collect();
 
@@ -403,11 +404,6 @@ fn display_matrix(text: &str) -> Option<[f64; 4]> {
         return None;
     };
     (values.len() == 9).then(|| [a, b, c, d].map(|v| v as f64 / 65536.0))
-}
-
-fn language(tag: &str) -> Option<String> {
-    ((2..=3).contains(&tag.len()) && tag.bytes().all(|b| b.is_ascii_lowercase()) && tag != "und")
-        .then(|| tag.to_owned())
 }
 
 #[cfg(test)]
@@ -696,10 +692,24 @@ mod tests {
             audio(2, json!("und")),
             audio(3, json!("EN")),
             audio(4, json!("en-US")),
+            audio(5, json!("en")),
+            audio(6, json!("de")),
+            audio(7, json!("zz")),
         ]))
         .unwrap();
         let languages: Vec<_> = s.audio.iter().map(|a| a.language.as_deref()).collect();
-        assert_eq!(languages, [Some("kor"), None, None, None]);
+        assert_eq!(
+            languages,
+            [
+                Some("kor"),
+                None,
+                None,
+                None,
+                Some("eng"),
+                Some("deu"),
+                None
+            ]
+        );
         assert_eq!(s.audio[3].index, 4);
     }
 
