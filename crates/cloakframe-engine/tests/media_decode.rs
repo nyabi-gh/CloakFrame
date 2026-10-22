@@ -7,13 +7,13 @@ mod common;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use cloakframe_core::timeline::{Rational, Rotation, SourceFrames, TimelineSpec};
+use cloakframe_core::timeline::{Rational, SourceFrames, TimelineSpec};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::Rgb8Image;
 use cloakframe_engine::media::decode::{DecodeError, FrameReader, frame_size, source_frame};
 use cloakframe_engine::media::process::ToolCommand;
 use cloakframe_engine::media::source;
-use common::{TestDir, fixtures, required_env};
+use common::{TestDir, fixtures, frame_number, required_env};
 use sha2::{Digest, Sha256};
 
 fn ffmpeg() -> PathBuf {
@@ -64,33 +64,6 @@ fn defect(name: &str) -> PathBuf {
     fixtures().join("defects").join(name)
 }
 
-/// The source frame number the fixture drew into the top-left of its coded frame
-/// (tools/fixture-extract/gen_inputs.py), read back through the display rotation.
-fn drawn_index(frame: &Rgb8Image, rotation: Rotation) -> u32 {
-    let (coded_w, coded_h) = match rotation {
-        Rotation::None => (frame.width, frame.height),
-        Rotation::ThreeQuarters => (frame.height, frame.width),
-        other => panic!("no fixture is turned {other:?}"),
-    };
-    let gray = |x: u32, y: u32| {
-        let (dx, dy) = match rotation {
-            Rotation::None => (x, y),
-            _ => (y, coded_w - 1 - x),
-        };
-        let i = (dy * frame.width + dx) as usize * 3;
-        frame.data[i..i + 3]
-            .iter()
-            .map(|&c| u32::from(c))
-            .sum::<u32>()
-            / 3
-    };
-    let block = (coded_w.min(coded_h) / 12).max(8);
-    (0..16)
-        .filter(|bit| gray((bit % 8) * block + block / 2, (bit / 8) * block + block / 2) > 128)
-        .map(|bit| 1 << bit)
-        .sum()
-}
-
 #[test]
 fn a_pass_gives_every_source_frame_once_in_order() {
     for name in P3 {
@@ -100,7 +73,7 @@ fn a_pass_gives_every_source_frame_once_in_order() {
         assert_eq!(decoded.len(), listed.len(), "{name}");
         for (k, frame) in decoded.iter().enumerate() {
             assert_eq!(
-                drawn_index(frame, spec.rotation),
+                frame_number(frame.width, frame.height, &frame.data, spec.rotation),
                 k as u32,
                 "{name} frame {k}"
             );

@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 
 use cloakframe_core::item::{Item, ItemId, PublishPermit, ReviewMode};
+use cloakframe_core::timeline::Rotation;
 use image::{ImageEncoder, RgbImage};
 
 /// A fresh directory under the system temp folder, removed on drop.
@@ -154,4 +155,47 @@ pub fn bmp_v5_with_profile(bmp: &[u8], icc: &[u8]) -> Vec<u8> {
     out.extend(rest);
     out.extend(icc);
     out
+}
+
+/// A gray RGB frame with `k`'s 16 bits as black and white blocks in its top rows, the numbers
+/// tools/fixture-extract/gen_inputs.py draws into the P-3 fixtures.
+pub fn numbered_frame(width: u32, height: u32, k: u32) -> Vec<u8> {
+    let mut rgb = vec![128; (width * height * 3) as usize];
+    let block = number_block(width, height);
+    for bit in 0..16 {
+        let value = if k >> bit & 1 == 1 { 235 } else { 16 };
+        let (x, y) = ((bit % 8) * block, (bit / 8) * block);
+        for row in y..y + block {
+            let at = ((row * width + x) * 3) as usize;
+            rgb[at..at + (block * 3) as usize].fill(value);
+        }
+    }
+    rgb
+}
+
+/// The number [`numbered_frame`] drew into the coded frame, read from a decoded RGB frame of
+/// `width`×`height` in display orientation.
+pub fn frame_number(width: u32, height: u32, rgb: &[u8], rotation: Rotation) -> u32 {
+    let (coded_w, coded_h) = match rotation {
+        Rotation::None => (width, height),
+        Rotation::ThreeQuarters => (height, width),
+        other => panic!("no numbered video is turned {other:?}"),
+    };
+    let gray = |x: u32, y: u32| {
+        let (dx, dy) = match rotation {
+            Rotation::None => (x, y),
+            _ => (y, coded_w - 1 - x),
+        };
+        let i = (dy * width + dx) as usize * 3;
+        rgb[i..i + 3].iter().map(|&c| u32::from(c)).sum::<u32>() / 3
+    };
+    let block = number_block(coded_w, coded_h);
+    (0..16)
+        .filter(|bit| gray((bit % 8) * block + block / 2, (bit / 8) * block + block / 2) > 128)
+        .map(|bit| 1 << bit)
+        .sum()
+}
+
+fn number_block(width: u32, height: u32) -> u32 {
+    (width.min(height) / 12).max(8)
 }
