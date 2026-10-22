@@ -60,6 +60,12 @@ pub enum Note {
     /// The GPU failed on this item, which was analyzed again on the CPU; the rest of the run uses
     /// the CPU for that model (plan 3).
     AnalyzedAgainOnCpu,
+    /// The hardware encoder failed on this item, which was encoded again in software; the rest
+    /// of the run encodes in software.
+    EncodedAgainInSoftware,
+    /// The video's odd width or height was padded to this even size by repeating the last
+    /// column or row (P-5).
+    Padded { width: u32, height: u32 },
     /// Published, but the folder could not be flushed to disk (some network and FUSE volumes).
     FolderNotFlushed,
     /// Published, but a temp file was left next to the output; a later run removes it.
@@ -73,6 +79,12 @@ impl fmt::Display for Note {
             Self::ColorProfileIgnored => "unusable color profile dropped",
             Self::NothingDetected => "nothing detected",
             Self::AnalyzedAgainOnCpu => "the GPU failed; analyzed again on the CPU",
+            Self::EncodedAgainInSoftware => {
+                "the hardware encoder failed; encoded again in software, as is the rest of the run"
+            }
+            Self::Padded { width, height } => {
+                return write!(f, "odd size padded to {width}×{height}");
+            }
             Self::FolderNotFlushed => "the output folder could not be flushed to disk",
             Self::TempFileLeft => "a temporary file was left next to the output",
         })
@@ -91,7 +103,7 @@ impl Notes {
         }
     }
 
-    fn into_vec(self) -> Vec<Note> {
+    pub(crate) fn into_vec(self) -> Vec<Note> {
         self.0.into_inner().unwrap_or_else(|e| e.into_inner())
     }
 }

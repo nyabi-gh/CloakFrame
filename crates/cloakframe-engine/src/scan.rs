@@ -16,6 +16,20 @@ pub enum MediaKind {
     Video,
 }
 
+impl MediaKind {
+    /// By the extension, ignoring case; `None` for files of other types.
+    pub fn of(path: &Path) -> Option<Self> {
+        let extension = path.extension()?.to_str()?.to_lowercase();
+        if IMAGE_EXTENSIONS.contains(&extension.as_str()) {
+            Some(Self::Image)
+        } else if VIDEO_EXTENSIONS.contains(&extension.as_str()) {
+            Some(Self::Video)
+        } else {
+            None
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct ScanRequest {
     pub inputs: Vec<PathBuf>,
@@ -148,16 +162,16 @@ impl Scanner<'_> {
     }
 
     fn file(&mut self, path: &Path, relative: PathBuf) {
-        let extension = path
-            .extension()
-            .and_then(OsStr::to_str)
-            .unwrap_or("")
-            .to_lowercase();
-        let kind = if IMAGE_EXTENSIONS.contains(&extension.as_str()) {
-            MediaKind::Image
-        } else if self.request.include_videos && VIDEO_EXTENSIONS.contains(&extension.as_str()) {
-            MediaKind::Video
-        } else {
+        let kind = match MediaKind::of(path) {
+            Some(MediaKind::Video) if !self.request.include_videos => None,
+            kind => kind,
+        };
+        let Some(kind) = kind else {
+            let extension = path
+                .extension()
+                .and_then(OsStr::to_str)
+                .unwrap_or("")
+                .to_lowercase();
             *self.result.skipped.entry(extension).or_default() += 1;
             return;
         };

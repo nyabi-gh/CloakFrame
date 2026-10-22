@@ -7,6 +7,7 @@ use std::time::SystemTime;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::ModelId;
+use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
 use cloakframe_engine::batch::{job_from_scan, session_from_report};
 use cloakframe_engine::cancel::CancelToken;
@@ -14,6 +15,8 @@ use cloakframe_engine::detect::fallback::{Acceleration, Backends, ModelBackend};
 use cloakframe_engine::detect::models::{DetectionModels, FaceModel, LoadError};
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
+use cloakframe_engine::media::encode::{OutputCodec, Quality};
+use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::model_files::download::{Https, download};
 use cloakframe_engine::model_files::{MODEL_FILES, ModelStore, Status, model_file};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
@@ -23,13 +26,17 @@ use cloakframe_engine::review::{ReviewDecisions, apply};
 use cloakframe_engine::run::{ItemProcessor, Job, RunReport, start_under};
 use cloakframe_engine::scan::{ScanRequest, scan};
 use cloakframe_engine::session::{SessionId, SessionStore};
+use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 
 const USAGE: &str = "\
 usage:
   cloakframe-cli run --output DIR --ort-library FILE [--models DIR]
                      [--faces yolo5face-n|yunet|off] [--plates on|off] [--tiles on|off]
                      [--gpu on|off] [--review required|off] [--keep-metadata [--keep-gps]]
-                     [--recursive] [--workers N] [--sessions DIR] INPUT...
+                     [--recursive] [--workers N] [--sessions DIR]
+                     [--videos --ffmpeg FILE --ffprobe FILE --mask X,Y,W,H...
+                      [--video-codec h264|hevc] [--video-quality high|balanced|space-saver]
+                      [--hardware-encode on|off]] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
                         [--plates on|off] [--tiles on|off] [--keep-metadata [--keep-gps]]
                         [--workers N] [--sessions DIR]
@@ -48,6 +55,11 @@ is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts
 tiles are detected as well, which finds small faces in large photos at more cost. --gpu off keeps every model on the CPU; by default each runs on the GPU where this
 build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
 settings run was given; decisions on items analyzed with other settings are refused.
+--videos processes MP4, MOV, M4V and WebM files as well, with the given FFmpeg and ffprobe.
+Videos are not analyzed yet: each --mask area (display pixels, repeatable) is masked in every
+frame, so --videos needs at least one --mask and --review off. Videos are written as MP4,
+H.264 by default at high quality; --hardware-encode off skips the hardware encoders, and one
+that fails during the run leaves the item and the rest of the run to software.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
 
 Ctrl+C cancels: items in progress stop and nothing more is published. A second Ctrl+C exits at
@@ -110,7 +122,25 @@ struct Options {
     keep_metadata: bool,
     keep_gps: bool,
     accept_terms: bool,
+    ffmpeg: Option<PathBuf>,
+    ffprobe: Option<PathBuf>,
+    masks: Vec<Rect>,
+    video_codec: Option<OutputCodec>,
+    video_quality: Option<Quality>,
+    hardware_encode: Option<bool>,
     inputs: Vec<PathBuf>,
+}
+
+fn parse_mask(value: &str) -> Result<Rect, String> {
+    let fields: Vec<f32> = value
+        .split(',')
+        .map(|v| v.trim().parse::<f32>())
+        .collect::<Result<_, _>>()
+        .map_err(|_| format!("--mask is X,Y,W,H in pixels, not {value}"))?;
+    let [x, y, width, height] = fields[..] else {
+        return Err(format!("--mask is X,Y,W,H in pixels, not {value}"));
+    };
+    Rect::new(x, y, width, height).map_err(|e| format!("--mask {value}: {e}"))
 }
 
 fn parse(args: Vec<String>) -> Result<Options, String> {
@@ -178,6 +208,35 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
             "--keep-metadata" => o.keep_metadata = true,
             "--keep-gps" => o.keep_gps = true,
             "--accept-terms" => o.accept_terms = true,
+            "--ffmpeg" => o.ffmpeg = Some(args.value(&arg)?.into()),
+            "--ffprobe" => o.ffprobe = Some(args.value(&arg)?.into()),
+            "--mask" => o.masks.push(parse_mask(&args.value(&arg)?)?),
+            "--video-codec" => {
+                o.video_codec = Some(match args.value(&arg)?.as_str() {
+                    "h264" => OutputCodec::H264,
+                    "hevc" => OutputCodec::Hevc,
+                    other => return Err(format!("--video-codec is h264 or hevc, not {other}")),
+                })
+            }
+            "--video-quality" => {
+                o.video_quality = Some(match args.value(&arg)?.as_str() {
+                    "high" => Quality::High,
+                    "balanced" => Quality::Balanced,
+                    "space-saver" => Quality::SpaceSaver,
+                    other => {
+                        return Err(format!(
+                            "--video-quality is high, balanced or space-saver, not {other}"
+                        ));
+                    }
+                })
+            }
+            "--hardware-encode" => {
+                o.hardware_encode = Some(match args.value(&arg)?.as_str() {
+                    "on" => true,
+                    "off" => false,
+                    other => return Err(format!("--hardware-encode is on or off, not {other}")),
+                })
+            }
             flag if flag.starts_with("--") => return Err(format!("unknown option {flag}")),
             _ => args.positional.push(arg),
         }
@@ -209,9 +268,6 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
     if o.synthetic {
         return Err(usage("this build has no synthetic processor"));
     }
-    if o.videos {
-        return Err(usage("this build cannot process videos yet"));
-    }
     if o.keep_gps && !o.keep_metadata {
         return Err(usage("--keep-gps needs --keep-metadata"));
     }
@@ -229,6 +285,57 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
         ..PhotoSettings::default()
     })
     .map_err(|e| failed(e.to_string()))
+}
+
+/// Photos, and with --videos videos masked with the given areas.
+fn media_processor(o: &Options) -> Result<MediaProcessor, CliError> {
+    let photo = photo_processor(o)?;
+    let video_flags = o.ffmpeg.is_some()
+        || o.ffprobe.is_some()
+        || !o.masks.is_empty()
+        || o.video_codec.is_some()
+        || o.video_quality.is_some()
+        || o.hardware_encode.is_some();
+    if !o.videos {
+        if video_flags {
+            return Err(usage("the video options need --videos"));
+        }
+        return Ok(MediaProcessor::new(photo, None));
+    }
+    // A video's review session binds its timeline and detections, which come with M5.
+    if o.review != Some(ReviewMode::Off) {
+        return Err(usage(
+            "--videos needs --review off: videos cannot be reviewed yet",
+        ));
+    }
+    // Without detection an unmasked video would be published as if it had been checked.
+    if o.masks.is_empty() {
+        return Err(usage(
+            "--videos needs at least one --mask: videos are not analyzed yet",
+        ));
+    }
+    let tools = Tools {
+        ffmpeg: o
+            .ffmpeg
+            .clone()
+            .ok_or_else(|| usage("--videos needs --ffmpeg FILE"))?,
+        ffprobe: o
+            .ffprobe
+            .clone()
+            .ok_or_else(|| usage("--videos needs --ffprobe FILE"))?,
+    };
+    let default = VideoSettings::default();
+    let settings = VideoSettings {
+        codec: o.video_codec.unwrap_or(default.codec),
+        quality: o.video_quality.unwrap_or(default.quality),
+        hardware_encode: o.hardware_encode.unwrap_or(default.hardware_encode),
+        masks: o.masks.clone(),
+        ..default
+    };
+    Ok(MediaProcessor::new(
+        photo,
+        Some(VideoProcessor::new(tools, settings)),
+    ))
 }
 
 fn spawn(detector: Box<dyn Detector>) -> Result<DetectorHandle, CliError> {
@@ -488,7 +595,7 @@ fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
         let processor = cloakframe_engine::synthetic::SyntheticProcessor;
         return run_with(&o, &output, processor, without_models, cancel);
     }
-    let processor = photo_processor(&o)?;
+    let processor = media_processor(&o)?;
     let models = detection_models(&o)?;
     let library = o
         .ort_library

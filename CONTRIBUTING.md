@@ -68,6 +68,22 @@ downloads them (YOLO5Face-n, which is for non-commercial use only, also needs
 `--accept-terms`). The command-line tests download the two MIT-licensed models
 from GitHub, so they need the network.
 
+With `--videos` it also processes MP4, MOV, M4V and WebM files. Videos are not
+analyzed yet (M5), so each `--mask X,Y,W,H` area, in display pixels, is masked
+in every frame, and videos need `--review off`:
+
+```bash
+cargo run -p cloakframe-engine --bin cloakframe-cli -- run --output out --review off \
+  --ort-library "$CLOAKFRAME_ORT_LIBRARY" --models "$CLOAKFRAME_TEST_ASSETS" \
+  --videos --ffmpeg "$CLOAKFRAME_FFMPEG" --ffprobe "$CLOAKFRAME_FFPROBE" \
+  --mask 100,50,200,100 videos/
+```
+
+Videos are written as MP4, H.264 at high quality by default (`--video-codec hevc`,
+`--video-quality balanced|space-saver`), on a hardware encoder where one works
+(`--hardware-encode off` keeps to software). Each output is decoded in full and
+checked before it is published.
+
 Changes to detection also run the detection benchmark: 610 Open Images photos
 (Open Images' own copies, about 160 MB) fetched by hash, scored against their
 labels and compared with CloakFrame 1.12.1's recorded results. CI runs it on pull

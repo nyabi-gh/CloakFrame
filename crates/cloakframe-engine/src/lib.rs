@@ -9,6 +9,7 @@ pub mod fs_case;
 pub mod identity;
 pub mod legacy;
 pub mod media;
+pub mod media_processor;
 pub mod model_files;
 pub mod ordered;
 pub mod output_plan;
@@ -20,6 +21,7 @@ pub mod scan;
 pub mod session;
 #[cfg(feature = "synthetic")]
 pub mod synthetic;
+pub mod video;
 
 #[cfg(test)]
 #[path = "../tests/common/mod.rs"]

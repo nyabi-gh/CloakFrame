@@ -1,0 +1,667 @@
+//! The video pipeline as the runner's item processor (plan 4.4). Until detection and tracking
+//! arrive (M5) a video is masked with fixed areas the user gives: analysis reads the timeline,
+//! and the second pass decodes every source frame at full size, masks it, encodes, and checks
+//! the output (P-4) before it waits for its publish permit. The source is never copied; its
+//! identity is compared before the first pass, between the passes, after the second and right
+//! before publishing (plan 0.1).
+
+use std::fmt;
+use std::io;
+use std::path::PathBuf;
+use std::sync::Mutex;
+
+use cloakframe_core::geometry::Rect;
+use cloakframe_core::item::{PublishBasis, PublishPermit};
+use cloakframe_core::mask::{MaskStyle, Region};
+use cloakframe_core::review::Digest;
+use image::{DynamicImage, RgbImage};
+use sha2::{Digest as _, Sha256};
+
+use crate::detect::Rgb8Image;
+use crate::identity::SourceStamp;
+use crate::media::decode::{DecodeError, FrameReader, frame_size};
+use crate::media::encode::{
+    Destination, EncodeError, Encoder, Encoders, FrameWriter, OutputCodec, Quality, encoded_size,
+};
+use crate::media::source::{self, Source};
+use crate::media::verify::{self, Expected, VerifyError};
+use crate::photo::mask::{self, ApplyError};
+use crate::publish::TempOutput;
+use crate::run::{
+    Analysis, Fingerprint, ItemContext, ItemProcessor, Note, Notes, RenderRequest, StepError,
+};
+
+/// The bundled tools (plan 0.1: run as external processes).
+#[derive(Debug, Clone)]
+pub struct Tools {
+    pub ffmpeg: PathBuf,
+    pub ffprobe: PathBuf,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct VideoSettings {
+    pub codec: OutputCodec,
+    pub quality: Quality,
+    /// Try the platform's hardware encoders before software (1.12.1's default).
+    pub hardware_encode: bool,
+    /// Areas masked in every frame, in display pixels.
+    pub masks: Vec<Rect>,
+    pub style: MaskStyle,
+}
+
+impl Default for VideoSettings {
+    fn default() -> Self {
+        Self {
+            codec: OutputCodec::H264,
+            quality: Quality::High,
+            hardware_encode: true,
+            masks: Vec::new(),
+            style: MaskStyle::default(),
+        }
+    }
+}
+
+impl VideoSettings {
+    fn digest(&self) -> Digest {
+        let s = &self.style;
+        let mut h = Sha256::new();
+        h.update(format!(
+            "codec {:?} quality {:?} hardware {}\nstyle {:?} {:?} padding {:08x} soft {} mosaic {}\n",
+            self.codec,
+            self.quality,
+            self.hardware_encode,
+            s.method,
+            s.shape,
+            s.padding.ratio().to_bits(),
+            s.soft_edges,
+            s.mosaic_strength.cells(),
+        ));
+        for m in &self.masks {
+            h.update(format!(
+                "mask {:08x} {:08x} {:08x} {:08x}\n",
+                m.x().to_bits(),
+                m.y().to_bits(),
+                m.width().to_bits(),
+                m.height().to_bits()
+            ));
+        }
+        Digest(h.finalize().into())
+    }
+}
+
+#[derive(Debug)]
+pub enum VideoError {
+    /// Reviews of videos come with their detections (M5); until then a video is not resumed.
+    NotResumable,
+    /// The source changed between reading its timeline and publishing the output.
+    ChangedWhileProcessing,
+    NameTaken,
+    /// A mask that does not overlap the frame at all, most likely meant for another video.
+    MaskOutside {
+        mask: usize,
+        size: (u32, u32),
+    },
+}
+
+impl fmt::Display for VideoError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NotResumable => f.write_str("videos cannot be resumed from a review yet"),
+            Self::ChangedWhileProcessing => {
+                f.write_str("the source changed while it was processed")
+            }
+            Self::NameTaken => f.write_str("the output name was taken during the run"),
+            Self::MaskOutside { mask, size } => write!(
+                f,
+                "mask {} lies outside the {}×{} video",
+                mask + 1,
+                size.0,
+                size.1
+            ),
+        }
+    }
+}
+
+impl std::error::Error for VideoError {}
+
+fn failed(e: impl std::error::Error + Send + Sync + 'static) -> StepError {
+    StepError::Failed(Box::new(e))
+}
+
+/// A tool stopped by the item's cancel reports its own error; the cancel is what happened.
+fn failed_unless_cancelled(
+    ctx: &ItemContext<'_>,
+    e: impl std::error::Error + Send + Sync + 'static,
+) -> StepError {
+    if ctx.cancel.is_cancelled() {
+        StepError::Cancelled
+    } else {
+        failed(e)
+    }
+}
+
+fn unchanged(ctx: &ItemContext<'_>, stamp: SourceStamp) -> Result<(), StepError> {
+    if SourceStamp::of(ctx.input).ok() == Some(stamp) {
+        Ok(())
+    } else {
+        Err(failed(VideoError::ChangedWhileProcessing))
+    }
+}
+
+/// The verified output under its temporary name and the source it was made from.
+pub struct Rendered {
+    output: TempOutput,
+    source: SourceStamp,
+}
+
+pub struct VideoProcessor {
+    tools: Tools,
+    settings: VideoSettings,
+    /// Held for a whole second pass, so videos render one at a time: the encoder already keeps
+    /// every core busy, and two 1080p encodes at once finished only 2–8% sooner than one after
+    /// the other (M4 stage 4) while holding twice the memory.
+    encoders: Mutex<Encoders>,
+}
+
+impl VideoProcessor {
+    pub fn new(tools: Tools, settings: VideoSettings) -> Self {
+        let encoders = Mutex::new(Encoders::new(settings.hardware_encode));
+        Self {
+            tools,
+            settings,
+            encoders,
+        }
+    }
+}
+
+/// Why a second pass failed. Only the encoder's own failures are worth another pass in
+/// software.
+#[derive(Debug)]
+enum PassError {
+    Decode(DecodeError),
+    Encode(EncodeError),
+    Verify(VerifyError),
+    Mask(ApplyError),
+    Output(io::Error),
+}
+
+impl PassError {
+    fn encoders_fault(&self) -> bool {
+        match self {
+            Self::Encode(EncodeError::Cancelled | EncodeError::Output(_)) => false,
+            Self::Encode(_) => true,
+            Self::Verify(VerifyError::Cancelled) => false,
+            Self::Verify(_) => true,
+            Self::Decode(_) | Self::Mask(_) | Self::Output(_) => false,
+        }
+    }
+}
+
+impl fmt::Display for PassError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Decode(e) => e.fmt(f),
+            Self::Encode(e) => e.fmt(f),
+            Self::Verify(e) => e.fmt(f),
+            Self::Mask(e) => e.fmt(f),
+            Self::Output(e) => write!(f, "cannot create the output: {e}"),
+        }
+    }
+}
+
+impl std::error::Error for PassError {}
+
+/// Runs the pass with the encoder `pick` gives. If a hardware encoder fails it, the run gives
+/// up on hardware and the pass is made again with whatever `pick` gives then, which is software
+/// (plan 4.4, as a failing GPU detector moves to the CPU in M3).
+fn encode_with_fallback<T>(
+    encoders: &mut Encoders,
+    notes: &Notes,
+    mut pick: impl FnMut(&Encoders) -> Result<Encoder, EncodeError>,
+    mut pass: impl FnMut(Encoder) -> Result<T, PassError>,
+) -> Result<T, PassError> {
+    let encoder = pick(encoders).map_err(PassError::Encode)?;
+    match pass(encoder) {
+        Err(e) if encoder.hardware && e.encoders_fault() => {
+            encoders.note_hardware_failure();
+            notes.add(Note::EncodedAgainInSoftware);
+            pass(pick(encoders).map_err(PassError::Encode)?)
+        }
+        result => result,
+    }
+}
+
+fn mask_frame(
+    frame: &mut Rgb8Image,
+    regions: &[Region],
+    style: &MaskStyle,
+) -> Result<(), ApplyError> {
+    if regions.is_empty() {
+        return Ok(());
+    }
+    let buffer = RgbImage::from_raw(frame.width, frame.height, std::mem::take(&mut frame.data))
+        .expect("the reader sizes the buffer to the frame");
+    let mut image = DynamicImage::ImageRgb8(buffer);
+    let result = mask::apply(&mut image, regions, style, None);
+    frame.data = image.into_rgb8().into_raw();
+    result
+}
+
+impl VideoProcessor {
+    /// One second pass with `encoder` into a new temporary output, which is returned checked.
+    fn pass(
+        &self,
+        ctx: &ItemContext<'_>,
+        source: &Source,
+        regions: &[Region],
+        encoder: Encoder,
+    ) -> Result<TempOutput, PassError> {
+        let Source { spec, frames } = source;
+        let output = TempOutput::create(ctx.destination).map_err(PassError::Output)?;
+        let total = frames.output_frames(spec);
+        let mut writer = FrameWriter::start(
+            &self.tools.ffmpeg,
+            encoder,
+            self.settings.quality,
+            spec,
+            total,
+            Some(ctx.input),
+            Destination::Made(output.temp_path()),
+            ctx.cancel,
+        )
+        .map_err(PassError::Encode)?;
+        let mut reader = FrameReader::start(
+            &self.tools.ffmpeg,
+            ctx.input,
+            spec,
+            frames,
+            frame_size(spec, None),
+            ctx.cancel,
+        )
+        .map_err(PassError::Decode)?;
+        let mut frame = Rgb8Image {
+            width: 0,
+            height: 0,
+            data: Vec::new(),
+        };
+        let mut read = 0;
+        for (n, k) in frames.shown(spec).enumerate() {
+            // Each source frame is masked once, however many output frames show it.
+            while read <= k {
+                if !reader.next_into(&mut frame).map_err(PassError::Decode)? {
+                    return Err(PassError::Decode(DecodeError::FrameCount {
+                        listed: frames.len(),
+                        decoded: read,
+                    }));
+                }
+                mask_frame(&mut frame, regions, &self.settings.style).map_err(PassError::Mask)?;
+                read += 1;
+            }
+            writer.write(&frame).map_err(PassError::Encode)?;
+            ctx.progress.set(n as u64 + 1, total);
+        }
+        // The reader checks the decoded count against the list once it reaches the end.
+        while reader.next_into(&mut frame).map_err(PassError::Decode)? {}
+        writer.finish().map_err(PassError::Encode)?;
+        let expected = Expected::of(spec, self.settings.codec, total);
+        verify::check(
+            &self.tools.ffprobe,
+            &self.tools.ffmpeg,
+            output.temp_path(),
+            &expected,
+            ctx.cancel,
+        )
+        .map_err(PassError::Verify)?;
+        Ok(output)
+    }
+
+    fn regions(&self, (width, height): (u32, u32)) -> Result<Vec<Region>, VideoError> {
+        self.settings
+            .masks
+            .iter()
+            .enumerate()
+            .map(|(i, &bbox)| {
+                let overlaps = bbox.x() < width as f32
+                    && bbox.y() < height as f32
+                    && bbox.right() > 0.0
+                    && bbox.bottom() > 0.0
+                    && bbox.area() > 0.0;
+                if overlaps {
+                    Ok(Region { bbox, roll: None })
+                } else {
+                    Err(VideoError::MaskOutside {
+                        mask: i,
+                        size: (width, height),
+                    })
+                }
+            })
+            .collect()
+    }
+}
+
+impl ItemProcessor for VideoProcessor {
+    type Prepared = Source;
+    type Rendered = Rendered;
+
+    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Source), StepError> {
+        let before = SourceStamp::of(ctx.input).map_err(failed)?;
+        let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
+            .map_err(|e| failed_unless_cancelled(ctx, e))?;
+        unchanged(ctx, before)?;
+        self.regions(source.spec.display_size()).map_err(failed)?;
+        let analysis = Analysis {
+            source: Some(before),
+            ..Analysis::default()
+        };
+        Ok((analysis, source))
+    }
+
+    fn render(
+        &self,
+        ctx: &ItemContext<'_>,
+        request: &RenderRequest<'_>,
+        prepared: Option<Source>,
+    ) -> Result<Rendered, StepError> {
+        let source = prepared.ok_or_else(|| failed(VideoError::NotResumable))?;
+        let stamp = request
+            .analysis
+            .source
+            .expect("analysis records the source");
+        let regions = if request.basis == PublishBasis::ExportedWithoutAnonymization {
+            Vec::new()
+        } else {
+            self.regions(source.spec.display_size()).map_err(failed)?
+        };
+        let mut encoders = self.encoders.lock().unwrap_or_else(|e| e.into_inner());
+        unchanged(ctx, stamp)?;
+        let output = encode_with_fallback(
+            &mut encoders,
+            ctx.notes,
+            |encoders| {
+                encoders.pick(
+                    &self.tools.ffmpeg,
+                    self.settings.codec,
+                    &source.spec,
+                    ctx.cancel,
+                )
+            },
+            |encoder| self.pass(ctx, &source, &regions, encoder),
+        )
+        .map_err(|e| failed_unless_cancelled(ctx, e))?;
+        drop(encoders);
+        unchanged(ctx, stamp)?;
+        let size = source.spec.display_size();
+        let (width, height) = encoded_size(size);
+        if (width, height) != size {
+            ctx.notes.add(Note::Padded { width, height });
+        }
+        Ok(Rendered {
+            output,
+            source: stamp,
+        })
+    }
+
+    fn publish(
+        &self,
+        ctx: &ItemContext<'_>,
+        rendered: Rendered,
+        permit: &PublishPermit,
+    ) -> Result<(), StepError> {
+        unchanged(ctx, rendered.source)?;
+        match rendered.output.publish(permit) {
+            Ok(published) => {
+                for w in &published.warnings {
+                    ctx.notes.add(w.note());
+                }
+                Ok(())
+            }
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+                Err(failed(VideoError::NameTaken))
+            }
+            Err(e) => Err(failed(e)),
+        }
+    }
+
+    /// No model decides a video's output yet (M5); the models' half is that of no models.
+    fn fingerprint(&self) -> Fingerprint {
+        Fingerprint {
+            models: Digest(Sha256::digest(b"").into()),
+            settings: self.settings.digest(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cancel::CancelToken;
+    use crate::detect::{DetectorHandle, NoDetections};
+    use crate::events::ProgressBoard;
+    use crate::media::process::ToolError;
+    use crate::test_support::{TestDir, fixtures, permit, required_env};
+    use cloakframe_core::item::ItemId;
+    use cloakframe_core::review::PhotoEdits;
+    use std::time::{Duration, SystemTime};
+
+    /// Runs `step` with a context for `input` published to `out/clip.mp4`.
+    fn with_context<T>(input: &std::path::Path, step: impl FnOnce(&ItemContext<'_>) -> T) -> T {
+        let destination = input.parent().unwrap().join("out/clip.mp4");
+        let detector = DetectorHandle::spawn(Box::new(NoDetections)).unwrap();
+        let notes = Notes::default();
+        let ctx = ItemContext {
+            item: ItemId(1),
+            input,
+            destination: &destination,
+            cancel: &CancelToken::new(),
+            detector: &detector,
+            progress: ProgressBoard::default().reporter(ItemId(1)),
+            notes: &notes,
+        };
+        step(&ctx)
+    }
+
+    fn touch(path: &std::path::Path) {
+        std::fs::File::options()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(SystemTime::now() + Duration::from_secs(60))
+            .unwrap();
+    }
+
+    fn changed(result: Result<impl Sized, StepError>) -> bool {
+        matches!(result, Err(StepError::Failed(e)) if e.to_string() == VideoError::ChangedWhileProcessing.to_string())
+    }
+
+    /// The source is read again by each pass; one changed in between is not rendered or
+    /// published, and nothing is left in the output folder.
+    #[test]
+    fn a_source_that_changes_between_the_passes_or_before_publishing_fails_the_item() {
+        let dir = TestDir::new();
+        let input = dir.path().join("clip.mp4");
+        std::fs::copy(
+            fixtures().join("defects/P-5/odd-641x361-audio-longer.mp4"),
+            &input,
+        )
+        .unwrap();
+        let processor = VideoProcessor::new(
+            Tools {
+                ffmpeg: required_env("CLOAKFRAME_FFMPEG"),
+                ffprobe: required_env("CLOAKFRAME_FFPROBE"),
+            },
+            VideoSettings {
+                hardware_encode: false,
+                masks: vec![Rect::new(0.0, 0.0, 8.0, 8.0).unwrap()],
+                ..VideoSettings::default()
+            },
+        );
+        let edits = PhotoEdits::default();
+        let out = dir.path().join("out");
+
+        with_context(&input, |ctx| {
+            let (analysis, source) = processor.analyze(ctx).unwrap();
+            touch(&input);
+            assert!(changed(processor.render(
+                ctx,
+                &RenderRequest {
+                    basis: PublishBasis::AutomaticUnreviewed,
+                    analysis: &analysis,
+                    edits: &edits
+                },
+                Some(source)
+            )));
+        });
+        assert!(!out.exists() || std::fs::read_dir(&out).unwrap().next().is_none());
+
+        with_context(&input, |ctx| {
+            let (analysis, source) = processor.analyze(ctx).unwrap();
+            let rendered = processor
+                .render(
+                    ctx,
+                    &RenderRequest {
+                        basis: PublishBasis::AutomaticUnreviewed,
+                        analysis: &analysis,
+                        edits: &edits,
+                    },
+                    Some(source),
+                )
+                .unwrap();
+            touch(&input);
+            assert!(changed(processor.publish(ctx, rendered, &permit())));
+        });
+        assert_eq!(std::fs::read_dir(&out).unwrap().count(), 0);
+    }
+
+    fn hardware() -> Encoder {
+        Encoder {
+            name: "h264_videotoolbox",
+            hardware: true,
+        }
+    }
+
+    fn software() -> Encoder {
+        Encoder::software(OutputCodec::H264)
+    }
+
+    fn broken_encoder() -> PassError {
+        PassError::Encode(EncodeError::Tool(ToolError::Io(
+            io::ErrorKind::BrokenPipe.into(),
+        )))
+    }
+
+    /// The encoders the pass was made with, and what came of it.
+    fn run(
+        hardware_first: bool,
+        outcomes: Vec<Result<(), PassError>>,
+    ) -> (Vec<Encoder>, Result<(), PassError>, Encoders, Notes) {
+        let mut encoders = Encoders::new(true);
+        let notes = Notes::default();
+        let mut outcomes = outcomes.into_iter();
+        let mut used = Vec::new();
+        let result = encode_with_fallback(
+            &mut encoders,
+            &notes,
+            |e| {
+                Ok(if hardware_first && !e.hardware_failed() {
+                    hardware()
+                } else {
+                    software()
+                })
+            },
+            |encoder| {
+                used.push(encoder);
+                outcomes.next().expect("a pass too many")
+            },
+        );
+        (used, result, encoders, notes)
+    }
+
+    #[test]
+    fn a_failing_hardware_encoder_is_replaced_by_software_for_the_item_and_the_run() {
+        let failures = [
+            broken_encoder(),
+            PassError::Verify(VerifyError::FrameCount {
+                expected: 60,
+                decoded: 59,
+            }),
+        ];
+        for failure in failures {
+            let (used, result, encoders, notes) = run(true, vec![Err(failure), Ok(())]);
+            assert_eq!(used, [hardware(), software()]);
+            result.unwrap();
+            assert!(encoders.hardware_failed());
+            assert_eq!(notes.into_vec(), [Note::EncodedAgainInSoftware]);
+        }
+    }
+
+    #[test]
+    fn failures_that_are_not_the_encoders_are_not_tried_again() {
+        let failures = [
+            PassError::Decode(DecodeError::FrameCount {
+                listed: 60,
+                decoded: 59,
+            }),
+            PassError::Encode(EncodeError::Cancelled),
+            PassError::Verify(VerifyError::Cancelled),
+            PassError::Output(io::ErrorKind::PermissionDenied.into()),
+        ];
+        for failure in failures {
+            let (used, result, encoders, notes) = run(true, vec![Err(failure)]);
+            assert_eq!(used, [hardware()]);
+            assert!(result.is_err());
+            assert!(!encoders.hardware_failed());
+            assert!(notes.into_vec().is_empty());
+        }
+    }
+
+    #[test]
+    fn a_failing_software_encode_fails_the_item() {
+        let (used, result, encoders, _) = run(false, vec![Err(broken_encoder())]);
+        assert_eq!(used, [software()]);
+        assert!(result.is_err());
+        assert!(!encoders.hardware_failed());
+    }
+
+    #[test]
+    fn a_software_retry_that_fails_too_fails_the_item() {
+        let (used, result, _, notes) =
+            run(true, vec![Err(broken_encoder()), Err(broken_encoder())]);
+        assert_eq!(used, [hardware(), software()]);
+        assert!(result.is_err());
+        assert_eq!(notes.into_vec(), [Note::EncodedAgainInSoftware]);
+    }
+
+    #[test]
+    fn masks_must_overlap_the_frame() {
+        let processor = |masks: Vec<Rect>| {
+            VideoProcessor::new(
+                Tools {
+                    ffmpeg: PathBuf::new(),
+                    ffprobe: PathBuf::new(),
+                },
+                VideoSettings {
+                    masks,
+                    ..VideoSettings::default()
+                },
+            )
+        };
+        let rect = |x, y, w, h| Rect::new(x, y, w, h).unwrap();
+        let inside = processor(vec![
+            rect(0.0, 0.0, 10.0, 10.0),
+            rect(630.0, 350.0, 50.0, 50.0),
+        ]);
+        assert_eq!(inside.regions((641, 361)).unwrap().len(), 2);
+        for outside in [
+            rect(641.0, 0.0, 10.0, 10.0),
+            rect(0.0, 361.0, 10.0, 10.0),
+            rect(-10.0, 0.0, 10.0, 10.0),
+            rect(10.0, 10.0, 0.0, 10.0),
+        ] {
+            let p = processor(vec![rect(0.0, 0.0, 1.0, 1.0), outside]);
+            assert!(matches!(
+                p.regions((641, 361)),
+                Err(VideoError::MaskOutside { mask: 1, .. })
+            ));
+        }
+    }
+}

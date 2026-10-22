@@ -249,8 +249,15 @@ const AUDIO_PREROLL_SECONDS: f64 = 0.25;
 /// Codecs MP4 carries that 1.12.1 copied; the rest become AAC at 192 kb/s.
 const COPIED_AUDIO: [&str; 5] = ["aac", "mp3", "ac3", "eac3", "alac"];
 
+#[derive(Clone, Copy)]
 pub enum Destination<'a> {
+    /// A new file, made here; an existing one is never replaced.
     File(&'a Path),
+    /// A file this process made for the output, such as a [`TempOutput`]'s, which FFmpeg writes
+    /// over.
+    ///
+    /// [`TempOutput`]: crate::publish::TempOutput
+    Made(&'a Path),
     /// Encoded and thrown away, to see whether an encoder works.
     Discard,
 }
@@ -341,10 +348,12 @@ impl FrameWriter {
         }
         command.args(["-map_metadata", "-1", "-map_chapters", "-1"]);
         match destination {
-            Destination::File(path) => {
-                // FFmpeg 9 refuses an existing output yet exits with 0, so the file is made here,
-                // never replacing one, and FFmpeg writes into it.
-                File::create_new(path).map_err(EncodeError::Output)?;
+            Destination::File(path) | Destination::Made(path) => {
+                // FFmpeg 9 refuses an existing output yet exits with 0, so the file is made
+                // beforehand, never replacing one, and FFmpeg writes into it.
+                if let Destination::File(path) = destination {
+                    File::create_new(path).map_err(EncodeError::Output)?;
+                }
                 command
                     .args(["-y", "-movflags", "+faststart", "-f", "mp4"])
                     .output_file(path);
