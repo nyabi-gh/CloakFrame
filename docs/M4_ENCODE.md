@@ -47,9 +47,11 @@ FFmpeg MP4 muxer는 세 글자 코드(`eng`·`ger`·`deu`·`qaa`)는 남기고 �
 
 ## 처리량
 
-`encode_throughput_1080p`(무시되는 시험, CI가 3개 OS에서 출력): 1080p rgb24를 stdin으로 libx264 `medium`에 300장. 같은 프레임만 넣어 인코더 일이 적고 파이프가 대부분을 차지한다. macOS arm64 로컬 374 fps(2,328 MB/s), debug 시험 빌드. Windows 실기기 NVENC의 4K 2패스는 M0 [실행 절차](M0_PLATFORM_RUNBOOK.md)로 잰다.
+`encode_throughput_1080p`(무시되는 시험, CI가 3개 OS에서 출력): 1080p rgb24를 stdin으로 libx264 `medium`에 300장. 같은 프레임만 넣어 인코더 일이 적고 파이프가 대부분을 차지한다. macOS arm64 로컬 374 fps(2,328 MB/s), debug 시험 빌드. PR #45의 CI(2026-10-22): Linux 99 fps(618 MB/s), macOS runner 113 fps(703 MB/s), Windows 84 fps(525 MB/s). 같은 실행의 디코드 파이프는 Linux 131 fps(818 MB/s), macOS runner 222 fps(1,381 MB/s), Windows 102 fps(637 MB/s)다. 분석 크기 30 fps에 필요한 47 MB/s보다 넉넉하다. 4K 30 fps 내보내기는 양쪽에 약 750 MB/s가 필요해 Windows runner 수치로는 모자랄 수 있으나, runner는 CPU가 적고 시험이 debug 빌드라 실기기 측정이 필요하다. Windows 실기기 NVENC의 4K 2패스는 M0 [실행 절차](M0_PLATFORM_RUNBOOK.md)로 잰다.
 
 ## 남은 것
+
+- 완료: PR #45(2026-10-22, main `2e35d1f`), 3개 OS CI와 fuzz workflow 통과.
 
 - NVENC·QSV의 색 태그와 full range, 하드웨어 인코드 실패 뒤 소프트웨어 재시도 흐름: 장치 없음(인자는 단위 시험). 재시도 흐름은 4단계 처리기에서 시험한다.
 - 4단계: 원본 identity 비교, P-4 출력 검사, 게시(임시 파일 → fsync → no-replace rename), 고정 수동 마스크로 CLI 끝까지 내보내기.
