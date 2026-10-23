@@ -1,5 +1,6 @@
-//! A video's first pass and tracking through the video processor, with the pinned FFmpeg and a
-//! detector that finds the white square the test videos move across a black frame. Needs
+//! A video's first pass, tracking and the second pass that masks what was tracked, through the
+//! video processor and the runner, with the pinned FFmpeg and a detector that finds the white
+//! square the test videos move across a black frame; and the publish gate of P-1 (video). Needs
 //! `CLOAKFRAME_FFMPEG` and `CLOAKFRAME_FFPROBE`.
 
 mod common;
@@ -9,15 +10,22 @@ use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
+use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{Detection, DetectionKind, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
-use cloakframe_core::item::{ItemId, PublishBasis};
+use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
+use cloakframe_core::mask::{MaskStyle, Method};
 use cloakframe_core::review::PhotoEdits;
+use cloakframe_core::tracking::TrackingWindows;
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::events::ProgressBoard;
+use cloakframe_engine::media::decode::{FrameReader, frame_size};
 use cloakframe_engine::media::source;
-use cloakframe_engine::run::{ItemContext, ItemProcessor, Notes, RenderRequest, StepError};
+use cloakframe_engine::run::{
+    self, ItemContext, ItemOutcome, ItemProcessor, Job, JobItem, Note, Notes, RenderRequest, Start,
+    StepError,
+};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Analyzed, Tools, VideoProcessor, VideoSettings};
 use cloakframe_engine::video::record::{Detected, Record, TrackRegion};
@@ -72,11 +80,12 @@ fn square(k: u64) -> Rect {
 /// What the detector is asked to do at a frame, counted from 0 by calls.
 type Hook = Box<dyn FnMut(u64) + Send>;
 
-/// Finds the white pixels' bounding box as one face, except in `blind` frames. Records each frame's
-/// size.
+/// Finds the white pixels' bounding box as one face, except in `blind` frames, and says it could
+/// not return two more in frame `capped`. Records each frame's size.
 struct WhiteSquare {
     calls: u64,
     blind: std::ops::Range<u64>,
+    capped: Option<u64>,
     hook: Option<Hook>,
     sizes: Arc<Mutex<Vec<(u32, u32)>>>,
 }
@@ -86,8 +95,16 @@ impl WhiteSquare {
         Self {
             calls: 0,
             blind: 0..0,
+            capped: None,
             hook: None,
             sizes: Arc::default(),
+        }
+    }
+
+    fn blind(frames: std::ops::Range<u64>) -> Self {
+        Self {
+            blind: frames,
+            ..Self::new()
         }
     }
 }
@@ -114,6 +131,11 @@ impl Detector for WhiteSquare {
         let face = Detection::new(ModelId::Yolo5FaceN, 0.9, bbox, None, None).unwrap();
         Ok(Found {
             detections: vec![face],
+            over_limit: if self.capped == Some(k) {
+                vec![(ModelId::Yolo5FaceN, 2)]
+            } else {
+                Vec::new()
+            },
             ..Found::default()
         })
     }
@@ -239,17 +261,353 @@ fn every_frame_is_detected_and_tracked_into_regions() {
         }
         assert_eq!(regions.frames(), 90);
 
-        // Until the second pass masks tracks, a video with one is refused, not published bare.
-        let refused = render(&processor, ctx, &analysis, analyzed).err().unwrap();
-        assert!(
-            refused
-                .to_string()
-                .contains("cannot be masked in videos yet"),
-            "{refused}"
-        );
+        let rendered = render(&processor, ctx, &analysis, analyzed).unwrap();
+        processor.publish(ctx, rendered, &permit()).unwrap();
     });
     assert!(sizes.lock().unwrap().iter().all(|&s| s == (960, 540)));
     assert_eq!(records_left(&dir), 0);
+    let output = output_frames(&dir.path().join("out/clip.mp4"));
+    assert_eq!(output.len(), 90);
+    for (k, frame) in output.iter().enumerate() {
+        assert!(masked(frame, k as u64), "frame {k}");
+    }
+}
+
+/// Every frame of a published output at its display size.
+fn output_frames(path: &Path) -> Vec<Rgb8Image> {
+    let cancel = CancelToken::new();
+    let source = source::open(&ffprobe(), path, &cancel).unwrap();
+    let size = frame_size(&source.spec, None);
+    let mut reader =
+        FrameReader::start(&ffmpeg(), path, &source.spec, &source.frames, size, &cancel).unwrap();
+    let mut frames = Vec::new();
+    loop {
+        let mut frame = Rgb8Image {
+            width: 0,
+            height: 0,
+            data: Vec::new(),
+        };
+        if !reader.next_into(&mut frame).unwrap() {
+            return frames;
+        }
+        frames.push(frame);
+    }
+}
+
+/// The square's pixels in frame `k`, inset from its edges.
+fn square_pixels(frame: &Rgb8Image, k: u64) -> impl Iterator<Item = [u8; 3]> + '_ {
+    let s = square(k);
+    let (x0, y0) = (s.x() as u32 + 8, s.y() as u32 + 8);
+    (y0..y0 + 64).step_by(8).flat_map(move |y| {
+        (x0..x0 + 64).step_by(8).map(move |x| {
+            let i = (y as usize * frame.width as usize + x as usize) * 3;
+            [frame.data[i], frame.data[i + 1], frame.data[i + 2]]
+        })
+    })
+}
+
+/// The square is under the default fill's black, none of its white left.
+fn masked(frame: &Rgb8Image, k: u64) -> bool {
+    square_pixels(frame, k).all(|p| p.iter().all(|&c| c <= 16))
+}
+
+/// The square shows, white as in the source.
+fn bare(frame: &Rgb8Image, k: u64) -> bool {
+    square_pixels(frame, k).all(|p| p.iter().all(|&c| c >= 230))
+}
+
+/// `input` through the runner in automatic mode, published as `out/clip.mp4`.
+fn run_one(processor: VideoProcessor, input: &Path, detector: WhiteSquare) -> ItemOutcome {
+    let job = Job {
+        items: vec![JobItem {
+            id: ItemId(1),
+            input: input.to_path_buf(),
+            destination: input.parent().unwrap().join("out/clip.mp4"),
+            start: Start::Fresh {
+                needs_review: false,
+            },
+        }],
+        review: ReviewMode::Off,
+        workers: 1,
+    };
+    let detector = DetectorHandle::spawn(Box::new(detector)).unwrap();
+    let report = run::start(job, Arc::new(processor), detector)
+        .unwrap()
+        .wait();
+    report.items.into_iter().next().unwrap()
+}
+
+/// The windows of the default but holes filled for only a second, shorter than the two the
+/// tracker bridges: the defaults leave no gap (docs/M5_RENDER.md), these do.
+fn short_fill() -> TrackingWindows {
+    TrackingWindows {
+        max_interpolation: 1.0,
+        ..TrackingWindows::default()
+    }
+}
+
+fn processor_with(dir: &TestDir, windows: TrackingWindows, masks: Vec<Rect>) -> VideoProcessor {
+    VideoProcessor::new(
+        Tools {
+            ffmpeg: ffmpeg(),
+            ffprobe: ffprobe(),
+        },
+        VideoSettings {
+            hardware_encode: false,
+            masks,
+            analysis: AnalysisSettings {
+                tiles: false,
+                windows,
+                ..AnalysisSettings::default()
+            },
+            ..VideoSettings::default()
+        },
+        dir.path().join("records"),
+    )
+}
+
+fn nothing_published(dir: &TestDir) -> bool {
+    let out = dir.path().join("out");
+    !out.exists() || std::fs::read_dir(out).unwrap().next().is_none()
+}
+
+/// P-1 (video, tests/fixtures/defects/P-1/expected.json): the face is lost in frames 30–64 and
+/// found again. A hole tracking bridges but does not fill is an unresolved gap: the video waits
+/// for review in automatic mode, and nothing is written to the output folder.
+#[test]
+fn an_unfilled_gap_holds_the_video_for_review_and_publishes_nothing() {
+    let dir = TestDir::new();
+    let input = moving_square(&dir);
+    let outcome = run_one(
+        processor_with(&dir, short_fill(), Vec::new()),
+        &input,
+        WhiteSquare::blind(30..65),
+    );
+    assert_eq!(
+        outcome.state,
+        ItemState::NeedsReview,
+        "{:?}",
+        outcome.failure
+    );
+    assert_eq!(
+        outcome.analysis.evidence,
+        [CoverageEvidence::unresolved(Problem::UnresolvedGap {
+            detection: DetectionKind::Face,
+            tracks: vec![1],
+            first: 30,
+            last: 64,
+        })]
+    );
+    assert!(nothing_published(&dir));
+    assert_eq!(records_left(&dir), 0);
+}
+
+/// Detections a bounded model could not return hold a video as they hold a photo (P-1).
+#[test]
+fn capped_candidates_hold_the_video_for_review() {
+    let dir = TestDir::new();
+    let input = moving_square(&dir);
+    let mut detector = WhiteSquare::new();
+    detector.capped = Some(10);
+    let outcome = run_one(
+        processor_with(&dir, TrackingWindows::default(), Vec::new()),
+        &input,
+        detector,
+    );
+    assert_eq!(
+        outcome.state,
+        ItemState::NeedsReview,
+        "{:?}",
+        outcome.failure
+    );
+    assert_eq!(
+        outcome.analysis.evidence,
+        [CoverageEvidence::unresolved(Problem::CappedCandidates {
+            model: ModelId::Yolo5FaceN,
+            frame: Some(10),
+            kept: 1,
+            found: 3,
+        })]
+    );
+    assert!(nothing_published(&dir));
+}
+
+/// With the default windows the same miss is bridged and filled: the video is published with
+/// the square masked in every frame, the missed ones too (docs/M5_RENDER.md). 1.12.1 reported
+/// such a hole and published it bare.
+#[test]
+fn the_default_windows_mask_a_subject_missed_for_over_a_second() {
+    let dir = TestDir::new();
+    let input = moving_square(&dir);
+    let outcome = run_one(
+        processor_with(&dir, TrackingWindows::default(), Vec::new()),
+        &input,
+        WhiteSquare::blind(30..65),
+    );
+    assert_eq!(
+        outcome.state,
+        ItemState::Published(PublishBasis::AutomaticUnreviewed),
+        "{:?}",
+        outcome.failure
+    );
+    assert!(outcome.analysis.evidence.is_empty());
+    assert_eq!(
+        outcome.notes,
+        [Note::Tracked {
+            faces: 1,
+            plates: 0
+        }]
+    );
+    let output = output_frames(&dir.path().join("out/clip.mp4"));
+    assert_eq!(output.len(), 90);
+    for (k, frame) in output.iter().enumerate() {
+        assert!(masked(frame, k as u64), "frame {k}");
+    }
+}
+
+/// The reviewer's two ways past an unresolved gap (plan 4.2), at the processor: exporting with
+/// warnings masks what was tracked and leaves the gap as it is; exporting without anonymization
+/// masks nothing, not even the fixed areas. Resuming a video from a stored review is M5 stage 3.
+#[test]
+fn exports_past_a_gap_mask_what_was_tracked_or_nothing() {
+    for basis in [
+        PublishBasis::ExportedWithWarnings,
+        PublishBasis::ExportedWithoutAnonymization,
+    ] {
+        let dir = TestDir::new();
+        let input = moving_square(&dir);
+        let fixed = Rect::new(100.0, 200.0, 80.0, 80.0).unwrap();
+        let processor = processor_with(&dir, short_fill(), vec![fixed]);
+        let cancel = CancelToken::new();
+        with_context(&input, WhiteSquare::blind(30..65), &cancel, |ctx| {
+            let (analysis, analyzed) = processor.analyze(ctx).unwrap();
+            assert_eq!(analysis.evidence.len(), 1);
+            let rendered = processor
+                .render(
+                    ctx,
+                    &RenderRequest {
+                        basis,
+                        analysis: &analysis,
+                        edits: &PhotoEdits::default(),
+                    },
+                    Some(analyzed),
+                )
+                .unwrap();
+            processor.publish(ctx, rendered, &permit()).unwrap();
+        });
+        let output = output_frames(&dir.path().join("out/clip.mp4"));
+        assert_eq!(output.len(), 90);
+        for (k, frame) in output.iter().enumerate() {
+            let k = k as u64;
+            if basis == PublishBasis::ExportedWithoutAnonymization {
+                assert!(bare(frame, k), "{basis:?} frame {k}");
+            } else if !(30..=64).contains(&k) {
+                assert!(masked(frame, k), "{basis:?} frame {k}");
+            } else if (33..62).contains(&k) {
+                // Past the track's ends held over for a tenth of a second.
+                assert!(bare(frame, k), "{basis:?} frame {k}");
+            }
+        }
+    }
+}
+
+/// A frame of a still picture repeated for two seconds.
+fn still_picture(dir: &TestDir) -> PathBuf {
+    let path = dir.path().join("still.mp4");
+    make(
+        &[
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=320x240:r=30:d=2,trim=end_frame=1,loop=loop=59:size=1:start=0",
+            "-c:v",
+            "libx264",
+            "-crf",
+            "1",
+            "-pix_fmt",
+            "yuv420p",
+        ],
+        &path,
+    );
+    path
+}
+
+/// The same box a few pixels off in each frame, as a detector gives a face that keeps still.
+struct Jittering {
+    calls: usize,
+}
+
+impl Detector for Jittering {
+    fn detect(&mut self, _: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+        const OFFSETS: [(f32, f32, f32); 5] = [
+            (0.0, 0.0, 0.0),
+            (2.5, -1.5, 3.0),
+            (-2.0, 2.0, -2.0),
+            (1.0, 3.0, 1.5),
+            (-3.0, -2.5, -3.0),
+        ];
+        let (dx, dy, dw) = OFFSETS[self.calls % OFFSETS.len()];
+        self.calls += 1;
+        let bbox = Rect::new(120.0 + dx, 80.0 + dy, 60.0 + dw, 70.0 + dw).unwrap();
+        Ok(Found {
+            detections: vec![Detection::new(ModelId::Yolo5FaceN, 0.9, bbox, None, None).unwrap()],
+            ..Found::default()
+        })
+    }
+}
+
+/// A track's mosaic cells keep their size and place (plan 4.4): over a still picture, every
+/// frame of a jittering box shows the same mosaic, where cells fitted to each frame's box would
+/// change from frame to frame (docs/M5_RENDER.md).
+#[test]
+fn a_tracks_mosaic_keeps_its_cells_while_its_box_jitters() {
+    let dir = TestDir::new();
+    let input = still_picture(&dir);
+    let processor = VideoProcessor::new(
+        Tools {
+            ffmpeg: ffmpeg(),
+            ffprobe: ffprobe(),
+        },
+        VideoSettings {
+            hardware_encode: false,
+            style: MaskStyle {
+                method: Method::Mosaic,
+                ..MaskStyle::default()
+            },
+            analysis: AnalysisSettings {
+                tiles: false,
+                ..AnalysisSettings::default()
+            },
+            ..VideoSettings::default()
+        },
+        dir.path().join("records"),
+    );
+    let cancel = CancelToken::new();
+    with_context(&input, Jittering { calls: 0 }, &cancel, |ctx| {
+        let (analysis, analyzed) = processor.analyze(ctx).unwrap();
+        assert_eq!(analyzed.tracks().len(), 1);
+        let rendered = render(&processor, ctx, &analysis, analyzed).unwrap();
+        processor.publish(ctx, rendered, &permit()).unwrap();
+    });
+    let output = output_frames(&dir.path().join("out/clip.mp4"));
+    assert_eq!(output.len(), 60);
+    // Inside every frame's box: the boxes vary by up to 3 pixels around (120, 80, 60, 70).
+    let at = |f: &Rgb8Image, x: u32, y: u32| {
+        let i = (y as usize * f.width as usize + x as usize) * 3;
+        [f.data[i], f.data[i + 1], f.data[i + 2]]
+    };
+    let mut largest = 0;
+    for frame in &output[1..] {
+        for y in 85..145 {
+            for x in 125..175 {
+                let (a, b) = (at(&output[0], x, y), at(frame, x, y));
+                let d = a.iter().zip(&b).map(|(a, b)| a.abs_diff(*b)).max().unwrap();
+                largest = largest.max(d);
+            }
+        }
+    }
+    // A lossy encode of the same flat cells.
+    assert!(largest <= 12, "{largest}");
 }
 
 #[test]

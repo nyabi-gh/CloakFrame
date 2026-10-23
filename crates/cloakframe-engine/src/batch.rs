@@ -8,7 +8,7 @@ use sha2::{Digest as _, Sha256};
 use crate::identity::SourceStamp;
 use crate::output_plan::{PlannedOutput, plan_outputs};
 use crate::run::{Fingerprint, Job, JobItem, RunReport, Start};
-use crate::scan::ScannedFile;
+use crate::scan::{MediaKind, ScannedFile};
 use crate::session::{FORMAT_VERSION, Session, SessionItem};
 
 /// One job item per scanned file, in scan order. An output whose name is taken goes to review
@@ -50,6 +50,9 @@ pub enum LeftOut {
     NotAnalyzed,
     /// The source changed or vanished since it was read for analysis.
     SourceChanged,
+    /// Videos are not kept for review yet: their records and timeline go into a session with
+    /// M5's review stage.
+    Video,
 }
 
 impl fmt::Display for LeftOut {
@@ -59,6 +62,7 @@ impl fmt::Display for LeftOut {
             Self::SourceChanged => {
                 f.write_str("the source changed or is gone since analysis; run it again")
             }
+            Self::Video => f.write_str("videos cannot be reviewed yet"),
         }
     }
 }
@@ -75,6 +79,10 @@ pub fn session_from_report(
     let mut left_out = Vec::new();
     for (outcome, planned) in report.items.iter().zip(plan) {
         if outcome.state != ItemState::NeedsReview {
+            continue;
+        }
+        if MediaKind::of(&outcome.input) == Some(MediaKind::Video) {
+            left_out.push((outcome.item, LeftOut::Video));
             continue;
         }
         let (Some(source), Some(input)) = (outcome.analysis.source, outcome.analysis.input) else {
@@ -118,8 +126,8 @@ mod tests {
     use super::*;
     use crate::test_support::TestDir;
 
-    /// An item held for review whose source changed or vanished cannot be reviewed; it is
-    /// reported with the reason instead of silently missing from the session.
+    /// An item held for review whose source changed or vanished cannot be reviewed, nor can a
+    /// video yet; each is reported with the reason instead of silently missing from the session.
     #[test]
     fn items_left_out_of_the_session_are_reported() {
         use crate::run::{Analysis, ItemOutcome};
@@ -145,6 +153,7 @@ mod tests {
                 outcome(0, "kept.jpg"),
                 outcome(1, "changed.jpg"),
                 outcome(2, "gone.jpg"),
+                outcome(3, "clip.MP4"),
             ],
         };
         std::fs::write(&report.items[1].input, b"edited after analysis").unwrap();
@@ -171,7 +180,8 @@ mod tests {
             left_out,
             [
                 (ItemId(1), LeftOut::SourceChanged),
-                (ItemId(2), LeftOut::SourceChanged)
+                (ItemId(2), LeftOut::SourceChanged),
+                (ItemId(3), LeftOut::Video)
             ]
         );
     }

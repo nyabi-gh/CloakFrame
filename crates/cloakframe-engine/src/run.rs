@@ -63,6 +63,9 @@ pub enum Note {
     /// The detector found nothing to mask. Not an unresolved problem, but a small face the model
     /// missed would otherwise go unnoticed (review item 14).
     NothingDetected,
+    /// The subjects a video's tracks follow, which are masked unless it is exported without
+    /// anonymization.
+    Tracked { faces: u32, plates: u32 },
     /// The GPU failed on this item, which was analyzed again on the CPU; the rest of the run uses
     /// the CPU for that model (plan 3).
     AnalyzedAgainOnCpu,
@@ -84,6 +87,21 @@ impl fmt::Display for Note {
             Self::ColorConverted => "colors converted to sRGB",
             Self::ColorProfileIgnored => "unusable color profile dropped",
             Self::NothingDetected => "nothing detected",
+            Self::Tracked { faces, plates } => {
+                let count = |n: u32, one: &str, many: &str| match n {
+                    0 => None,
+                    1 => Some(format!("1 {one}")),
+                    n => Some(format!("{n} {many}")),
+                };
+                let subjects: Vec<String> = [
+                    count(*faces, "face", "faces"),
+                    count(*plates, "license plate", "license plates"),
+                ]
+                .into_iter()
+                .flatten()
+                .collect();
+                return write!(f, "tracked {}", subjects.join(" and "));
+            }
             Self::AnalyzedAgainOnCpu => "the GPU failed; analyzed again on the CPU",
             Self::EncodedAgainInSoftware => {
                 "the hardware encoder failed; encoded again in software, as is the rest of the run"

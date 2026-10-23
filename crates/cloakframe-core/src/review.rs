@@ -147,7 +147,7 @@ impl PhotoEdits {
             .enumerate()
             .filter(|(i, _)| !self.excluded.contains(i))
             .map(|(_, d)| Region::from(d))
-            .chain(self.added.iter().map(|&bbox| Region { bbox, roll: None }))
+            .chain(self.added.iter().map(|&bbox| Region::new(bbox)))
             .collect()
     }
 }

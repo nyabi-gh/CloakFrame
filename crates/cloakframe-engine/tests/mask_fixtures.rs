@@ -88,8 +88,8 @@ fn run(test: &str) -> Vec<Case> {
                 .map(|d| {
                     let [x, y, w, h] = d.bbox;
                     Region {
-                        bbox: Rect::new(x, y, w, h).unwrap(),
                         roll: d.has_pose.then_some(d.roll),
+                        ..Region::new(Rect::new(x, y, w, h).unwrap())
                     }
                 })
                 .collect();
@@ -281,10 +281,7 @@ fn mosaic_strength_sets_the_cell_count() {
     let path = fixtures().join("defects/D3/noise-face-600.png");
     let input = image::open(path).unwrap();
     let source = input.to_rgb8();
-    let region = Region {
-        bbox: Rect::new(100.0, 100.0, 600.0, 600.0).unwrap(),
-        roll: None,
-    };
+    let region = Region::new(Rect::new(100.0, 100.0, 600.0, 600.0).unwrap());
     let mut outputs = Vec::new();
     for s in MosaicStrength::MIN..=MosaicStrength::MAX {
         let style = MaskStyle {

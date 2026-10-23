@@ -1,25 +1,27 @@
 //! The video pipeline as the runner's item processor (plan 4.4). Analysis reads the timeline,
 //! detects in every frame and tracks into the item's records; the second pass decodes every
-//! source frame at full size, masks it, encodes, and checks the output (P-4) before it waits for
-//! its publish permit. Until the second pass masks the tracked regions (M5 stage 2), it masks the
-//! fixed areas the user gives and refuses a video in which anything was tracked. The source is
-//! never copied; its identity is compared before the first pass, after it, between the passes,
+//! source frame at full size, masks the frame's tracked regions and the fixed areas the user
+//! gives, encodes, and checks the output (P-4) before it waits for its publish permit. The source
+//! is never copied; its identity is compared before the first pass, after it, between the passes,
 //! after the second and right before publishing (plan 0.1).
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
+use cloakframe_core::detection::DetectionKind;
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, PublishBasis, PublishPermit};
-use cloakframe_core::mask::{MaskStyle, Region};
+use cloakframe_core::mask::{MaskStyle, MosaicGrid, Region};
 use cloakframe_core::review::Digest;
+use cloakframe_core::tracking::TrackId;
 use image::{DynamicImage, RgbImage};
 use sha2::{Digest as _, Sha256};
 
 use super::analysis::{self, AnalysisError, AnalysisSettings};
-use super::record::{Detected, Record};
+use super::record::{Detected, Record, RecordError, TrackRegion};
 use super::tracking::{self, KindTracking, TrackSummary, TrackingError};
 use crate::detect::Rgb8Image;
 use crate::identity::SourceStamp;
@@ -108,10 +110,6 @@ pub enum VideoError {
         mask: usize,
         size: (u32, u32),
     },
-    /// Something was tracked, and the second pass cannot mask tracks yet (M5 stage 2).
-    TracksNotMasked {
-        tracks: usize,
-    },
 }
 
 impl fmt::Display for VideoError {
@@ -128,10 +126,6 @@ impl fmt::Display for VideoError {
                 mask + 1,
                 size.0,
                 size.1
-            ),
-            Self::TracksNotMasked { tracks } => write!(
-                f,
-                "{tracks} detected subjects cannot be masked in videos yet"
             ),
         }
     }
@@ -272,6 +266,7 @@ enum PassError {
     Encode(EncodeError),
     Verify(VerifyError),
     Mask(ApplyError),
+    Regions(RecordError),
     Output(io::Error),
 }
 
@@ -282,7 +277,7 @@ impl PassError {
             Self::Encode(_) => true,
             Self::Verify(VerifyError::Cancelled) => false,
             Self::Verify(_) => true,
-            Self::Decode(_) | Self::Mask(_) | Self::Output(_) => false,
+            Self::Decode(_) | Self::Mask(_) | Self::Regions(_) | Self::Output(_) => false,
         }
     }
 }
@@ -294,6 +289,7 @@ impl fmt::Display for PassError {
             Self::Encode(e) => e.fmt(f),
             Self::Verify(e) => e.fmt(f),
             Self::Mask(e) => e.fmt(f),
+            Self::Regions(e) => write!(f, "the tracked regions cannot be read: {e}"),
             Self::Output(e) => write!(f, "cannot create the output: {e}"),
         }
     }
@@ -321,6 +317,45 @@ fn encode_with_fallback<T>(
     }
 }
 
+/// What a second pass masks: in every frame the fixed areas and, from the region record, the
+/// frame's tracked regions on their track's mosaic grid.
+struct Masks<'a> {
+    fixed: Vec<Region>,
+    tracked: Option<(&'a Record<TrackRegion>, BTreeMap<TrackId, MosaicGrid>)>,
+}
+
+impl Masks<'_> {
+    fn none() -> Self {
+        Self {
+            fixed: Vec::new(),
+            tracked: None,
+        }
+    }
+}
+
+/// Each track's mosaic grid, on the cell its largest box needs: a track's cells keep their size
+/// and place in every frame (plan 4.4).
+fn track_grids(
+    regions: &Record<TrackRegion>,
+    style: &MaskStyle,
+    (width, height): (u32, u32),
+) -> Result<BTreeMap<TrackId, MosaicGrid>, RecordError> {
+    let mut cells: BTreeMap<TrackId, u32> = BTreeMap::new();
+    let mut frames = regions.ascending()?;
+    let mut entries = Vec::new();
+    while frames.next_into(&mut entries)?.is_some() {
+        for r in &entries {
+            let cell = MosaicGrid::cell_for(&r.bbox, style, width, height);
+            let largest = cells.entry(r.track).or_default();
+            *largest = (*largest).max(cell);
+        }
+    }
+    Ok(cells
+        .into_iter()
+        .map(|(track, cell)| (track, MosaicGrid::new(cell)))
+        .collect())
+}
+
 fn mask_frame(
     frame: &mut Rgb8Image,
     regions: &[Region],
@@ -343,7 +378,7 @@ impl VideoProcessor {
         &self,
         ctx: &ItemContext<'_>,
         source: &Source,
-        regions: &[Region],
+        masks: &Masks<'_>,
         encoder: Encoder,
     ) -> Result<TempOutput, PassError> {
         let Source { spec, frames } = source;
@@ -374,6 +409,11 @@ impl VideoProcessor {
             height: 0,
             data: Vec::new(),
         };
+        let mut tracked = match &masks.tracked {
+            Some((record, grids)) => Some((record.ascending().map_err(PassError::Regions)?, grids)),
+            None => None,
+        };
+        let (mut entries, mut regions) = (Vec::new(), Vec::new());
         let mut read = 0;
         let listed = frames.len() as u64;
         for k in frames.shown(spec) {
@@ -385,7 +425,22 @@ impl VideoProcessor {
                         decoded: read,
                     }));
                 }
-                mask_frame(&mut frame, regions, &self.settings.style).map_err(PassError::Mask)?;
+                regions.clear();
+                if let Some((record, grids)) = &mut tracked {
+                    let at = record.next_into(&mut entries).map_err(PassError::Regions)?;
+                    if at != Some(read as u64) {
+                        return Err(PassError::Regions(RecordError::Damaged(
+                            "the regions are not the source's frames",
+                        )));
+                    }
+                    regions.extend(entries.iter().map(|r| Region {
+                        roll: r.roll,
+                        grid: grids.get(&r.track).copied(),
+                        ..Region::new(r.bbox)
+                    }));
+                }
+                regions.extend_from_slice(&masks.fixed);
+                mask_frame(&mut frame, &regions, &self.settings.style).map_err(PassError::Mask)?;
                 read += 1;
                 ctx.progress.set(listed + read as u64, 2 * listed);
             }
@@ -418,7 +473,7 @@ impl VideoProcessor {
                     && bbox.bottom() > 0.0
                     && bbox.area() > 0.0;
                 if overlaps {
-                    Ok(Region { bbox, roll: None })
+                    Ok(Region::new(bbox))
                 } else {
                     Err(VideoError::MaskOutside {
                         mask: i,
@@ -461,7 +516,9 @@ impl ItemProcessor for VideoProcessor {
         let kinds: Vec<KindTracking> = settings
             .kinds()
             .into_iter()
-            .map(|kind| KindTracking::new(kind, settings.track_score(kind), rate))
+            .map(|kind| {
+                KindTracking::new(kind, settings.track_score(kind), rate, &settings.windows)
+            })
             .collect();
         let tracked = tracking::track(
             &record,
@@ -476,6 +533,12 @@ impl ItemProcessor for VideoProcessor {
         }
         if tracked.tracks.is_empty() {
             ctx.notes.add(Note::NothingDetected);
+        } else {
+            let count = |kind| tracked.tracks.iter().filter(|t| t.kind == kind).count() as u32;
+            ctx.notes.add(Note::Tracked {
+                faces: count(DetectionKind::Face),
+                plates: count(DetectionKind::Plate),
+            });
         }
         let mut evidence = first.capped;
         evidence.extend(tracked.gaps);
@@ -501,21 +564,26 @@ impl ItemProcessor for VideoProcessor {
         prepared: Option<Analyzed>,
     ) -> Result<Rendered, StepError> {
         let analyzed = prepared.ok_or_else(|| failed(VideoError::NotResumable))?;
-        let unmasked = request.basis != PublishBasis::ExportedWithoutAnonymization;
-        if unmasked && !analyzed.tracks.is_empty() {
-            return Err(failed(VideoError::TracksNotMasked {
-                tracks: analyzed.tracks.len(),
-            }));
-        }
         let source = &analyzed.source;
         let stamp = request
             .analysis
             .source
             .expect("analysis records the source");
-        let regions = if !unmasked {
-            Vec::new()
+        let size = source.spec.display_size();
+        let record;
+        let masks = if request.basis == PublishBasis::ExportedWithoutAnonymization {
+            Masks::none()
         } else {
-            self.regions(source.spec.display_size()).map_err(failed)?
+            let fixed = self.regions(size).map_err(failed)?;
+            let tracked = if analyzed.tracks.is_empty() {
+                None
+            } else {
+                record =
+                    Record::<TrackRegion>::open(&analyzed.records.regions()).map_err(failed)?;
+                let grids = track_grids(&record, &self.settings.style, size).map_err(failed)?;
+                Some((&record, grids))
+            };
+            Masks { fixed, tracked }
         };
         let mut encoders = self.encoders.lock().unwrap_or_else(|e| e.into_inner());
         unchanged(ctx, stamp)?;
@@ -530,12 +598,11 @@ impl ItemProcessor for VideoProcessor {
                     ctx.cancel,
                 )
             },
-            |encoder| self.pass(ctx, source, &regions, encoder),
+            |encoder| self.pass(ctx, source, &masks, encoder),
         )
         .map_err(|e| failed_unless_cancelled(ctx, e))?;
         drop(encoders);
         unchanged(ctx, stamp)?;
-        let size = source.spec.display_size();
         let (width, height) = encoded_size(size);
         if (width, height) != size {
             ctx.notes.add(Note::Padded { width, height });
@@ -615,6 +682,86 @@ mod tests {
 
     fn changed(result: Result<impl Sized, StepError>) -> bool {
         matches!(result, Err(StepError::Failed(e)) if e.to_string() == VideoError::ChangedWhileProcessing.to_string())
+    }
+
+    /// Regions that end before the source's frames fail the pass instead of leaving the rest of
+    /// the frames unmasked.
+    #[test]
+    fn regions_short_of_the_sources_frames_fail_the_item() {
+        use crate::video::record::{Order, RecordWriter};
+        use cloakframe_core::detection::DetectionKind;
+        let dir = TestDir::new();
+        let input = dir.path().join("clip.mp4");
+        std::fs::copy(
+            fixtures().join("defects/P-5/odd-641x361-audio-longer.mp4"),
+            &input,
+        )
+        .unwrap();
+        let tools = Tools {
+            ffmpeg: required_env("CLOAKFRAME_FFMPEG"),
+            ffprobe: required_env("CLOAKFRAME_FFPROBE"),
+        };
+        let source = source::open(&tools.ffprobe, &input, &CancelToken::new()).unwrap();
+        let processor = VideoProcessor::new(
+            tools,
+            VideoSettings {
+                hardware_encode: false,
+                ..VideoSettings::default()
+            },
+            dir.path().join("records"),
+        );
+        let records = ItemRecords::create(&dir.path().join("records"), ItemId(1)).unwrap();
+        let mut writer = RecordWriter::create(&records.regions(), Order::Ascending).unwrap();
+        for k in 0..source.frames.len() as u64 - 1 {
+            let region = TrackRegion {
+                kind: DetectionKind::Face,
+                track: 1,
+                bbox: Rect::new(10.0, 10.0, 40.0, 40.0).unwrap(),
+                score: 0.9,
+                roll: None,
+                interpolated: false,
+            };
+            writer.frame(k, &[region]).unwrap();
+        }
+        writer.finish(&[]).unwrap();
+        let track = TrackSummary {
+            id: 1,
+            kind: DetectionKind::Face,
+            first: 0,
+            last: source.frames.len() as u64 - 2,
+            detections: 1,
+            strong: 1,
+            low_confidence: false,
+        };
+        let analyzed = Analyzed {
+            source,
+            records,
+            tracks: vec![track],
+        };
+        let analysis = Analysis {
+            source: Some(SourceStamp::of(&input).unwrap()),
+            ..Analysis::default()
+        };
+        with_context(&input, |ctx| {
+            let result = processor.render(
+                ctx,
+                &RenderRequest {
+                    basis: PublishBasis::AutomaticUnreviewed,
+                    analysis: &analysis,
+                    edits: &PhotoEdits::default(),
+                },
+                Some(analyzed),
+            );
+            let Err(StepError::Failed(e)) = result else {
+                panic!("rendered with regions short of the frames");
+            };
+            assert!(
+                e.to_string().contains("the tracked regions cannot be read"),
+                "{e}"
+            );
+        });
+        let out = dir.path().join("out");
+        assert!(!out.exists() || std::fs::read_dir(&out).unwrap().next().is_none());
     }
 
     /// The source is read again by each pass; one changed in between is not rendered or
@@ -774,6 +921,44 @@ mod tests {
         assert_eq!(used, [hardware(), software()]);
         assert!(result.is_err());
         assert_eq!(notes.into_vec(), [Note::EncodedAgainInSoftware]);
+    }
+
+    /// A track's grid is the cell its largest box needs, so none of its frames gets more cells
+    /// than the strength; each track has its own.
+    #[test]
+    fn each_track_takes_the_cell_of_its_largest_box() {
+        use crate::video::record::{Order, RecordWriter};
+        use cloakframe_core::detection::DetectionKind;
+        let dir = crate::test_support::TestDir::new();
+        let path = dir.path().join("regions");
+        let region = |track, side: f32| TrackRegion {
+            kind: DetectionKind::Face,
+            track,
+            bbox: Rect::new(10.0, 10.0, side, side).unwrap(),
+            score: 0.9,
+            roll: None,
+            interpolated: false,
+        };
+        let mut writer = RecordWriter::create(&path, Order::Ascending).unwrap();
+        writer
+            .frame(0, &[region(1, 40.0), region(2, 20.0)])
+            .unwrap();
+        writer.frame(1, &[region(1, 100.0)]).unwrap();
+        writer
+            .frame(2, &[region(1, 60.0), region(2, 30.0)])
+            .unwrap();
+        writer.finish(&[]).unwrap();
+        let style = MaskStyle::default();
+        let grids = track_grids(&Record::open(&path).unwrap(), &style, (640, 360)).unwrap();
+        let cell = |side| MosaicGrid::cell_for(&region(1, side).bbox, &style, 640, 360);
+        assert_eq!(
+            grids,
+            BTreeMap::from([
+                (1, MosaicGrid::new(cell(100.0))),
+                (2, MosaicGrid::new(cell(30.0)))
+            ])
+        );
+        assert!(cell(100.0) > cell(60.0) && cell(30.0) > cell(20.0));
     }
 
     #[test]

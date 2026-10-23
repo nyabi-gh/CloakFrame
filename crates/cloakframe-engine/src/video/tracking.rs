@@ -76,11 +76,10 @@ pub struct KindTracking {
 }
 
 impl KindTracking {
-    /// The tracking windows at the source's frame rate, with `score` starting tracks and counting
-    /// as strong.
-    pub fn new(kind: DetectionKind, score: f32, rate: Rational) -> Self {
+    /// `windows` at the source's frame rate, with `score` starting tracks and counting as strong.
+    pub fn new(kind: DetectionKind, score: f32, rate: Rational, windows: &TrackingWindows) -> Self {
         let (mut tracker, mut post) = (TrackerConfig::default(), PostProcessConfig::default());
-        TrackingWindows::default().apply(rate, &mut tracker, &mut post);
+        windows.apply(rate, &mut tracker, &mut post);
         tracker.high_score = score;
         tracker.low_score = DETECTION_FLOOR;
         post.strong_score = score;
@@ -516,8 +515,8 @@ mod tests {
 
     fn kinds(rate: Rational) -> [KindTracking; 2] {
         [
-            KindTracking::new(DetectionKind::Face, 0.4, rate),
-            KindTracking::new(DetectionKind::Plate, 0.4, rate),
+            KindTracking::new(DetectionKind::Face, 0.4, rate, &TrackingWindows::default()),
+            KindTracking::new(DetectionKind::Plate, 0.4, rate, &TrackingWindows::default()),
         ]
     }
 

@@ -125,14 +125,64 @@ pub struct Region {
     pub bbox: Rect,
     /// Face roll in radians; turns a custom image with the face.
     pub roll: Option<f32>,
+    /// A mosaic's cells on this grid instead of fitted to the area (D3).
+    pub grid: Option<MosaicGrid>,
+}
+
+impl Region {
+    pub fn new(bbox: Rect) -> Self {
+        Self {
+            bbox,
+            roll: None,
+            grid: None,
+        }
+    }
 }
 
 impl From<&Detection> for Region {
     fn from(d: &Detection) -> Self {
         Self {
-            bbox: d.bbox(),
             roll: d.roll(),
+            ..Self::new(d.bbox())
         }
+    }
+}
+
+/// Square mosaic cells of one size whose edges are multiples of it from the image's origin, for
+/// the frames of a video track (plan 4.4). A cell's value is the mean of the whole cell, so
+/// where a still subject's box jitters from frame to frame its cells keep their values; cells
+/// fitted to each frame's box gave those frames different means, and averaging the frames
+/// recovered detail finer than the cells (docs/M5_RENDER.md).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MosaicGrid {
+    cell: u32,
+}
+
+impl MosaicGrid {
+    /// Cells are at least 2 pixels wide, as fitted cells are.
+    pub const MIN_CELL: u32 = 2;
+
+    pub fn new(cell: u32) -> Self {
+        Self {
+            cell: cell.max(Self::MIN_CELL),
+        }
+    }
+
+    pub fn cell(self) -> u32 {
+        self.cell
+    }
+
+    /// The cell that gives `bbox`'s padded area the strength's cells along its short side. A
+    /// track takes the largest over its boxes, which never gives any of them more cells.
+    pub fn cell_for(bbox: &Rect, style: &MaskStyle, width: u32, height: u32) -> u32 {
+        if width == 0 || height == 0 {
+            return Self::MIN_CELL;
+        }
+        let padded = padded_region(bbox, style.padding.ratio(), width as usize, height as usize);
+        let short = padded.w.min(padded.h) as u32;
+        short
+            .div_ceil(u32::from(style.mosaic_strength.cells()))
+            .max(Self::MIN_CELL)
     }
 }
 
@@ -387,7 +437,7 @@ fn render_one<S: Sample>(
     if style.method == Method::CustomImage {
         let overlay = overlay.expect("checked by render");
         let mut area = Effect::copy(plane, padded);
-        mosaic(&mut area, padded, style.mosaic_strength);
+        mosaic(plane, &mut area, padded, style.mosaic_strength, region.grid);
         custom_image(&mut area, overlay, region.roll);
         area.write_back(plane, |_, _| 1.0);
         return;
@@ -395,7 +445,7 @@ fn render_one<S: Sample>(
 
     if !style.soft_edges {
         let mut area = Effect::copy(plane, padded);
-        apply_effect(plane, &mut area, padded, style);
+        apply_effect(plane, &mut area, padded, style, region.grid);
         match style.shape {
             Shape::Rectangle => area.write_back(plane, |_, _| 1.0),
             Shape::Ellipse => {
@@ -424,7 +474,7 @@ fn render_one<S: Sample>(
         h: (padded.bottom() + outer).min(height) - top,
     };
     let mut area = Effect::copy(plane, outer_rect);
-    apply_effect(plane, &mut area, padded, style);
+    apply_effect(plane, &mut area, padded, style, region.grid);
     let ramp = SoftEdge {
         core: padded,
         shape: style.shape,
@@ -445,10 +495,11 @@ fn apply_effect<S: Sample>(
     area: &mut Effect<S>,
     padded: IRect,
     style: &MaskStyle,
+    grid: Option<MosaicGrid>,
 ) {
     match style.method {
         Method::Fill => fill(area),
-        Method::Mosaic => mosaic(area, padded, style.mosaic_strength),
+        Method::Mosaic => mosaic(plane, area, padded, style.mosaic_strength, grid),
         Method::Blur => blur(plane, area, padded),
         Method::CustomImage => unreachable!("handled before"),
     }
@@ -523,11 +574,21 @@ fn cell_edges(len: usize, cells: usize) -> Vec<usize> {
     (0..=cells).map(|i| i * len / cells).collect()
 }
 
-/// Mosaic over `padded`: cells along the short side are the strength, but at least 2 pixels
-/// wide so a small region still changes; the long side gets cells of about the same size. Each
-/// cell is the rounded mean of the pixels it covers. Pixels of `area` outside `padded` (the
-/// soft-edge band) take the nearest edge cell.
-fn mosaic<S: Sample>(area: &mut Effect<S>, padded: IRect, strength: MosaicStrength) {
+/// Mosaic over `padded`, on `grid` if given and otherwise fitted to it: cells along the short
+/// side are the strength, but at least 2 pixels wide so a small region still changes; the long
+/// side gets cells of about the same size. Each cell is the rounded mean of the pixels it covers.
+/// Pixels of `area` outside `padded` (the soft-edge band) take the nearest edge cell of a fitted
+/// mosaic and their own cell on a grid.
+fn mosaic<S: Sample>(
+    plane: &Plane<'_, S>,
+    area: &mut Effect<S>,
+    padded: IRect,
+    strength: MosaicStrength,
+    grid: Option<MosaicGrid>,
+) {
+    if let Some(grid) = grid {
+        return grid_mosaic(plane, area, grid.cell as usize);
+    }
     let (short, long) = (padded.w.min(padded.h), padded.w.max(padded.h));
     let cells_short = usize::from(strength.cells()).min((short / 2).max(1));
     let cells_long = ((cells_short * long) as f64 / short as f64).round() as usize;
@@ -570,6 +631,53 @@ fn mosaic<S: Sample>(area: &mut Effect<S>, padded: IRect, strength: MosaicStreng
             let at = area.at(x, y);
             let mean = &means[(j * cx + i) * cn..(j * cx + i + 1) * cn];
             area.data[at..at + cn].copy_from_slice(mean);
+        }
+    }
+}
+
+/// Every pixel of `area` takes the rounded mean of its grid cell, the whole cell as the image has
+/// it (clipped to the image), not only the part inside the area.
+fn grid_mosaic<S: Sample>(plane: &Plane<'_, S>, area: &mut Effect<S>, cell: usize) {
+    let cn = area.cn;
+    let rect = area.rect;
+    let (first_i, first_j) = (rect.x / cell, rect.y / cell);
+    let (cx, cy) = (
+        (rect.right() - 1) / cell + 1 - first_i,
+        (rect.bottom() - 1) / cell + 1 - first_j,
+    );
+    let mut means = vec![S::default(); cx * cy * cn];
+    for j in 0..cy {
+        let (y0, y1) = (
+            (first_j + j) * cell,
+            ((first_j + j + 1) * cell).min(plane.height),
+        );
+        for i in 0..cx {
+            let (x0, x1) = (
+                (first_i + i) * cell,
+                ((first_i + i + 1) * cell).min(plane.width),
+            );
+            let mut sums = [0u64; 4];
+            for y in y0..y1 {
+                let row = plane.at(x0, y);
+                for px in plane.data[row..row + (x1 - x0) * cn].chunks_exact(cn) {
+                    for (sum, v) in sums.iter_mut().zip(px) {
+                        *sum += u64::from(v.get());
+                    }
+                }
+            }
+            let n = ((x1 - x0) * (y1 - y0)) as u64;
+            for c in 0..cn {
+                means[(j * cx + i) * cn + c] = S::from_u32(((sums[c] + n / 2) / n) as u32);
+            }
+        }
+    }
+    for y in rect.y..rect.bottom() {
+        let j = y / cell - first_j;
+        for x in rect.x..rect.right() {
+            let i = x / cell - first_i;
+            let at = area.at(x, y);
+            area.data[at..at + cn]
+                .copy_from_slice(&means[(j * cx + i) * cn..(j * cx + i + 1) * cn]);
         }
     }
 }
@@ -936,10 +1044,7 @@ mod tests {
     }
 
     fn region(x: f32, y: f32, w: f32, h: f32) -> Region {
-        Region {
-            bbox: rect(x, y, w, h),
-            roll: None,
-        }
+        Region::new(rect(x, y, w, h))
     }
 
     fn style(method: Method, shape: Shape, padding: f32, soft_edges: bool) -> MaskStyle {
@@ -1010,7 +1115,11 @@ mod tests {
             };
             let s = style(Method::Fill, shape, next(5) as f32 * 0.25, next(2) == 0);
             let detected = padded_region(&bbox, 0.0, w as usize, h as usize);
-            let r = Region { bbox, roll: None };
+            let grid = (next(2) == 0).then(|| MosaicGrid::new(next(12)));
+            let r = Region {
+                grid,
+                ..Region::new(bbox)
+            };
 
             let mut rgb = vec![200u8; (w * h * 3) as usize];
             let mut image = ImageMut::new(w, h, Layout::Rgb, Pixels::U8(&mut rgb)).unwrap();
@@ -1061,6 +1170,126 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// A still subject whose box jitters keeps its cells' values on a grid: every pixel two
+    /// frames both mask is the same. Fitted cells move with the box (docs/M5_RENDER.md).
+    #[test]
+    fn a_grid_gives_a_jittering_box_the_same_cells() {
+        let (w, h) = (160u32, 120u32);
+        let source: Vec<u8> = (0..w * h * 3).map(|i| (i * 37 % 251) as u8).collect();
+        let s = style(Method::Mosaic, Shape::Rectangle, 0.18, false);
+        let boxes = [
+            rect(50.0, 30.0, 40.0, 50.0),
+            rect(51.5, 29.0, 38.0, 52.5),
+            rect(48.0, 31.25, 43.0, 47.0),
+        ];
+        let cell = boxes
+            .iter()
+            .map(|b| MosaicGrid::cell_for(b, &s, w, h))
+            .max()
+            .unwrap();
+        let masked = |bbox: Rect, grid: Option<MosaicGrid>| {
+            let mut px = source.clone();
+            let mut image = ImageMut::new(w, h, Layout::Rgb, Pixels::U8(&mut px)).unwrap();
+            let region = Region {
+                grid,
+                ..Region::new(bbox)
+            };
+            render(&mut image, &[region], &s, None).unwrap();
+            px
+        };
+        let both = |a: &[u8], b: &[u8], same: bool| {
+            let mut shared = 0;
+            for i in (0..a.len()).step_by(3) {
+                let masked_in_both =
+                    a[i..i + 3] != source[i..i + 3] && b[i..i + 3] != source[i..i + 3];
+                if masked_in_both {
+                    shared += 1;
+                    if same {
+                        assert_eq!(a[i..i + 3], b[i..i + 3], "pixel {}", i / 3);
+                    }
+                }
+            }
+            assert!(shared > 1000);
+            (0..a.len())
+                .step_by(3)
+                .filter(|&i| a[i..i + 3] != source[i..i + 3] && b[i..i + 3] != source[i..i + 3])
+                .any(|i| a[i..i + 3] != b[i..i + 3])
+        };
+        let grid = Some(MosaicGrid::new(cell));
+        let first = masked(boxes[0], grid);
+        for &b in &boxes[1..] {
+            both(&first, &masked(b, grid), true);
+        }
+        let fitted = masked(boxes[0], None);
+        assert!(
+            boxes[1..]
+                .iter()
+                .any(|&b| both(&fitted, &masked(b, None), false))
+        );
+    }
+
+    /// Cells are whole squares from the image's origin, valued by everything they cover: a cell
+    /// the area only touches is the mean of the whole cell, clipped at the image's edge.
+    #[test]
+    fn a_grid_cell_is_the_mean_of_the_whole_cell() {
+        let (w, h) = (20u32, 10u32);
+        let source: Vec<u8> = (0..w * h).map(|i| (i * 13 % 97) as u8).collect();
+        let mut px = source.clone();
+        let mut image = ImageMut::new(w, h, Layout::Gray, Pixels::U8(&mut px)).unwrap();
+        let region = Region {
+            grid: Some(MosaicGrid::new(6)),
+            ..Region::new(rect(5.0, 5.0, 10.0, 5.0))
+        };
+        render(
+            &mut image,
+            &[region],
+            &style(Method::Mosaic, Shape::Rectangle, 0.0, false),
+            None,
+        )
+        .unwrap();
+        let src = &source;
+        let mean = |x0: u32, y0: u32| {
+            let (x1, y1) = ((x0 + 6).min(w), (y0 + 6).min(h));
+            let sum: u32 = (y0..y1)
+                .flat_map(|y| (x0..x1).map(move |x| u32::from(src[(y * w + x) as usize])))
+                .sum();
+            let n = (x1 - x0) * (y1 - y0);
+            ((sum + n / 2) / n) as u8
+        };
+        for y in 0..h {
+            for x in 0..w {
+                let inside = (5..15).contains(&x) && (5..10).contains(&y);
+                let want = if inside {
+                    mean(x / 6 * 6, y / 6 * 6)
+                } else {
+                    source[(y * w + x) as usize]
+                };
+                assert_eq!(px[(y * w + x) as usize], want, "({x}, {y})");
+            }
+        }
+    }
+
+    /// A track's cell gives each of its boxes at most the strength's cells along the padded
+    /// area's short side, and is never under 2 pixels.
+    #[test]
+    fn a_tracks_cell_is_never_finer_than_the_strength() {
+        for strength in [MosaicStrength::MIN, 8, MosaicStrength::MAX] {
+            let s = MaskStyle {
+                mosaic_strength: MosaicStrength::new(strength).unwrap(),
+                ..style(Method::Mosaic, Shape::Rectangle, 0.18, false)
+            };
+            for side in [1.0, 3.0, 17.0, 64.0, 333.0] {
+                let b = rect(10.0, 10.0, side, side * 1.3);
+                let cell = MosaicGrid::cell_for(&b, &s, 1000, 1000);
+                let padded = padded_region(&b, 0.18, 1000, 1000);
+                let short = padded.w.min(padded.h) as u32;
+                assert!(cell * u32::from(strength) >= short, "{side} {strength}");
+                assert!(cell >= MosaicGrid::MIN_CELL);
+            }
+        }
+        assert_eq!(MosaicGrid::new(0).cell(), MosaicGrid::MIN_CELL);
     }
 
     #[test]

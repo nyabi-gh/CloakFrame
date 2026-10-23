@@ -2,23 +2,48 @@
 //! "renders" the bytes reversed (never a copy of the source, D9) and reports problems named in the
 //! file stem: `gap` gives an unresolved gap, `capped` capped candidates, `fail` a decode failure.
 //! `slow` keeps its temp output open until cancelled and `stuck` for a minute regardless, for the
-//! CLI's Ctrl+C tests.
+//! CLI's Ctrl+C tests. [`FixedDetection`] stands in for the models in the real pipelines.
 
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
-use cloakframe_core::detection::{DetectionKind, ModelId};
+use cloakframe_core::detection::{Detection, DetectionKind, ModelId, Thresholds};
+use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::PublishPermit;
 use cloakframe_core::review::Digest;
 use sha2::{Digest as _, Sha256};
 
+use crate::detect::{DetectError, Detector, Found, Rgb8Image};
 use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
 use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError};
 
 #[derive(Default)]
 pub struct SyntheticProcessor;
+
+/// Finds one face, this box in the pixels of the image it is given, wherever the box overlaps
+/// that image. With tiles the same box is found in every tile, so its tests detect without them.
+pub struct FixedDetection(pub Rect);
+
+impl Detector for FixedDetection {
+    fn detect(&mut self, image: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+        let b = self.0;
+        let overlaps = b.x() < image.width as f32
+            && b.y() < image.height as f32
+            && b.right() > 0.0
+            && b.bottom() > 0.0;
+        let detections = if overlaps {
+            vec![Detection::new(ModelId::Yolo5FaceN, 0.9, b, None, None).expect("a valid face")]
+        } else {
+            Vec::new()
+        };
+        Ok(Found {
+            detections,
+            ..Found::default()
+        })
+    }
+}
 
 fn failed(message: &str) -> StepError {
     StepError::Failed(message.into())

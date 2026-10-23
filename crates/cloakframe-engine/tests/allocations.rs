@@ -17,7 +17,7 @@ use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method};
 use cloakframe_core::timeline::Rational;
-use cloakframe_core::tracking::Observation;
+use cloakframe_core::tracking::{Observation, TrackingWindows};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::photo::budget::{MemoryBudget, PixelLayout, estimated_bytes};
@@ -235,6 +235,7 @@ fn tracking_an_hour_peaks_where_ten_minutes_do() {
         DetectionKind::Face,
         0.4,
         Rational::new(30, 1).unwrap(),
+        &TrackingWindows::default(),
     )];
     let mut peaks = Vec::new();
     for minutes in [10, 60] {

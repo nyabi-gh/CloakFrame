@@ -12,8 +12,8 @@ use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, FrameIndex, KindThresholds, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::review::Digest;
-use cloakframe_core::tracking::Observation;
 use cloakframe_core::tracking::scene::{SceneCutDetector, SceneCuts, Thumbnail};
+use cloakframe_core::tracking::{Observation, TrackingWindows};
 use sha2::{Digest as _, Sha256};
 
 use super::record::{Detected, Order, RecordError, RecordWriter};
@@ -40,6 +40,9 @@ pub struct AnalysisSettings {
     pub thresholds: Thresholds,
     /// Tile mode as in photos.
     pub tiles: bool,
+    /// Always the defaults in a run. Shorter interpolation leaves holes the defaults fill, which
+    /// the tests of the publish gate need, since the defaults leave no gap (docs/M5_RENDER.md).
+    pub windows: TrackingWindows,
 }
 
 impl Default for AnalysisSettings {
@@ -50,6 +53,7 @@ impl Default for AnalysisSettings {
             models,
             thresholds: models.default_thresholds(),
             tiles: true,
+            windows: TrackingWindows::default(),
         }
     }
 }
@@ -92,6 +96,16 @@ impl AnalysisSettings {
             ));
         }
         h.update(format!("tiles {}\n", self.tiles));
+        let w = &self.windows;
+        h.update(format!(
+            "windows {:016x} {:016x} {:016x} {:016x} {:016x} {:016x}\n",
+            w.max_lost.to_bits(),
+            w.max_since_high.to_bits(),
+            w.max_since_high_moving.to_bits(),
+            w.max_interpolation.to_bits(),
+            w.extension.to_bits(),
+            w.max_cut_boundary.to_bits()
+        ));
         Digest(h.finalize().into())
     }
 }
@@ -312,4 +326,40 @@ fn detect_frames(
         capped,
         reran_on_cpu,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A stored review is bound to the settings' digest, so each setting that changes the
+    /// tracks changes it.
+    #[test]
+    fn every_setting_changes_the_digest() {
+        let base = AnalysisSettings::default();
+        let changed = [
+            AnalysisSettings {
+                tiles: false,
+                ..base.clone()
+            },
+            AnalysisSettings {
+                thresholds: Thresholds {
+                    face: KindThresholds::new(0.6, 0.4).unwrap(),
+                    ..base.thresholds
+                },
+                ..base.clone()
+            },
+            AnalysisSettings {
+                windows: TrackingWindows {
+                    max_interpolation: 1.0,
+                    ..TrackingWindows::default()
+                },
+                ..base.clone()
+            },
+        ];
+        for settings in changed {
+            assert_ne!(settings.digest(), base.digest(), "{settings:?}");
+        }
+        assert_eq!(AnalysisSettings::default().digest(), base.digest());
+    }
 }

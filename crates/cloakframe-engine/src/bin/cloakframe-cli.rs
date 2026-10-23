@@ -35,7 +35,7 @@ usage:
                      [--faces yolo5face-n|yunet|off] [--plates on|off] [--tiles on|off]
                      [--gpu on|off] [--review required|off] [--keep-metadata [--keep-gps]]
                      [--recursive] [--workers N] [--sessions DIR]
-                     [--videos --ffmpeg FILE --ffprobe FILE --mask X,Y,W,H...
+                     [--videos --ffmpeg FILE --ffprobe FILE [--mask X,Y,W,H...]
                       [--video-codec h264|hevc] [--video-quality high|balanced|space-saver]
                       [--hardware-encode on|off]] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
@@ -57,11 +57,15 @@ tiles are detected as well, which finds small faces in large photos at more cost
 build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
 settings run was given; decisions on items analyzed with other settings are refused.
 --videos processes MP4, MOV, M4V and WebM files as well, with the given FFmpeg and ffprobe.
-Videos are not analyzed yet: each --mask area (display pixels, repeatable) is masked in every
-frame, so --videos needs at least one --mask and --review off. Videos are written as MP4,
-H.264 by default at high quality; --hardware-encode off skips the hardware encoders, and one
-that fails during the run leaves the item and the rest of the run to software.
-Test builds also take --synthetic, and with it --videos, to run without a media pipeline.
+Every frame of a video is detected with the same models and settings as photos, and what is
+tracked is masked; each --mask area (display pixels, repeatable) is masked in every frame as
+well. Videos cannot be reviewed yet, so --videos needs --review off, and a video with a problem
+waits for review without being kept. Videos are written as MP4, H.264 by default at high
+quality; --hardware-encode off skips the hardware encoders, and one that fails during the run
+leaves the item and the rest of the run to software.
+Test builds also take --synthetic, and with it --videos, to run without a media pipeline, and
+--fixed-detection X,Y,W,H in place of --ort-library, which finds that face (in the pixels of
+the image the models are given) in every image; use it with --tiles off.
 
 Ctrl+C cancels: items in progress stop and nothing more is published. A second Ctrl+C exits at
 once.
@@ -126,22 +130,23 @@ struct Options {
     ffmpeg: Option<PathBuf>,
     ffprobe: Option<PathBuf>,
     masks: Vec<Rect>,
+    fixed_detection: Option<Rect>,
     video_codec: Option<OutputCodec>,
     video_quality: Option<Quality>,
     hardware_encode: Option<bool>,
     inputs: Vec<PathBuf>,
 }
 
-fn parse_mask(value: &str) -> Result<Rect, String> {
+fn parse_rect(flag: &str, value: &str) -> Result<Rect, String> {
     let fields: Vec<f32> = value
         .split(',')
         .map(|v| v.trim().parse::<f32>())
         .collect::<Result<_, _>>()
-        .map_err(|_| format!("--mask is X,Y,W,H in pixels, not {value}"))?;
+        .map_err(|_| format!("{flag} is X,Y,W,H in pixels, not {value}"))?;
     let [x, y, width, height] = fields[..] else {
-        return Err(format!("--mask is X,Y,W,H in pixels, not {value}"));
+        return Err(format!("{flag} is X,Y,W,H in pixels, not {value}"));
     };
-    Rect::new(x, y, width, height).map_err(|e| format!("--mask {value}: {e}"))
+    Rect::new(x, y, width, height).map_err(|e| format!("{flag} {value}: {e}"))
 }
 
 fn parse(args: Vec<String>) -> Result<Options, String> {
@@ -211,7 +216,10 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
             "--accept-terms" => o.accept_terms = true,
             "--ffmpeg" => o.ffmpeg = Some(args.value(&arg)?.into()),
             "--ffprobe" => o.ffprobe = Some(args.value(&arg)?.into()),
-            "--mask" => o.masks.push(parse_mask(&args.value(&arg)?)?),
+            "--mask" => o.masks.push(parse_rect(&arg, &args.value(&arg)?)?),
+            "--fixed-detection" => {
+                o.fixed_detection = Some(parse_rect(&arg, &args.value(&arg)?)?);
+            }
             "--video-codec" => {
                 o.video_codec = Some(match args.value(&arg)?.as_str() {
                     "h264" => OutputCodec::H264,
@@ -303,17 +311,10 @@ fn media_processor(o: &Options, records: PathBuf) -> Result<MediaProcessor, CliE
         }
         return Ok(MediaProcessor::new(photo, None));
     }
-    // A video's review session binds its timeline and detections, which come with M5.
+    // A video's review session binds its timeline and records, which come with M5 stage 3.
     if o.review != Some(ReviewMode::Off) {
         return Err(usage(
             "--videos needs --review off: videos cannot be reviewed yet",
-        ));
-    }
-    // Until the second pass masks what was tracked, an item with tracks fails and the given
-    // areas are all a video is masked with.
-    if o.masks.is_empty() {
-        return Err(usage(
-            "--videos needs at least one --mask: detected subjects are not masked in videos yet",
         ));
     }
     let tools = Tools {
@@ -337,6 +338,7 @@ fn media_processor(o: &Options, records: PathBuf) -> Result<MediaProcessor, CliE
             models: photo_settings.models,
             thresholds: photo_settings.thresholds,
             tiles: photo_settings.tiles,
+            ..AnalysisSettings::default()
         },
         ..default
     };
@@ -622,6 +624,22 @@ fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
         );
     }
     let processor = media_processor(&o, store.records_dir(&session))?;
+    #[cfg(feature = "synthetic")]
+    if let Some(found) = o.fixed_detection {
+        let detector = || {
+            Ok(Started {
+                handle: spawn(Box::new(cloakframe_engine::synthetic::FixedDetection(
+                    found,
+                )))?,
+                backends: Backends::default(),
+            })
+        };
+        return run_with(&o, &output, processor, detector, (store, session), cancel);
+    }
+    #[cfg(not(feature = "synthetic"))]
+    if o.fixed_detection.is_some() {
+        return Err(usage("this build has no fixed detection"));
+    }
     let models = detection_models(&o)?;
     let library = o
         .ort_library

@@ -603,7 +603,7 @@
   "tracking_tests/testTrackingWindowsFollowTheFrameRate": {
    "status": "changed",
    "plan": "M5",
-   "note": "새 구현은 유리수 FPS. 23.976·29.97에서 같은 프레임 수가 나와야 함. 보간 창은 2/3초 대신 다시 잇는 창과 같은 1초(M5 결정, docs/M5_PLAN.md): 30 fps에서 20 → 30, 60 fps에서 40 → 60, 24 fps에서 16 → 24. 나머지 창은 1.12.1과 같음"
+   "note": "새 구현은 유리수 FPS. 23.976·29.97에서 같은 프레임 수가 나와야 함. 다시 잇기·보간·장면 전환 경계 창은 모두 2초(M5 결정, docs/M5_PLAN.md·docs/M5_RENDER.md): 30 fps에서 다시 잇기 30 → 60, 보간 20 → 60, 경계 30 → 60, 움직이는 track 45 → 60. 끝 연장 0.1초는 1.12.1과 같음"
   },
   "update_signature_tests/testAnUnpinnedBuildSaysSoInsteadOfPassing": {
    "status": "changed",

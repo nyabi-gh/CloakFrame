@@ -68,15 +68,15 @@ downloads them (YOLO5Face-n, which is for non-commercial use only, also needs
 `--accept-terms`). The command-line tests download the two MIT-licensed models
 from GitHub, so they need the network.
 
-With `--videos` it also processes MP4, MOV, M4V and WebM files. Videos are not
-analyzed yet (M5), so each `--mask X,Y,W,H` area, in display pixels, is masked
-in every frame, and videos need `--review off`:
+With `--videos` it also processes MP4, MOV, M4V and WebM files: every frame is
+detected with the same models and settings as photos, and what is tracked is
+masked. Each `--mask X,Y,W,H` area, in display pixels, is masked in every frame
+as well. Videos cannot be reviewed yet (M5 stage 3), so they need `--review off`:
 
 ```bash
 cargo run -p cloakframe-engine --bin cloakframe-cli -- run --output out --review off \
   --ort-library "$CLOAKFRAME_ORT_LIBRARY" --models "$CLOAKFRAME_TEST_ASSETS" \
-  --videos --ffmpeg "$CLOAKFRAME_FFMPEG" --ffprobe "$CLOAKFRAME_FFPROBE" \
-  --mask 100,50,200,100 videos/
+  --videos --ffmpeg "$CLOAKFRAME_FFMPEG" --ffprobe "$CLOAKFRAME_FFPROBE" videos/
 ```
 
 Videos are written as MP4, H.264 at high quality by default (`--video-codec hevc`,

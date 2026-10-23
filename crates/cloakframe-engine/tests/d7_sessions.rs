@@ -22,7 +22,7 @@ use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::model_files::{ModelStore, model_file};
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
-use cloakframe_engine::run::{Job, JobItem, Start, start};
+use cloakframe_engine::run::{Job, JobItem, Note, Start, start};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 use common::{TestDir, required_env};
@@ -143,6 +143,7 @@ fn photos_and_videos_share_the_sessions() {
                 models,
                 thresholds: photo_settings.thresholds,
                 tiles: photo_settings.tiles,
+                ..AnalysisSettings::default()
             },
             ..VideoSettings::default()
         };
@@ -169,11 +170,20 @@ fn photos_and_videos_share_the_sessions() {
                 outcome.failure
             );
         }
-        // Lena's face was tracked, which the second pass cannot mask yet.
-        let failure = videos[0].failure.as_deref().unwrap_or_default();
+        // Lena's face was tracked and masked.
+        assert_eq!(
+            videos[0].state,
+            ItemState::Published(PublishBasis::AutomaticUnreviewed),
+            "{:?}",
+            videos[0].failure
+        );
         assert!(
-            failure.contains("cannot be masked in videos yet"),
-            "{failure}"
+            videos[0]
+                .notes
+                .iter()
+                .any(|n| matches!(n, Note::Tracked { faces: 1.., .. })),
+            "{:?}",
+            videos[0].notes
         );
         assert_eq!(backends.sessions_made(), 2, "{acceleration:?}");
     }

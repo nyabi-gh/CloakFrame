@@ -1,5 +1,6 @@
 //! M4's completion check (plan 8 M4 stage 5): videos exported end to end through the runner with
-//! a fixed mask, from sources with each frame's number drawn in and clicks in their sound on
+//! a corner a stand-in detector finds in every frame, tracked and masked as a face is (M5 stage
+//! 2), from sources with each frame's number drawn in and clicks in their sound on
 //! chosen frames, made here with the pinned FFmpeg. Every output frame `n` shows the source frame
 //! an analysis pass reads as `shown_at(n)` (P-3 `analysis_equals_output`), every source frame
 //! shows, and every click is heard as the first output frame showing its frame starts: the sound
@@ -16,16 +17,18 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 
+use cloakframe_core::detection::{Detection, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_core::timeline::{Rational, Rotation};
 use cloakframe_engine::cancel::CancelToken;
-use cloakframe_engine::detect::{DetectorHandle, NoDetections, Rgb8Image};
+use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::media::decode::{FrameReader, frame_size};
 use cloakframe_engine::media::encode::OutputCodec;
 use cloakframe_engine::media::process::ToolCommand;
 use cloakframe_engine::media::source::{self, Source};
-use cloakframe_engine::run::{self, Job, JobItem, Start};
+use cloakframe_engine::run::{self, Job, JobItem, Note, Start};
+use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 use common::{TestDir, fixtures, frame_number, numbered_frame, required_env};
 
@@ -228,9 +231,23 @@ fn corner_mask((width, height): (u32, u32)) -> Rect {
     Rect::new(width as f32 - 24.0, height as f32 - 24.0, 16.0, 16.0).unwrap()
 }
 
+/// Finds the corner of every frame it is given as a face. The sources are analyzed at their own
+/// size, in display orientation.
+struct Corner;
+
+impl Detector for Corner {
+    fn detect(&mut self, image: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+        let bbox = corner_mask((image.width, image.height));
+        Ok(Found {
+            detections: vec![Detection::new(ModelId::Yolo5FaceN, 0.9, bbox, None, None).unwrap()],
+            ..Found::default()
+        })
+    }
+}
+
 const EXPORTS: [(OutputCodec, bool); 2] = [(OutputCodec::H264, true), (OutputCodec::Hevc, false)];
 
-/// `input` through the runner in automatic mode with a corner mask, published as
+/// `input` through the runner in automatic mode with the corner tracked, published as
 /// `out/<name>.mp4`.
 fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -> PathBuf {
     let destination = input
@@ -253,7 +270,10 @@ fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -
     let settings = VideoSettings {
         codec,
         hardware_encode,
-        masks: vec![corner_mask(opened(input).spec.display_size())],
+        analysis: AnalysisSettings {
+            tiles: false,
+            ..AnalysisSettings::default()
+        },
         ..VideoSettings::default()
     };
     let processor = Arc::new(VideoProcessor::new(
@@ -264,7 +284,7 @@ fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -
         settings,
         input.parent().unwrap().join("records"),
     ));
-    let detector = DetectorHandle::spawn(Box::new(NoDetections)).unwrap();
+    let detector = DetectorHandle::spawn(Box::new(Corner)).unwrap();
     let report = run::start(job, processor, detector).unwrap().wait();
     let outcome = &report.items[0];
     assert_eq!(
@@ -272,6 +292,14 @@ fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -
         ItemState::Published(PublishBasis::AutomaticUnreviewed),
         "{name}: {:?}",
         outcome.failure
+    );
+    assert!(
+        outcome.notes.contains(&Note::Tracked {
+            faces: 1,
+            plates: 0
+        }),
+        "{name}: {:?}",
+        outcome.notes
     );
     destination
 }

@@ -149,6 +149,8 @@ impl Default for PostProcessConfig {
 /// The time limits of tracking, in seconds, so a clip is treated alike at any frame rate.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TrackingWindows {
+    /// Two seconds, where 1.12.1 gave one: a subject missed for longer started a new track, and
+    /// the frames between were published bare without a warning (docs/M5_RENDER.md).
     pub max_lost: f64,
     pub max_since_high: f64,
     pub max_since_high_moving: f64,
@@ -163,12 +165,12 @@ pub struct TrackingWindows {
 impl Default for TrackingWindows {
     fn default() -> Self {
         Self {
-            max_lost: 1.0,
-            max_since_high: 1.0,
-            max_since_high_moving: 1.5,
-            max_interpolation: 1.0,
+            max_lost: 2.0,
+            max_since_high: 2.0,
+            max_since_high_moving: 2.0,
+            max_interpolation: 2.0,
             extension: 0.1,
-            max_cut_boundary: 1.0,
+            max_cut_boundary: 2.0,
         }
     }
 }
@@ -204,35 +206,36 @@ mod tests {
         (tracker, post)
     }
 
+    /// The window counts of every tracking window at a rate.
+    fn counts(num: u32, den: u32) -> [u64; 6] {
+        let (tracker, post) = at(num, den);
+        [
+            tracker.max_frames_lost,
+            tracker.max_frames_since_high,
+            tracker.max_frames_since_high_moving,
+            post.max_interpolation_gap,
+            post.extension_frames,
+            post.max_cut_boundary_gap,
+        ]
+    }
+
     /// tests/fixtures/legacy/tracking_tests/testTrackingWindowsFollowTheFrameRate.json, with the
-    /// interpolation window at one second instead of 2/3 (M5 decision): 30 → 20 is now 30.
+    /// windows of M5 (docs/M5_PLAN.md, docs/M5_RENDER.md): two seconds to find a subject again
+    /// and to fill the hole, where 1.12.1 had one second and 2/3 (1.5 s once moving).
     #[test]
     fn windows_follow_the_frame_rate() {
-        assert_eq!(
-            at(30, 1),
-            (TrackerConfig::default(), PostProcessConfig::default())
-        );
-        let (tracker, post) = at(60, 1);
-        assert_eq!(
-            (post.max_interpolation_gap, tracker.max_frames_lost),
-            (60, 60)
-        );
-        let (tracker, post) = at(24, 1);
-        assert_eq!(
-            (post.max_interpolation_gap, tracker.max_frames_lost),
-            (24, 24)
-        );
+        assert_eq!(counts(30, 1), [60, 60, 60, 60, 3, 60]);
+        assert_eq!(counts(60, 1), [120, 120, 120, 120, 6, 120]);
+        assert_eq!(counts(24, 1), [48, 48, 48, 48, 2, 48]);
         // Rates a frame apart in name give the same frame counts.
         assert_eq!(at(24000, 1001), at(24, 1));
         assert_eq!(at(30000, 1001), at(30, 1));
-        let (tracker, post) = at(30000, 1001);
+        // Other fields stay as configured.
+        let (tracker, post) = at(30, 1);
+        assert_eq!(tracker.high_score, TrackerConfig::default().high_score);
         assert_eq!(
-            (
-                tracker.max_frames_since_high_moving,
-                post.extension_frames,
-                post.max_cut_boundary_gap
-            ),
-            (45, 3, 30)
+            post.smoothing_radius,
+            PostProcessConfig::default().smoothing_radius
         );
     }
 
