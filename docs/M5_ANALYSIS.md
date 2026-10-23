@@ -78,6 +78,16 @@
 
 debug는 Rust 전처리가 느리고 기기 부하에 따라 같은 설정도 두 배까지 달랐다. 비교는 같은 실행 안의 순서로 본다.
 
+PR #50의 CI(2026-10-22, debug, GitHub runner):
+
+| runner | spin 끔 | spin 켬 | spin 끔(다시) | spin 끔, 타일 |
+| --- | --- | --- | --- | --- |
+| macOS 15 arm64 | 6.2 fps | 7.2 | 6.5 | 2.3 |
+| Ubuntu 24.04 x86_64 | 7.0 | 6.5 | 7.2 | 2.5 |
+| Windows Server 2025 x64 | 6.5 | 5.2 | 5.1 | 2.2 |
+
+runner에서는 spin을 끈 이득이 보이지 않는다. 끈 쪽이 확실히 느린 OS도 없다. runner는 코어가 3–4개이고 debug 빌드라 Rust 전처리가 시간 대부분을 차지해, spin이 디코드·전처리의 코어를 빼앗는 효과가 드러나지 않는 것으로 본다(이 Mac의 release는 2.8배 차이). M5_PLAN의 "영상 감지 1.6–2배"는 3개 OS에서 확인되지 않았고, release로 다시 재는 것은 5단계 처리량 측정(계획 9.3)에서 한다.
+
 ## 메모리
 
 `allocations.rs` `tracking_an_hour_peaks_where_ten_minutes_do`: 30 fps, 동시에 4명이 움직이고 20초마다 새 사람으로 바뀌며, 7프레임마다 놓치고 2분마다 장면 전환인 합성 레코드. 추적과 영역 읽기의 peak heap(전역 할당자로 셈):
@@ -118,6 +128,8 @@ spin 설정은 결과를 바꾸지 않으므로 시험이 없고, CI 측정(켬�
 
 ## 남은 것
 
+- 완료: PR #50(2026-10-23, main `209a261`). 3개 OS CI와 탐지 벤치마크(core `detection.rs`가 바뀌어 돎)가 통과했다. Windows·Linux에서는 이 PR이 분석 1패스·레코드·추적 연결·D7 영상 경우의 첫 실행이었다. 같은 실행의 1080p 파이프: 디코드 Linux 88.6 fps·macOS runner 184·Windows 103, 인코드 Linux 77.2·macOS runner 109·Windows 84.5.
+- spin 결정의 release 측정(위): 5단계.
 - 2단계(`m5-render`): 영역 레코드로 마스크, 렌더 거부를 마스크로 바꿈, `--mask` 선택 사항, P-1(영상)을 실제로 생기는 근거로 확인하는 방법(위), 결과 JSON의 track·gap 종류.
 - 3단계: 검토로 남기는 영상의 레코드 보존과 세션 형식 2, 비정상 종료로 남은 레코드 폴더 정리(세션 JSON이 없는 폴더).
 - `Problem::FailedFrame`: 감지 실패는 GPU에서 CPU로 다시 한 뒤에도 실패하면 항목 실패다. 프레임 단위 근거로 남기는 경로는 아직 없다.
