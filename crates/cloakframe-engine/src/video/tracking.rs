@@ -27,6 +27,8 @@ use cloakframe_core::tracking::{
     Observation, PostProcessConfig, TrackId, TrackedBox, TrackerConfig, TrackingWindows,
 };
 
+use serde::{Deserialize, Serialize};
+
 use super::analysis::DETECTION_FLOOR;
 use super::record::{Assigned, Detected, Order, Record, RecordError, RecordWriter, TrackRegion};
 use crate::cancel::CancelToken;
@@ -92,7 +94,7 @@ impl KindTracking {
 }
 
 /// A kept track, for review and the results.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TrackSummary {
     pub id: TrackId,
     pub kind: DetectionKind,

@@ -14,7 +14,7 @@ use cloakframe_core::detection::{Detection, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method, Overlay, Padding};
-use cloakframe_core::review::PhotoEdits;
+use cloakframe_core::review::{Edits, PhotoEdits};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::photo::budget::MemoryBudget;
@@ -134,7 +134,10 @@ fn reviewed(
         start: Start::Reviewed {
             decision,
             analysis: Box::new(analysis),
-            edits,
+            edits: Edits {
+                photo: edits,
+                ..Edits::default()
+            },
         },
     }
 }

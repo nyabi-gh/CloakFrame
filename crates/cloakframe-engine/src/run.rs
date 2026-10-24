@@ -8,13 +8,14 @@ use std::thread;
 use cloakframe_core::coverage::CoverageEvidence;
 use cloakframe_core::detection::Detection;
 use cloakframe_core::item::{Item, ItemId, ItemState, PublishBasis, PublishPermit, ReviewMode};
-use cloakframe_core::review::{Digest, PhotoEdits};
+use cloakframe_core::review::{Digest, Edits};
 
 use crate::cancel::CancelToken;
 use crate::detect::{DetectError, DetectorHandle};
 use crate::events::{Event, ProgressBoard, ProgressReporter};
 use crate::identity::SourceStamp;
 use crate::ordered::process_ordered;
+use crate::video::process::VideoAnalysis;
 
 const EVENT_CAPACITY: usize = 64;
 
@@ -79,6 +80,9 @@ pub enum Note {
     FolderNotFlushed,
     /// Published, but a temp file was left next to the output; a later run removes it.
     TempFileLeft,
+    /// Published, but the video's analysis records could not be removed from the app's data
+    /// folder; a later run removes them.
+    RecordsLeft,
 }
 
 impl fmt::Display for Note {
@@ -111,6 +115,7 @@ impl fmt::Display for Note {
             }
             Self::FolderNotFlushed => "the output folder could not be flushed to disk",
             Self::TempFileLeft => "a temporary file was left next to the output",
+            Self::RecordsLeft => "the video's analysis records were left in the app's data folder",
         })
     }
 }
@@ -138,7 +143,7 @@ pub struct RenderRequest<'a> {
     /// `ExportedWithoutAnonymization` renders with nothing masked.
     pub basis: PublishBasis,
     pub analysis: &'a Analysis,
-    pub edits: &'a PhotoEdits,
+    pub edits: &'a Edits,
 }
 
 /// The media-specific steps of one item. The runner owns the state machine and the publish
@@ -168,9 +173,9 @@ pub trait ItemProcessor: Send + Sync + 'static {
         rendered: Self::Rendered,
         permit: &PublishPermit,
     ) -> Result<(), StepError>;
-    /// What besides the input decides the results. A stored review is bound to it, so changing
-    /// models or settings invalidates earlier review decisions.
-    fn fingerprint(&self) -> Fingerprint;
+    /// What besides the input decides the results of `input`. A stored review is bound to it, so
+    /// changing models or settings invalidates earlier review decisions.
+    fn fingerprint(&self, input: &Path) -> Fingerprint;
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -188,6 +193,7 @@ pub struct Analysis {
     /// [`content_digest`](crate::identity::content_digest) of the bytes analyzed. A review is
     /// rendered only from the same bytes.
     pub input: Option<Digest>,
+    pub video: Option<VideoAnalysis>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -206,7 +212,7 @@ pub enum Start {
     Reviewed {
         decision: Decision,
         analysis: Box<Analysis>,
-        edits: PhotoEdits,
+        edits: Edits,
     },
 }
 
@@ -497,7 +503,7 @@ impl<P: ItemProcessor> Runner<P> {
         };
 
         checkpoint()?;
-        let no_edits = PhotoEdits::default();
+        let no_edits = Edits::default();
         let (prepared, edits) = match start {
             Start::Fresh { needs_review } => {
                 let (analyzed, prepared) = self.processor.analyze(ctx)?;
@@ -672,7 +678,7 @@ mod tests {
             }
         }
 
-        fn fingerprint(&self) -> Fingerprint {
+        fn fingerprint(&self, _: &Path) -> Fingerprint {
             Fingerprint {
                 models: Digest([0; 32]),
                 settings: Digest([0; 32]),
@@ -950,7 +956,7 @@ mod tests {
                 evidence,
                 ..Analysis::default()
             }),
-            edits: PhotoEdits::default(),
+            edits: Edits::default(),
         };
         job.items[0].start = reviewed(Decision::Approve, vec![resolved]);
         job.items[1].start = reviewed(Decision::Approve, vec![gap()]);

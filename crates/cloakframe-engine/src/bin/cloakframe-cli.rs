@@ -25,7 +25,7 @@ use cloakframe_engine::publish::remove_stale_temp_files;
 use cloakframe_engine::review::{ReviewDecisions, apply};
 use cloakframe_engine::run::{ItemProcessor, Job, RunReport, start_under};
 use cloakframe_engine::scan::{ScanRequest, scan};
-use cloakframe_engine::session::{SessionId, SessionStore};
+use cloakframe_engine::session::{SessionError, SessionId, SessionLock, SessionStore, StoredMedia};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 
@@ -40,7 +40,9 @@ usage:
                       [--hardware-encode on|off]] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
                         [--plates on|off] [--tiles on|off] [--keep-metadata [--keep-gps]]
-                        [--workers N] [--sessions DIR]
+                        [--workers N] [--sessions DIR] [--videos --ffmpeg FILE --ffprobe FILE
+                        [--mask X,Y,W,H...] [--video-codec h264|hevc]
+                        [--video-quality high|balanced|space-saver] [--hardware-encode on|off]]
   cloakframe-cli models [--models DIR]
   cloakframe-cli models fetch [--accept-terms] [--models DIR] yolo5face-n|yunet|plates...
   cloakframe-cli sessions [--sessions DIR]
@@ -55,14 +57,17 @@ is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts
 (default off). --tiles off detects each photo in one whole view only; by default overlapping
 tiles are detected as well, which finds small faces in large photos at more cost. --gpu off keeps every model on the CPU; by default each runs on the GPU where this
 build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
-settings run was given; decisions on items analyzed with other settings are refused.
+settings run was given, the video ones too; decisions on items analyzed with other settings are
+refused.
 --videos processes MP4, MOV, M4V and WebM files as well, with the given FFmpeg and ffprobe.
 Every frame of a video is detected with the same models and settings as photos, and what is
 tracked is masked; each --mask area (display pixels, repeatable) is masked in every frame as
-well. Videos cannot be reviewed yet, so --videos needs --review off, and a video with a problem
-waits for review without being kept. Videos are written as MP4, H.264 by default at high
-quality; --hardware-encode off skips the hardware encoders, and one that fails during the run
-leaves the item and the rest of the run to software.
+well. A video waiting for review keeps its frame-by-frame records in the session folder until
+it is published or the session is done; the session lists its tracks, and a decision can leave
+tracks unmasked (excluded_tracks) or add tracks drawn by hand (added_tracks). review renders a
+video again only from the same bytes and timeline it analyzed. Videos are written as MP4, H.264
+by default at high quality; --hardware-encode off skips the hardware encoders, and one that
+fails during the run leaves the item and the rest of the run to software.
 Test builds also take --synthetic, and with it --videos, to run without a media pipeline, and
 --fixed-detection X,Y,W,H in place of --ort-library, which finds that face (in the pixels of
 the image the models are given) in every image; use it with --tiles off.
@@ -310,12 +315,6 @@ fn media_processor(o: &Options, records: PathBuf) -> Result<MediaProcessor, CliE
             return Err(usage("the video options need --videos"));
         }
         return Ok(MediaProcessor::new(photo, None));
-    }
-    // A video's review session binds its timeline and records, which come with M5 stage 3.
-    if o.review != Some(ReviewMode::Off) {
-        return Err(usage(
-            "--videos needs --review off: videos cannot be reviewed yet",
-        ));
     }
     let tools = Tools {
         ffmpeg: o
@@ -667,6 +666,7 @@ fn run_with<P: ItemProcessor>(
     (store, id): (SessionStore, SessionId),
     cancel: &CancelToken,
 ) -> Result<u8, CliError> {
+    let _lock = hold(&store, &id)?;
     let scanned = scan(
         &ScanRequest {
             inputs: o.inputs.clone(),
@@ -698,76 +698,119 @@ fn run_with<P: ItemProcessor>(
         workers,
     );
     clean_stale(&job);
-    let fingerprint = processor.fingerprint();
     let started = if job.items.is_empty() {
         without_models()?
     } else {
         detector()?
     };
-    let report = execute(job, Arc::new(processor), started.handle, cancel)?;
+    let processor = Arc::new(processor);
+    let report = execute(job, Arc::clone(&processor), started.handle, cancel)?;
     // Saved before anything is written, which can fail once the terminal is gone.
-    let (session, left_out) = session_from_report(&report, &plan, output, fingerprint);
-    let saved = session.map(|session| store.save(&id, &session).map(|()| &id));
+    let (session, left_out) =
+        session_from_report(&report, &plan, output, |input| processor.fingerprint(input));
+    let saved = session
+        .as_ref()
+        .map(|session| store.save(&id, session).map(|()| &id));
+    // The records of videos not kept for review are of no more use.
+    let cleaned = match (&session, &saved) {
+        (Some(session), Some(Ok(_))) => store.prune(&id, session),
+        _ => store.remove(&id),
+    };
     print_report(&report);
     print_fallbacks(&started.backends.get());
     for (item, reason) in &left_out {
         out(format_args!("{}\tnot kept for review\t{reason}", item.0));
     }
+    let mut code = exit_for(&report);
+    if let Err(e) = cleaned {
+        note(format_args!(
+            "cannot remove the video analysis records in {}: {e}",
+            store.records_dir(&id).display()
+        ));
+        code = code.max(FAILED);
+    }
     if let Some(saved) = saved {
         let id = saved.map_err(|e| failed(format!("cannot save the review session: {e}")))?;
         out(format_args!("session\t{}", id.as_str()));
     }
-    let mut code = exit_for(&report);
     if !scanned.issues.is_empty() || !left_out.is_empty() {
         code = code.max(FAILED);
-    }
-    // Videos are not kept for review yet, so none of their records outlives the run.
-    let records = store.records_dir(&id);
-    match std::fs::remove_dir_all(&records) {
-        Err(e) if e.kind() != std::io::ErrorKind::NotFound => {
-            eprintln!(
-                "cannot remove the video analysis records in {}: {e}",
-                records.display()
-            );
-            code = code.max(FAILED);
-        }
-        _ => {}
     }
     Ok(code)
 }
 
-fn review(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
-    #[cfg(feature = "synthetic")]
-    if o.synthetic {
-        return review_with(&o, cloakframe_engine::synthetic::SyntheticProcessor, cancel);
+/// Removes the records runs that ended abnormally left, then holds session `id` for this
+/// process (see [`SessionStore::lock`]).
+fn hold(store: &SessionStore, id: &SessionId) -> Result<SessionLock, CliError> {
+    match store.sweep() {
+        Ok(left) => {
+            for (path, e) in left {
+                note(format_args!(
+                    "cannot remove the video analysis records left in {}: {e}",
+                    path.display()
+                ));
+            }
+        }
+        Err(e) => note(format_args!(
+            "cannot look for video analysis records left in {}: {e}",
+            store.dir().display()
+        )),
     }
-    let processor = photo_processor(&o)?;
-    review_with(&o, processor, cancel)
+    store.lock(id).map_err(|e| match e {
+        SessionError::InUse => failed(e.to_string()),
+        e => failed(format!(
+            "cannot lock the review session in {}: {e}",
+            store.dir().display()
+        )),
+    })
 }
 
-fn review_with<P: ItemProcessor>(
-    o: &Options,
-    processor: P,
-    cancel: &CancelToken,
-) -> Result<u8, CliError> {
+fn review(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
     let id = o
         .session
         .as_deref()
         .and_then(SessionId::parse)
         .ok_or_else(|| usage("review needs --session ID (as printed by run)"))?;
+    let store = session_store(&o)?;
+    #[cfg(feature = "synthetic")]
+    if o.synthetic {
+        let processor = cloakframe_engine::synthetic::SyntheticProcessor;
+        return review_with(&o, processor, (store, id), cancel);
+    }
+    let processor = media_processor(&o, store.records_dir(&id))?;
+    review_with(&o, processor, (store, id), cancel)
+}
+
+fn review_with<P: ItemProcessor>(
+    o: &Options,
+    processor: P,
+    (store, id): (SessionStore, SessionId),
+    cancel: &CancelToken,
+) -> Result<u8, CliError> {
     let decisions_path = o
         .decisions
         .clone()
         .ok_or_else(|| usage("review needs --decisions FILE"))?;
-    let store = session_store(o)?;
+    let _lock = hold(&store, &id)?;
     let mut session = store.load(&id).map_err(|e| failed(e.to_string()))?;
+    let has_videos = session
+        .items
+        .iter()
+        .any(|i| matches!(i.media, StoredMedia::Video { .. }));
+    if has_videos && !o.videos {
+        return Err(usage(
+            "the session holds videos; review them with --videos --ffmpeg FILE --ffprobe FILE and the video options run was given",
+        ));
+    }
     let decisions: ReviewDecisions = serde_json::from_slice(
         &std::fs::read(&decisions_path)
             .map_err(|e| failed(format!("cannot read the decisions: {e}")))?,
     )
     .map_err(|e| failed(format!("the decisions file is not valid: {e}")))?;
 
-    let applied = apply(&mut session, &decisions, processor.fingerprint());
+    let applied = apply(&mut session, &decisions, |input| {
+        processor.fingerprint(input)
+    });
     for (item, rejection) in &applied.rejected {
         out(format_args!("{}\trefused\t{rejection}", item.0));
     }
@@ -801,7 +844,8 @@ fn review_with<P: ItemProcessor>(
         code = code.max(exit_for(&report));
         resumed = Some(report);
     }
-    // Stored before the report is written, which can fail once the terminal is gone.
+    // Stored before the report is written, which can fail once the terminal is gone. The
+    // records of the published videos go with them.
     let stored = if session.items.is_empty() {
         store
             .remove(&id)
@@ -813,6 +857,14 @@ fn review_with<P: ItemProcessor>(
         store
             .save(&id, &session)
             .map_err(|e| failed(format!("cannot save the review session: {e}")))
+            .and_then(|()| {
+                store.prune(&id, &session).map_err(|e| {
+                    failed(format!(
+                        "cannot remove the video analysis records in {}: {e}",
+                        store.records_dir(&id).display()
+                    ))
+                })
+            })
     };
     if let Some(report) = &resumed {
         print_report(report);

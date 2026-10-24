@@ -2,14 +2,14 @@ use std::fmt;
 use std::path::Path;
 
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
-use cloakframe_core::review::{Digest, PhotoEdits, ReviewKey, ReviewRevision};
+use cloakframe_core::review::{Digest, PhotoEdits, ReviewKey, ReviewRevision, VideoEdits};
 use sha2::{Digest as _, Sha256};
 
 use crate::identity::SourceStamp;
 use crate::output_plan::{PlannedOutput, plan_outputs};
 use crate::run::{Fingerprint, Job, JobItem, RunReport, Start};
 use crate::scan::{MediaKind, ScannedFile};
-use crate::session::{FORMAT_VERSION, Session, SessionItem};
+use crate::session::{FORMAT_VERSION, Session, SessionItem, StoredMedia};
 
 /// One job item per scanned file, in scan order. An output whose name is taken goes to review
 /// even in automatic mode.
@@ -50,9 +50,6 @@ pub enum LeftOut {
     NotAnalyzed,
     /// The source changed or vanished since it was read for analysis.
     SourceChanged,
-    /// Videos are not kept for review yet: their records and timeline go into a session with
-    /// M5's review stage.
-    Video,
 }
 
 impl fmt::Display for LeftOut {
@@ -62,7 +59,6 @@ impl fmt::Display for LeftOut {
             Self::SourceChanged => {
                 f.write_str("the source changed or is gone since analysis; run it again")
             }
-            Self::Video => f.write_str("videos cannot be reviewed yet"),
         }
     }
 }
@@ -73,7 +69,7 @@ pub fn session_from_report(
     report: &RunReport,
     plan: &[PlannedOutput],
     output: &Path,
-    fingerprint: Fingerprint,
+    fingerprint: impl Fn(&Path) -> Fingerprint,
 ) -> (Option<Session>, Vec<(ItemId, LeftOut)>) {
     let mut items = Vec::new();
     let mut left_out = Vec::new();
@@ -81,11 +77,13 @@ pub fn session_from_report(
         if outcome.state != ItemState::NeedsReview {
             continue;
         }
-        if MediaKind::of(&outcome.input) == Some(MediaKind::Video) {
-            left_out.push((outcome.item, LeftOut::Video));
-            continue;
-        }
-        let (Some(source), Some(input)) = (outcome.analysis.source, outcome.analysis.input) else {
+        let analysis = &outcome.analysis;
+        let is_video = MediaKind::of(&outcome.input) == Some(MediaKind::Video);
+        let (Some(source), Some(input), true) = (
+            analysis.source,
+            analysis.input,
+            analysis.video.is_some() == is_video,
+        ) else {
             left_out.push((outcome.item, LeftOut::NotAnalyzed));
             continue;
         };
@@ -93,12 +91,32 @@ pub fn session_from_report(
             left_out.push((outcome.item, LeftOut::SourceChanged));
             continue;
         }
+        let (media, timeline) = match &analysis.video {
+            Some(video) => (
+                StoredMedia::Video {
+                    frames: video.frames,
+                    width: video.size.0,
+                    height: video.size.1,
+                    tracks: video.tracks.clone(),
+                    edits: VideoEdits::default(),
+                },
+                video.timeline,
+            ),
+            // Photos have no timeline.
+            None => (
+                StoredMedia::Photo {
+                    detections: analysis.detections.clone(),
+                    edits: PhotoEdits::default(),
+                },
+                Digest(Sha256::digest(b"").into()),
+            ),
+        };
+        let fingerprint = fingerprint(&outcome.input);
         let key = ReviewKey {
             input,
             models: fingerprint.models,
             settings: fingerprint.settings,
-            // Photos have no timeline; videos bind their TimelineSpec here from M4.
-            timeline: Digest(Sha256::digest(b"").into()),
+            timeline,
         };
         items.push(SessionItem {
             item: outcome.item,
@@ -108,9 +126,8 @@ pub fn session_from_report(
             suggestion: planned.suggestion.clone(),
             source,
             revision: ReviewRevision::first(key),
-            detections: outcome.analysis.detections.clone(),
-            evidence: outcome.analysis.evidence.clone(),
-            edits: PhotoEdits::default(),
+            media,
+            evidence: analysis.evidence.clone(),
         });
     }
     let session = (!items.is_empty()).then(|| Session {
@@ -127,7 +144,8 @@ mod tests {
     use crate::test_support::TestDir;
 
     /// An item held for review whose source changed or vanished cannot be reviewed, nor can a
-    /// video yet; each is reported with the reason instead of silently missing from the session.
+    /// video without its analysis; each is reported with the reason instead of silently missing
+    /// from the session. A video is kept with its timeline, tracks and its pipeline's settings.
     #[test]
     fn items_left_out_of_the_session_are_reported() {
         use crate::run::{Analysis, ItemOutcome};
@@ -154,8 +172,25 @@ mod tests {
                 outcome(1, "changed.jpg"),
                 outcome(2, "gone.jpg"),
                 outcome(3, "clip.MP4"),
+                outcome(4, "held.mp4"),
             ],
         };
+        let mut report = report;
+        let track = crate::video::tracking::TrackSummary {
+            id: 1,
+            kind: cloakframe_core::detection::DetectionKind::Face,
+            first: 0,
+            last: 9,
+            detections: 10,
+            strong: 10,
+            low_confidence: false,
+        };
+        report.items[4].analysis.video = Some(crate::video::process::VideoAnalysis {
+            timeline: Digest([7; 32]),
+            frames: 10,
+            size: (64, 48),
+            tracks: vec![track],
+        });
         std::fs::write(&report.items[1].input, b"edited after analysis").unwrap();
         std::fs::remove_file(&report.items[2].input).unwrap();
         let plan: Vec<PlannedOutput> = report
@@ -167,22 +202,39 @@ mod tests {
                 suggestion: None,
             })
             .collect();
-        let fingerprint = Fingerprint {
+        let fingerprint = |input: &Path| Fingerprint {
             models: Digest([0; 32]),
-            settings: Digest([0; 32]),
+            settings: Digest([u8::from(MediaKind::of(input) == Some(MediaKind::Video)); 32]),
         };
         let (session, left_out) =
             session_from_report(&report, &plan, &dir.path().join("out"), fingerprint);
         let session = session.unwrap();
-        assert_eq!(session.items.len(), 1);
-        assert_eq!(session.items[0].item, ItemId(0));
+        let kept: Vec<ItemId> = session.items.iter().map(|i| i.item).collect();
+        assert_eq!(kept, [ItemId(0), ItemId(4)]);
         assert_eq!(
             left_out,
             [
                 (ItemId(1), LeftOut::SourceChanged),
                 (ItemId(2), LeftOut::SourceChanged),
-                (ItemId(3), LeftOut::Video)
+                (ItemId(3), LeftOut::NotAnalyzed)
             ]
+        );
+        let video = &session.items[1];
+        let key = video.revision.key();
+        assert_eq!(
+            (key.timeline, key.settings),
+            (Digest([7; 32]), Digest([1; 32]))
+        );
+        assert_eq!(session.items[0].revision.key().settings, Digest([0; 32]));
+        assert_eq!(
+            video.media,
+            StoredMedia::Video {
+                frames: 10,
+                width: 64,
+                height: 48,
+                tracks: vec![track],
+                edits: VideoEdits::default(),
+            }
         );
     }
 }

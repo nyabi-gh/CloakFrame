@@ -2,7 +2,8 @@
 //! detector (`--fixed-detection`, test builds), the odd-sized video padded and noted (P-5), the
 //! detected box tracked and masked in every frame and checked before it is published (P-4); a
 //! face the pinned model finds in a video, masked; a turned video in HEVC from software with a
-//! fixed mask; and the options videos need.
+//! fixed mask; a video held for review, kept in a session and resumed from it with the
+//! reviewer's edits; and the options videos need.
 //!
 //! Needs `CLOAKFRAME_FFMPEG`, `CLOAKFRAME_FFPROBE`, `CLOAKFRAME_ORT_LIBRARY` and
 //! `CLOAKFRAME_TEST_ASSETS`, and the `synthetic` feature.
@@ -299,10 +300,126 @@ fn a_mask_outside_a_video_fails_only_that_video() {
     assert_eq!(names(&f.out()), ["astronaut.png"]);
 }
 
-/// A video held for review (here because its output name is taken) is reported with why, but
-/// not kept in a session: videos are reviewed from M5 stage 3.
+/// A video held for review (here because its output name is taken) is kept in a session with its
+/// records and tracks; review renders it again from them with the reviewer's edits: the tracked
+/// box left unmasked, a box drawn by hand masked in every frame. The session and its records go
+/// once it is published.
 #[test]
-fn a_video_held_for_review_is_not_kept_for_it_yet() {
+fn a_video_held_for_review_is_resumed_from_its_session() {
+    let f = Fixture::new();
+    let source = f.input(
+        "odd.mp4",
+        &fixtures().join("defects/P-5/odd-641x361-audio-longer.mp4"),
+    );
+    std::fs::create_dir_all(f.out()).unwrap();
+    std::fs::write(f.out().join("odd.mp4"), b"someone else's").unwrap();
+    let run = f.run_finding("100,50,200,100", &["--videos"]);
+    assert_eq!(run.code, 3, "{}\n{}", run.stdout, run.stderr);
+    assert!(run.stdout.contains("needs review"), "{}", run.stdout);
+    let id = run
+        .stdout
+        .lines()
+        .find_map(|l| l.strip_prefix("session\t"))
+        .expect("a session")
+        .to_owned();
+    let sessions = f.root.join("sessions");
+    let stored: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(sessions.join(format!("{id}.json"))).unwrap())
+            .unwrap();
+    let item = &stored["items"][0];
+    assert_eq!(item["media"], "video");
+    assert_eq!(item["tracks"][0]["kind"], "face");
+    assert_eq!(item["tracks"][0]["id"], 1);
+    let last = item["frames"].as_u64().unwrap() - 1;
+    assert!(sessions.join(&id).join("item-0/regions").exists());
+
+    let decisions = f.root.join("decisions.json");
+    let decide = |extra: &str| {
+        std::fs::write(
+            &decisions,
+            format!(
+                r#"{{"items": [{{"item": 0, "revision": 0, "action": "approve",
+                    "rename_to": "odd (2).mp4"{extra}}}]}}"#
+            ),
+        )
+        .unwrap();
+    };
+    decide(&format!(
+        r#", "excluded_tracks": [1], "added_tracks": [{{"first": 0, "last": {last},
+            "keyframes": [{{"frame": 0, "bbox": {{"x": 400, "y": 250, "width": 100, "height": 60}}}}]}}]"#
+    ));
+    let review = |extra: &[&str]| {
+        let (ffmpeg, ffprobe) = (ffmpeg(), ffprobe());
+        let mut args = vec![
+            "review",
+            "--session",
+            &id,
+            "--decisions",
+            decisions.to_str().unwrap(),
+            "--tiles",
+            "off",
+        ];
+        if !extra.is_empty() {
+            args.extend([
+                "--ffmpeg",
+                ffmpeg.to_str().unwrap(),
+                "--ffprobe",
+                ffprobe.to_str().unwrap(),
+            ]);
+            args.extend(extra);
+        }
+        f.cli(&args)
+    };
+    let without = review(&[]);
+    assert_eq!(without.code, 2, "{}", without.stderr);
+    assert!(
+        without.stderr.contains("the session holds videos"),
+        "{}",
+        without.stderr
+    );
+    // The video's own settings bind its review, as the photo's bind a photo's.
+    let other = review(&["--videos", "--video-quality", "balanced"]);
+    assert_eq!(other.code, 1, "{}\n{}", other.stdout, other.stderr);
+    assert!(
+        other.stdout.contains("the models or settings differ"),
+        "{}",
+        other.stdout
+    );
+    assert!(sessions.join(&id).join("item-0/regions").exists());
+
+    let reviewed = review(&["--videos"]);
+    assert_eq!(reviewed.code, 0, "{}\n{}", reviewed.stdout, reviewed.stderr);
+    assert!(
+        reviewed.stdout.contains("published (reviewed)"),
+        "{}",
+        reviewed.stdout
+    );
+    assert_eq!(names(&f.out()), ["odd (2).mp4", "odd.mp4"]);
+    assert_eq!(
+        std::fs::read(f.out().join("odd.mp4")).unwrap(),
+        b"someone else's"
+    );
+    assert!(names(&sessions).is_empty(), "{:?}", names(&sessions));
+
+    let (_, source_frames) = frames(&source);
+    let (_, output_frames) = frames(&f.out().join("odd (2).mp4"));
+    assert_eq!(output_frames.len(), source_frames.len());
+    for (source, output) in source_frames.iter().zip(&output_frames) {
+        for (x, y) in [(150, 75), (299, 149)] {
+            assert!(
+                close(pixel(output, x, y), pixel(source, x, y), 24),
+                "({x}, {y})"
+            );
+        }
+        assert!(!close(pixel(source, 450, 280), [0, 0, 0], 30));
+        assert!(close(pixel(output, 450, 280), [0, 0, 0], 6));
+    }
+}
+
+/// A gap a manual track shows over in every frame is resolved by it; one it misses a frame of is
+/// refused, and nothing is published.
+#[test]
+fn a_manual_track_resolves_a_gap_only_over_all_of_its_frames() {
     let f = Fixture::new();
     f.input(
         "odd.mp4",
@@ -310,36 +427,161 @@ fn a_video_held_for_review_is_not_kept_for_it_yet() {
     );
     std::fs::create_dir_all(f.out()).unwrap();
     std::fs::write(f.out().join("odd.mp4"), b"someone else's").unwrap();
-    let run = f.run_finding("0,0,1,1", &["--review", "off", "--videos"]);
+    let run = f.run_finding("100,50,200,100", &["--videos"]);
     assert_eq!(run.code, 3, "{}\n{}", run.stdout, run.stderr);
+    let id = run
+        .stdout
+        .lines()
+        .find_map(|l| l.strip_prefix("session\t"))
+        .unwrap()
+        .to_owned();
+    // The stand-in detector leaves no gap; one is written into the stored evidence.
+    let path = f.root.join("sessions").join(format!("{id}.json"));
+    let mut stored: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+    stored["items"][0]["evidence"] = serde_json::json!([{
+        "kind": "unresolved_gap", "detection": "face", "tracks": [1],
+        "first": 10, "last": 20, "resolution": "unresolved"
+    }]);
+    std::fs::write(&path, serde_json::to_vec(&stored).unwrap()).unwrap();
+
+    let decisions = f.root.join("decisions.json");
+    let review = |first: u64, last: u64| {
+        std::fs::write(
+            &decisions,
+            format!(
+                r#"{{"items": [{{"item": 0, "revision": 0, "action": "approve",
+                    "rename_to": "odd (2).mp4",
+                    "resolutions": [{{"evidence": 0, "resolution": "covered_by_manual_mask"}}],
+                    "added_tracks": [{{"first": {first}, "last": {last}, "keyframes":
+                        [{{"frame": {first}, "bbox": {{"x": 100, "y": 50, "width": 200, "height": 100}}}}]}}]}}]}}"#
+            ),
+        )
+        .unwrap();
+        let (ffmpeg, ffprobe) = (ffmpeg(), ffprobe());
+        f.cli(&[
+            "review",
+            "--session",
+            &id,
+            "--decisions",
+            decisions.to_str().unwrap(),
+            "--tiles",
+            "off",
+            "--videos",
+            "--ffmpeg",
+            ffmpeg.to_str().unwrap(),
+            "--ffprobe",
+            ffprobe.to_str().unwrap(),
+        ])
+    };
+    let short = review(11, 20);
+    assert_eq!(short.code, 1, "{}\n{}", short.stdout, short.stderr);
     assert!(
-        run.stdout
-            .lines()
-            .any(|l| l == "0\tnot kept for review\tvideos cannot be reviewed yet"),
+        short.stdout.contains("refused")
+            && short
+                .stdout
+                .contains("the added areas or tracks do not cover it"),
         "{}",
-        run.stdout
+        short.stdout
     );
-    assert!(run.stdout.contains("needs review"), "{}", run.stdout);
-    assert!(!run.stdout.contains("session\t"), "{}", run.stdout);
     assert_eq!(names(&f.out()), ["odd.mp4"]);
-    assert_eq!(
-        std::fs::read(f.out().join("odd.mp4")).unwrap(),
-        b"someone else's"
+    let covering = review(10, 20);
+    assert_eq!(covering.code, 0, "{}\n{}", covering.stdout, covering.stderr);
+    assert_eq!(names(&f.out()), ["odd (2).mp4", "odd.mp4"]);
+}
+
+/// Records a run killed in its tracks (as a crash or a power cut leaves them) are removed by the
+/// next run, but never those of a run still going.
+#[test]
+fn records_a_killed_run_left_go_with_the_next_run() {
+    let f = Fixture::new();
+    let long = f.root.join("in/long.mp4");
+    let status = Command::new(ffmpeg())
+        .args(["-v", "error", "-f", "lavfi"])
+        .args(["-i", "testsrc2=s=640x360:r=30:d=120"])
+        .args([
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+        ])
+        .arg(&long)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    let sessions = f.root.join("sessions");
+    let (out, ffmpeg, ffprobe) = (f.out(), ffmpeg(), ffprobe());
+    let mut running = Command::new(env!("CARGO_BIN_EXE_cloakframe-cli"))
+        .args(["run", "--output", out.to_str().unwrap(), "--videos"])
+        .args(["--ffmpeg", ffmpeg.to_str().unwrap()])
+        .args(["--ffprobe", ffprobe.to_str().unwrap()])
+        .args(["--fixed-detection", "10,10,50,50", "--tiles", "off"])
+        .arg("--sessions")
+        .arg(&sessions)
+        .arg(&long)
+        .env("HOME", f.root.join("home"))
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
+        .spawn()
+        .unwrap();
+    let item_records = || {
+        std::fs::read_dir(&sessions).ok().and_then(|entries| {
+            entries
+                .filter_map(Result::ok)
+                .map(|e| e.path().join("item-0"))
+                .find(|p| p.exists())
+        })
+    };
+    let started = std::time::Instant::now();
+    let records = loop {
+        if let Some(records) = item_records() {
+            break records;
+        }
+        assert!(running.try_wait().unwrap().is_none(), "the run ended early");
+        assert!(started.elapsed().as_secs() < 60, "no records appeared");
+        std::thread::sleep(std::time::Duration::from_millis(20));
+    };
+
+    let photo = f.root.join("photo.jpg");
+    std::fs::write(&photo, b"photo").unwrap();
+    let other = |output: &str| {
+        f.cli(&[
+            "run",
+            "--synthetic",
+            "--review",
+            "off",
+            "--output",
+            f.root.join(output).to_str().unwrap(),
+            photo.to_str().unwrap(),
+        ])
+    };
+    let beside = other("beside");
+    assert_eq!(beside.code, 0, "{}", beside.stderr);
+    assert!(
+        running.try_wait().unwrap().is_none(),
+        "the run ended before it could be killed; give it a longer video"
     );
+    assert!(records.exists());
+    running.kill().unwrap();
+    running.wait().unwrap();
+    assert!(records.exists());
+
+    let after = other("after");
+    assert_eq!(after.code, 0, "{}", after.stderr);
+    assert!(!records.exists());
+    assert!(names(&sessions).is_empty(), "{:?}", names(&sessions));
 }
 
 #[test]
-fn videos_need_tools_and_automatic_mode() {
+fn videos_need_their_tools() {
     let f = Fixture::new();
     let usage = |args: &[&str], message: &str| {
         let run = f.run(args);
         assert_eq!(run.code, 2, "{args:?}: {}", run.stderr);
         assert!(run.stderr.contains(message), "{args:?}: {}", run.stderr);
     };
-    usage(
-        &["--videos", "--mask", "0,0,8,8"],
-        "--videos needs --review off",
-    );
     usage(&["--mask", "0,0,8,8"], "the video options need --videos");
     usage(&["--videos", "--mask", "0,0,8"], "--mask is X,Y,W,H");
     usage(
@@ -354,8 +596,6 @@ fn videos_need_tools_and_automatic_mode() {
         "run",
         "--output",
         f.out().to_str().unwrap(),
-        "--review",
-        "off",
         "--videos",
         "--mask",
         "0,0,8,8",

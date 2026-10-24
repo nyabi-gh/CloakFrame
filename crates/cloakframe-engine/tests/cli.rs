@@ -89,8 +89,15 @@ impl Fixture {
         ])
     }
 
+    /// Stored sessions; each also has a lock file beside it.
     fn sessions(&self) -> usize {
-        std::fs::read_dir(self.root.join("sessions")).map_or(0, |d| d.count())
+        std::fs::read_dir(self.root.join("sessions")).map_or(0, |d| {
+            d.filter(|e| {
+                e.as_ref()
+                    .is_ok_and(|e| e.path().extension().is_some_and(|x| x == "json"))
+            })
+            .count()
+        })
     }
 }
 
@@ -312,7 +319,7 @@ fn runtime_errors_exit_with_one() {
     ]);
     assert_eq!(code, 1, "{stderr}");
     assert!(
-        stderr.contains("cannot save the review session"),
+        stderr.contains("cannot lock the review session"),
         "{stderr}"
     );
     assert!(!stderr.contains("usage:"), "{stderr}");

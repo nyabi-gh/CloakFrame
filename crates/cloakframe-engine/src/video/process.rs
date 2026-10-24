@@ -3,7 +3,9 @@
 //! source frame at full size, masks the frame's tracked regions and the fixed areas the user
 //! gives, encodes, and checks the output (P-4) before it waits for its publish permit. The source
 //! is never copied; its identity is compared before the first pass, after it, between the passes,
-//! after the second and right before publishing (plan 0.1).
+//! after the second and right before publishing (plan 0.1). Beside each pass a thread reads the
+//! source once more for the digest a review is bound to; a review resumed from a session renders
+//! only the same bytes on the same timeline.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -15,7 +17,7 @@ use cloakframe_core::detection::DetectionKind;
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, PublishBasis, PublishPermit};
 use cloakframe_core::mask::{MaskStyle, MosaicGrid, Region};
-use cloakframe_core::review::Digest;
+use cloakframe_core::review::{Digest, ManualTrack, VideoEdits};
 use cloakframe_core::tracking::TrackId;
 use image::{DynamicImage, RgbImage};
 use sha2::{Digest as _, Sha256};
@@ -24,7 +26,7 @@ use super::analysis::{self, AnalysisError, AnalysisSettings};
 use super::record::{Detected, Record, RecordError, TrackRegion};
 use super::tracking::{self, KindTracking, TrackSummary, TrackingError};
 use crate::detect::Rgb8Image;
-use crate::identity::SourceStamp;
+use crate::identity::{SourceStamp, file_digest};
 use crate::media::decode::{DecodeError, FrameReader, frame_size};
 use crate::media::encode::{
     Destination, EncodeError, Encoder, Encoders, FrameWriter, OutputCodec, Quality, encoded_size,
@@ -100,10 +102,12 @@ impl VideoSettings {
 
 #[derive(Debug)]
 pub enum VideoError {
-    /// Reviews of videos come with their detections (M5); until then a video is not resumed.
-    NotResumable,
     /// The source changed between reading its timeline and publishing the output.
     ChangedWhileProcessing,
+    /// A review resumed from a session: the bytes or the timeline are not the analyzed ones.
+    ChangedSinceAnalysis,
+    /// A review resumed from a session that does not hold a video's analysis.
+    NotAnalyzed,
     NameTaken,
     /// A mask that does not overlap the frame at all, most likely meant for another video.
     MaskOutside {
@@ -115,10 +119,13 @@ pub enum VideoError {
 impl fmt::Display for VideoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::NotResumable => f.write_str("videos cannot be resumed from a review yet"),
             Self::ChangedWhileProcessing => {
                 f.write_str("the source changed while it was processed")
             }
+            Self::ChangedSinceAnalysis => {
+                f.write_str("the source changed since it was analyzed; run it again")
+            }
+            Self::NotAnalyzed => f.write_str("the item has no video analysis to resume"),
             Self::NameTaken => f.write_str("the output name was taken during the run"),
             Self::MaskOutside { mask, size } => write!(
                 f,
@@ -171,17 +178,35 @@ fn tracking_failed(e: TrackingError) -> StepError {
     }
 }
 
-/// An item's analysis files in a folder of its own, removed with the item.
+/// The folder of an item's analysis files under a session's records folder.
+pub fn item_records_dir(records: &Path, item: ItemId) -> PathBuf {
+    records.join(format!("item-{}", item.0))
+}
+
+/// An item's analysis files in a folder of its own. Until the analysis is complete the folder
+/// goes with the item; after, it is kept for review or the second pass, and whoever keeps the
+/// session removes it once nothing needs it.
 pub struct ItemRecords {
     dir: PathBuf,
+    complete: bool,
 }
 
 impl ItemRecords {
     fn create(records: &Path, item: ItemId) -> io::Result<Self> {
         std::fs::create_dir_all(records)?;
-        let dir = records.join(format!("item-{}", item.0));
+        let dir = item_records_dir(records, item);
         std::fs::create_dir(&dir)?;
-        Ok(Self { dir })
+        Ok(Self {
+            dir,
+            complete: false,
+        })
+    }
+
+    fn existing(records: &Path, item: ItemId) -> Self {
+        Self {
+            dir: item_records_dir(records, item),
+            complete: true,
+        }
     }
 
     pub fn detections(&self) -> PathBuf {
@@ -200,25 +225,35 @@ impl ItemRecords {
 impl Drop for ItemRecords {
     fn drop(&mut self) {
         // Nothing can report a failure here. What is left is in the app's data folder, which the
-        // run's own cleanup of its records folder reports.
-        let _ = std::fs::remove_dir_all(&self.dir);
+        // session's own cleanup of its records folder reports.
+        if !self.complete {
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
     }
+}
+
+/// What a video's analysis leaves for review and for a second pass resumed from it, besides its
+/// evidence. The records themselves stay in the item's folder.
+#[derive(Debug, Clone, PartialEq)]
+pub struct VideoAnalysis {
+    /// [`Source::timeline_digest`].
+    pub timeline: Digest,
+    /// Source frames, the frames the records and the edits count.
+    pub frames: u64,
+    /// The display size the regions are in.
+    pub size: (u32, u32),
+    pub tracks: Vec<TrackSummary>,
 }
 
 /// A video's analysis waiting for its second pass.
 pub struct Analyzed {
     source: Source,
     records: ItemRecords,
-    tracks: Vec<TrackSummary>,
 }
 
 impl Analyzed {
     pub fn records(&self) -> &ItemRecords {
         &self.records
-    }
-
-    pub fn tracks(&self) -> &[TrackSummary] {
-        &self.tracks
     }
 }
 
@@ -228,17 +263,19 @@ fn source_rate(source: &Source) -> cloakframe_core::timeline::Rational {
     source.spec.average_rate.unwrap_or(source.spec.rate)
 }
 
-/// The verified output under its temporary name and the source it was made from.
+/// The verified output under its temporary name, the source it was made from and the item's
+/// records, which go once it is published.
 pub struct Rendered {
     output: TempOutput,
     source: SourceStamp,
+    records: PathBuf,
 }
 
 pub struct VideoProcessor {
-    tools: Tools,
-    settings: VideoSettings,
-    /// The run's folder for its items' records.
-    records: PathBuf,
+    pub(super) tools: Tools,
+    pub(super) settings: VideoSettings,
+    /// The session's folder for its items' records.
+    pub(super) records: PathBuf,
     /// Held for a whole second pass, so videos render one at a time: the encoder already keeps
     /// every core busy, and two 1080p encodes at once finished only 2–8% sooner than one after
     /// the other (M4 stage 4) while holding twice the memory.
@@ -317,25 +354,92 @@ fn encode_with_fallback<T>(
     }
 }
 
-/// What a second pass masks: in every frame the fixed areas and, from the region record, the
-/// frame's tracked regions on their track's mosaic grid.
-struct Masks<'a> {
+/// What a second pass or a preview masks: in every frame the frame's tracked regions on their
+/// track's mosaic grid, except the tracks the reviewer excluded, the reviewer's own tracks on
+/// theirs, and the fixed areas.
+pub(super) struct Masks<'a> {
     fixed: Vec<Region>,
     tracked: Option<(&'a Record<TrackRegion>, BTreeMap<TrackId, MosaicGrid>)>,
+    excluded: &'a [TrackId],
+    manual: Vec<(&'a ManualTrack, MosaicGrid)>,
+    size: (u32, u32),
 }
 
-impl Masks<'_> {
-    fn none() -> Self {
+impl<'a> Masks<'a> {
+    fn none(size: (u32, u32)) -> Self {
         Self {
             fixed: Vec::new(),
             tracked: None,
+            excluded: &[],
+            manual: Vec::new(),
+            size,
         }
     }
+
+    /// `tracked` is the region record with its [`track_grids`].
+    pub(super) fn new(
+        fixed: Vec<Region>,
+        tracked: Option<(&'a Record<TrackRegion>, BTreeMap<TrackId, MosaicGrid>)>,
+        edits: &'a VideoEdits,
+        style: &MaskStyle,
+        size: (u32, u32),
+    ) -> Self {
+        let manual = edits
+            .added_tracks
+            .iter()
+            .map(|track| (track, manual_grid(track, style, size)))
+            .collect();
+        Self {
+            fixed,
+            tracked,
+            excluded: &edits.excluded_tracks,
+            manual,
+            size,
+        }
+    }
+
+    pub(super) fn regions(&self) -> Option<&'a Record<TrackRegion>> {
+        self.tracked.as_ref().map(|(record, _)| *record)
+    }
+
+    /// Frame `k`'s regions into `out`, from the region record's entries of that frame.
+    pub(super) fn frame(&self, k: u64, entries: &[TrackRegion], out: &mut Vec<Region>) {
+        out.clear();
+        if let Some((_, grids)) = &self.tracked {
+            out.extend(
+                entries
+                    .iter()
+                    .filter(|r| !self.excluded.contains(&r.track))
+                    .map(|r| Region {
+                        roll: r.roll,
+                        grid: grids.get(&r.track).copied(),
+                        ..Region::new(r.bbox)
+                    }),
+            );
+        }
+        out.extend(self.manual.iter().filter_map(|(track, grid)| {
+            track.box_at(k, self.size).map(|b| Region {
+                grid: Some(*grid),
+                ..Region::new(b.bbox)
+            })
+        }));
+        out.extend_from_slice(&self.fixed);
+    }
+}
+
+/// A manual track's grid, on the cell its largest box needs, like a tracked one's.
+fn manual_grid(track: &ManualTrack, style: &MaskStyle, (width, height): (u32, u32)) -> MosaicGrid {
+    let cell = (track.first..=track.last)
+        .filter_map(|k| track.box_at(k, (width, height)))
+        .map(|b| MosaicGrid::cell_for(&b.bbox, style, width, height))
+        .max()
+        .unwrap_or_default();
+    MosaicGrid::new(cell)
 }
 
 /// Each track's mosaic grid, on the cell its largest box needs: a track's cells keep their size
 /// and place in every frame (plan 4.4).
-fn track_grids(
+pub(super) fn track_grids(
     regions: &Record<TrackRegion>,
     style: &MaskStyle,
     (width, height): (u32, u32),
@@ -356,7 +460,7 @@ fn track_grids(
         .collect())
 }
 
-fn mask_frame(
+pub(super) fn mask_frame(
     frame: &mut Rgb8Image,
     regions: &[Region],
     style: &MaskStyle,
@@ -409,8 +513,8 @@ impl VideoProcessor {
             height: 0,
             data: Vec::new(),
         };
-        let mut tracked = match &masks.tracked {
-            Some((record, grids)) => Some((record.ascending().map_err(PassError::Regions)?, grids)),
+        let mut tracked = match masks.regions() {
+            Some(record) => Some(record.ascending().map_err(PassError::Regions)?),
             None => None,
         };
         let (mut entries, mut regions) = (Vec::new(), Vec::new());
@@ -425,21 +529,15 @@ impl VideoProcessor {
                         decoded: read,
                     }));
                 }
-                regions.clear();
-                if let Some((record, grids)) = &mut tracked {
+                if let Some(record) = &mut tracked {
                     let at = record.next_into(&mut entries).map_err(PassError::Regions)?;
                     if at != Some(read as u64) {
                         return Err(PassError::Regions(RecordError::Damaged(
                             "the regions are not the source's frames",
                         )));
                     }
-                    regions.extend(entries.iter().map(|r| Region {
-                        roll: r.roll,
-                        grid: grids.get(&r.track).copied(),
-                        ..Region::new(r.bbox)
-                    }));
                 }
-                regions.extend_from_slice(&masks.fixed);
+                masks.frame(read as u64, &entries, &mut regions);
                 mask_frame(&mut frame, &regions, &self.settings.style).map_err(PassError::Mask)?;
                 read += 1;
                 ctx.progress.set(listed + read as u64, 2 * listed);
@@ -461,7 +559,7 @@ impl VideoProcessor {
         Ok(output)
     }
 
-    fn regions(&self, (width, height): (u32, u32)) -> Result<Vec<Region>, VideoError> {
+    pub(super) fn regions(&self, (width, height): (u32, u32)) -> Result<Vec<Region>, VideoError> {
         self.settings
             .masks
             .iter()
@@ -485,24 +583,44 @@ impl VideoProcessor {
     }
 }
 
-impl ItemProcessor for VideoProcessor {
-    type Prepared = Analyzed;
-    type Rendered = Rendered;
+/// Runs `work` while another thread reads the source for its digest. The digest is of use only
+/// if `work` succeeds, so a failure stops the read.
+fn beside_a_digest<T>(
+    ctx: &ItemContext<'_>,
+    work: impl FnOnce() -> Result<T, StepError>,
+) -> Result<(T, Digest), StepError> {
+    let reading = ctx.cancel.child();
+    std::thread::scope(|scope| {
+        let digest = std::thread::Builder::new()
+            .name("cloakframe-digest".into())
+            .spawn_scoped(scope, || file_digest(ctx.input, &reading))
+            .map_err(failed)?;
+        let result = work();
+        if result.is_err() {
+            reading.cancel();
+        }
+        let digest = digest
+            .join()
+            .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
+        let value = result?;
+        let digest = digest.map_err(|e| failed_unless_cancelled(ctx, e))?;
+        Ok((value, digest))
+    })
+}
 
-    /// The first half of the item's progress is the first pass, a unit per source frame.
-    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Analyzed), StepError> {
-        let before = SourceStamp::of(ctx.input).map_err(failed)?;
-        let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
-            .map_err(|e| failed_unless_cancelled(ctx, e))?;
-        unchanged(ctx, before)?;
-        self.regions(source.spec.display_size()).map_err(failed)?;
-        let records = ItemRecords::create(&self.records, ctx.item).map_err(failed)?;
+impl VideoProcessor {
+    fn first_pass(
+        &self,
+        ctx: &ItemContext<'_>,
+        source: &Source,
+        records: &ItemRecords,
+    ) -> Result<(analysis::FirstPass, tracking::Tracked), StepError> {
         let settings = &self.settings.analysis;
         let listed = source.frames.len() as u64;
         let first = analysis::first_pass(
             &self.tools.ffmpeg,
             ctx.input,
-            &source,
+            source,
             ctx.detector,
             settings,
             &records.detections(),
@@ -510,9 +628,8 @@ impl ItemProcessor for VideoProcessor {
             |done| ctx.progress.set(done, 2 * listed),
         )
         .map_err(analysis_failed)?;
-        unchanged(ctx, before)?;
         let record = Record::<Detected>::open(&records.detections()).map_err(failed)?;
-        let rate = source_rate(&source);
+        let rate = source_rate(source);
         let kinds: Vec<KindTracking> = settings
             .kinds()
             .into_iter()
@@ -528,6 +645,49 @@ impl ItemProcessor for VideoProcessor {
             ctx.cancel,
         )
         .map_err(tracking_failed)?;
+        Ok((first, tracked))
+    }
+
+    /// The source and records of an analysis stored for review, if the source still has the
+    /// analyzed timeline.
+    fn reopen(
+        &self,
+        ctx: &ItemContext<'_>,
+        analysis: &Analysis,
+        video: &VideoAnalysis,
+    ) -> Result<Analyzed, StepError> {
+        let stamp = analysis.source.expect("analysis records the source");
+        if SourceStamp::of(ctx.input).ok() != Some(stamp) {
+            return Err(failed(VideoError::ChangedSinceAnalysis));
+        }
+        let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
+            .map_err(|e| failed_unless_cancelled(ctx, e))?;
+        unchanged(ctx, stamp)?;
+        if source.timeline_digest() != video.timeline {
+            return Err(failed(VideoError::ChangedSinceAnalysis));
+        }
+        Ok(Analyzed {
+            source,
+            records: ItemRecords::existing(&self.records, ctx.item),
+        })
+    }
+}
+
+impl ItemProcessor for VideoProcessor {
+    type Prepared = Analyzed;
+    type Rendered = Rendered;
+
+    /// The first half of the item's progress is the first pass, a unit per source frame.
+    fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Analyzed), StepError> {
+        let before = SourceStamp::of(ctx.input).map_err(failed)?;
+        let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
+            .map_err(|e| failed_unless_cancelled(ctx, e))?;
+        unchanged(ctx, before)?;
+        self.regions(source.spec.display_size()).map_err(failed)?;
+        let mut records = ItemRecords::create(&self.records, ctx.item).map_err(failed)?;
+        let ((first, tracked), input) =
+            beside_a_digest(ctx, || self.first_pass(ctx, &source, &records))?;
+        unchanged(ctx, before)?;
         if first.reran_on_cpu {
             ctx.notes.add(Note::AnalyzedAgainOnCpu);
         }
@@ -545,16 +705,17 @@ impl ItemProcessor for VideoProcessor {
         let analysis = Analysis {
             evidence,
             source: Some(before),
+            input: Some(input),
+            video: Some(VideoAnalysis {
+                timeline: source.timeline_digest(),
+                frames: source.frames.len() as u64,
+                size: source.spec.display_size(),
+                tracks: tracked.tracks,
+            }),
             ..Analysis::default()
         };
-        Ok((
-            analysis,
-            Analyzed {
-                source,
-                records,
-                tracks: tracked.tracks,
-            },
-        ))
+        records.complete = true;
+        Ok((analysis, Analyzed { source, records }))
     }
 
     fn render(
@@ -563,44 +724,64 @@ impl ItemProcessor for VideoProcessor {
         request: &RenderRequest<'_>,
         prepared: Option<Analyzed>,
     ) -> Result<Rendered, StepError> {
-        let analyzed = prepared.ok_or_else(|| failed(VideoError::NotResumable))?;
+        let analysis = request.analysis;
+        let stamp = analysis.source.expect("analysis records the source");
+        let video = analysis
+            .video
+            .as_ref()
+            .ok_or_else(|| failed(VideoError::NotAnalyzed))?;
+        let resumed = prepared.is_none();
+        let analyzed = match prepared {
+            Some(analyzed) => analyzed,
+            None => self.reopen(ctx, analysis, video)?,
+        };
         let source = &analyzed.source;
-        let stamp = request
-            .analysis
-            .source
-            .expect("analysis records the source");
         let size = source.spec.display_size();
         let record;
         let masks = if request.basis == PublishBasis::ExportedWithoutAnonymization {
-            Masks::none()
+            Masks::none(size)
         } else {
             let fixed = self.regions(size).map_err(failed)?;
-            let tracked = if analyzed.tracks.is_empty() {
+            let style = &self.settings.style;
+            let tracked = if video.tracks.is_empty() {
                 None
             } else {
                 record =
                     Record::<TrackRegion>::open(&analyzed.records.regions()).map_err(failed)?;
-                let grids = track_grids(&record, &self.settings.style, size).map_err(failed)?;
+                let grids = track_grids(&record, style, size).map_err(failed)?;
                 Some((&record, grids))
             };
-            Masks { fixed, tracked }
+            Masks::new(fixed, tracked, &request.edits.video, style, size)
         };
         let mut encoders = self.encoders.lock().unwrap_or_else(|e| e.into_inner());
         unchanged(ctx, stamp)?;
-        let output = encode_with_fallback(
-            &mut encoders,
-            ctx.notes,
-            |encoders| {
-                encoders.pick(
-                    &self.tools.ffmpeg,
-                    self.settings.codec,
-                    &source.spec,
-                    ctx.cancel,
-                )
-            },
-            |encoder| self.pass(ctx, source, &masks, encoder),
-        )
-        .map_err(|e| failed_unless_cancelled(ctx, e))?;
+        let mut second_pass = || {
+            encode_with_fallback(
+                &mut encoders,
+                ctx.notes,
+                |encoders| {
+                    encoders.pick(
+                        &self.tools.ffmpeg,
+                        self.settings.codec,
+                        &source.spec,
+                        ctx.cancel,
+                    )
+                },
+                |encoder| self.pass(ctx, source, &masks, encoder),
+            )
+            .map_err(|e| failed_unless_cancelled(ctx, e))
+        };
+        // A pass straight after analysis renders the bytes the first pass read; a resumed one
+        // reads them again for the digest the review was bound to.
+        let output = if resumed {
+            let (output, input) = beside_a_digest(ctx, second_pass)?;
+            if analysis.input != Some(input) {
+                return Err(failed(VideoError::ChangedSinceAnalysis));
+            }
+            output
+        } else {
+            second_pass()?
+        };
         drop(encoders);
         unchanged(ctx, stamp)?;
         let (width, height) = encoded_size(size);
@@ -610,6 +791,7 @@ impl ItemProcessor for VideoProcessor {
         Ok(Rendered {
             output,
             source: stamp,
+            records: analyzed.records.dir.clone(),
         })
     }
 
@@ -625,6 +807,12 @@ impl ItemProcessor for VideoProcessor {
                 for w in &published.warnings {
                     ctx.notes.add(w.note());
                 }
+                match std::fs::remove_dir_all(&rendered.records) {
+                    Err(e) if e.kind() != io::ErrorKind::NotFound => {
+                        ctx.notes.add(Note::RecordsLeft);
+                    }
+                    _ => {}
+                }
                 Ok(())
             }
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
@@ -634,7 +822,7 @@ impl ItemProcessor for VideoProcessor {
         }
     }
 
-    fn fingerprint(&self) -> Fingerprint {
+    fn fingerprint(&self, _: &Path) -> Fingerprint {
         Fingerprint {
             models: self.settings.analysis.models.digest(),
             settings: self.settings.digest(),
@@ -651,7 +839,7 @@ mod tests {
     use crate::media::process::ToolError;
     use crate::test_support::{TestDir, fixtures, permit, required_env};
     use cloakframe_core::item::ItemId;
-    use cloakframe_core::review::PhotoEdits;
+    use cloakframe_core::review::Edits;
     use std::time::{Duration, SystemTime};
 
     /// Runs `step` with a context for `input` published to `out/clip.mp4`.
@@ -733,13 +921,16 @@ mod tests {
             strong: 1,
             low_confidence: false,
         };
-        let analyzed = Analyzed {
-            source,
-            records,
+        let video = VideoAnalysis {
+            timeline: source.timeline_digest(),
+            frames: source.frames.len() as u64,
+            size: source.spec.display_size(),
             tracks: vec![track],
         };
+        let analyzed = Analyzed { source, records };
         let analysis = Analysis {
             source: Some(SourceStamp::of(&input).unwrap()),
+            video: Some(video),
             ..Analysis::default()
         };
         with_context(&input, |ctx| {
@@ -748,7 +939,7 @@ mod tests {
                 &RenderRequest {
                     basis: PublishBasis::AutomaticUnreviewed,
                     analysis: &analysis,
-                    edits: &PhotoEdits::default(),
+                    edits: &Edits::default(),
                 },
                 Some(analyzed),
             );
@@ -787,7 +978,7 @@ mod tests {
             },
             dir.path().join("records"),
         );
-        let edits = PhotoEdits::default();
+        let edits = Edits::default();
         let out = dir.path().join("out");
 
         with_context(&input, |ctx| {
@@ -804,6 +995,10 @@ mod tests {
             )));
         });
         assert!(!out.exists() || std::fs::read_dir(&out).unwrap().next().is_none());
+        // A complete analysis outlives a failed render; the session's cleanup removes it.
+        let records = dir.path().join("records");
+        assert!(records.join("item-1/regions").exists());
+        std::fs::remove_dir_all(&records).unwrap();
 
         with_context(&input, |ctx| {
             let (analysis, source) = processor.analyze(ctx).unwrap();

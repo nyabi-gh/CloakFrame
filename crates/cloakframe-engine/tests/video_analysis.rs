@@ -15,11 +15,12 @@ use cloakframe_core::detection::{Detection, DetectionKind, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method};
-use cloakframe_core::review::PhotoEdits;
+use cloakframe_core::review::{Digest, Edits, Keyframe, ManualTrack, VideoEdits};
 use cloakframe_core::tracking::TrackingWindows;
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::{DetectError, Detector, DetectorHandle, Found, Rgb8Image};
 use cloakframe_engine::events::ProgressBoard;
+use cloakframe_engine::identity::content_digest;
 use cloakframe_engine::media::decode::{FrameReader, frame_size};
 use cloakframe_engine::media::source;
 use cloakframe_engine::run::{
@@ -29,6 +30,7 @@ use cloakframe_engine::run::{
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Analyzed, Tools, VideoProcessor, VideoSettings};
 use cloakframe_engine::video::record::{Detected, Record, TrackRegion};
+use cloakframe_engine::video::tracking::TrackSummary;
 use common::{TestDir, permit, required_env};
 
 fn ffmpeg() -> PathBuf {
@@ -193,10 +195,14 @@ fn render(
         &RenderRequest {
             basis: PublishBasis::AutomaticUnreviewed,
             analysis,
-            edits: &PhotoEdits::default(),
+            edits: &Edits::default(),
         },
         Some(analyzed),
     )
+}
+
+fn tracks(analysis: &cloakframe_engine::run::Analysis) -> &[TrackSummary] {
+    &analysis.video.as_ref().expect("a video's analysis").tracks
 }
 
 fn records_left(dir: &TestDir) -> usize {
@@ -220,8 +226,7 @@ fn every_frame_is_detected_and_tracked_into_regions() {
         let (analysis, analyzed) = processor.analyze(ctx).unwrap();
         assert!(analysis.evidence.is_empty(), "{:?}", analysis.evidence);
         assert_eq!(
-            analyzed
-                .tracks()
+            tracks(&analysis)
                 .iter()
                 .map(|t| (t.id, t.kind, t.first, t.last))
                 .collect::<Vec<_>>(),
@@ -373,7 +378,7 @@ fn nothing_published(dir: &TestDir) -> bool {
 
 /// P-1 (video, tests/fixtures/defects/P-1/expected.json): the face is lost in frames 30–64 and
 /// found again. A hole tracking bridges but does not fill is an unresolved gap: the video waits
-/// for review in automatic mode, and nothing is written to the output folder.
+/// for review in automatic mode with its records, and nothing is written to the output folder.
 #[test]
 fn an_unfilled_gap_holds_the_video_for_review_and_publishes_nothing() {
     let dir = TestDir::new();
@@ -399,7 +404,7 @@ fn an_unfilled_gap_holds_the_video_for_review_and_publishes_nothing() {
         })]
     );
     assert!(nothing_published(&dir));
-    assert_eq!(records_left(&dir), 0);
+    assert!(dir.path().join("records/item-1/regions").exists());
 }
 
 /// Detections a bounded model could not return hold a video as they hold a photo (P-1).
@@ -488,7 +493,7 @@ fn exports_past_a_gap_mask_what_was_tracked_or_nothing() {
                     &RenderRequest {
                         basis,
                         analysis: &analysis,
-                        edits: &PhotoEdits::default(),
+                        edits: &Edits::default(),
                     },
                     Some(analyzed),
                 )
@@ -585,7 +590,7 @@ fn a_tracks_mosaic_keeps_its_cells_while_its_box_jitters() {
     let cancel = CancelToken::new();
     with_context(&input, Jittering { calls: 0 }, &cancel, |ctx| {
         let (analysis, analyzed) = processor.analyze(ctx).unwrap();
-        assert_eq!(analyzed.tracks().len(), 1);
+        assert_eq!(tracks(&analysis).len(), 1);
         let rendered = render(&processor, ctx, &analysis, analyzed).unwrap();
         processor.publish(ctx, rendered, &permit()).unwrap();
     });
@@ -697,7 +702,7 @@ fn a_stream_whose_size_changes_is_scaled_to_its_first_size_in_both_passes() {
     let cancel = CancelToken::new();
     with_context(&input, detector, &cancel, |ctx| {
         let (analysis, analyzed) = processor.analyze(ctx).unwrap();
-        assert!(analyzed.tracks().is_empty());
+        assert!(tracks(&analysis).is_empty());
         let rendered = render(&processor, ctx, &analysis, analyzed).unwrap();
         processor.publish(ctx, rendered, &permit()).unwrap();
     });
@@ -709,4 +714,122 @@ fn a_stream_whose_size_changes_is_scaled_to_its_first_size_in_both_passes() {
         (output.spec.display_size(), output.frames.len()),
         ((320, 240), 120)
     );
+}
+
+/// A video analyzed and left for review, as the runner leaves it: its records kept, the
+/// prepared state dropped.
+fn analyzed_for_review(dir: &TestDir) -> (PathBuf, VideoProcessor, run::Analysis) {
+    let input = moving_square(dir);
+    let processor = processor_with(dir, TrackingWindows::default(), Vec::new());
+    let analysis = with_context(&input, WhiteSquare::new(), &CancelToken::new(), |ctx| {
+        let (analysis, analyzed) = processor.analyze(ctx).unwrap();
+        drop(analyzed);
+        analysis
+    });
+    assert!(dir.path().join("records/item-1/regions").exists());
+    (input, processor, analysis)
+}
+
+/// The square's track, drawn by hand: it moves in a straight line, so two keyframes follow it.
+fn by_hand() -> ManualTrack {
+    ManualTrack {
+        first: 0,
+        last: 89,
+        keyframes: vec![
+            Keyframe {
+                frame: 0,
+                bbox: square(0),
+            },
+            Keyframe {
+                frame: 89,
+                bbox: square(89),
+            },
+        ],
+    }
+}
+
+fn excluding(added: Vec<ManualTrack>) -> VideoEdits {
+    VideoEdits {
+        excluded_tracks: vec![1],
+        added_tracks: added,
+    }
+}
+
+fn resume(
+    processor: &VideoProcessor,
+    input: &Path,
+    analysis: &run::Analysis,
+    edits: VideoEdits,
+) -> Result<(), StepError> {
+    let edits = Edits {
+        video: edits,
+        ..Edits::default()
+    };
+    with_context(input, WhiteSquare::new(), &CancelToken::new(), |ctx| {
+        let rendered = processor.render(
+            ctx,
+            &RenderRequest {
+                basis: PublishBasis::Reviewed,
+                analysis,
+                edits: &edits,
+            },
+            None,
+        )?;
+        processor.publish(ctx, rendered, &permit())
+    })
+}
+
+/// A review resumed from its stored analysis renders the same bytes on the same timeline again,
+/// with the reviewer's edits: an excluded track is left bare, a track drawn by hand is masked.
+/// Its records go once it is published.
+#[test]
+fn a_stored_analysis_renders_again_with_the_reviewers_edits() {
+    for added in [Vec::new(), vec![by_hand()]] {
+        let dir = TestDir::new();
+        let (input, processor, analysis) = analyzed_for_review(&dir);
+        assert_eq!(
+            analysis.input,
+            Some(content_digest(&std::fs::read(&input).unwrap()))
+        );
+        let drawn = !added.is_empty();
+        resume(&processor, &input, &analysis, excluding(added)).unwrap();
+        assert!(!dir.path().join("records/item-1").exists());
+        let output = output_frames(&dir.path().join("out/clip.mp4"));
+        assert_eq!(output.len(), 90);
+        for (k, frame) in output.iter().enumerate() {
+            let k = k as u64;
+            assert!(
+                if drawn {
+                    masked(frame, k)
+                } else {
+                    bare(frame, k)
+                },
+                "frame {k}"
+            );
+        }
+    }
+}
+
+/// Other bytes, or the same bytes read as another timeline, are not rendered from a review.
+#[test]
+fn a_review_is_rendered_only_from_the_analyzed_bytes_and_timeline() {
+    let dir = TestDir::new();
+    let (input, processor, analysis) = analyzed_for_review(&dir);
+    let mut other_bytes = analysis.clone();
+    other_bytes.input = Some(Digest([0; 32]));
+    let mut other_timeline = analysis.clone();
+    other_timeline.video.as_mut().unwrap().timeline = Digest([0; 32]);
+    for changed in [other_bytes, other_timeline] {
+        let Err(StepError::Failed(e)) = resume(&processor, &input, &changed, VideoEdits::default())
+        else {
+            panic!("rendered a changed source");
+        };
+        assert!(
+            e.to_string().contains("changed since it was analyzed"),
+            "{e}"
+        );
+        assert!(nothing_published(&dir));
+    }
+    assert!(dir.path().join("records/item-1/regions").exists());
+    resume(&processor, &input, &analysis, VideoEdits::default()).unwrap();
 }

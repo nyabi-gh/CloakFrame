@@ -1,5 +1,7 @@
 //! Photos and videos in one run: each item goes to the pipeline its kind needs.
 
+use std::path::Path;
+
 use cloakframe_core::item::PublishPermit;
 
 use crate::photo::process::{self as photo, PhotoProcessor};
@@ -85,9 +87,14 @@ impl ItemProcessor for MediaProcessor {
         }
     }
 
-    /// The photo pipeline's: only photos are kept for review (videos join with M5), so the
-    /// video settings must not refuse a review of the run's photos.
-    fn fingerprint(&self) -> Fingerprint {
-        self.photo.fingerprint()
+    /// The pipeline's that processes `input`, so the video settings do not refuse a review of
+    /// the photos.
+    fn fingerprint(&self, input: &Path) -> Fingerprint {
+        match &self.video {
+            Some(video) if MediaKind::of(input) == Some(MediaKind::Video) => {
+                video.fingerprint(input)
+            }
+            _ => self.photo.fingerprint(input),
+        }
     }
 }

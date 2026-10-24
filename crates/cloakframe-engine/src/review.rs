@@ -5,7 +5,8 @@ use std::path::{Component, Path, PathBuf};
 use cloakframe_core::coverage::{Problem, Resolution, has_unresolved};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::ItemId;
-use cloakframe_core::review::{EditError, PhotoEdits};
+use cloakframe_core::review::{EditError, Edits, ManualTrack, PhotoEdits, VideoEdits};
+use cloakframe_core::tracking::TrackId;
 use serde::{Deserialize, Serialize};
 
 use crate::fs_case::NameRule;
@@ -13,7 +14,8 @@ use crate::output_plan::free_name;
 use crate::photo::format::ImageFormat;
 use crate::publish::TEMP_PREFIX;
 use crate::run::{Analysis, Decision, Fingerprint, JobItem, Start};
-use crate::session::{Session, SessionItem};
+use crate::session::{Session, SessionItem, StoredMedia};
+use crate::video::process::VideoAnalysis;
 
 /// A reviewer's decisions on a stored session, as written by the desktop app or by hand for
 /// `cloakframe-cli review`.
@@ -31,8 +33,8 @@ pub struct ItemDecision {
     pub revision: u64,
     pub action: Action,
     pub resolutions: Vec<EvidenceResolution>,
-    /// The whole edit document for the item; it replaces any earlier one.
-    pub edits: PhotoEdits,
+    /// The whole edit document for the item, the half of its kind; it replaces any earlier one.
+    pub edits: Edits,
     /// A new file name in the same folder, for an output whose name is taken.
     pub rename_to: Option<String>,
 }
@@ -51,6 +53,10 @@ struct ItemDecisionForm {
     excluded: Vec<usize>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     added: Vec<Rect>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    excluded_tracks: Vec<TrackId>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    added_tracks: Vec<ManualTrack>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     rename_to: Option<String>,
 }
@@ -62,9 +68,15 @@ impl From<ItemDecisionForm> for ItemDecision {
             revision: f.revision,
             action: f.action,
             resolutions: f.resolutions,
-            edits: PhotoEdits {
-                excluded: f.excluded,
-                added: f.added,
+            edits: Edits {
+                photo: PhotoEdits {
+                    excluded: f.excluded,
+                    added: f.added,
+                },
+                video: VideoEdits {
+                    excluded_tracks: f.excluded_tracks,
+                    added_tracks: f.added_tracks,
+                },
             },
             rename_to: f.rename_to,
         }
@@ -78,8 +90,10 @@ impl From<ItemDecision> for ItemDecisionForm {
             revision: d.revision,
             action: d.action,
             resolutions: d.resolutions,
-            excluded: d.edits.excluded,
-            added: d.edits.added,
+            excluded: d.edits.photo.excluded,
+            added: d.edits.photo.added,
+            excluded_tracks: d.edits.video.excluded_tracks,
+            added_tracks: d.edits.video.added_tracks,
             rename_to: d.rename_to,
         }
     }
@@ -145,7 +159,7 @@ impl fmt::Display for Rejection {
             Self::Edit(e) => e.fmt(f),
             Self::NotCovered { evidence } => write!(
                 f,
-                "evidence #{evidence} is marked as covered by a manual mask, but the added areas do not cover it"
+                "evidence #{evidence} is marked as covered by a manual mask, but the added areas or tracks do not cover it"
             ),
             Self::NothingToCover { evidence } => write!(
                 f,
@@ -176,7 +190,7 @@ pub struct Applied {
 pub fn apply(
     session: &mut Session,
     decisions: &ReviewDecisions,
-    fingerprint: Fingerprint,
+    fingerprint: impl Fn(&Path) -> Fingerprint,
 ) -> Applied {
     let mut applied = Applied::default();
     let mut seen = HashSet::new();
@@ -195,7 +209,13 @@ pub fn apply(
                 .push((decision.item, Rejection::UnknownItem));
             continue;
         };
-        match check(stored, decision, fingerprint, &output, &claimed) {
+        match check(
+            stored,
+            decision,
+            fingerprint(&stored.input),
+            &output,
+            &claimed,
+        ) {
             Ok(accepted) => {
                 let folder = accepted.destination.parent().unwrap_or(Path::new(""));
                 let case = NameRule::probe(&output.join(folder));
@@ -219,13 +239,8 @@ pub fn apply(
                                 Decision::ExportWithoutAnonymization
                             }
                         },
-                        analysis: Box::new(Analysis {
-                            detections: stored.detections.clone(),
-                            evidence: stored.evidence.clone(),
-                            source: Some(stored.source),
-                            input: Some(stored.revision.key().input),
-                        }),
-                        edits: stored.edits.clone(),
+                        analysis: Box::new(stored_analysis(stored)),
+                        edits: stored_edits(stored),
                     },
                 });
             }
@@ -254,26 +269,61 @@ fn check(
     if !stored.source_unchanged() {
         return Err(Rejection::SourceChanged);
     }
-    decision
-        .edits
-        .check(stored.detections.len())
-        .map_err(Rejection::Edit)?;
     let mut item = stored.clone();
-    item.edits = decision.edits.clone();
+    let wrong_media = Rejection::Edit(EditError::WrongMedia);
+    match &mut item.media {
+        StoredMedia::Photo { detections, edits } => {
+            if !decision.edits.video.is_empty() {
+                return Err(wrong_media);
+            }
+            let photo = &decision.edits.photo;
+            photo.check(detections.len()).map_err(Rejection::Edit)?;
+            edits.clone_from(photo);
+        }
+        StoredMedia::Video {
+            frames,
+            width,
+            height,
+            tracks,
+            edits,
+        } => {
+            if !decision.edits.photo.is_empty() {
+                return Err(wrong_media);
+            }
+            let video = &decision.edits.video;
+            video
+                .check(
+                    |id| tracks.iter().any(|t| t.id == id),
+                    *frames,
+                    (*width, *height),
+                )
+                .map_err(Rejection::Edit)?;
+            edits.clone_from(video);
+        }
+    }
     for r in &decision.resolutions {
         let evidence = item
             .evidence
             .get_mut(r.evidence)
             .ok_or(Rejection::NoSuchEvidence(r.evidence))?;
         if r.resolution == Resolution::CoveredByManualMask {
-            // Capped candidates, failed frames and gaps carry no box to compare with. Gaps get
-            // their track boxes with video edits (M5).
-            let Problem::WeakCandidate { bbox, .. } = evidence.problem else {
-                return Err(Rejection::NothingToCover {
-                    evidence: r.evidence,
-                });
+            // A weak candidate's box must lie in the added areas. A gap has no box, so a manual
+            // track must show in each of its frames; where cannot be checked (M5 plan). Capped
+            // candidates and failed frames can only be dismissed.
+            let covered = match (&evidence.problem, &item.media) {
+                (Problem::WeakCandidate { bbox, .. }, StoredMedia::Photo { edits, .. }) => {
+                    bbox.is_covered_by(&edits.added)
+                }
+                (Problem::UnresolvedGap { first, last, .. }, StoredMedia::Video { edits, .. }) => {
+                    edits.covers(*first, *last)
+                }
+                _ => {
+                    return Err(Rejection::NothingToCover {
+                        evidence: r.evidence,
+                    });
+                }
             };
-            if !bbox.is_covered_by(&item.edits.added) {
+            if !covered {
                 return Err(Rejection::NotCovered {
                     evidence: r.evidence,
                 });
@@ -314,6 +364,49 @@ fn check(
     item.conflict = None;
     item.suggestion = None;
     Ok(item)
+}
+
+/// What the item's render resumes from: its stored analysis.
+fn stored_analysis(stored: &SessionItem) -> Analysis {
+    let key = stored.revision.key();
+    let (detections, video) = match &stored.media {
+        StoredMedia::Photo { detections, .. } => (detections.clone(), None),
+        StoredMedia::Video {
+            frames,
+            width,
+            height,
+            tracks,
+            ..
+        } => (
+            Vec::new(),
+            Some(VideoAnalysis {
+                timeline: key.timeline,
+                frames: *frames,
+                size: (*width, *height),
+                tracks: tracks.clone(),
+            }),
+        ),
+    };
+    Analysis {
+        detections,
+        evidence: stored.evidence.clone(),
+        source: Some(stored.source),
+        input: Some(key.input),
+        video,
+    }
+}
+
+fn stored_edits(stored: &SessionItem) -> Edits {
+    match &stored.media {
+        StoredMedia::Photo { edits, .. } => Edits {
+            photo: edits.clone(),
+            ..Edits::default()
+        },
+        StoredMedia::Video { edits, .. } => Edits {
+            video: edits.clone(),
+            ..Edits::default()
+        },
+    }
 }
 
 /// One name in the folder that every system can hold: output folders are often shared with
@@ -369,6 +462,10 @@ mod tests {
         settings: Digest([3; 32]),
     };
 
+    fn same_settings(_: &Path) -> Fingerprint {
+        FINGERPRINT
+    }
+
     fn rect(x: f32) -> Rect {
         Rect::new(x, 0.0, 8.0, 8.0).unwrap()
     }
@@ -405,12 +502,14 @@ mod tests {
                         source: SourceStamp::of(&input).unwrap(),
                         input,
                         revision: ReviewRevision::first(key),
-                        detections: vec![
-                            Detection::new(ModelId::Yolo5FaceN, 0.9, rect(0.0), None, None)
-                                .unwrap(),
-                        ],
+                        media: StoredMedia::Photo {
+                            detections: vec![
+                                Detection::new(ModelId::Yolo5FaceN, 0.9, rect(0.0), None, None)
+                                    .unwrap(),
+                            ],
+                            edits: PhotoEdits::default(),
+                        },
                         evidence: vec![gap()],
-                        edits: PhotoEdits::default(),
                     }
                 })
                 .collect(),
@@ -423,7 +522,7 @@ mod tests {
             revision: 0,
             action,
             resolutions: Vec::new(),
-            edits: PhotoEdits::default(),
+            edits: Edits::default(),
             rename_to: None,
         }
     }
@@ -442,7 +541,7 @@ mod tests {
             evidence: 0,
             resolution: Resolution::CoveredByManualMask,
         });
-        d.edits.added = added;
+        d.edits.photo.added = added;
         d
     }
 
@@ -467,7 +566,7 @@ mod tests {
                     decide(2, Action::ExportWithWarnings),
                 ],
             },
-            FINGERPRINT,
+            same_settings,
         );
         assert_eq!(
             applied.rejected,
@@ -505,7 +604,7 @@ mod tests {
                     decide(9, Action::ExportWithWarnings),
                 ],
             },
-            FINGERPRINT,
+            same_settings,
         );
         assert_eq!(
             applied.rejected,
@@ -531,7 +630,7 @@ mod tests {
             &ReviewDecisions {
                 items: vec![export()],
             },
-            FINGERPRINT,
+            same_settings,
         );
         assert_eq!(
             applied.rejected,
@@ -561,7 +660,7 @@ mod tests {
         ] {
             let mut d = export();
             d.rename_to = Some(bad.into());
-            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, same_settings);
             assert_eq!(applied.rejected[0].1, Rejection::InvalidName, "{bad:?}");
         }
         // A four-byte stem that is not a device name, another image format, a name like one.
@@ -578,7 +677,7 @@ mod tests {
             &ReviewDecisions {
                 items: vec![renamed],
             },
-            FINGERPRINT,
+            same_settings,
         );
         assert!(applied.rejected.is_empty());
         assert_eq!(applied.jobs[0].destination, s.output.join("a (2).jpg"));
@@ -596,7 +695,7 @@ mod tests {
             &ReviewDecisions {
                 items: vec![decide(0, Action::ExportWithWarnings), second],
             },
-            FINGERPRINT,
+            same_settings,
         );
         assert_eq!(applied.jobs.len(), 1);
         assert!(matches!(
@@ -610,29 +709,32 @@ mod tests {
         let dir = TestDir::new();
         let mut s = session(&dir, &["a.jpg"]);
         let mut bad = decide(0, Action::ExportWithWarnings);
-        bad.edits.excluded = vec![1];
+        bad.edits.photo.excluded = vec![1];
         let mut empty_area = decide(0, Action::ExportWithWarnings);
-        empty_area.edits.added = vec![Rect::new(0.0, 0.0, 0.0, 4.0).unwrap()];
+        empty_area.edits.photo.added = vec![Rect::new(0.0, 0.0, 0.0, 4.0).unwrap()];
         for (d, want) in [
             (bad, Rejection::Edit(EditError::NoSuchDetection(1))),
             (empty_area, Rejection::Edit(EditError::EmptyArea(0))),
         ] {
-            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, same_settings);
             assert_eq!(applied.rejected, [(ItemId(0), want)]);
         }
 
         s.items[0].evidence = vec![weak(rect(20.0))];
         let mut covered = covered(decide(0, Action::Approve), vec![rect(20.0)]);
-        covered.edits.excluded = vec![0];
+        covered.edits.photo.excluded = vec![0];
         let applied = apply(
             &mut s,
             &ReviewDecisions {
                 items: vec![covered.clone()],
             },
-            FINGERPRINT,
+            same_settings,
         );
         assert!(applied.rejected.is_empty());
-        assert_eq!(s.items[0].edits, covered.edits);
+        let StoredMedia::Photo { edits, .. } = &s.items[0].media else {
+            panic!()
+        };
+        assert_eq!(*edits, covered.edits.photo);
         let Start::Reviewed { edits, .. } = &applied.jobs[0].start else {
             panic!()
         };
@@ -681,14 +783,14 @@ mod tests {
         ] {
             s.items[0].evidence = vec![evidence];
             let d = covered(decide(0, Action::Approve), added);
-            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, same_settings);
             assert_eq!(applied.rejected, [(ItemId(0), want)]);
         }
 
         s.items[0].evidence = vec![weak(rect(40.0))];
         let other_half = Rect::new(44.0, 0.0, 4.0, 8.0).unwrap();
         let d = covered(decide(0, Action::Approve), vec![half, other_half]);
-        let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, FINGERPRINT);
+        let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, same_settings);
         assert!(applied.rejected.is_empty(), "{:?}", applied.rejected);
     }
 
@@ -711,7 +813,7 @@ mod tests {
                 &ReviewDecisions {
                     items: vec![decide(0, Action::ExportWithoutAnonymization)],
                 },
-                fingerprint,
+                |_: &Path| fingerprint,
             );
             assert_eq!(applied.rejected, [(ItemId(0), Rejection::SettingsChanged)]);
         }
@@ -720,12 +822,125 @@ mod tests {
             &ReviewDecisions {
                 items: vec![decide(0, Action::ExportWithoutAnonymization)],
             },
-            FINGERPRINT,
+            same_settings,
         );
         let Start::Reviewed { decision, .. } = &applied.jobs[0].start else {
             panic!()
         };
         assert_eq!(*decision, Decision::ExportWithoutAnonymization);
+    }
+
+    fn video_item(session: &mut Session) {
+        let item = &mut session.items[0];
+        item.destination = PathBuf::from("clip.mp4");
+        item.media = StoredMedia::Video {
+            frames: 90,
+            width: 640,
+            height: 360,
+            tracks: vec![crate::video::tracking::TrackSummary {
+                id: 1,
+                kind: DetectionKind::Face,
+                first: 0,
+                last: 89,
+                detections: 80,
+                strong: 80,
+                low_confidence: false,
+            }],
+            edits: VideoEdits::default(),
+        };
+    }
+
+    fn manual(first: u64, last: u64) -> ManualTrack {
+        ManualTrack {
+            first,
+            last,
+            keyframes: vec![cloakframe_core::review::Keyframe {
+                frame: first,
+                bbox: rect(0.0),
+            }],
+        }
+    }
+
+    /// A video's decision names its tracks and adds tracks; a manual track resolves a gap only
+    /// over every frame of it. Photo edits on a video, and video edits on a photo, are refused.
+    #[test]
+    fn video_decisions_edit_tracks_and_cover_gaps_with_manual_tracks() {
+        let dir = TestDir::new();
+        let mut s = session(&dir, &["clip.jpg"]);
+        video_item(&mut s);
+        let decide_video = |video: VideoEdits| {
+            let mut d = covered(decide(0, Action::Approve), Vec::new());
+            d.edits.video = video;
+            d
+        };
+        let video = |excluded: Vec<TrackId>, added: Vec<ManualTrack>| VideoEdits {
+            excluded_tracks: excluded,
+            added_tracks: added,
+        };
+        let photo_on_video = covered(decide(0, Action::Approve), vec![rect(0.0)]);
+        for (d, want) in [
+            (photo_on_video, Rejection::Edit(EditError::WrongMedia)),
+            (
+                decide_video(video(vec![2], Vec::new())),
+                Rejection::Edit(EditError::NoSuchTrack(2)),
+            ),
+            (
+                decide_video(video(Vec::new(), vec![manual(80, 90)])),
+                Rejection::Edit(EditError::ManualTrack {
+                    track: 0,
+                    error: cloakframe_core::review::ManualTrackError::PastTheEnd,
+                }),
+            ),
+            (
+                decide_video(video(Vec::new(), vec![manual(30, 40), manual(42, 64)])),
+                Rejection::NotCovered { evidence: 0 },
+            ),
+        ] {
+            let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, same_settings);
+            assert_eq!(applied.rejected, [(ItemId(0), want)]);
+        }
+
+        let edits = video(vec![1], vec![manual(30, 41), manual(42, 64)]);
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions {
+                items: vec![decide_video(edits.clone())],
+            },
+            same_settings,
+        );
+        assert!(applied.rejected.is_empty(), "{:?}", applied.rejected);
+        let StoredMedia::Video { edits: stored, .. } = &s.items[0].media else {
+            panic!()
+        };
+        assert_eq!(*stored, edits);
+        let Start::Reviewed {
+            analysis,
+            edits: job_edits,
+            ..
+        } = &applied.jobs[0].start
+        else {
+            panic!()
+        };
+        assert_eq!(job_edits.video, edits);
+        let video = analysis.video.as_ref().unwrap();
+        assert_eq!(
+            (video.timeline, video.frames, video.size),
+            (Digest([4; 32]), 90, (640, 360))
+        );
+        assert_eq!(video.tracks[0].id, 1);
+
+        let mut photo = session(&dir, &["a.jpg"]);
+        let mut d = decide(0, Action::ExportWithWarnings);
+        d.edits.video.excluded_tracks = vec![1];
+        let applied = apply(
+            &mut photo,
+            &ReviewDecisions { items: vec![d] },
+            same_settings,
+        );
+        assert_eq!(
+            applied.rejected,
+            [(ItemId(0), Rejection::Edit(EditError::WrongMedia))]
+        );
     }
 
     #[test]
@@ -736,7 +951,10 @@ mod tests {
                  "resolutions": [{"evidence": 0, "resolution": "covered_by_manual_mask"}]},
                 {"item": 1, "revision": 2, "action": "export_with_warnings", "rename_to": "b (2).jpg"},
                 {"item": 2, "revision": 0, "action": "export_without_anonymization",
-                 "excluded": [0], "added": [{"x": 1, "y": 2, "width": 3, "height": 4}]}
+                 "excluded": [0], "added": [{"x": 1, "y": 2, "width": 3, "height": 4}]},
+                {"item": 3, "revision": 0, "action": "approve", "excluded_tracks": [4],
+                 "added_tracks": [{"first": 2, "last": 8, "keyframes": [
+                    {"frame": 3, "bbox": {"x": 10, "y": 20, "width": 30, "height": 40}}]}]}
             ]}"#,
         )
         .unwrap();
@@ -744,14 +962,21 @@ mod tests {
             decisions.items[2].action,
             Action::ExportWithoutAnonymization
         );
-        assert_eq!(decisions.items[2].edits.excluded, [0]);
-        assert_eq!(decisions.items[2].edits.added[0].height(), 4.0);
-        assert!(decisions.items[1].edits.is_empty());
+        assert_eq!(decisions.items[2].edits.photo.excluded, [0]);
+        assert_eq!(decisions.items[2].edits.photo.added[0].height(), 4.0);
+        assert_eq!(decisions.items[1].edits, Edits::default());
         assert_eq!(
             decisions.items[0].resolutions[0].resolution,
             Resolution::CoveredByManualMask
         );
         assert_eq!(decisions.items[1].rename_to.as_deref(), Some("b (2).jpg"));
+        let video = &decisions.items[3].edits.video;
+        assert_eq!(video.excluded_tracks, [4]);
+        assert_eq!(video.added_tracks[0].keyframes[0].bbox.width(), 30.0);
+        assert_eq!(
+            (video.added_tracks[0].first, video.added_tracks[0].last),
+            (2, 8)
+        );
     }
 
     #[test]
@@ -765,6 +990,11 @@ mod tests {
             r#"{"items": [{"item": 0, "revision": 0, "action": "approve",
                 "resolutions": [{"evidence": 0, "resolution": "dismissed", "note": "x"}]}]}"#,
             r#"{"items": [], "item": []}"#,
+            r#"{"items": [{"item": 0, "revision": 0, "action": "approve",
+                "added_tracks": [{"first": 0, "last": 1, "keyframe": []}]}]}"#,
+            r#"{"items": [{"item": 0, "revision": 0, "action": "approve",
+                "added_tracks": [{"first": 0, "last": 1, "keyframes": [
+                    {"frame": 0, "box": {"x": 1, "y": 2, "width": 3, "height": 4}}]}]}]}"#,
         ] {
             let error = serde_json::from_str::<ReviewDecisions>(json).unwrap_err();
             assert!(

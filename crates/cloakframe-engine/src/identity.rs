@@ -1,13 +1,34 @@
-use std::io;
+use std::io::{self, Read};
 use std::path::Path;
 
 use cloakframe_core::review::Digest;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 
+use crate::cancel::CancelToken;
+
 /// SHA-256 of a source's bytes as they were read, to which a review is bound (plan 4.2).
 pub fn content_digest(bytes: &[u8]) -> Digest {
     Digest(Sha256::digest(bytes).into())
+}
+
+/// [`content_digest`] of a file read in pieces, for videos, which are not held in memory. A
+/// cancel ends it with [`io::ErrorKind::Interrupted`].
+pub fn file_digest(path: &Path, cancel: &CancelToken) -> io::Result<Digest> {
+    let mut file = std::fs::File::open(path)?;
+    let mut hasher = Sha256::new();
+    let mut buffer = vec![0; 1 << 20];
+    loop {
+        if cancel.is_cancelled() {
+            return Err(io::ErrorKind::Interrupted.into());
+        }
+        match file.read(&mut buffer) {
+            Ok(0) => return Ok(Digest(hasher.finalize().into())),
+            Ok(n) => hasher.update(&buffer[..n]),
+            Err(e) if e.kind() == io::ErrorKind::Interrupted => {}
+            Err(e) => return Err(e),
+        }
+    }
 }
 
 /// Which file a path names, independent of how the path is spelled (case, `..`, links to the
@@ -123,6 +144,21 @@ mod tests {
         assert_eq!(
             identity(&dir.path().join("missing")).unwrap_err().kind(),
             io::ErrorKind::NotFound
+        );
+    }
+
+    #[test]
+    fn a_file_read_in_pieces_has_the_digest_of_its_bytes() {
+        let dir = crate::test_support::TestDir::new();
+        let path = dir.path().join("clip.mp4");
+        let bytes: Vec<u8> = (0..(3 << 20) + 17).map(|i| (i * 7 % 251) as u8).collect();
+        std::fs::write(&path, &bytes).unwrap();
+        let cancel = CancelToken::new();
+        assert_eq!(file_digest(&path, &cancel).unwrap(), content_digest(&bytes));
+        cancel.cancel();
+        assert_eq!(
+            file_digest(&path, &cancel).unwrap_err().kind(),
+            io::ErrorKind::Interrupted
         );
     }
 

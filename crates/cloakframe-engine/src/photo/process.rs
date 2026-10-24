@@ -293,6 +293,7 @@ impl ItemProcessor for PhotoProcessor {
             evidence,
             source: Some(prepared.source.stamp),
             input: Some(content_digest(&prepared.source.bytes)),
+            video: None,
         };
         Ok((analysis, prepared))
     }
@@ -334,7 +335,7 @@ impl ItemProcessor for PhotoProcessor {
             if request.analysis.detections.is_empty() {
                 ctx.notes.add(Note::NothingDetected);
             }
-            request.edits.regions(&request.analysis.detections)
+            request.edits.photo.regions(&request.analysis.detections)
         };
         let overlay = self
             .settings
@@ -387,7 +388,7 @@ impl ItemProcessor for PhotoProcessor {
         }
     }
 
-    fn fingerprint(&self) -> Fingerprint {
+    fn fingerprint(&self, _: &Path) -> Fingerprint {
         Fingerprint {
             models: self.settings.models.digest(),
             settings: self.settings.digest(),
@@ -414,7 +415,8 @@ mod tests {
     #[test]
     fn every_setting_changes_the_fingerprint() {
         let base = with_plates();
-        let processor = |s: PhotoSettings| PhotoProcessor::new(s).unwrap().fingerprint();
+        let processor =
+            |s: PhotoSettings| PhotoProcessor::new(s).unwrap().fingerprint(Path::new(""));
         let changed = [
             PhotoSettings {
                 thresholds: Thresholds {
@@ -481,7 +483,8 @@ mod tests {
 
     #[test]
     fn the_models_make_the_other_half_of_the_fingerprint() {
-        let fingerprint = |s: PhotoSettings| PhotoProcessor::new(s).unwrap().fingerprint();
+        let fingerprint =
+            |s: PhotoSettings| PhotoProcessor::new(s).unwrap().fingerprint(Path::new(""));
         let default = fingerprint(PhotoSettings::default());
         let plates = fingerprint(with_plates());
         assert_eq!(default.models, DetectionModels::default().digest());

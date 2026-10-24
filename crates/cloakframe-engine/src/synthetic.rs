@@ -96,6 +96,7 @@ impl ItemProcessor for SyntheticProcessor {
                 evidence,
                 source,
                 input,
+                video: None,
             },
             (),
         ))
@@ -154,7 +155,7 @@ impl ItemProcessor for SyntheticProcessor {
         }
     }
 
-    fn fingerprint(&self) -> Fingerprint {
+    fn fingerprint(&self, _: &std::path::Path) -> Fingerprint {
         Fingerprint {
             models: Digest(Sha256::digest(b"synthetic").into()),
             settings: Digest(Sha256::digest(b"").into()),

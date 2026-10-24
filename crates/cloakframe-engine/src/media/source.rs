@@ -3,7 +3,9 @@
 use std::fmt;
 use std::path::Path;
 
+use cloakframe_core::review::Digest;
 use cloakframe_core::timeline::{SourceFrames, TimelineSpec};
+use sha2::{Digest as _, Sha256};
 
 use crate::cancel::CancelToken;
 use crate::media::frames::{self, FramesError};
@@ -39,6 +41,25 @@ impl std::error::Error for OpenError {
             Self::Frames(e) => Some(e),
             Self::Unsupported(_) => None,
         }
+    }
+}
+
+impl Source {
+    /// What a review of the video is bound to besides its bytes: the timeline every pass and the
+    /// preview follow and the frames it maps (plan 4.2). Read again from the same bytes by the
+    /// same tools, it is the same.
+    pub fn timeline_digest(&self) -> Digest {
+        let mut h = Sha256::new();
+        h.update(format!(
+            "{:?}\nframes {} end {:?}\n",
+            self.spec,
+            self.frames.len(),
+            self.frames.end()
+        ));
+        for k in 0..self.frames.len() {
+            h.update(self.frames.pts(k).to_le_bytes());
+        }
+        Digest(h.finalize().into())
     }
 }
 
@@ -110,6 +131,27 @@ mod tests {
         assert_eq!(source.spec.estimated_frames, 60);
         let length = source.spec.duration_seconds.unwrap();
         assert!((length - 2.0).abs() < 0.01, "{length}");
+    }
+
+    /// A review is bound to every frame time and every part of the timeline.
+    #[test]
+    fn the_timeline_digest_follows_the_frames_and_the_spec() {
+        let pts = || (0..60).map(|k| k * 100 / 3).collect::<Vec<_>>();
+        let source = |spec, pts| finish(spec, frames(pts)).unwrap().timeline_digest();
+        let base = source(spec(None), pts());
+        assert_eq!(base, source(spec(None), pts()));
+        let mut moved = pts();
+        moved[30] += 1;
+        assert_ne!(base, source(spec(None), moved));
+        let mut shorter = pts();
+        shorter.pop();
+        assert_ne!(base, source(spec(None), shorter));
+        let mut turned = spec(None);
+        turned.rotation = Rotation::Quarter;
+        assert_ne!(base, source(turned, pts()));
+        let mut later = spec(None);
+        later.start = Seconds::new(1, 30).unwrap();
+        assert_ne!(base, source(later, pts()));
     }
 
     /// A header that says one second does not hide frames a day apart.
