@@ -5,6 +5,7 @@
 use std::path::PathBuf;
 
 use cloakframe_core::geometry::Rect;
+use cloakframe_core::review::{Keyframe, ManualTrack};
 use cloakframe_core::tracking::merge::{build_bidirectional_tracks, build_tracks};
 use cloakframe_core::tracking::post::{
     UncoveredSpan, extend_track_ends, interpolate_gaps, post_process_tracks, smooth_track,
@@ -75,6 +76,44 @@ fn track(v: &Value) -> Track {
         low_confidence: v["low_confidence"].as_bool().unwrap(),
         boxes: v["boxes"].as_array().unwrap().iter().map(tracked).collect(),
     }
+}
+
+fn manual(v: &Value) -> ManualTrack {
+    ManualTrack {
+        first: u(&v["start_frame"]),
+        last: u(&v["end_frame"]),
+        keyframes: v["keyframes"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|k| Keyframe {
+                frame: u(&k["frame"]),
+                bbox: rect(&k["rect"]),
+            })
+            .collect(),
+    }
+}
+
+/// 1.12.1 `materializeManualVideoTrack`: every frame's box, or nothing if any frame has none.
+fn materialize(track: &ManualTrack, frames: u64, size: (u32, u32), id: u32) -> Option<Track> {
+    track.check(frames, size).ok()?;
+    let boxes = (track.first..=track.last)
+        .map(|frame| {
+            let b = track.box_at(frame, size).unwrap();
+            TrackedBox {
+                frame,
+                bbox: b.bbox,
+                score: 1.0,
+                interpolated: b.interpolated,
+                roll: None,
+            }
+        })
+        .collect();
+    Some(Track {
+        id,
+        low_confidence: false,
+        boxes,
+    })
 }
 
 fn tracks(v: &Value) -> Vec<Track> {
@@ -269,14 +308,43 @@ fn replay(call: &Value, context: &str) {
             }
             assert_eq!(detector.finish(), cuts(&call["cuts"]), "{context}");
         }
+        "manualTrackRectAtFrame" => {
+            let got = manual(&call["track"]).rect_at(u(&call["frame"]));
+            let want = (!call["rect"].is_null()).then(|| rect(&call["rect"]));
+            assert_eq!(got, want, "{context}");
+        }
+        "materializeManualVideoTrack" => {
+            let size = &call["frame_size"];
+            let got = materialize(
+                &manual(&call["track"]),
+                u(&call["frame_count"]),
+                (u(&size[0]) as u32, u(&size[1]) as u32),
+                u(&call["assigned_id"]) as u32,
+            );
+            match &call["result"] {
+                Value::Null => assert!(got.is_none(), "{context}: {got:?}"),
+                want => {
+                    let want = Track {
+                        id: u(&call["assigned_id"]) as u32,
+                        low_confidence: false,
+                        boxes: want["boxes"]
+                            .as_array()
+                            .unwrap()
+                            .iter()
+                            .map(tracked)
+                            .collect(),
+                    };
+                    assert_track(&got.expect("a track"), &want, context);
+                }
+            }
+        }
         other => panic!("{context}: no replay for {other}"),
     }
 }
 
 /// Normative tests whose recorded calls are replayed. The other normative tests are checked
-/// elsewhere: the frame-rate windows in `tracking::tests` (the interpolation window changed, M5),
-/// the manual track in M5 stage 3 with video review, the scene-cut container in
-/// `tracking::scene::tests`.
+/// elsewhere: the frame-rate windows in `tracking::tests` (the interpolation window changed, M5)
+/// and the scene-cut container in `tracking::scene::tests`.
 const REPLAYED: &[&str] = &[
     "testBidirectionalTracksRespectConsecutiveSceneCuts",
     "testBidirectionalTracksRespectSceneCuts",
@@ -292,6 +360,7 @@ const REPLAYED: &[&str] = &[
     "testGuardRejectedGapIsCoveredConservatively",
     "testInterpolationCoversSizeJumpConservatively",
     "testLongGapAcrossSceneCutIsReportedWhenTracksMeet",
+    "testManualVideoTrackInterpolationAndBounds",
     "testNoInterpolationAcrossSceneCut",
     "testPoseIsTrackedAndInterpolated",
     "testRegionsForFrameCollectsAllTracks",
@@ -329,7 +398,6 @@ fn every_legacy_tracking_test_is_accounted_for() {
     let elsewhere = [
         "testTrackingWindowsFollowTheFrameRate",
         "testSceneCutsContainer",
-        "testManualVideoTrackInterpolationAndBounds",
         "testSceneCutDetectorReportsSingleFrameShotAsOneBoundary",
         "testTrackingSafetyLimitsRejectExcessiveData",
         "testTrackingCancellationGuard",
