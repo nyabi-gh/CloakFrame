@@ -111,7 +111,7 @@ M5 계획과 같은 Wikimedia Commons CC 영상(인터뷰·도로·거리·군�
 
 ## 남은 것
 
-- Windows·Linux CI: 이 단계의 2패스 마스크·`--fixed-detection`·실제 모델 영상 시험의 첫 실행.
+- 완료: PR #51(2026-10-24, main `08778f0`). 3개 OS CI와 탐지 벤치마크(core `mask.rs`가 바뀌어 돎, 기본 설정 얼굴 재현율 87.9%)가 통과했다. Windows·Linux에서는 이 PR이 2패스 마스크·`--fixed-detection`·실제 모델 영상 시험의 첫 실행이었다. 같은 실행의 1080p 파이프: 디코드 Linux 102 fps·macOS runner 160·Windows 101, 인코드 Linux 93·macOS runner 111·Windows 83. 1패스(debug, spin 끔/켬/끔/타일): macOS runner 7.0/6.0/6.0/1.9, Linux 7.4/6.7/7.6/2.6, Windows 6.6/5.4/5.6/2.1 fps로 1단계와 같은 모습(runner에서는 spin 이득이 보이지 않음).
 
 - 3단계(`m5-review`): 세션 형식 2(영상의 레코드·영역 파일·track 요약·gap evidence, track·gap의 kind가 결과 JSON에), 저장한 검토에서 2패스 재개, 영상 편집과 미리보기 API.
 - 2초 넘게 놓친 대상은 새 track이고 보고하지 않는다. 1.12.1과 같은 한계이고, 같은 자리 재시작을 gap으로 보는 것은 군중 잡음 때문에 M5 계획에서 하지 않기로 했다.
