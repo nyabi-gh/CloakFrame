@@ -1,0 +1,56 @@
+{
+  "note": "Clips of the video benchmark (docs/M5_BENCHMARK.md), cut from Wikimedia Commons files by tools/benchmark/video_fetch.py. Not in the repository.",
+  "clips": [
+    {
+      "name": "street",
+      "file": "street.webm",
+      "frames": 1140,
+      "cut": {"start": 153.607, "duration": 19},
+      "sha256": "e5721293b37dbca10d4467976563263ef331f91f0edd13994e1b5cc695e7bf3c",
+      "source": {
+        "name": "street.webm",
+        "title": "Walking in BRISTOL - UK - 4K 60fps (UHD).webm",
+        "page": "https://commons.wikimedia.org/wiki/File:Walking_in_BRISTOL_-_UK_-_4K_60fps_(UHD).webm",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Walking_in_BRISTOL_-_UK_-_4K_60fps_%28UHD%29.webm",
+        "author": "POPtravel",
+        "license": "CC BY 3.0",
+        "bytes": 157286400,
+        "sha256": "7e624c0f274ec80a126f27b1d392d49b7d75dc6e9623a498b1769ff9394b3ba1"
+      }
+    },
+    {
+      "name": "road",
+      "file": "road.webm",
+      "frames": 510,
+      "cut": {"start": 0, "duration": 20.4},
+      "sha256": "6237bc7b8d038a4587984b7a346eee27b0d151c76fcfc575a77cd3f459b60b3e",
+      "source": {
+        "name": "road.webm",
+        "title": "Road traffic on Stritarjeva street.webm",
+        "page": "https://commons.wikimedia.org/wiki/File:Road_traffic_on_Stritarjeva_street.webm",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/2/20/Road_traffic_on_Stritarjeva_street.webm",
+        "author": "Sounds of Changes",
+        "license": "CC BY 3.0",
+        "bytes": 16777216,
+        "sha256": "bee375d6d4018163e9392fd7d430d37082280fe1ae1f5c8949163473227a6a3c"
+      }
+    },
+    {
+      "name": "crowd",
+      "file": "crowd.mp4",
+      "frames": 750,
+      "cut": {"start": 0, "duration": 12.5, "retag": true},
+      "sha256": "b028ab7728163f1b549efc296e661d7d4886a4674d37a06cf0240aa246c03aae",
+      "source": {
+        "name": "crowd.webm",
+        "title": "Pyrkon 2026 - ambient flow of people 1.webm (Commons' 1080p VP9 transcode)",
+        "page": "https://commons.wikimedia.org/wiki/File:Pyrkon_2026_-_ambient_flow_of_people_1.webm",
+        "url": "https://upload.wikimedia.org/wikipedia/commons/transcoded/2/21/Pyrkon_2026_-_ambient_flow_of_people_1.webm/Pyrkon_2026_-_ambient_flow_of_people_1.webm.1080p.vp9.webm",
+        "author": "Rose Abrams",
+        "license": "CC BY 4.0",
+        "bytes": 12582912,
+        "sha256": "7a839422790dcecb52d6fee96faeca6a23e4a2e37df953ba1c5ed5ccfd578932"
+      }
+    }
+  ]
+}
