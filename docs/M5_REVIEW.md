@@ -130,4 +130,4 @@ SSD에서는 1패스 시간의 1% 아래다. 해시를 패스와 나란히 돌�
 - 재개한 렌더가 실패한 영상의 레코드는 세션이 끝날 때까지 남는다(다시 시도할 수 있게).
 - 완료: PR #52(2026-10-24, main `bd07db1`). 3개 OS CI와 탐지 벤치마크(기본 설정 얼굴 재현율 87.9%)가 통과했다. Windows·Linux에서 세션 잠금(`a_session_is_held_by_one_process_at_a_time`)·정리·kill 뒤 정리(`records_a_killed_run_left_go_with_the_next_run`) 시험이 처음 돌아 통과했다. 같은 실행(Actions run 40075046983)의 1080p 파이프: 디코드 Linux 99.5 fps·macOS runner 196·Windows 102, 인코드 Linux 94·macOS runner 150·Windows 82. 1패스(debug, spin 끔/켬/끔/타일): macOS runner 7.0/4.8/5.7/2.5, Linux 7.5/6.5/7.6/2.6, Windows 6.6/5.9/6.6/2.3 fps.
 - CLI 사용자는 세션 JSON에서 track 번호를 읽는다. `sessions` 목록은 항목 수만 보인다.
-- 4단계 `m5-benchmark`: 영상 탐지 품질(노출 프레임 수).
+- 4단계 `m5-benchmark`: 영상 탐지 품질(노출 프레임 수), [기록](M5_BENCHMARK.md).
