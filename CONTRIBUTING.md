@@ -71,7 +71,10 @@ from GitHub, so they need the network.
 With `--videos` it also processes MP4, MOV, M4V and WebM files: every frame is
 detected with the same models and settings as photos, and what is tracked is
 masked. Each `--mask X,Y,W,H` area, in display pixels, is masked in every frame
-as well. Videos cannot be reviewed yet (M5 stage 3), so they need `--review off`:
+as well. A video waiting for review keeps its analysis records in the session
+folder; the session JSON lists its tracks, and `review` (given the same video
+options) renders it again with the decisions, leaving `excluded_tracks` unmasked
+and masking `added_tracks` drawn by hand:
 
 ```bash
 cargo run -p cloakframe-engine --bin cloakframe-cli -- run --output out --review off \
