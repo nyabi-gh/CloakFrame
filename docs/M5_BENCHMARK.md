@@ -76,7 +76,7 @@ track 수와 gap(얼굴): 거리 72·3곳 / 69·0 / 146·0, 도로 61·3곳 / 65
 
 ## CI 게이트
 
-`video-benchmark.yml`(Linux, 추적·장면 전환·레코드·분석·`video_benchmark`·기준 파일이 바뀌는 PR과 main push, 수동 실행): `detections/*.jsonl.gz` 여섯 개를 `--from-detections`로 다시 추적하고 `video_evaluate.py --gate`로 `expected.json`(타일 끔 5,322, 타일 켬 912)과 1.12.1 기록에 비교한다. 허용은 얼굴 프레임의 1%(277). 추적 점수를 0.7로 올린 결과(노출 17,085)로 게이트가 실패하는 것을 확인했다. 기록은 이 Mac(arm64)에서 다시 추적한 결과다. 같은 감지를 x86 Linux에서 추적해도 같은 값인지는 첫 CI 실행에서 확인한다.
+`video-benchmark.yml`(Linux, 추적·장면 전환·레코드·분석·`video_benchmark`·기준 파일이 바뀌는 PR과 main push, 수동 실행): `detections/*.jsonl.gz` 여섯 개를 `--from-detections`로 다시 추적하고 `video_evaluate.py --gate`로 `expected.json`(타일 끔 5,322, 타일 켬 912)과 1.12.1 기록에 비교한다. 허용은 얼굴 프레임의 1%(277). 추적 점수를 0.7로 올린 결과(노출 17,085)로 게이트가 실패하는 것을 확인했다. 기록은 이 Mac(arm64)에서 다시 추적한 결과다. 같은 감지를 x86 Linux에서 추적해도 같은 값이었다(PR #53 첫 실행).
 
 추적 결과를 일부러 바꾸는 변경은 `expected.json`을 새 값으로 바꾸고 기록에 이유를 적는다. 감지를 바꾸는 변경은 `record_video.sh`로 감지 기록을 다시 만든다(클립 필요).
 
@@ -111,6 +111,7 @@ python3 tools/benchmark/video_sheets.py boxes "$CLOAKFRAME_FFMPEG" "$CLOAKFRAME_
 
 ## 남은 것
 
+- 완료: PR #53(2026-10-24, main `ed070a6`). 3개 OS CI·탐지 벤치마크(87.9%)와 영상 추적 벤치마크 첫 실행이 통과했다. x86 Linux에서 다시 추적한 노출이 기록과 같았다(타일 끔 5,322, 타일 켬 912, 1.12.1 7,791). 같은 실행의 1080p 파이프: 디코드 Linux 87 fps·macOS runner 219·Windows 102, 인코드 Linux 78·macOS runner 125·Windows 84. 1패스(debug, spin 끔/켬/끔/타일): macOS runner 6.5/6.9/5.7/2.0, Linux 6.8/6.4/6.9/2.4, Windows 6.6/5.8/6.6/2.1 fps.
 - 저조도·측면 위주 클립, 번호판 영상 기준(번호판은 기본 꺼짐).
 - 표본 사이 구멍의 길이는 표본 간격보다 잘게 재지 못한다. 연속 노출 길이가 필요하면 사람별 keyframe track이 필요하다.
 - 5단계 `m5-verify`: 완료 기준 표, 1시간 영상 RAM, 처리량(9.3), 범위 조정 점검.
