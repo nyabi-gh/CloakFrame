@@ -28,6 +28,7 @@ use cloakframe_engine::run::{
     StepError,
 };
 use cloakframe_engine::video::analysis::AnalysisSettings;
+use cloakframe_engine::video::preview::PreviewError;
 use cloakframe_engine::video::process::{Analyzed, Tools, VideoProcessor, VideoSettings};
 use cloakframe_engine::video::record::{Detected, Record, TrackRegion};
 use cloakframe_engine::video::tracking::TrackSummary;
@@ -832,4 +833,74 @@ fn a_review_is_rendered_only_from_the_analyzed_bytes_and_timeline() {
     }
     assert!(dir.path().join("records/item-1/regions").exists());
     resume(&processor, &input, &analysis, VideoEdits::default()).unwrap();
+}
+
+/// The preview gives frame k as the passes decode it, the frame's regions, and the frame masked
+/// as the second pass masks it under the edits, at the display size or smaller.
+#[test]
+fn the_preview_shows_a_frame_its_regions_and_its_masks() {
+    let dir = TestDir::new();
+    let (input, processor, analysis) = analyzed_for_review(&dir);
+    let cancel = CancelToken::new();
+    let preview = processor
+        .preview(ItemId(1), &input, &analysis, &cancel)
+        .unwrap();
+    assert_eq!((preview.frames(), preview.size()), (90, (1280, 720)));
+    assert_eq!(preview.tracks().len(), 1);
+    let decoded = output_frames(&input);
+    let none = VideoEdits::default();
+    for k in [0, 45, 89] {
+        let frame = preview.frame(k, None, &cancel).unwrap();
+        assert!(frame == decoded[k as usize], "frame {k}");
+        assert!(bare(&frame, k));
+
+        let regions = preview.regions(k, &excluding(vec![by_hand()])).unwrap();
+        let [tracked] = &regions.tracked[..] else {
+            panic!("frame {k}: {regions:?}");
+        };
+        assert_eq!(tracked.track, 1);
+        assert!(tracked.bbox.iou(&square(k)) > 0.9, "{:?}", tracked.bbox);
+        let [(0, drawn)] = regions.manual[..] else {
+            panic!("frame {k}: {regions:?}");
+        };
+        assert!(drawn.bbox.iou(&square(k)) > 0.99, "{:?}", drawn.bbox);
+        assert_eq!(drawn.interpolated, k != 0 && k != 89);
+
+        let shown = preview.masked(k, &none, None, &cancel).unwrap();
+        assert!(masked(&shown, k), "frame {k}");
+        let far = |f: &Rgb8Image| f.data[f.data.len() - 3..].to_vec();
+        assert_eq!(far(&shown), far(&frame));
+        let left_bare = preview
+            .masked(k, &excluding(Vec::new()), None, &cancel)
+            .unwrap();
+        assert!(left_bare == frame, "frame {k}");
+        let drawn = preview
+            .masked(k, &excluding(vec![by_hand()]), None, &cancel)
+            .unwrap();
+        assert!(masked(&drawn, k), "frame {k}");
+
+        let small = preview.masked(k, &none, Some(640), &cancel).unwrap();
+        assert_eq!((small.width, small.height), (640, 360));
+        let s = square(k);
+        let at = |x: f32, y: f32| {
+            let i = ((y / 2.0) as usize * 640 + (x / 2.0) as usize) * 3;
+            small.data[i..i + 3].to_vec()
+        };
+        assert!(at(s.x() + 40.0, s.y() + 40.0).iter().all(|&c| c <= 16));
+    }
+    assert!(matches!(
+        preview.frame(90, None, &cancel),
+        Err(PreviewError::NoSuchFrame(90))
+    ));
+
+    std::fs::File::options()
+        .write(true)
+        .open(&input)
+        .unwrap()
+        .set_modified(SystemTime::now() + Duration::from_secs(60))
+        .unwrap();
+    assert!(matches!(
+        processor.preview(ItemId(1), &input, &analysis, &cancel),
+        Err(PreviewError::ChangedSinceAnalysis)
+    ));
 }
