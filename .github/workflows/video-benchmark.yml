@@ -1,0 +1,74 @@
+name: Video benchmark
+
+# The video benchmark's tracking gate (plan 9.2, docs/M5_BENCHMARK.md) whenever what decides tracks
+# changes: the engine tracks its recorded first-pass detections of the benchmark clips again, and
+# the face frames it exposes must stay within one percent of the face frames of its recorded result.
+# Detection itself is the photo benchmark's; the clips are not fetched.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/video-benchmark.yml
+      - Cargo.lock
+      - tests/fixtures/benchmark/video/**
+      - tools/benchmark/video_evaluate.py
+      - crates/cloakframe-core/src/detection.rs
+      - crates/cloakframe-core/src/geometry.rs
+      - crates/cloakframe-core/src/timeline.rs
+      - crates/cloakframe-core/src/tracking/**
+      - crates/cloakframe-engine/examples/video_benchmark.rs
+      - crates/cloakframe-engine/src/video/analysis.rs
+      - crates/cloakframe-engine/src/video/record.rs
+      - crates/cloakframe-engine/src/video/tracking.rs
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/video-benchmark.yml
+      - Cargo.lock
+      - tests/fixtures/benchmark/video/**
+      - tools/benchmark/video_evaluate.py
+      - crates/cloakframe-core/src/detection.rs
+      - crates/cloakframe-core/src/geometry.rs
+      - crates/cloakframe-core/src/timeline.rs
+      - crates/cloakframe-core/src/tracking/**
+      - crates/cloakframe-engine/examples/video_benchmark.rs
+      - crates/cloakframe-engine/src/video/analysis.rs
+      - crates/cloakframe-engine/src/video/record.rs
+      - crates/cloakframe-engine/src/video/tracking.rs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: video-benchmark-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tracking:
+    name: Video tracking benchmark (ubuntu-24.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Track the recorded detections
+        run: |
+          cargo build --release --locked -p cloakframe-engine --example video_benchmark
+          r="$RUNNER_TEMP/results"; mkdir -p "$r"
+          for recorded in tests/fixtures/benchmark/video/detections/*.jsonl.gz; do
+            name=$(basename "$recorded" .jsonl.gz)
+            gzip -dc "$recorded" > "$r/$name.jsonl"
+            target/release/examples/video_benchmark --from-detections "$r/$name.jsonl" \
+              --out "$r/$name.json"
+          done
+
+      - name: Compare with the recorded result and 1.12.1
+        run: |
+          python3 -I tools/benchmark/video_evaluate.py --gate "$RUNNER_TEMP/results"/*.json \
+            tests/fixtures/benchmark/video/legacy/*.json.gz

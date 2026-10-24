@@ -15,6 +15,10 @@ on:
       - tests/fixtures/assets.json
       - tests/fixtures/benchmark/**
       - tools/benchmark/**
+      - '!tests/fixtures/benchmark/video/**'
+      - '!tools/benchmark/video_*'
+      - '!tools/benchmark/*_video.sh'
+      - '!tools/benchmark/legacy/legacy_video.cpp'
       - crates/cloakframe-core/src/detection.rs
       - crates/cloakframe-core/src/geometry.rs
       - crates/cloakframe-engine/examples/benchmark.rs
@@ -31,6 +35,10 @@ on:
       - tests/fixtures/assets.json
       - tests/fixtures/benchmark/**
       - tools/benchmark/**
+      - '!tests/fixtures/benchmark/video/**'
+      - '!tools/benchmark/video_*'
+      - '!tools/benchmark/*_video.sh'
+      - '!tools/benchmark/legacy/legacy_video.cpp'
       - crates/cloakframe-core/src/detection.rs
       - crates/cloakframe-core/src/geometry.rs
       - crates/cloakframe-engine/examples/benchmark.rs

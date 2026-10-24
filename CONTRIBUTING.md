@@ -106,6 +106,26 @@ A change meant to move the default result records the new one into
 and says why in its record. See [docs/M3_BENCHMARK.md](docs/M3_BENCHMARK.md) for
 the set and the other settings.
 
+Changes to tracking run the video benchmark: the engine's recorded first-pass
+detections of three Wikimedia Commons clips (`tests/fixtures/benchmark/video/`)
+are tracked again and the face frames left exposed are counted against
+hand-tagged reference faces, the recorded result and CloakFrame 1.12.1's
+(`.github/workflows/video-benchmark.yml`); to run it locally:
+
+```bash
+for f in tests/fixtures/benchmark/video/detections/*.jsonl.gz; do
+  n=$(basename "$f" .jsonl.gz); gzip -dc "$f" > "$n.jsonl"
+  cargo run --release -p cloakframe-engine --example video_benchmark -- \
+    --from-detections "$n.jsonl" --out "$n.json"
+done
+python3 -I tools/benchmark/video_evaluate.py --gate *.json tests/fixtures/benchmark/video/legacy/*.json.gz
+```
+
+A change meant to move that result updates `tests/fixtures/benchmark/video/expected.json`
+and says why; a change to detection records the detections again with
+`tools/benchmark/record_video.sh` (the clips come from `tools/benchmark/video_fetch.py`).
+See [docs/M5_BENCHMARK.md](docs/M5_BENCHMARK.md).
+
 The parser of ffprobe's report has libFuzzer targets in `fuzz/`, a separate
 Cargo project on a pinned nightly (CI's `fuzz.yml` runs them when the parser
 changes). `probe_report` mutates raw reports from `fuzz/seeds/`; `probe_fields`
