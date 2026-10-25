@@ -208,6 +208,7 @@ impl WithCpuFallback {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::detect::{DetectorHandle, prepared};
     use cloakframe_core::detection::{Detection, KindThresholds};
     use cloakframe_core::geometry::Rect;
     use std::sync::atomic::{AtomicUsize, Ordering};
@@ -226,7 +227,8 @@ mod tests {
     }
 
     /// One detection as wide as the image, tagged with the backend in its score; an image of
-    /// width 13 fails on the accelerator.
+    /// width 13 fails on the accelerator. Its prepared input is the image's width, as the real
+    /// detectors prepare theirs.
     struct Scripted(Backend);
 
     impl Detector for Scripted {
@@ -244,6 +246,20 @@ mod tests {
                 detections: vec![found],
                 ..Found::default()
             })
+        }
+
+        fn preparer(&self) -> Option<Preparer> {
+            Some(Box::new(|image| Box::new(image.width)))
+        }
+
+        fn detect_prepared(
+            &mut self,
+            image: &Rgb8Image,
+            input: Prepared,
+            thresholds: &Thresholds,
+        ) -> Result<Found, DetectError> {
+            assert_eq!(prepared::<u32>(input), image.width);
+            self.detect(image, thresholds)
         }
     }
 
@@ -302,6 +318,28 @@ mod tests {
         assert_eq!((score(&later), later.reran_on_cpu), (0.6, false));
         assert_eq!(made.load(Ordering::SeqCst), 2);
         assert_eq!(backends.sessions_made(), 2);
+    }
+
+    /// The inference thread hands every detector the input its preparer made.
+    #[test]
+    fn a_prepared_image_that_fails_is_analyzed_again_on_the_cpu() {
+        let made = Arc::new(AtomicUsize::new(0));
+        let backends = Backends::default();
+        let d = with_fallback(
+            ModelId::YuNet,
+            Backend::CoreMl,
+            maker(&made, None),
+            &backends,
+        )
+        .unwrap();
+        let handle = DetectorHandle::spawn(d).unwrap();
+        let first = handle.detect(image(4), thresholds()).unwrap();
+        assert_eq!((score(&first), first.reran_on_cpu), (0.9, false));
+        let failed = handle.detect(image(13), thresholds()).unwrap();
+        assert_eq!((score(&failed), failed.reran_on_cpu), (0.6, true));
+        let later = handle.detect(image(4), thresholds()).unwrap();
+        assert_eq!((score(&later), later.reran_on_cpu), (0.6, false));
+        assert_eq!(backends.get()[0].backend, Backend::Cpu);
     }
 
     #[test]
