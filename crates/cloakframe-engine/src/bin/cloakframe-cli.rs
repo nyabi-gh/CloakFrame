@@ -566,6 +566,16 @@ fn print_report(report: &RunReport) {
     }
 }
 
+/// The code for two outcomes at once: a failure outweighs items waiting for review.
+fn worse(a: u8, b: u8) -> u8 {
+    let rank = |code| match code {
+        FAILED => 2,
+        NEEDS_REVIEW => 1,
+        _ => 0,
+    };
+    if rank(b) > rank(a) { b } else { a }
+}
+
 fn exit_for(report: &RunReport) -> u8 {
     if report.count(|s| matches!(s, ItemState::Failed | ItemState::Cancelled)) > 0 {
         FAILED
@@ -727,14 +737,14 @@ fn run_with<P: ItemProcessor>(
             "cannot remove the video analysis records in {}: {e}",
             store.records_dir(&id).display()
         ));
-        code = code.max(FAILED);
+        code = worse(code, FAILED);
     }
     if let Some(saved) = saved {
         let id = saved.map_err(|e| failed(format!("cannot save the review session: {e}")))?;
         out(format_args!("session\t{}", id.as_str()));
     }
     if !scanned.issues.is_empty() || !left_out.is_empty() {
-        code = code.max(FAILED);
+        code = worse(code, FAILED);
     }
     Ok(code)
 }
@@ -841,7 +851,7 @@ fn review_with<P: ItemProcessor>(
             .map(|o| o.item)
             .collect();
         session.items.retain(|i| !finished.contains(&i.item));
-        code = code.max(exit_for(&report));
+        code = worse(code, exit_for(&report));
         resumed = Some(report);
     }
     // Stored before the report is written, which can fail once the terminal is gone. The

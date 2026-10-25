@@ -160,6 +160,25 @@ fn a_failing_item_fails_alone() {
     assert!(stdout.contains("failed") && stdout.contains("synthetic decode failure"));
 }
 
+/// A failure outweighs items waiting for review, wherever it comes from.
+#[test]
+fn a_scan_problem_fails_the_run_even_with_items_waiting_for_review() {
+    let f = Fixture::new();
+    f.input("clip-gap.jpg", b"gap");
+    let missing = f.root.join("missing.jpg");
+    let (code, stdout) = f.cli(&[
+        "run",
+        "--output",
+        f.out().to_str().unwrap(),
+        "--review",
+        "off",
+        f.root.join("in").to_str().unwrap(),
+        missing.to_str().unwrap(),
+    ]);
+    assert_eq!(code, 1, "{stdout}");
+    assert_eq!(f.sessions(), 1);
+}
+
 #[test]
 fn an_existing_output_is_kept_and_the_item_waits_for_a_new_name() {
     let f = Fixture::new();
