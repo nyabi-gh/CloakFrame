@@ -108,6 +108,8 @@ GPU 실패(ORT 오류, GPU 메모리 부족) 시 실패한 요청(타일 하나,
 
 **ORT 텔레메트리:** Microsoft가 배포하는 ORT 빌드는 텔레메트리가 기본으로 켜져 있다. Windows 구성 요소(Windows ML)는 OS 진단 데이터 경로(TraceLogging)로, macOS·Linux 공식 빌드는 1.29부터 들어 있는 1DS SDK로 앱 프로세스가 직접 `mobile.events.data.microsoft.com`에 HTTPS로 보내고, 사용자 Library(또는 홈) 아래 SQLite 저장소에 이벤트를 쌓는다. M0에서 확인한 결과 **`ORT_DISABLE_TELEMETRY=1`만이 1DS 전송을 막고, `DisableTelemetryEvents`(`with_telemetry(false)`)만으로는 전송 시도가 계속된다**([기록](M0_ORT_SPIKE.md#macos-api-27-재확인과-텔레메트리)). 그래서 `main` 첫 줄에서 다른 스레드가 생기기 전에 환경 변수를 설정하고, `with_telemetry(false)`도 함께 호출한다. 네트워크 감시(`spikes/ort/netwatch`)를 M8 릴리스 시험과 ORT 갱신마다 돌린다. 1.12.1 macOS 패키지와 Linux AppImage(둘 다 공식 1.29.0, 텔레메트리 호출 없음)는 전송을 시도하는 상태였다(Linux는 에뮬레이션 사전 실행).
 
+**crate 판(2026-10-25 변경):** 공개된 지 2주가 안 된 판도 쓴다. 그 전에는 2주가 안 된 판을 피하고 이전 판을 고정했다(보안 권고나 막는 결함만 예외). 판은 그대로 `=`로 고정하고 `manifests/rust.toml`에 적으며, 새 판을 넣을 때는 cargo-deny(라이선스·보안 권고)와 3개 OS CI를 통과해야 한다. 이미 이전 판으로 고정한 crate는 다른 이유로 올릴 때 함께 본다.
+
 ## 4. 아키텍처
 
 ### 4.1 crate 구성
@@ -397,7 +399,7 @@ crates/
   3. 영상 검토(`m6-video-review`): 타임라인·track 레인·gap, 프레임 이동·미리보기, 저해상도 연속 재생(범위 조정 ①), keyframe, gap 결정, 미리보기 전 `VideoEdits::check`(재검토 11번)
   4. 설정·미리보기·번역·접근성(`m6-settings`): 고급 설정, 샘플 미리보기, 하드웨어 인코드 실패 이유 표시(M5에서 넘어옴), `.ts` 이전 완료, 접근성 이름·역할·포커스
   5. 완료 확인(`m6-verify`): 흐름별 시험 표, macOS 실제 OS 점검, Windows·Linux CI 실행·스크린샷, 범위 조정 점검
-- **결정(2026-10-25, [기록](M6_PLAN.md)):** 위 단계, 범위 조정 ①②는 미루지 않음, 재검토 7·10번은 M8 품질 비교 전 별도 브랜치. egui·egui_kittest·eframe은 0.37.x(0.37.0이 10월 29일에 공개 2주, 0단계는 그 뒤 시작하고 M0 자동 시험을 다시 돌림), muda·rfd도 그때 2주 지난 최신 판. 글꼴은 JIS X 0213 전체와 KS X 1001 한자를 번들, 메뉴는 muda "custom"(Linux는 egui 메뉴 막대), 번역은 영어 `.ftl` 기준으로 1.12.1 `.ts`에서 쓰는 문장만 옮김(새 일본어는 기계 초안 + 검토 필요 표시), 설정은 앱 데이터 폴더의 `settings.toml`, 렌더러는 wgpu 기본·실패 시 glow. **완료(2026-10-25, PR #56, main `87e0e22`):** CI 4개(형식·린트·라이선스, 3개 OS 시험) 통과
+- **결정(2026-10-25, [기록](M6_PLAN.md)):** 위 단계, 범위 조정 ①②는 미루지 않음, 재검토 7·10번은 M8 품질 비교 전 별도 브랜치. egui·egui_kittest·eframe은 0.37.x(0단계 첫 커밋에서 M0 자동 시험을 다시 돌림), muda·rfd도 그때의 최신 판(같은 날 2주 규칙을 없애 0단계를 바로 시작할 수 있음, 3장). 글꼴은 JIS X 0213 전체와 KS X 1001 한자를 번들, 메뉴는 muda "custom"(Linux는 egui 메뉴 막대), 번역은 영어 `.ftl` 기준으로 1.12.1 `.ts`에서 쓰는 문장만 옮김(새 일본어는 기계 초안 + 검토 필요 표시), 설정은 앱 데이터 폴더의 `settings.toml`, 렌더러는 wgpu 기본·실패 시 glow. **완료(2026-10-25, PR #56, main `87e0e22`):** CI 4개(형식·린트·라이선스, 3개 OS 시험) 통과
 
 ### M7 — 배포·업데이트·이전
 

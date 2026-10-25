@@ -134,7 +134,7 @@ default-features = false
 features = ["rustls-no-provider", "platform-verifier"]
 # 모델 다운로드. 동기 API라 Tokio가 없다(2026-10-19, 계획 3장의 reqwest 대신). redirect는 engine이 한 단계씩
 # allowlist로 검사한다. rustls feature는 webpki-roots(CDLA-Permissive-2.0)를 넣으므로 쓰지 않고 OS 인증서
-# 저장소(platform-verifier)로 확인한다. 공개 2주가 안 된 ureq-proto 0.6.5 등 다섯 crate는 Cargo.lock에서 이전 판.
+# 저장소(platform-verifier)로 확인한다. ureq-proto 0.6.5 등 다섯 crate는 당시 공개 2주 규칙(2026-10-25에 없앰, 계획 3장)으로 Cargo.lock에서 이전 판.
 evidence = "docs/M3_MODELS.md"
 
 [crates.rustls]
