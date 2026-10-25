@@ -155,6 +155,7 @@ PR #55의 macOS CI에서 `media_decode.rs` `cancelling_stops_a_pass`가 취소 �
 - **위치:** `review.rs:260`. 결정은 `item`과 `revision` 번호만 대조한다. 모델·설정 지문과 원본 stamp는 보지만, 결정 파일 자체에는 입력 키가 없다. core `ReviewRevision::accepts`(키 + 번호)는 시험에서만 쓴다.
 - 예: 예전 세션의 `decisions.json`을 새 세션에 쓰면, 입력 폴더에 파일이 늘어 번호가 밀린 경우 `item 3, revision 0, export_without_anonymization`이 다른 사진에 적용된다.
 - 계획 4.2 `ReviewRevision` 행("입력·모델·설정·타임라인 해시에 묶인 수정 번호. 오래된 응답은 적용하지 않음")과 core 주석(`review.rs:94`)은 다른 입력의 응답도 막는 것처럼 읽힌다. M6의 앱 안 결정은 키를 들고 있겠지만, CLI 결정 파일은 그렇지 않다.
+- **처리(2026-10-26, M6 2단계 `m6-photo-review`):** 결정에 선택 필드 `key`를 더해, 있으면 세션의 키와 다를 때 `ForeignKey`로 거절한다(수정 번호보다 먼저, 시험 `a_decision_for_another_key_is_refused`). 앱은 항상 키를 채운다. 키 없이 손으로 쓴 CLI 결정 파일은 번호로만 막히며 계획 4.2·core 주석·CLI 도움말에 그렇게 적었다(메인테이너가 추천대로).
 
 ## 10. 움직이는 대상의 다시 잇기
 
