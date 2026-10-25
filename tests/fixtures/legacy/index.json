@@ -525,7 +525,7 @@
   "tracking_tests/testRetainedLowConfidenceTracksAreMarkedNotDropped": {
    "status": "intent",
    "plan": "M5, P-1",
-   "note": "약한 track은 CoverageEvidence의 '약한 후보'로 남아 게시를 막는다"
+   "note": "낮은 신뢰 track은 남겨 통째로 가리고 표시만 한다. 게시를 막지 않는다(M5 계획 결정, docs/M5_PLAN.md)"
   },
   "tracking_tests/testSceneCutDetectorCommitsCandidateRaisedWhileConfirming": {
    "status": "normative",
