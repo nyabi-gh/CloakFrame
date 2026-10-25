@@ -5,7 +5,7 @@ use std::path::{Component, Path, PathBuf};
 use cloakframe_core::coverage::{Problem, Resolution, has_unresolved};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::ItemId;
-use cloakframe_core::review::{EditError, Edits, ManualTrack, PhotoEdits, VideoEdits};
+use cloakframe_core::review::{EditError, Edits, ManualTrack, PhotoEdits, ReviewKey, VideoEdits};
 use cloakframe_core::tracking::TrackId;
 use serde::{Deserialize, Serialize};
 
@@ -38,6 +38,9 @@ pub struct ItemDecision {
     pub edits: Edits,
     /// A new file name in the same folder, for an output whose name is taken.
     pub rename_to: Option<String>,
+    /// What the decision was made against. The app always sends it; a decision file written by
+    /// hand may leave it out and is then held to the revision number alone.
+    pub key: Option<ReviewKey>,
 }
 
 /// The stored form of [`ItemDecision`], with the edits at the top level. serde cannot refuse
@@ -60,6 +63,8 @@ struct ItemDecisionForm {
     added_tracks: Vec<ManualTrack>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     rename_to: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    key: Option<ReviewKey>,
 }
 
 impl From<ItemDecisionForm> for ItemDecision {
@@ -80,6 +85,7 @@ impl From<ItemDecisionForm> for ItemDecision {
                 },
             },
             rename_to: f.rename_to,
+            key: f.key,
         }
     }
 }
@@ -96,6 +102,7 @@ impl From<ItemDecision> for ItemDecisionForm {
             excluded_tracks: d.edits.video.excluded_tracks,
             added_tracks: d.edits.video.added_tracks,
             rename_to: d.rename_to,
+            key: d.key,
         }
     }
 }
@@ -121,6 +128,8 @@ pub struct EvidenceResolution {
 pub enum Rejection {
     UnknownItem,
     DecidedTwice,
+    /// The decision was made against another input, models, settings or timeline.
+    ForeignKey,
     Stale {
         current: u64,
     },
@@ -149,6 +158,9 @@ impl fmt::Display for Rejection {
         match self {
             Self::UnknownItem => f.write_str("the session has no such item"),
             Self::DecidedTwice => f.write_str("the item is decided more than once"),
+            Self::ForeignKey => f.write_str(
+                "the decision was made for another input, models, settings or timeline",
+            ),
             Self::Stale { current } => {
                 write!(f, "the decision is for an older revision (current: {current})")
             }
@@ -258,6 +270,9 @@ fn check(
     output: &Path,
     claimed: &HashSet<(PathBuf, String)>,
 ) -> Result<SessionItem, Rejection> {
+    if decision.key.is_some_and(|key| key != stored.revision.key()) {
+        return Err(Rejection::ForeignKey);
+    }
     if decision.revision != stored.revision.number() {
         return Err(Rejection::Stale {
             current: stored.revision.number(),
@@ -462,7 +477,7 @@ mod tests {
     use crate::test_support::TestDir;
     use cloakframe_core::coverage::CoverageEvidence;
     use cloakframe_core::detection::{Detection, DetectionKind, ModelId};
-    use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
+    use cloakframe_core::review::{Digest, ReviewRevision};
 
     const FINGERPRINT: Fingerprint = Fingerprint {
         models: Digest([2; 32]),
@@ -531,6 +546,7 @@ mod tests {
             resolutions: Vec::new(),
             edits: Edits::default(),
             rename_to: None,
+            key: None,
         }
     }
 
@@ -1000,6 +1016,45 @@ mod tests {
         assert_eq!(
             applied.rejected,
             [(ItemId(0), Rejection::Edit(EditError::WrongMedia))]
+        );
+    }
+
+    /// A decision that carries the key it was made against applies only to that input, models,
+    /// settings and timeline, whatever its revision number (docs/M0_M5_REVIEW.md, item 9).
+    #[test]
+    fn a_decision_for_another_key_is_refused() {
+        let dir = TestDir::new();
+        let mut s = session(&dir, &["a.jpg", "b.jpg"]);
+        let current = s.items[1].revision.key();
+        let mut foreign = decide(1, Action::ExportWithoutAnonymization);
+        foreign.key = Some(ReviewKey {
+            input: Digest([9; 32]),
+            ..current
+        });
+        let mut own = decide(0, Action::ExportWithoutAnonymization);
+        own.key = Some(s.items[0].revision.key());
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions {
+                items: vec![foreign, own],
+            },
+            same_settings,
+        );
+        assert_eq!(applied.rejected, [(ItemId(1), Rejection::ForeignKey)]);
+        assert_eq!(applied.jobs.len(), 1);
+        assert_eq!(s.items[1].revision.number(), 0);
+
+        let mut keyed = decide(0, Action::Approve);
+        keyed.key = Some(current);
+        let json = serde_json::to_string(&ReviewDecisions { items: vec![keyed] }).unwrap();
+        let back: ReviewDecisions = serde_json::from_str(&json).unwrap();
+        assert_eq!(back.items[0].key, Some(current));
+        assert!(
+            !serde_json::to_string(&ReviewDecisions {
+                items: vec![decide(0, Action::Approve)]
+            })
+            .unwrap()
+            .contains("key")
         );
     }
 

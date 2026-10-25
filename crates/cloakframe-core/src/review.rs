@@ -92,7 +92,8 @@ impl ReviewRevision {
     }
 
     /// A response computed for an older revision, or for different inputs, must not be applied.
-    /// The CLI's decision files carry only the revision number (docs/M0_M5_REVIEW.md, item 9).
+    /// A decision file written by hand for the CLI may carry only the revision number
+    /// (docs/M0_M5_REVIEW.md, item 9).
     pub fn accepts(&self, response: &ReviewRevision) -> bool {
         self == response
     }

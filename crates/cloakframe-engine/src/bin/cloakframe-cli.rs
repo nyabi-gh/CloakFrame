@@ -56,7 +56,8 @@ is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts
 tiles are detected as well, which finds small faces in large photos at more cost. --gpu off keeps every model on the CPU; by default each runs on the GPU where this
 build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
 settings run was given, the video ones too; decisions on items analyzed with other settings are
-refused.
+refused. A decision may carry its item's key from the session (the revision's key); one made
+for another input, models, settings or timeline is refused.
 --videos processes MP4, MOV, M4V and WebM files as well, with the given FFmpeg and ffprobe.
 Every frame of a video is detected with the same models and settings as photos, and what is
 tracked is masked; each --mask area (display pixels, repeatable) is masked in every frame as
