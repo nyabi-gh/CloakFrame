@@ -6,9 +6,13 @@ use cloakframe_engine::scan::{MediaKind, ScanRequest, ScanResult, scan};
 use eframe::egui;
 use fluent_bundle::FluentValue;
 
+use cloakframe_core::item::ItemState;
+
 use crate::fonts;
 use crate::i18n::{Language, Translator};
+use crate::run::{self, Board, Failure, Running};
 use crate::settings::{Method, Notice, Settings, SettingsFile, Theme};
+use crate::tools::Tools;
 
 /// What a menu, a shortcut or a button asks of the app outside the widget it is in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,6 +47,11 @@ pub struct AppState {
     commands: Vec<Command>,
     /// The fonts were made for this language; a change of language makes them again.
     fonts_for: Option<Language>,
+    pub tools: Tools,
+    pub folders: run::Folders,
+    running: Option<Running>,
+    /// The run in progress or the last one, until the user starts anew.
+    pub board: Option<Board>,
 }
 
 impl AppState {
@@ -62,7 +71,17 @@ impl AppState {
             about_open: false,
             commands: Vec::new(),
             fonts_for: None,
+            tools: Tools::default(),
+            folders: run::Folders::default(),
+            running: None,
+            board: None,
         }
+    }
+
+    pub fn with_tools(mut self, tools: Tools, folders: run::Folders) -> Self {
+        self.tools = tools;
+        self.folders = folders;
+        self
     }
 
     pub fn tr(&self) -> &Translator {
@@ -95,7 +114,7 @@ impl AppState {
         let request = ScanRequest {
             inputs: self.inputs.clone(),
             recursive: true,
-            include_videos: true,
+            include_videos: self.tools.videos(),
             output: self.settings.output.clone(),
         };
         let cancel = CancelToken::new();
@@ -175,6 +194,7 @@ impl AppState {
         for command in std::mem::take(&mut self.commands) {
             self.run(command, &ctx);
         }
+        self.take_run_messages();
 
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         egui::Panel::top("menu").show(ui, |ui| crate::menu::bar(ui, self));
@@ -183,9 +203,13 @@ impl AppState {
             for notice in &self.notices {
                 ui.colored_label(ui.visuals().warn_fg_color, notice);
             }
-            self.drop_area(ui, &ctx);
-            ui.separator();
-            self.what_and_how(ui);
+            if self.board.is_some() {
+                self.run_view(ui);
+            } else {
+                self.drop_area(ui, &ctx);
+                ui.separator();
+                self.what_and_how(ui);
+            }
         });
         crate::about::window(&ctx, self);
     }
@@ -238,6 +262,12 @@ impl AppState {
                 ui.spinner();
                 ui.label(self.tr.get("scanning"));
             });
+        }
+        if !self.tools.videos() {
+            ui.colored_label(
+                ui.visuals().warn_fg_color,
+                self.tr.get("videos-need-ffmpeg"),
+            );
         }
         let Some(found) = &self.found else {
             return;
@@ -317,6 +347,7 @@ impl AppState {
                 );
             }
         });
+        ui.checkbox(&mut self.settings.review, self.tr.get("review-first"));
         if !self.settings.faces && !self.settings.plates {
             ui.colored_label(ui.visuals().warn_fg_color, self.tr.get("models-need-one"));
         }
@@ -360,6 +391,9 @@ impl AppState {
                 let blocker = self.start_blocker();
                 let start =
                     ui.add_enabled(blocker.is_none(), egui::Button::new(self.tr.get("start")));
+                if start.clicked() {
+                    self.start_run(ui.ctx());
+                }
                 if let Some(why) = blocker {
                     start.on_disabled_hover_text(self.tr.get(why));
                 }
@@ -369,14 +403,140 @@ impl AppState {
 
     /// The message saying why the run cannot start yet.
     pub fn start_blocker(&self) -> Option<&'static str> {
-        if !self.settings.faces && !self.settings.plates {
+        if self.board.is_some() {
+            Some("running")
+        } else if !self.settings.faces && !self.settings.plates {
             Some("models-need-one")
         } else if self.found.as_ref().is_none_or(|f| f.files.is_empty()) {
             Some("start-needs-files")
         } else if self.settings.output.is_none() {
             Some("start-needs-output")
+        } else if self.tools.ort_library.is_none() {
+            Some("start-needs-runtime")
         } else {
             None
+        }
+    }
+
+    fn start_run(&mut self, ctx: &egui::Context) {
+        let (Some(found), Some(output)) = (&self.found, &self.settings.output) else {
+            return;
+        };
+        let request = run::Request {
+            files: found.files.clone(),
+            output: output.clone(),
+            settings: self.settings.clone(),
+            tools: self.tools.clone(),
+            folders: self.folders.clone(),
+        };
+        match run::start(request, ctx) {
+            Ok(running) => {
+                self.running = Some(running);
+                self.board = Some(Board::default());
+            }
+            Err(e) => self.notices.push(e.to_string()),
+        }
+    }
+
+    fn take_run_messages(&mut self) {
+        let (Some(running), Some(board)) = (&self.running, &mut self.board) else {
+            return;
+        };
+        for message in running.messages() {
+            board.take(message);
+        }
+        if board.is_over() {
+            self.running = None;
+        }
+    }
+
+    /// Waits for the run in progress to end, for tests.
+    pub fn wait_for_run(&mut self) {
+        let (Some(running), Some(board)) = (&self.running, &mut self.board) else {
+            return;
+        };
+        while !board.is_over() {
+            match running.wait() {
+                Some(message) => board.take(message),
+                None => break,
+            }
+        }
+        self.running = None;
+    }
+
+    fn run_view(&mut self, ui: &mut egui::Ui) {
+        let Some(board) = &self.board else {
+            return;
+        };
+        let tr = &self.tr;
+        let mut cancel = false;
+        let mut again = false;
+        ui.horizontal(|ui| {
+            if let Some(finished) = &board.finished {
+                let count = |f: fn(ItemState) -> bool| {
+                    FluentValue::from(finished.report.items.iter().filter(|o| f(o.state)).count())
+                };
+                ui.heading(tr.with(
+                    "run-summary",
+                    &[
+                        ("saved", count(|s| matches!(s, ItemState::Published(_)))),
+                        ("review", count(|s| s == ItemState::NeedsReview)),
+                        ("failed", count(|s| s == ItemState::Failed)),
+                    ],
+                ));
+            } else if board.failure.is_none() {
+                ui.spinner();
+                ui.heading(tr.get("running"));
+            }
+            if board.is_over() {
+                again = ui.button(tr.get("run-new")).clicked();
+            } else {
+                cancel = ui.button(tr.get("cancel")).clicked();
+            }
+        });
+        if let Some(failure) = &board.failure {
+            let text = match failure {
+                Failure::NoRuntime => tr.get("start-needs-runtime"),
+                Failure::MissingModel(name) => {
+                    tr.with("model-missing", &[("name", FluentValue::from(*name))])
+                }
+                Failure::Other(e) => e.clone(),
+            };
+            ui.colored_label(ui.visuals().error_fg_color, text);
+        }
+        for note in board
+            .notes
+            .iter()
+            .chain(board.finished.iter().flat_map(|f| f.problems.iter()))
+        {
+            ui.colored_label(ui.visuals().warn_fg_color, note);
+        }
+        let progress = board
+            .progress
+            .as_ref()
+            .map(|p| p.snapshot())
+            .unwrap_or_default();
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for (item, input) in &board.items {
+                let state = board.states.get(item).copied().unwrap_or(ItemState::Queued);
+                ui.horizontal(|ui| {
+                    ui.label(tr.get(state_id(state)));
+                    let name = input.file_name().map(|n| n.to_string_lossy().into_owned());
+                    ui.label(name.unwrap_or_default());
+                    if !state.is_terminal()
+                        && state != ItemState::NeedsReview
+                        && let Some(p) = progress.get(item).filter(|p| p.total > 0)
+                    {
+                        ui.add(egui::ProgressBar::new(p.done as f32 / p.total as f32));
+                    }
+                });
+            }
+        });
+        if cancel && let Some(running) = &self.running {
+            running.cancel();
+        }
+        if again {
+            self.board = None;
         }
     }
 
@@ -421,5 +581,18 @@ fn describe(tr: &Translator, notice: &Notice) -> String {
             "settings-newer",
             &[("version", FluentValue::from(*version))],
         ),
+    }
+}
+
+fn state_id(state: ItemState) -> &'static str {
+    match state {
+        ItemState::Queued => "state-queued",
+        ItemState::Analyzed | ItemState::ReadyForRender(_) => "state-analyzed",
+        ItemState::NeedsReview => "state-needs-review",
+        ItemState::Rendering(_) => "state-rendering",
+        ItemState::Verified(_) => "state-verified",
+        ItemState::Published(_) => "state-published",
+        ItemState::Failed => "state-failed",
+        ItemState::Cancelled => "state-cancelled",
     }
 }

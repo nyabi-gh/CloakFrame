@@ -76,3 +76,23 @@ close = Close
 settings-unknown-keys = Settings this version does not know were kept: { $keys }
 settings-unreadable = The settings file could not be read and was left as it is: { $error }
 settings-newer = A newer version of CloakFrame wrote the settings (format { $version }); changes here are not saved.
+
+review-first = Review before saving
+running = Working…
+cancel = Cancel
+state-queued = Waiting
+state-analyzed = Analyzed
+state-needs-review = Needs review
+state-rendering = Saving
+state-verified = Checked
+state-published = Saved
+state-failed = Failed
+state-cancelled = Cancelled
+run-summary = { $saved ->
+    [one] One saved
+   *[other] { $saved } saved
+}, { $review } to review, { $failed } failed
+run-new = New run
+start-needs-runtime = ONNX Runtime was not found next to the app.
+model-missing = The detection model { $name } is not downloaded yet.
+videos-need-ffmpeg = FFmpeg was not found next to the app, so videos are left out.

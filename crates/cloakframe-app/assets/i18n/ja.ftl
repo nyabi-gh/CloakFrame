@@ -74,3 +74,21 @@ settings-unknown-keys = このバージョンが知らない設定はそのま�
 settings-unreadable = 設定ファイルを読み込めなかったため、そのまま残しました: { $error }
 ## needs review
 settings-newer = 新しいバージョンの CloakFrame が書いた設定です(形式 { $version })。ここでの変更は保存されません。
+
+## needs review
+review-first = 保存する前に確認
+running = 処理しています…
+cancel = キャンセル
+state-queued = 待機中
+state-analyzed = 分析済み
+state-needs-review = 確認が必要
+state-rendering = 保存中
+state-verified = 確認済み
+state-published = 保存済み
+state-failed = 失敗
+state-cancelled = キャンセル済み
+run-summary = 保存 { $saved } 件、確認待ち { $review } 件、失敗 { $failed } 件
+run-new = 新しく始める
+start-needs-runtime = アプリの隣に ONNX Runtime が見つかりません。
+model-missing = 検出モデル { $name } はまだダウンロードされていません。
+videos-need-ffmpeg = アプリの隣に FFmpeg が見つからないため、動画は除外しました。

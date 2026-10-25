@@ -53,6 +53,8 @@ pub struct Settings {
     pub plates: bool,
     pub method: Method,
     pub mosaic_strength: u8,
+    /// Hold every result for review; off publishes those with no unresolved problem.
+    pub review: bool,
 }
 
 impl Default for Settings {
@@ -67,6 +69,7 @@ impl Default for Settings {
             plates: false,
             method: Method::default(),
             mosaic_strength: cloakframe_core::mask::MosaicStrength::default().cells(),
+            review: true,
         }
     }
 }

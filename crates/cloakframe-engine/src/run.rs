@@ -289,7 +289,14 @@ impl RunHandle {
     }
 
     /// Drains the remaining events and returns the final report.
-    pub fn wait(mut self) -> RunReport {
+    pub fn wait(self) -> RunReport {
+        self.finish()
+            .expect("the run thread always sends RunFinished")
+    }
+
+    /// Drains the remaining events and waits for the run's thread. The report, unless a caller
+    /// reading [`Self::events`] already took it.
+    pub fn finish(mut self) -> Option<RunReport> {
         let mut report = None;
         for event in self.events.iter() {
             if let Event::RunFinished(r) = event {
@@ -301,7 +308,7 @@ impl RunHandle {
         {
             std::panic::resume_unwind(panic);
         }
-        report.expect("the run thread always sends RunFinished")
+        report
     }
 }
 

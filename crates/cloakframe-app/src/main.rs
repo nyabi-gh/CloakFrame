@@ -106,7 +106,10 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
         "CloakFrame",
         options,
         Box::new(move |cc| {
-            let mut state = AppState::new(settings, file, notices);
+            let mut state = AppState::new(settings, file, notices).with_tools(
+                cloakframe_app::tools::Tools::locate(),
+                cloakframe_app::run::Folders::of_the_app(),
+            );
             state.install_fonts(&cc.egui_ctx);
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             let menu = native_menu(cc, &state);
