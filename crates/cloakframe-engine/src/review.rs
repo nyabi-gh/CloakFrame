@@ -32,6 +32,7 @@ pub struct ItemDecision {
     /// The revision number the decision was made on; decisions on an older one are refused.
     pub revision: u64,
     pub action: Action,
+    /// Every resolution of the item; like the edits, it replaces any earlier one.
     pub resolutions: Vec<EvidenceResolution>,
     /// The whole edit document for the item, the half of its kind; it replaces any earlier one.
     pub edits: Edits,
@@ -300,6 +301,9 @@ fn check(
                 .map_err(Rejection::Edit)?;
             edits.clone_from(video);
         }
+    }
+    for evidence in &mut item.evidence {
+        evidence.resolution = Resolution::Unresolved;
     }
     for r in &decision.resolutions {
         let evidence = item
@@ -792,6 +796,58 @@ mod tests {
         let d = covered(decide(0, Action::Approve), vec![half, other_half]);
         let applied = apply(&mut s, &ReviewDecisions { items: vec![d] }, same_settings);
         assert!(applied.rejected.is_empty(), "{:?}", applied.rejected);
+    }
+
+    /// An accepted decision stays in the session when its publish fails, so the retry is
+    /// decided on the next revision. A retry without the manual mask must not keep the
+    /// resolution that mask earned.
+    #[test]
+    fn a_retry_decides_the_resolutions_again() {
+        let dir = TestDir::new();
+        let mut s = session(&dir, &["a.jpg"]);
+        s.items[0].evidence = vec![weak(rect(40.0))];
+        let first = covered(decide(0, Action::Approve), vec![rect(40.0)]);
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions { items: vec![first] },
+            same_settings,
+        );
+        assert!(applied.rejected.is_empty(), "{:?}", applied.rejected);
+
+        let mut retry = decide(0, Action::Approve);
+        retry.revision = 1;
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions { items: vec![retry] },
+            same_settings,
+        );
+        assert_eq!(
+            applied.rejected,
+            [(ItemId(0), Rejection::UnresolvedProblems)]
+        );
+
+        let mut s = session(&dir, &["clip.jpg"]);
+        video_item(&mut s);
+        let mut first = covered(decide(0, Action::Approve), Vec::new());
+        first.edits.video.added_tracks = vec![manual(30, 64)];
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions { items: vec![first] },
+            same_settings,
+        );
+        assert!(applied.rejected.is_empty(), "{:?}", applied.rejected);
+
+        let mut retry = decide(0, Action::Approve);
+        retry.revision = 1;
+        let applied = apply(
+            &mut s,
+            &ReviewDecisions { items: vec![retry] },
+            same_settings,
+        );
+        assert_eq!(
+            applied.rejected,
+            [(ItemId(0), Rejection::UnresolvedProblems)]
+        );
     }
 
     #[test]
