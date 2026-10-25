@@ -75,6 +75,8 @@
 
 PR #55의 macOS CI에서 `media_decode.rs` `cancelling_stops_a_pass`가 취소 대신 `Ok(false)`(끝까지 읽음)로 실패했다. 프로세스 감시 스레드는 취소를 50 ms마다만 보는데, 시험의 20초 320×240 영상은 이 Mac에서 파이프로 전부 디코드하는 데 약 63 ms라 runner가 조금만 늦어도 kill 전에 FFmpeg가 정상 종료한다. 그러면 취소한 패스가 끝까지 읽은 것으로 보였다. `FrameReader::next_into`가 프레임마다 취소를 직접 보게 고쳤다(이번 수정 전부터 있던 경쟁).
 
+병합(2026-10-25): PR #55의 CI 10개(3개 OS 시험·형식·라이선스·fuzz·탐지 벤치마크·영상 추적 벤치마크·1패스 release 3개 OS)가 `a8b13ad`에서 통과했고 메인테이너 지시로 main을 fast-forward했다.
+
 ## 1. 재시도 결정에서 남는 "수동 마스크로 덮음"
 
 - **위치:** `crates/cloakframe-engine/src/review.rs:253-336`(`check`), `bin/cloakframe-cli.rs:836-843`.
