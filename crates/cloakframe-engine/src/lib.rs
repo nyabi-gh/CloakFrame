@@ -19,6 +19,7 @@ pub mod review;
 pub mod run;
 pub mod scan;
 pub mod session;
+pub mod startup;
 #[cfg(feature = "synthetic")]
 pub mod synthetic;
 pub mod video;

@@ -3,17 +3,15 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Arc;
-use std::time::SystemTime;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, ModelId};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
-use cloakframe_engine::batch::{job_from_scan, session_from_report};
+use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stale_outputs};
 use cloakframe_engine::cancel::CancelToken;
-use cloakframe_engine::detect::fallback::{Acceleration, Backends, ModelBackend};
+use cloakframe_engine::detect::fallback::{Acceleration, ModelBackend};
 use cloakframe_engine::detect::models::{DetectionModels, FaceModel, LoadError};
-use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
 use cloakframe_engine::media::encode::{OutputCodec, Quality};
 use cloakframe_engine::media_processor::MediaProcessor;
@@ -21,11 +19,11 @@ use cloakframe_engine::model_files::download::{Https, download};
 use cloakframe_engine::model_files::{MODEL_FILES, ModelStore, Status, model_file};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
-use cloakframe_engine::publish::remove_stale_temp_files;
 use cloakframe_engine::review::{ReviewDecisions, apply};
 use cloakframe_engine::run::{ItemProcessor, Job, RunReport, start_under};
 use cloakframe_engine::scan::{ScanRequest, scan};
 use cloakframe_engine::session::{SessionError, SessionId, SessionLock, SessionStore, StoredMedia};
+use cloakframe_engine::startup::{self, StartError, Started};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 
@@ -348,21 +346,11 @@ fn media_processor(o: &Options, records: PathBuf) -> Result<MediaProcessor, CliE
 }
 
 fn spawn(detector: Box<dyn Detector>) -> Result<DetectorHandle, CliError> {
-    DetectorHandle::spawn(detector)
-        .map_err(|e| failed(format!("cannot start the inference thread: {e}")))
-}
-
-/// The inference thread and where each model on it runs.
-struct Started {
-    handle: DetectorHandle,
-    backends: Backends,
+    startup::spawn(detector).map_err(|e| failed(e.to_string()))
 }
 
 fn without_models() -> Result<Started, CliError> {
-    Ok(Started {
-        handle: spawn(Box::new(NoDetections))?,
-        backends: Backends::default(),
-    })
+    startup::without_models().map_err(|e| failed(e.to_string()))
 }
 
 fn model_name(model: ModelId) -> &'static str {
@@ -396,32 +384,6 @@ fn model_store(o: &Options) -> Result<(ModelStore, bool), CliError> {
         .ok_or_else(|| failed("no app data folder for this user; pass --models DIR"))
 }
 
-/// Copies into the app's model folder the models it lacks that CloakFrame 1.12.1 downloaded.
-fn import_legacy(
-    store: &ModelStore,
-    models: impl IntoIterator<Item = ModelId>,
-) -> Result<(), CliError> {
-    let folders = cloakframe_engine::legacy::model_dirs();
-    for model in models {
-        match store.import(model, &folders) {
-            Ok(Some(from)) => eprintln!(
-                "copied {} from {}",
-                model_file(model).name,
-                from.parent().unwrap_or(&from).display()
-            ),
-            Ok(None) => {}
-            Err(e) => {
-                return Err(failed(format!(
-                    "cannot copy {} into {}: {e}",
-                    model_file(model).name,
-                    store.dir().display()
-                )));
-            }
-        }
-    }
-    Ok(())
-}
-
 /// Loads ONNX Runtime from `library` and the models from `store`, and says where each runs.
 fn detector(
     library: &Path,
@@ -429,35 +391,18 @@ fn detector(
     models: DetectionModels,
     acceleration: Acceleration,
 ) -> Result<Started, CliError> {
-    if *app_folder {
-        import_legacy(store, models.ids())?;
-    }
-    let runtime = OrtRuntime::load(library).map_err(|e| failed(e.to_string()))?;
-    #[cfg(target_os = "macos")]
-    let runtime = match cloakframe_engine::app_dirs::cache_dir() {
-        Some(cache) => {
-            if let Err(e) = cloakframe_engine::legacy::remove_coreml_cache(&cache) {
-                eprintln!("cannot remove the models CloakFrame 1.12.1 compiled for CoreML: {e}");
-            }
-            let runtime = runtime.with_coreml_cache(cache.join("coreml"));
-            if let Err(e) = runtime.remove_unused_coreml_caches() {
-                eprintln!("cannot remove compiled CoreML models this build does not use: {e}");
-            }
-            runtime
-        }
-        None => runtime,
-    };
-    let loaded = models
-        .load(&runtime, store, acceleration)
-        .map_err(|e| match e {
-            LoadError::Missing { model, .. } => failed(format!(
-                "{e}; download it with `cloakframe-cli models fetch {}{}`",
-                fetch_name(model),
-                if *app_folder { "" } else { " --models DIR" }
-            )),
-            e => failed(e.to_string()),
-        })?;
-    for m in loaded.backends.get() {
+    let started = startup::with_models(library, store, *app_folder, models, acceleration, |n| {
+        eprintln!("{n}")
+    })
+    .map_err(|e| match e {
+        StartError::Load(e @ LoadError::Missing { model, .. }) => failed(format!(
+            "{e}; download it with `cloakframe-cli models fetch {}{}`",
+            fetch_name(model),
+            if *app_folder { "" } else { " --models DIR" }
+        )),
+        e => failed(e.to_string()),
+    })?;
+    for m in started.backends.get() {
         match &m.fallback {
             Some(f) => eprintln!(
                 "{} runs on the CPU: it could not start on {} ({})",
@@ -468,10 +413,7 @@ fn detector(
             None => eprintln!("{} runs on {}", model_name(m.model), m.backend),
         }
     }
-    Ok(Started {
-        handle: spawn(loaded.detector)?,
-        backends: loaded.backends,
-    })
+    Ok(started)
 }
 
 /// Models the GPU failed during the run. The item it failed on is noted in the report.
@@ -597,19 +539,6 @@ fn execute<P: ItemProcessor>(
     Ok(handle.wait())
 }
 
-fn clean_stale(job: &Job) {
-    let mut folders: Vec<_> = job
-        .items
-        .iter()
-        .filter_map(|i| i.destination.parent().map(PathBuf::from))
-        .collect();
-    folders.sort();
-    folders.dedup();
-    for folder in folders {
-        let _ = remove_stale_temp_files(&folder, SystemTime::now());
-    }
-}
-
 fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
     let output = o
         .output
@@ -640,7 +569,7 @@ fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
                 handle: spawn(Box::new(cloakframe_engine::synthetic::FixedDetection(
                     found,
                 )))?,
-                backends: Backends::default(),
+                backends: cloakframe_engine::detect::fallback::Backends::default(),
             })
         };
         return run_with(&o, &output, processor, detector, (store, session), cancel);
@@ -707,7 +636,7 @@ fn run_with<P: ItemProcessor>(
         o.review.unwrap_or(ReviewMode::Required),
         workers,
     );
-    clean_stale(&job);
+    remove_stale_outputs(&job);
     let started = if job.items.is_empty() {
         without_models()?
     } else {
@@ -715,17 +644,13 @@ fn run_with<P: ItemProcessor>(
     };
     let processor = Arc::new(processor);
     let report = execute(job, Arc::clone(&processor), started.handle, cancel)?;
-    // Saved before anything is written, which can fail once the terminal is gone.
-    let (session, left_out) =
-        session_from_report(&report, &plan, output, |input| processor.fingerprint(input));
-    let saved = session
-        .as_ref()
-        .map(|session| store.save(&id, session).map(|()| &id));
-    // The records of videos not kept for review are of no more use.
-    let cleaned = match (&session, &saved) {
-        (Some(session), Some(Ok(_))) => store.prune(&id, session),
-        _ => store.remove(&id),
-    };
+    let Kept {
+        saved,
+        cleaned,
+        left_out,
+    } = keep_for_review(&store, &id, &report, &plan, output, |input| {
+        processor.fingerprint(input)
+    });
     print_report(&report);
     print_fallbacks(&started.backends.get());
     for (item, reason) in &left_out {
@@ -740,7 +665,7 @@ fn run_with<P: ItemProcessor>(
         code = worse(code, FAILED);
     }
     if let Some(saved) = saved {
-        let id = saved.map_err(|e| failed(format!("cannot save the review session: {e}")))?;
+        saved.map_err(|e| failed(format!("cannot save the review session: {e}")))?;
         out(format_args!("session\t{}", id.as_str()));
     }
     if !scanned.issues.is_empty() || !left_out.is_empty() {
@@ -836,7 +761,7 @@ fn review_with<P: ItemProcessor>(
             review: ReviewMode::Required,
             workers: o.workers.unwrap_or(1),
         };
-        clean_stale(&job);
+        remove_stale_outputs(&job);
         // Resumed items are not analyzed again, so no model is loaded.
         let report = execute(
             job,
@@ -901,7 +826,10 @@ fn models(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
 
 fn list_models(store: &ModelStore, app_folder: bool) -> Result<u8, CliError> {
     if app_folder {
-        import_legacy(store, MODEL_FILES.iter().map(|f| f.model))?;
+        startup::import_legacy(store, MODEL_FILES.iter().map(|f| f.model), &mut |n| {
+            eprintln!("{n}")
+        })
+        .map_err(|e| failed(e.to_string()))?;
     }
     for file in &MODEL_FILES {
         let status = match store.status(file.model) {
@@ -954,7 +882,8 @@ fn fetch_models(
         }
     }
     if app_folder {
-        import_legacy(store, wanted.iter().copied())?;
+        startup::import_legacy(store, wanted.iter().copied(), &mut |n| eprintln!("{n}"))
+            .map_err(|e| failed(e.to_string()))?;
     }
     let mut needed = Vec::new();
     for model in wanted {

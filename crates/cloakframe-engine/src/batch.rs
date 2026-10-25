@@ -1,5 +1,7 @@
 use std::fmt;
-use std::path::Path;
+use std::io;
+use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
 use cloakframe_core::review::{Digest, PhotoEdits, ReviewKey, ReviewRevision, VideoEdits};
@@ -7,9 +9,10 @@ use sha2::{Digest as _, Sha256};
 
 use crate::identity::SourceStamp;
 use crate::output_plan::{PlannedOutput, plan_outputs};
+use crate::publish::remove_stale_temp_files;
 use crate::run::{Fingerprint, Job, JobItem, RunReport, Start};
 use crate::scan::{MediaKind, ScannedFile};
-use crate::session::{FORMAT_VERSION, Session, SessionItem, StoredMedia};
+use crate::session::{FORMAT_VERSION, Session, SessionId, SessionItem, SessionStore, StoredMedia};
 
 /// One job item per scanned file, in scan order. An output whose name is taken goes to review
 /// even in automatic mode.
@@ -41,6 +44,53 @@ pub fn job_from_scan(
         },
         plan,
     )
+}
+
+/// Removes the temp outputs earlier runs left in the job's output folders, before this run
+/// writes its own there.
+pub fn remove_stale_outputs(job: &Job) {
+    let mut folders: Vec<PathBuf> = job
+        .items
+        .iter()
+        .filter_map(|i| i.destination.parent().map(PathBuf::from))
+        .collect();
+    folders.sort();
+    folders.dedup();
+    for folder in folders {
+        let _ = remove_stale_temp_files(&folder, SystemTime::now());
+    }
+}
+
+/// What [`keep_for_review`] did with a finished run.
+pub struct Kept {
+    /// Whether a session was saved, and how saving went.
+    pub saved: Option<io::Result<()>>,
+    /// Removing the records no review needs: all of them when nothing was saved.
+    pub cleaned: io::Result<()>,
+    pub left_out: Vec<(ItemId, LeftOut)>,
+}
+
+/// Saves as session `id` the items `report` left for review, and removes the video records of
+/// the rest. Done before anything is shown, which can fail once a terminal is gone.
+pub fn keep_for_review(
+    store: &SessionStore,
+    id: &SessionId,
+    report: &RunReport,
+    plan: &[PlannedOutput],
+    output: &Path,
+    fingerprint: impl Fn(&Path) -> Fingerprint,
+) -> Kept {
+    let (session, left_out) = session_from_report(report, plan, output, fingerprint);
+    let saved = session.as_ref().map(|session| store.save(id, session));
+    let cleaned = match (&session, &saved) {
+        (Some(session), Some(Ok(()))) => store.prune(id, session),
+        _ => store.remove(id),
+    };
+    Kept {
+        saved,
+        cleaned,
+        left_out,
+    }
 }
 
 /// Why an item the run held for review is not in its review session.
