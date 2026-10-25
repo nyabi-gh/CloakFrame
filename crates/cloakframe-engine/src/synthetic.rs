@@ -1,8 +1,8 @@
 //! A processor that exercises the whole run without a media pipeline. It reads the input once,
 //! "renders" the bytes reversed (never a copy of the source, D9) and reports problems named in the
 //! file stem: `gap` gives an unresolved gap, `capped` capped candidates, `fail` a decode failure.
-//! `slow` keeps its temp output open until cancelled and `stuck` for a minute regardless, for the
-//! CLI's Ctrl+C tests. [`FixedDetection`] stands in for the models in the real pipelines.
+//! `slow` keeps its temp output open until cancelled, `held` for two seconds and `stuck` for a
+//! minute regardless, for the CLI's signal tests. [`FixedDetection`] stands in for the models in the real pipelines.
 
 use std::io::{self, Write};
 use std::time::{Duration, Instant};
@@ -119,9 +119,16 @@ impl ItemProcessor for SyntheticProcessor {
         let mut out = TempOutput::create(ctx.destination).map_err(io_failed)?;
         out.file().write_all(&bytes).map_err(io_failed)?;
         let stem = stem(ctx);
-        if stem.contains("slow") || stem.contains("stuck") {
+        let hold = if stem.contains("slow") || stem.contains("stuck") {
+            Duration::from_secs(60)
+        } else if stem.contains("held") {
+            Duration::from_secs(2)
+        } else {
+            Duration::ZERO
+        };
+        if !hold.is_zero() {
             let started = Instant::now();
-            while started.elapsed() < Duration::from_secs(60) {
+            while started.elapsed() < hold {
                 if stem.contains("slow") && ctx.cancel.is_cancelled() {
                     return Err(StepError::Cancelled);
                 }

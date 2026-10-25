@@ -365,6 +365,7 @@ fn a_closed_output_still_keeps_the_review_session() {
 
 #[cfg(unix)]
 mod interrupt {
+    use std::io::{BufRead, BufReader};
     use std::process::{Child, Command, Stdio};
     use std::time::{Duration, Instant};
 
@@ -480,6 +481,40 @@ mod interrupt {
             String::from_utf8_lossy(&output.stderr)
         );
         assert_eq!(code, Some(130));
+    }
+
+    /// Closing a terminal under zsh hangs the job up twice: the kernel's hangup, then zsh's own.
+    /// Neither may stop the CLI before it saves the review session and removes its temp outputs.
+    #[test]
+    fn hangups_only_cancel() {
+        let f = Fixture::new();
+        f.input("a-gap.jpg", b"gap");
+        f.input("b-held.jpg", b"held");
+        let mut child = start(&f);
+        let (lines, stderr) = std::sync::mpsc::channel();
+        let reader = BufReader::new(child.stderr.take().unwrap());
+        std::thread::spawn(move || {
+            for line in reader.lines() {
+                let _ = lines.send(line.unwrap());
+            }
+        });
+        wait_for_temp_output(&f);
+        let pid = Pid::from_raw(child.id() as i32).unwrap();
+        kill_process(pid, Signal::HUP).unwrap();
+        let mut seen = Vec::new();
+        while !seen.iter().any(|l: &String| l.contains("cancelling")) {
+            seen.push(stderr.recv_timeout(Duration::from_secs(10)).unwrap());
+        }
+        kill_process(pid, Signal::HUP).unwrap();
+        let code = exit_within(&mut child, Duration::from_secs(10));
+        if code.is_none() {
+            let _ = child.kill();
+        }
+        child.wait().unwrap();
+        seen.extend(stderr.try_iter());
+        assert_eq!(code, Some(130), "{seen:?}");
+        assert_eq!(f.sessions(), 1, "{seen:?}");
+        assert_eq!(super::files(&f.out()), Vec::<String>::new());
     }
 
     #[test]

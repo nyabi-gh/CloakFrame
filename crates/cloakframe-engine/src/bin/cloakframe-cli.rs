@@ -73,7 +73,7 @@ Test builds also take --synthetic, and with it --videos, to run without a media 
 the image the models are given) in every image; use it with --tiles off.
 
 Ctrl+C cancels: items in progress stop and nothing more is published. A second Ctrl+C exits at
-once.
+once. Closing the terminal only cancels.
 
 exit status: 0 done, 1 failed or refused items or a failed run, 2 usage error, 3 items wait for
 review, 130 cancelled";
@@ -1046,21 +1046,28 @@ fn main() -> ExitCode {
 }
 
 /// The first Ctrl+C (or SIGTERM) cancels; work in progress stops, temp outputs are removed and
-/// nothing more is published. A second one exits at once.
+/// nothing more is published. A second one exits at once. A hangup only ever cancels: closing a
+/// terminal under zsh sends two, the kernel's and zsh's own.
 fn cancel_on_interrupt() -> CancelToken {
     let cancel = CancelToken::new();
-    let handler = cancel.clone();
     #[cfg(unix)]
     let ignored = ignored_signals();
+    let handler = cancel.clone();
+    let mut interrupted = false;
     let installed = ctrlc::set_handler(move || {
-        if handler.is_cancelled() {
+        if interrupted {
             exit_now(CANCELLED);
         }
+        interrupted = true;
         handler.cancel();
         note("cancelling; press Ctrl+C again to stop at once");
     });
     if let Err(e) = installed {
         eprintln!("warning: Ctrl+C will stop without cleaning up: {e}");
+    }
+    #[cfg(unix)]
+    if !ignored.contains(&libc::SIGHUP) {
+        cancel_on_hangups(cancel.clone());
     }
     #[cfg(unix)]
     ignore(&ignored);
@@ -1104,6 +1111,35 @@ fn ignored_signals() -> Vec<libc::c_int> {
             }
         })
         .collect()
+}
+
+/// What a hangup cancels, set before the handler is installed.
+#[cfg(unix)]
+static HUNG_UP: std::sync::OnceLock<CancelToken> = std::sync::OnceLock::new();
+
+/// Replaces ctrlc's SIGHUP handler, which cannot tell a hangup from Ctrl+C.
+#[cfg(unix)]
+#[allow(unsafe_code)]
+fn cancel_on_hangups(cancel: CancelToken) {
+    extern "C" fn on_hangup(_: libc::c_int) {
+        // Only an atomic load and store, and write(2): all a signal handler may do.
+        if let Some(cancel) = HUNG_UP.get() {
+            cancel.cancel();
+        }
+        let line = b"hung up; cancelling\n";
+        // SAFETY: write(2) is async-signal-safe and reads `line` only.
+        unsafe { libc::write(libc::STDERR_FILENO, line.as_ptr().cast(), line.len()) };
+    }
+    let _ = HUNG_UP.set(cancel);
+    // SAFETY: an all-zero sigaction is a valid value to fill in; the handler above is
+    // async-signal-safe.
+    unsafe {
+        let mut action: libc::sigaction = std::mem::zeroed();
+        action.sa_sigaction = on_hangup as extern "C" fn(libc::c_int) as libc::sighandler_t;
+        action.sa_flags = libc::SA_RESTART;
+        libc::sigemptyset(&mut action.sa_mask);
+        libc::sigaction(libc::SIGHUP, &action, std::ptr::null_mut());
+    }
 }
 
 #[cfg(unix)]
