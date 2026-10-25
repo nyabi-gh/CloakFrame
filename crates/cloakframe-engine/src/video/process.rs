@@ -25,6 +25,7 @@ use sha2::{Digest as _, Sha256};
 use super::analysis::{self, AnalysisError, AnalysisSettings};
 use super::record::{Detected, Record, RecordError, TrackRegion};
 use super::tracking::{self, KindTracking, TrackSummary, TrackingError};
+use crate::cancel::CancelToken;
 use crate::detect::Rgb8Image;
 use crate::identity::{SourceStamp, file_digest};
 use crate::media::decode::{DecodeError, FrameReader, frame_size};
@@ -242,6 +243,9 @@ pub struct VideoAnalysis {
     pub frames: u64,
     /// The display size the regions are in.
     pub size: (u32, u32),
+    /// From the first frame shown to the end of the last, which with `frames` gives the average
+    /// length of a frame.
+    pub seconds: f64,
     pub tracks: Vec<TrackSummary>,
 }
 
@@ -261,6 +265,16 @@ impl Analyzed {
 /// or the output's when the source gives none.
 fn source_rate(source: &Source) -> cloakframe_core::timeline::Rational {
     source.spec.average_rate.unwrap_or(source.spec.rate)
+}
+
+/// A source frame's share of the item's progress, which counts pixels as photos do.
+fn frame_pixels(spec: &cloakframe_core::timeline::TimelineSpec) -> u64 {
+    let (width, height) = spec.display_size();
+    u64::from(width) * u64::from(height)
+}
+
+fn seconds(source: &Source) -> f64 {
+    source.frames.end().as_f64() - source.spec.start.as_f64()
 }
 
 /// The verified output under its temporary name, the source it was made from and the item's
@@ -283,6 +297,13 @@ pub struct VideoProcessor {
 }
 
 impl VideoProcessor {
+    /// The work [`ItemProcessor`]'s progress will count for `input`, from ffprobe's report
+    /// without its frame list.
+    pub fn estimated_work(&self, input: &Path, cancel: &CancelToken) -> Option<u64> {
+        let spec = crate::media::probe::probe(&self.tools.ffprobe, input, cancel).ok()?;
+        Some(2 * spec.estimated_frames * frame_pixels(&spec))
+    }
+
     /// Each item's records go in a folder of its own under `records`, made when it is analyzed.
     pub fn new(tools: Tools, settings: VideoSettings, records: PathBuf) -> Self {
         let encoders = Mutex::new(Encoders::new(settings.hardware_encode));
@@ -520,6 +541,7 @@ impl VideoProcessor {
         let (mut entries, mut regions) = (Vec::new(), Vec::new());
         let mut read = 0;
         let listed = frames.len() as u64;
+        let pixels = frame_pixels(spec);
         for k in frames.shown(spec) {
             // Each source frame is masked once, however many output frames show it.
             while read <= k {
@@ -540,7 +562,8 @@ impl VideoProcessor {
                 masks.frame(read as u64, &entries, &mut regions);
                 mask_frame(&mut frame, &regions, &self.settings.style).map_err(PassError::Mask)?;
                 read += 1;
-                ctx.progress.set(listed + read as u64, 2 * listed);
+                ctx.progress
+                    .set((listed + read as u64) * pixels, 2 * listed * pixels);
             }
             writer.write(&frame).map_err(PassError::Encode)?;
         }
@@ -617,6 +640,7 @@ impl VideoProcessor {
     ) -> Result<(analysis::FirstPass, tracking::Tracked), StepError> {
         let settings = &self.settings.analysis;
         let listed = source.frames.len() as u64;
+        let pixels = frame_pixels(&source.spec);
         let first = analysis::first_pass(
             &self.tools.ffmpeg,
             ctx.input,
@@ -625,7 +649,7 @@ impl VideoProcessor {
             settings,
             &records.detections(),
             ctx.cancel,
-            |done| ctx.progress.set(done, 2 * listed),
+            |done| ctx.progress.set(done * pixels, 2 * listed * pixels),
         )
         .map_err(analysis_failed)?;
         let record = Record::<Detected>::open(&records.detections()).map_err(failed)?;
@@ -677,7 +701,7 @@ impl ItemProcessor for VideoProcessor {
     type Prepared = Analyzed;
     type Rendered = Rendered;
 
-    /// The first half of the item's progress is the first pass, a unit per source frame.
+    /// The first half of the item's progress is the first pass, a frame's pixels per source frame.
     fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Analyzed), StepError> {
         let before = SourceStamp::of(ctx.input).map_err(failed)?;
         let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
@@ -710,6 +734,7 @@ impl ItemProcessor for VideoProcessor {
                 timeline: source.timeline_digest(),
                 frames: source.frames.len() as u64,
                 size: source.spec.display_size(),
+                seconds: seconds(&source),
                 tracks: tracked.tracks,
             }),
             ..Analysis::default()
@@ -833,7 +858,6 @@ impl ItemProcessor for VideoProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cancel::CancelToken;
     use crate::detect::{DetectorHandle, NoDetections};
     use crate::events::ProgressBoard;
     use crate::media::process::ToolError;
@@ -870,6 +894,71 @@ mod tests {
 
     fn changed(result: Result<impl Sized, StepError>) -> bool {
         matches!(result, Err(StepError::Failed(e)) if e.to_string() == VideoError::ChangedWhileProcessing.to_string())
+    }
+
+    /// Both passes count a frame's pixels, as photos do, so a run's items share a unit; the
+    /// estimate from the report alone is the total the passes count.
+    #[test]
+    fn progress_counts_pixels_and_the_estimate_is_its_total() {
+        let dir = TestDir::new();
+        let input = dir.path().join("clip.mp4");
+        std::fs::copy(
+            fixtures().join("defects/P-5/odd-641x361-audio-longer.mp4"),
+            &input,
+        )
+        .unwrap();
+        let processor = VideoProcessor::new(
+            Tools {
+                ffmpeg: required_env("CLOAKFRAME_FFMPEG"),
+                ffprobe: required_env("CLOAKFRAME_FFPROBE"),
+            },
+            VideoSettings {
+                hardware_encode: false,
+                ..VideoSettings::default()
+            },
+            dir.path().join("records"),
+        );
+        let estimate = processor.estimated_work(&input, &CancelToken::new());
+        let destination = dir.path().join("out/clip.mp4");
+        let detector = DetectorHandle::spawn(Box::new(NoDetections)).unwrap();
+        let (notes, board, cancel) = (
+            Notes::default(),
+            ProgressBoard::default(),
+            CancelToken::new(),
+        );
+        let ctx = ItemContext {
+            item: ItemId(1),
+            input: &input,
+            destination: &destination,
+            cancel: &cancel,
+            detector: &detector,
+            progress: board.reporter(ItemId(1)),
+            notes: &notes,
+        };
+        let (analysis, analyzed) = processor.analyze(&ctx).unwrap();
+        let video = analysis.video.as_ref().unwrap();
+        let total = 2 * video.frames * u64::from(video.size.0) * u64::from(video.size.1);
+        let progress = board.snapshot()[&ItemId(1)];
+        assert_eq!((progress.done, progress.total), (total / 2, total));
+        assert_eq!(estimate, Some(total));
+        assert!(
+            (video.seconds - video.frames as f64 / 30.0).abs() < 1e-6,
+            "{}",
+            video.seconds
+        );
+        processor
+            .render(
+                &ctx,
+                &RenderRequest {
+                    basis: PublishBasis::AutomaticUnreviewed,
+                    analysis: &analysis,
+                    edits: &Edits::default(),
+                },
+                Some(analyzed),
+            )
+            .unwrap();
+        let progress = board.snapshot()[&ItemId(1)];
+        assert_eq!((progress.done, progress.total), (total, total));
     }
 
     /// Regions that end before the source's frames fail the pass instead of leaving the rest of
@@ -925,6 +1014,7 @@ mod tests {
             timeline: source.timeline_digest(),
             frames: source.frames.len() as u64,
             size: source.spec.display_size(),
+            seconds: seconds(&source),
             tracks: vec![track],
         };
         let analyzed = Analyzed { source, records };

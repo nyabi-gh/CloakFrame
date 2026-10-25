@@ -13,7 +13,9 @@ pub enum Event {
     RunFinished(RunReport),
 }
 
-/// Work done on one item, in its own units (pixels for photos, frames × passes for video).
+/// Work done on one item, in pixels: a photo's for each of its two steps, a video's frame pixels
+/// for each source frame of each pass. Items of every kind count alike, so a run's progress can
+/// add them up.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Progress {
     pub done: u64,

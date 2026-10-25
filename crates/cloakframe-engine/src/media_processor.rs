@@ -4,6 +4,7 @@ use std::path::Path;
 
 use cloakframe_core::item::PublishPermit;
 
+use crate::cancel::CancelToken;
 use crate::photo::process::{self as photo, PhotoProcessor};
 use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError};
 use crate::scan::MediaKind;
@@ -18,6 +19,18 @@ impl MediaProcessor {
     /// Without a video processor, video items fail.
     pub fn new(photo: PhotoProcessor, video: Option<VideoProcessor>) -> Self {
         Self { photo, video }
+    }
+
+    /// The work an item's progress will count ([`crate::events::Progress`]), read from the start
+    /// of the file before the run reaches it. `None` when that does not tell.
+    pub fn estimated_work(&self, input: &Path, cancel: &CancelToken) -> Option<u64> {
+        match MediaKind::of(input)? {
+            MediaKind::Image => {
+                let (width, height) = crate::photo::decode::start_dimensions(input)?;
+                Some(2 * u64::from(width) * u64::from(height))
+            }
+            MediaKind::Video => self.video.as_ref()?.estimated_work(input, cancel),
+        }
     }
 
     fn video(&self) -> Result<&VideoProcessor, StepError> {

@@ -3,7 +3,7 @@ use std::fs::{self, File, OpenOptions, TryLockError};
 use std::hash::{BuildHasher, RandomState};
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use cloakframe_core::coverage::CoverageEvidence;
 use cloakframe_core::detection::Detection;
@@ -61,6 +61,8 @@ pub enum StoredMedia {
         /// The display size the regions are in.
         width: u32,
         height: u32,
+        /// The source's length, [`crate::video::process::VideoAnalysis::seconds`].
+        seconds: f64,
         /// Every kept track with its kind (P-2); the boxes are in the records.
         tracks: Vec<TrackSummary>,
         #[serde(default, skip_serializing_if = "VideoEdits::is_empty")]
@@ -99,6 +101,13 @@ impl SessionId {
 
     pub fn as_str(&self) -> &str {
         &self.0
+    }
+
+    /// When [`Self::generate`] made it; `None` for an id it did not make.
+    pub fn created(&self) -> Option<SystemTime> {
+        let (secs, _) = self.0.split_once('-')?;
+        let secs = u64::from_str_radix(secs, 16).ok()?;
+        SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(secs))
     }
 }
 
@@ -442,8 +451,15 @@ mod tests {
         assert!(SessionId::parse("a/b").is_none());
         assert!(SessionId::parse("").is_none());
         assert!(SessionId::parse("ABC").is_none());
+        let before = SystemTime::now() - Duration::from_secs(1);
         let id = SessionId::generate();
-        assert_eq!(SessionId::parse(id.as_str()), Some(id));
+        assert_eq!(SessionId::parse(id.as_str()).as_ref(), Some(&id));
+        let created = id.created().unwrap();
+        assert!(
+            created >= before && created <= SystemTime::now(),
+            "{created:?}"
+        );
+        assert_eq!(SessionId::parse("abc").unwrap().created(), None);
     }
 
     fn video(dir: &TestDir, item: u64) -> SessionItem {
@@ -455,6 +471,7 @@ mod tests {
                 frames: 90,
                 width: 640,
                 height: 360,
+                seconds: 3.0,
                 tracks: vec![TrackSummary {
                     id: 1,
                     kind: cloakframe_core::detection::DetectionKind::Face,

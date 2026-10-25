@@ -288,6 +288,12 @@ impl RunHandle {
         self.items.get(&item).map(CancelToken::cancel).is_some()
     }
 
+    /// What [`Self::cancel_item`] cancels, item by item, for a caller that reads the events on
+    /// another thread than the one asking to cancel.
+    pub fn item_cancels(&self) -> BTreeMap<ItemId, CancelToken> {
+        self.items.clone()
+    }
+
     /// Drains the remaining events and returns the final report.
     pub fn wait(self) -> RunReport {
         self.finish()

@@ -147,6 +147,7 @@ pub fn session_from_report(
                     frames: video.frames,
                     width: video.size.0,
                     height: video.size.1,
+                    seconds: video.seconds,
                     tracks: video.tracks.clone(),
                     edits: VideoEdits::default(),
                 },
@@ -239,6 +240,7 @@ mod tests {
             timeline: Digest([7; 32]),
             frames: 10,
             size: (64, 48),
+            seconds: 0.4,
             tracks: vec![track],
         });
         std::fs::write(&report.items[1].input, b"edited after analysis").unwrap();
@@ -282,6 +284,7 @@ mod tests {
                 frames: 10,
                 width: 64,
                 height: 48,
+                seconds: 0.4,
                 tracks: vec![track],
                 edits: VideoEdits::default(),
             }

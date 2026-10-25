@@ -287,6 +287,7 @@ fn check(
             height,
             tracks,
             edits,
+            ..
         } => {
             if !decision.edits.photo.is_empty() {
                 return Err(wrong_media);
@@ -379,6 +380,7 @@ fn stored_analysis(stored: &SessionItem) -> Analysis {
             frames,
             width,
             height,
+            seconds,
             tracks,
             ..
         } => (
@@ -387,6 +389,7 @@ fn stored_analysis(stored: &SessionItem) -> Analysis {
                 timeline: key.timeline,
                 frames: *frames,
                 size: (*width, *height),
+                seconds: *seconds,
                 tracks: tracks.clone(),
             }),
         ),
@@ -893,6 +896,7 @@ mod tests {
             frames: 90,
             width: 640,
             height: 360,
+            seconds: 3.0,
             tracks: vec![crate::video::tracking::TrackSummary {
                 id: 1,
                 kind: DetectionKind::Face,

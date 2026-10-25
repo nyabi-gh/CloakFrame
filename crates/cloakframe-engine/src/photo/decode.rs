@@ -139,6 +139,21 @@ pub fn dimensions(source: &Source) -> Result<(u32, u32), ReadError> {
     header_dimensions(&source.bytes, source.format)
 }
 
+/// What [`start_dimensions`] reads: past the largest EXIF segment (64 KiB) with room for XMP.
+const START_BYTES: u64 = 256 << 10;
+
+/// Width and height from the start of the file alone, for estimating work before the file is
+/// read. `None` where the header is not there, as in a TIFF that keeps it at the end.
+pub fn start_dimensions(path: &Path) -> Option<(u32, u32)> {
+    let mut bytes = Vec::new();
+    File::open(path)
+        .ok()?
+        .take(START_BYTES)
+        .read_to_end(&mut bytes)
+        .ok()?;
+    header_dimensions(&bytes, sniff(&bytes)?).ok()
+}
+
 pub fn header_dimensions(bytes: &[u8], format: ImageFormat) -> Result<(u32, u32), ReadError> {
     if format == ImageFormat::Jpeg {
         let header = turbojpeg::read_header(bytes).map_err(|e| ReadError::Decode(e.to_string()))?;
@@ -435,6 +450,29 @@ mod tests {
         }
         assert_eq!(exif_orientation(&jpeg_with_orientation(&base, 9)), 1);
         assert_eq!(exif_orientation(&jpeg(&base)), 1);
+    }
+
+    /// The estimate before a run reads the file: stored width and height where the start of the
+    /// file holds them, nothing where it does not.
+    #[test]
+    fn start_dimensions_read_only_the_start_of_the_file() {
+        let dir = TestDir::new();
+        let noise = RgbImage::from_fn(600, 400, |x, y| {
+            Rgb([(x * 7 + y * 13) as u8, (x ^ y) as u8, 0])
+        });
+        let write = |name: &str, bytes: Vec<u8>| {
+            let path = dir.path().join(name);
+            std::fs::write(&path, bytes).unwrap();
+            path
+        };
+        let jpg = write("turned.jpg", jpeg_with_orientation(&noise, 6));
+        assert_eq!(start_dimensions(&jpg), Some((600, 400)));
+        let png = write("plain.png", encode(&noise, image::ImageFormat::Png));
+        assert_eq!(start_dimensions(&png), Some((600, 400)));
+        let tiff = encode(&noise, image::ImageFormat::Tiff);
+        assert!(tiff.len() as u64 > START_BYTES);
+        assert_eq!(start_dimensions(&write("ifd-at-end.tif", tiff)), None);
+        assert_eq!(start_dimensions(&dir.path().join("missing.jpg")), None);
     }
 
     #[test]
