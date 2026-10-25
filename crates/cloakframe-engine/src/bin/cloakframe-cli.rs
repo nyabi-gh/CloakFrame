@@ -489,8 +489,8 @@ fn print_fallbacks(backends: &[ModelBackend]) {
 }
 
 /// A line of the results. Once the terminal is gone (a hangup) or the reader stops reading, the
-/// line has nowhere to go; `println!` would panic there, before the session is saved and the exit
-/// code returned, so a failed write is dropped instead.
+/// line has nowhere to go; `println!` would panic there, before the exit code is returned, so a
+/// failed write is dropped instead.
 fn out(line: impl fmt::Display) {
     let _ = writeln!(io::stdout().lock(), "{line}");
 }

@@ -74,7 +74,8 @@ pub(crate) fn usable_roll(roll: f32) -> Option<f32> {
     (roll.is_finite() && roll.abs() <= MAX_ROLL).then_some(roll)
 }
 
-/// ByteTrack's settings, in frames. The defaults are [`TrackingWindows`] at 30 frames per second.
+/// ByteTrack's settings, in frames. The defaults are 1.12.1's frame counts; the engine sets the
+/// windows from [`TrackingWindows::apply`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TrackerConfig {
     /// Detections at or above this start and keep tracks; weaker ones down to `low_score` only
@@ -108,8 +109,8 @@ impl Default for TrackerConfig {
     }
 }
 
-/// Post-processing settings, in frames. The defaults are [`TrackingWindows`] at 30 frames per
-/// second.
+/// Post-processing settings, in frames. The defaults are 1.12.1's frame counts; the engine sets
+/// the windows from [`TrackingWindows::apply`].
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PostProcessConfig {
     /// Longer holes inside a track, or across a cut to a track in the same place, are reported.
@@ -117,7 +118,8 @@ pub struct PostProcessConfig {
     pub smoothing_radius: u64,
     /// Frames a track is held over before its first and after its last box.
     pub extension_frames: u64,
-    /// How far after a cut a track in the same place is still taken for the one before it.
+    /// The longest hole, from the end of a track before a cut (its extension included) to the
+    /// start of one after it in the same place, that still joins the two.
     pub max_cut_boundary_gap: u64,
     pub strong_score: f32,
     /// Strong detections that make a track confident whatever its length.
@@ -150,7 +152,9 @@ impl Default for PostProcessConfig {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TrackingWindows {
     /// Two seconds, where 1.12.1 gave one: a subject missed for longer started a new track, and
-    /// the frames between were published bare without a warning (docs/M5_RENDER.md).
+    /// the frames between were published bare without a warning (docs/M5_RENDER.md). A moving
+    /// subject can start one sooner: the predicted box moves at most one side of the box, so one
+    /// that moved further fails the overlap test (docs/M0_M5_REVIEW.md, item 10).
     pub max_lost: f64,
     pub max_since_high: f64,
     pub max_since_high_moving: f64,

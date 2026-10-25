@@ -28,7 +28,7 @@ pub enum DetectError {
     /// The model's inputs or outputs are not what the detector decodes. Not a reason to retry on
     /// another execution provider (plan 3).
     UnexpectedModel(String),
-    /// The inference thread is gone (its detector panicked).
+    /// The inference thread is gone (its detector or input preparer panicked).
     Unavailable,
 }
 
@@ -140,7 +140,9 @@ impl DetectorHandle {
                 })?;
             return Ok(Self { requests });
         };
-        // One input made ahead: the next image's input is ready when the session is free.
+        // Inputs made ahead: while the session runs one, the next waits in the channel and the
+        // preparer holds one more until there is room, so the next is ready when the session is
+        // free.
         let (ready, inputs) = mpsc::sync_channel::<(Rgb8Image, Prepared, Thresholds, Reply)>(1);
         thread::Builder::new()
             .name("cloakframe-inference".into())

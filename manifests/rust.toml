@@ -19,7 +19,7 @@ features-windows = ["directml"]
 # api-N은 세 OS 중 가장 낮은 ORT(Windows ML 2.4.89 안의 1.27.1)가 정한다. api-30이면 Windows에서 BadVersion.
 # 세션마다 with_auto_device(PreferCPU)로 기본 EP 자동 선택(MaxEfficiency)을 덮는다.
 # rc.14는 세션 출력마다 OrtTypeInfo를 놓지 않아 rc.15로 올림(docs/M5_VERIFY.md).
-# engine은 M2 3단계부터 CPU만 쓴다(crates/cloakframe-engine/src/detect/runtime.rs). coreml·directml은 M3에서 붙인다.
+# coreml·directml은 M3에서 engine Cargo.toml의 대상별 feature로 붙였다.
 evidence = "docs/M0_ORT_SPIKE.md"
 
 [crates.eframe]

@@ -3,9 +3,9 @@
 //! source frame at full size, masks the frame's tracked regions and the fixed areas the user
 //! gives, encodes, and checks the output (P-4) before it waits for its publish permit. The source
 //! is never copied; its identity is compared before the first pass, after it, between the passes,
-//! after the second and right before publishing (plan 0.1). Beside each pass a thread reads the
-//! source once more for the digest a review is bound to; a review resumed from a session renders
-//! only the same bytes on the same timeline.
+//! after the second and right before publishing (plan 0.1). Beside the first pass, and the second
+//! when it resumes a review, a thread reads the source once more for the digest a review is bound
+//! to; a review resumed from a session renders only the same bytes on the same timeline.
 
 use std::collections::BTreeMap;
 use std::fmt;

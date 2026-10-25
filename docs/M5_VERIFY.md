@@ -92,7 +92,7 @@ GPU는 두 구현 모두 CoreML과 VideoToolbox, CPU는 CPU 세션과 libx264 `m
   - 스레드 넘김: 0.3 ms
 - **원인:** 1패스는 프레임마다 썸네일 → 추론 스레드에서 전처리 → 세션 실행을 차례로 했다. 장치를 기다리는 세션 실행 동안 CPU가 다음 프레임에 할 일이 없었다. 1.12.1은 같은 단계를 OpenCV NEON resize와 `blobFromImage`로 해서 짧았다.
 - **고친 것:** `Detector`에 세션 없이 하는 일인 `preparer`와 `detect_prepared`를 기본 구현과 함께 더했다. 세 감지기·조합·CPU 폴백이 이것을 넘긴다.
-  - `DetectorHandle`은 전처리 스레드(`cloakframe-prepare`)가 다음 이미지의 입력을 하나 미리 만들어 둔다. 세션은 여전히 추론 스레드 하나만 가진다(D8).
+  - `DetectorHandle`은 전처리 스레드(`cloakframe-prepare`)가 다음 이미지의 입력을 미리 만들어 둔다(세션이 N을 도는 동안 N+1이 채널에, N+2가 보내기 대기). 세션은 여전히 추론 스레드 하나만 가진다(D8).
   - 영상 1패스는 `tiles::submit_views`로 다음 프레임을 먼저 넣은 뒤 앞 프레임의 결과를 받는다.
   - 사진은 `detect_views` 그대로다. worker 여럿이 요청을 쌓으므로 전처리 스레드만으로 겹친다.
 - **확인:** 영상 벤치마크의 기록된 감지 여섯 개(세 클립 × 타일 끔·켬, CPU)를 새 빌드로 다시 만들어 바이트까지 같았다. 단위 시험 `inputs_are_made_on_their_own_thread_and_queued_images_keep_their_order`가 입력을 만든 스레드, 넣은 순서대로의 결과, 감지기 panic이면 Unavailable을 본다.
