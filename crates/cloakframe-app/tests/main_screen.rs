@@ -74,7 +74,8 @@ fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
             .dropped_files
             .push(Arc::new(Dropped(path.clone())));
     }
-    harness.run();
+    // One frame takes the drop and starts the scan, whose spinner repaints until it ends.
+    harness.step();
     harness.state_mut().wait_for_scan();
     harness.run();
 }
