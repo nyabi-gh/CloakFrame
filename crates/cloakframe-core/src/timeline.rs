@@ -391,9 +391,10 @@ const STANDARD_RATES: [(u32, u32); 14] = [
     (240, 1),
 ];
 
-/// The integer rate next to an NTSC one (30 for 29.97).
+/// The integer rate next to an NTSC one (30 for 29.97), which is N·1000/1001.
 fn integer_twin(rate: Rational) -> Option<Rational> {
-    (rate.den() == 1001).then(|| Rational::new(rate.num() / 1000, 1).expect("a positive rate"))
+    (rate.den() == 1001 && rate.num().is_multiple_of(1000))
+        .then(|| Rational::new(rate.num() / 1000, 1).expect("a positive rate"))
 }
 
 /// The processed stream's frames in presentation order, as the packet list gives them without
@@ -993,6 +994,22 @@ mod tests {
     }
 
     /// 29.97 fps slots show all of a short 30 fps clip too; the source's own rate wins.
+    /// Below 1 fps an NTSC-like rate has no integer rate beside it.
+    #[test]
+    fn rates_slower_than_one_frame_a_second() {
+        for (num, den) in [(500u32, 1001u32), (1, 2)] {
+            let ticks = 30000 * i64::from(den) / i64::from(num);
+            let frames =
+                SourceFrames::new(tb(30000), (0..5).map(|k| k * ticks).collect(), Some(ticks))
+                    .unwrap();
+            let own = rational(num, den);
+            assert_eq!(
+                frames.constant_rate(Seconds::ZERO, Some(own), Some(own)),
+                own
+            );
+        }
+    }
+
     #[test]
     fn constant_rate_sources_keep_their_rate() {
         for (num, den, count) in [
