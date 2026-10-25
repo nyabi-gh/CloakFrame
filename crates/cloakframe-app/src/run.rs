@@ -2,8 +2,8 @@
 //! messages, so drawing never waits for it.
 
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::PathBuf;
-use std::sync::{Arc, mpsc};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
@@ -12,6 +12,7 @@ use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stal
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::Acceleration;
 use cloakframe_engine::detect::models::{DetectionModels, LoadError};
+use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::events::{Event, ProgressBoard};
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::model_files::{ModelStore, model_file};
@@ -218,6 +219,19 @@ fn processor(
     Ok(MediaProcessor::new(photo, video))
 }
 
+/// The process's ONNX Runtime, loaded by the first run that needs it and shared by every later
+/// one: ORT allows one environment per process. A load that fails is tried again by the next run.
+fn runtime(library: &Path) -> Result<OrtRuntime, Failure> {
+    static RUNTIME: Mutex<Option<OrtRuntime>> = Mutex::new(None);
+    let mut runtime = RUNTIME.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(loaded) = &*runtime {
+        return Ok(loaded.clone());
+    }
+    let loaded = OrtRuntime::load(library).map_err(other)?;
+    *runtime = Some(loaded.clone());
+    Ok(loaded)
+}
+
 /// Estimates each item's work in turn, the order the run takes them, until all have one or the
 /// run is over.
 fn estimate(
@@ -266,8 +280,8 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
             .as_ref()
             .ok_or(Failure::NoRuntime)?;
         let folder = request.folders.models.clone().ok_or_else(no_folder)?;
-        startup::with_models(
-            library,
+        startup::with_runtime(
+            runtime(library)?,
             &ModelStore::new(folder),
             request.folders.app_models,
             models,

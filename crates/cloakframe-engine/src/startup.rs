@@ -108,6 +108,34 @@ pub fn with_models(
         import_legacy(store, models.ids(), &mut note)?;
     }
     let runtime = OrtRuntime::load(library).map_err(|e| StartError::Runtime(e.to_string()))?;
+    load(runtime, store, models, acceleration, note)
+}
+
+/// Like [`with_models`] on a runtime the caller loaded: ORT allows one environment per process,
+/// so a front end that starts more than one run keeps one and passes it to each.
+pub fn with_runtime(
+    runtime: OrtRuntime,
+    store: &ModelStore,
+    app_folder: bool,
+    models: DetectionModels,
+    acceleration: Acceleration,
+    mut note: impl FnMut(StartNote),
+) -> Result<Started, StartError> {
+    if app_folder {
+        import_legacy(store, models.ids(), &mut note)?;
+    }
+    load(runtime, store, models, acceleration, note)
+}
+
+fn load(
+    runtime: OrtRuntime,
+    store: &ModelStore,
+    models: DetectionModels,
+    acceleration: Acceleration,
+    #[cfg_attr(not(target_os = "macos"), allow(unused_mut, unused_variables))] mut note: impl FnMut(
+        StartNote,
+    ),
+) -> Result<Started, StartError> {
     #[cfg(target_os = "macos")]
     let runtime = match crate::app_dirs::cache_dir() {
         Some(cache) => {
