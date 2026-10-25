@@ -9,12 +9,13 @@ use eframe::egui;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
     egui::MenuBar::new().ui(ui, |ui| {
-        let (file, add_files, add_folder, quit, help, about) = {
+        let (file, add_files, add_folder, models, quit, help, about) = {
             let tr = state.tr();
             (
                 tr.get("menu-file"),
                 tr.get("add-files"),
                 tr.get("add-folder"),
+                tr.get("models-open"),
                 tr.get("menu-file-quit"),
                 tr.get("menu-help"),
                 tr.get("menu-app-about"),
@@ -26,6 +27,9 @@ pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
             }
             if ui.button(add_folder).clicked() {
                 state.command(Command::AddFolder);
+            }
+            if ui.button(models).clicked() {
+                state.command(Command::Models);
             }
             ui.separator();
             if ui.button(quit).clicked() {
@@ -96,6 +100,8 @@ pub mod native {
                 tr.get("add-folder"),
                 Some((CMD_OR_CTRL | Modifiers::SHIFT, Code::KeyO)),
             ),
+            &PredefinedMenuItem::separator(),
+            &item("models", tr.get("models-open"), None),
         ])?;
         #[cfg(target_os = "windows")]
         file.append_items(&[
@@ -175,6 +181,7 @@ pub mod native {
                     "quit" => commands.push(Command::Quit),
                     "add_files" => commands.push(Command::AddFiles),
                     "add_folder" => commands.push(Command::AddFolder),
+                    "models" => commands.push(Command::Models),
                     "copy" => events.push(egui::Event::Copy),
                     "cut" => events.push(egui::Event::Cut),
                     "paste" => {

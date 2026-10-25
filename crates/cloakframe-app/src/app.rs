@@ -10,6 +10,7 @@ use cloakframe_core::item::ItemState;
 
 use crate::fonts;
 use crate::i18n::{Language, Translator};
+use crate::models::Models;
 use crate::run::{self, Board, Failure, Running};
 use crate::settings::{Method, Notice, Settings, SettingsFile, Theme};
 use crate::thumbnails::Thumbnails;
@@ -20,6 +21,7 @@ use crate::tools::Tools;
 pub enum Command {
     AddFiles,
     AddFolder,
+    Models,
     About,
     Quit,
 }
@@ -52,6 +54,7 @@ pub struct AppState {
     pub folders: run::Folders,
     running: Option<Running>,
     thumbnails: Option<Thumbnails>,
+    pub models: Models,
     /// The run in progress or the last one, until the user starts anew.
     pub board: Option<Board>,
 }
@@ -77,12 +80,14 @@ impl AppState {
             folders: run::Folders::default(),
             running: None,
             thumbnails: None,
+            models: Models::new(None, false),
             board: None,
         }
     }
 
     pub fn with_tools(mut self, tools: Tools, folders: run::Folders) -> Self {
         self.tools = tools;
+        self.models = Models::new(folders.models.clone(), folders.app_models);
         self.folders = folders;
         self
     }
@@ -199,6 +204,7 @@ impl AppState {
             self.run(command, &ctx);
         }
         self.take_run_messages();
+        self.models.take(&ctx);
 
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         egui::Panel::top("menu").show(ui, |ui| crate::menu::bar(ui, self));
@@ -216,6 +222,7 @@ impl AppState {
             }
         });
         crate::about::window(&ctx, self);
+        self.models.window(&ctx, &self.tr);
     }
 
     fn run(&mut self, command: Command, ctx: &egui::Context) {
@@ -230,6 +237,7 @@ impl AppState {
                     self.add_inputs(folders, ctx);
                 }
             }
+            Command::Models => self.models.show(ctx),
             Command::About => self.about_open = true,
             Command::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
         }
@@ -425,6 +433,9 @@ impl AppState {
                 None => self.tr.get("no-output-folder"),
             };
             ui.label(shown);
+            if ui.button(self.tr.get("models-open")).clicked() {
+                self.command(Command::Models);
+            }
             if ui.button(self.tr.get("choose-folder")).clicked()
                 && let Some(folder) = rfd::FileDialog::new().pick_folder()
             {
@@ -519,6 +530,7 @@ impl AppState {
         let tr = &self.tr;
         let mut cancel = false;
         let mut again = false;
+        let mut models = false;
         ui.horizontal(|ui| {
             if let Some(finished) = &board.finished {
                 let count = |f: fn(ItemState) -> bool| {
@@ -551,6 +563,9 @@ impl AppState {
                 Failure::Other(e) => e.clone(),
             };
             ui.colored_label(ui.visuals().error_fg_color, text);
+            if matches!(failure, Failure::MissingModel(_)) {
+                models = ui.button(tr.get("models-open")).clicked();
+            }
         }
         for note in board
             .notes
@@ -585,6 +600,9 @@ impl AppState {
         }
         if again {
             self.board = None;
+        }
+        if models {
+            self.command(Command::Models);
         }
     }
 

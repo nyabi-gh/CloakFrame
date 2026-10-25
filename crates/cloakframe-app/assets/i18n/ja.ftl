@@ -92,3 +92,22 @@ run-new = 新しく始める
 start-needs-runtime = アプリの隣に ONNX Runtime が見つかりません。
 model-missing = 検出モデル { $name } はまだダウンロードされていません。
 videos-need-ffmpeg = アプリの隣に FFmpeg が見つからないため、動画は除外しました。
+
+## needs review
+models-title = 検出モデル
+models-open = 検出モデル…
+models-folder = フォルダー: { $path }
+model-name-yolo5face-n = YOLO5Face-n (顔、推奨)
+model-name-yunet = YuNet (顔、高速)
+model-name-plates = YOLOv9-t (ナンバープレート)
+model-terms-yolo5face-n = YOLO5Face (GPL-3.0) から変換し、非商用研究向けデータセット WIDER FACE で学習したモデルです。非商用の目的でのみ使ってください。
+model-terms-yunet = OpenCV Zoo から MIT ライセンスで提供されます。
+model-terms-plates = open-image-models プロジェクトから MIT ライセンスで提供されます。元になった YOLOv9 の条件も適用されます。
+model-size = { $size } MB
+model-license = ライセンス: { $license }
+model-present = ダウンロード済み
+model-not-downloaded = 未ダウンロード
+model-different = その場所のファイルはこのモデルではありません。ダウンロードすると置き換えます。
+model-accept-terms = この条件に同意します
+model-download = ダウンロード
+model-download-failed = ダウンロードできませんでした: { $error }

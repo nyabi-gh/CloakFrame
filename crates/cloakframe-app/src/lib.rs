@@ -5,6 +5,7 @@ pub mod app;
 pub mod fonts;
 pub mod i18n;
 pub mod menu;
+pub mod models;
 pub mod run;
 pub mod settings;
 pub mod thumbnails;
