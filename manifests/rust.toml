@@ -87,6 +87,14 @@ targets = ["windows"]
 # muda init_for_hwnd에 줄 HWND.
 evidence = "docs/M0_EGUI.md"
 
+[crates.zbus]
+version = "=5.19.0"
+default-features = false
+features = ["async-io", "blocking-api"]
+targets = ["linux"]
+# AccessKit AT-SPI·rfd xdg-portal이 이미 쓰는 판. 결과의 "폴더에서 보기"가 freedesktop FileManager1 ShowItems를 부른다.
+evidence = "docs/M6_PLAN.md"
+
 [crates.image]
 version = "=0.25.10"
 default-features = false

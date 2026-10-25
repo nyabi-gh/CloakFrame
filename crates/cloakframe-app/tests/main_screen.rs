@@ -1,13 +1,18 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use cloakframe_app::app::AppState;
+use cloakframe_app::app::{AppState, Quit};
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
 use cloakframe_app::run::Folders;
 use cloakframe_app::settings::Settings;
 use cloakframe_app::tools::Tools;
-use cloakframe_core::item::{ItemState, PublishBasis};
+use cloakframe_core::coverage::{CoverageEvidence, Problem};
+use cloakframe_core::detection::{DetectionKind, ModelId};
+use cloakframe_core::item::{ItemId, ItemState, PublishBasis};
+use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
+use cloakframe_engine::identity::SourceStamp;
+use cloakframe_engine::session::{FORMAT_VERSION, Session, SessionId, SessionItem, StoredMedia};
 use eframe::egui;
 use egui::accesskit::Role;
 use egui_kittest::Harness;
@@ -223,11 +228,258 @@ fn start_runs_the_engine_and_shows_the_result() {
         finished.report.items[0].failure
     );
     assert!(output.join("lena.jpg").is_file());
-    harness.get_by_label("One saved, 0 to review, 0 failed");
+    harness.get_by_label("1 saved");
     harness.get_by_label("Saved");
+    harness.get_by_role_and_label(Role::Button, "Show in Folder");
+    harness.get_by_label("Details").click();
+    harness.run();
+    harness.get_by_label_contains("lena.jpg  Saved");
     harness
         .get_by_role_and_label(Role::Button, "New run")
         .click();
     harness.run();
     assert!(harness.state().board.is_none());
+}
+
+fn session_item(
+    item: u64,
+    input: PathBuf,
+    media: StoredMedia,
+    evidence: Vec<CoverageEvidence>,
+) -> SessionItem {
+    let key = ReviewKey {
+        input: Digest([1; 32]),
+        models: Digest([2; 32]),
+        settings: Digest([3; 32]),
+        timeline: Digest([4; 32]),
+    };
+    SessionItem {
+        item: ItemId(item),
+        destination: PathBuf::from(input.file_name().unwrap()),
+        conflict: None,
+        suggestion: None,
+        source: SourceStamp::of(&input).unwrap(),
+        input,
+        revision: ReviewRevision::first(key),
+        media,
+        evidence,
+    }
+}
+
+/// A session a run left is listed when the app starts again, opens to its items and their
+/// problems, and is discarded only once the user confirms.
+#[test]
+fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
+    let dir = Dir::new("sessions");
+    let output = dir.0.join("out");
+    let folders = Folders {
+        data: Some(dir.0.join("data")),
+        models: None,
+        app_models: false,
+    };
+    let photo = dir.file("photo.jpg");
+    let clip = dir.file("clip.mp4");
+    let gone = dir.file("gone.jpg");
+    let capped = CoverageEvidence::unresolved(Problem::CappedCandidates {
+        model: ModelId::YuNet,
+        frame: None,
+        kept: 100,
+        found: 259,
+    });
+    let gap = CoverageEvidence::unresolved(Problem::UnresolvedGap {
+        detection: DetectionKind::Face,
+        tracks: vec![1, 2],
+        first: 30,
+        last: 65,
+    });
+    let photo_media = || StoredMedia::Photo {
+        detections: Vec::new(),
+        edits: Default::default(),
+    };
+    let session = Session {
+        version: FORMAT_VERSION,
+        output: output.clone(),
+        items: vec![
+            session_item(0, photo, photo_media(), vec![capped]),
+            session_item(
+                1,
+                clip,
+                StoredMedia::Video {
+                    frames: 300,
+                    width: 64,
+                    height: 48,
+                    seconds: 10.0,
+                    tracks: Vec::new(),
+                    edits: Default::default(),
+                },
+                vec![gap],
+            ),
+            session_item(2, gone.clone(), photo_media(), Vec::new()),
+        ],
+    };
+    let store = folders.sessions().unwrap();
+    let id = SessionId::generate();
+    store.save(&id, &session).unwrap();
+    std::fs::remove_file(&gone).unwrap();
+
+    let mut harness = harness(Language::En, Settings::default());
+    harness.state_mut().set_folders(folders);
+    harness.step();
+    harness.state_mut().wait_for_sessions();
+    harness.run();
+    harness.get_by_label("Waiting for review");
+    harness.get_by_label("Today");
+    harness.get_by_label(&format!("3 items for {}", output.display()));
+    harness.get_by_label("one original changed");
+
+    harness.get_by_role_and_label(Role::Button, "Open").click();
+    harness.run();
+    harness.get_by_label(
+        "3 to review — faces missed for 1.2 s in one video, the detection limit reached in one item",
+    );
+    harness.get_by_label("Face lost in frames 30–65 (1.2 s)");
+    harness.get_by_label("Detection limit reached: 100 of 259 kept");
+    harness.get_by_label("The original changed or is gone; run it again");
+    harness.get_by_role_and_label(Role::Button, "Back").click();
+    harness.run();
+    assert!(harness.state().opened.is_none());
+
+    harness
+        .get_by_role_and_label(Role::Button, "Discard…")
+        .click();
+    harness.run();
+    harness.get_by_label("Discard this review?");
+    harness.get_by_role_and_label(Role::Button, "Keep").click();
+    harness.run();
+    assert!(store.load(&id).is_ok(), "kept until the user confirms");
+    harness
+        .get_by_role_and_label(Role::Button, "Discard…")
+        .click();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Button, "Discard")
+        .click();
+    harness.run();
+    assert!(store.list().unwrap().is_empty());
+    assert!(harness.state().sessions.list.is_empty());
+    assert!(harness.query_by_label("Waiting for review").is_none());
+}
+
+fn close(harness: &mut Harness<'_, AppState>) {
+    harness
+        .input_mut()
+        .viewports
+        .entry(egui::ViewportId::ROOT)
+        .or_default()
+        .events
+        .push(egui::ViewportEvent::Close);
+    harness.step();
+}
+
+fn commands(harness: &Harness<'_, AppState>) -> Vec<egui::ViewportCommand> {
+    harness
+        .output()
+        .viewport_output
+        .get(&egui::ViewportId::ROOT)
+        .map(|v| v.commands.clone())
+        .unwrap_or_default()
+}
+
+/// Closing the window while a run works asks first; once the user agrees, the run is
+/// cancelled and the window closes after it has stopped and kept its review. Needs the ONNX
+/// Runtime and the models (CONTRIBUTING.md).
+#[test]
+fn closing_during_a_run_asks_and_waits_for_the_run_to_stop() {
+    let dir = Dir::new("quit");
+    let input = dir.0.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    for i in 0..8 {
+        std::fs::copy(assets.join("lena.jpg"), input.join(format!("lena-{i}.jpg"))).unwrap();
+    }
+    let settings = Settings {
+        output: Some(dir.0.join("out")),
+        ..Settings::default()
+    };
+    let mut harness = harness(Language::En, settings);
+    harness.state_mut().tools = Tools {
+        ort_library: Some(required_env("CLOAKFRAME_ORT_LIBRARY")),
+        ..Tools::default()
+    };
+    harness.state_mut().set_folders(Folders {
+        data: Some(dir.0.join("data")),
+        models: Some(assets),
+        app_models: false,
+    });
+    drop_files(&mut harness, &[input]);
+    harness.get_by_role_and_label(Role::Button, "Start").click();
+    harness.step();
+
+    close(&mut harness);
+    assert!(commands(&harness).contains(&egui::ViewportCommand::CancelClose));
+    assert_eq!(harness.state().quit, Quit::Asking);
+    harness.step();
+    harness.get_by_label("A run is in progress");
+    harness
+        .get_by_role_and_label(Role::Button, "Keep Working")
+        .click();
+    harness.step();
+    assert_eq!(harness.state().quit, Quit::No);
+
+    close(&mut harness);
+    harness.step();
+    harness
+        .get_by_role_and_label(Role::Button, "Cancel and Quit")
+        .click();
+    harness.step();
+    assert_eq!(harness.state().quit, Quit::AfterRun);
+    harness.state_mut().wait_for_run();
+    harness.step();
+    assert!(commands(&harness).contains(&egui::ViewportCommand::Close));
+    assert_eq!(harness.state().quit, Quit::No);
+    let finished = harness
+        .state()
+        .board
+        .as_ref()
+        .unwrap()
+        .finished
+        .as_ref()
+        .unwrap();
+    assert!(
+        finished
+            .report
+            .items
+            .iter()
+            .all(|o| matches!(o.state, ItemState::NeedsReview | ItemState::Cancelled)),
+        "{:?}",
+        finished
+            .report
+            .items
+            .iter()
+            .map(|o| o.state)
+            .collect::<Vec<_>>()
+    );
+}
+
+/// Every message of every language, the new screens' included, in the fonts the window uses for
+/// it: egui_kittest fails on a character they cannot draw.
+#[test]
+fn every_message_of_every_language_can_be_drawn() {
+    for (language, text) in [
+        (Language::En, include_str!("../assets/i18n/en.ftl")),
+        (Language::Ko, include_str!("../assets/i18n/ko.ftl")),
+        (Language::Ja, include_str!("../assets/i18n/ja.ftl")),
+    ] {
+        let mut harness = Harness::builder()
+            .with_size(egui::vec2(1100.0, 760.0))
+            .with_context_setup(move |ctx| ctx.set_fonts(fonts::definitions(language)))
+            .build_ui(move |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    for line in text.lines() {
+                        ui.label(line);
+                    }
+                });
+            });
+        harness.run();
+    }
 }

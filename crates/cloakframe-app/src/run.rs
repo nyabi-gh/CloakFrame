@@ -1,9 +1,10 @@
 //! A run started from the window: the engine works on its own threads and reports here through
 //! messages, so drawing never waits for it.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 use std::sync::{Arc, mpsc};
+use std::time::{Duration, Instant};
 
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method as MaskMethod, MosaicStrength};
@@ -23,6 +24,7 @@ use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools as VideoTools, VideoProcessor, VideoSettings};
 use eframe::egui;
 
+use crate::progress::{self, Overall, Pace};
 use crate::settings::{Method, Settings};
 use crate::tools::Tools;
 
@@ -43,6 +45,13 @@ impl Folders {
             app_models: true,
         }
     }
+
+    /// Where runs keep the items they leave for review, which the CLI's sessions share.
+    pub fn sessions(&self) -> Option<SessionStore> {
+        self.data
+            .as_ref()
+            .map(|data| SessionStore::new(data.join("sessions")))
+    }
 }
 
 /// Everything a run needs, taken from the window when Start is pressed.
@@ -56,10 +65,16 @@ pub struct Request {
 
 #[derive(Debug)]
 pub enum Message {
-    /// The run is going; its items in scan order, and their progress.
+    /// The run is going; its items in scan order, their progress, and what cancels each.
     Started {
         items: Vec<(ItemId, PathBuf)>,
         progress: ProgressBoard,
+        cancels: BTreeMap<ItemId, CancelToken>,
+    },
+    /// The work an item the engine has not reached yet will be, from the start of its file.
+    Estimated {
+        item: ItemId,
+        work: u64,
     },
     State {
         item: ItemId,
@@ -109,20 +124,33 @@ impl Running {
     }
 }
 
+/// Sends to the window and has it drawn again.
+#[derive(Clone)]
+struct Tell {
+    send: mpsc::Sender<Message>,
+    repaint: egui::Context,
+}
+
+impl Tell {
+    fn tell(&self, message: Message) {
+        let _ = self.send.send(message);
+        self.repaint.request_repaint();
+    }
+}
+
 pub fn start(request: Request, ctx: &egui::Context) -> std::io::Result<Running> {
     let (send, messages) = mpsc::channel();
     let cancel = CancelToken::new();
     let token = cancel.clone();
-    let repaint = ctx.clone();
+    let tell = Tell {
+        send,
+        repaint: ctx.clone(),
+    };
     std::thread::Builder::new()
         .name("cloakframe-app-run".into())
         .spawn(move || {
-            let tell = |message| {
-                let _ = send.send(message);
-                repaint.request_repaint();
-            };
             if let Err(failure) = run(request, &token, &tell) {
-                tell(Message::Failed(failure));
+                tell.tell(Message::Failed(failure));
             }
         })?;
     Ok(Running { messages, cancel })
@@ -190,13 +218,30 @@ fn processor(
     Ok(MediaProcessor::new(photo, video))
 }
 
-fn run(request: Request, cancel: &CancelToken, tell: &impl Fn(Message)) -> Result<(), Failure> {
+/// Estimates each item's work in turn, the order the run takes them, until all have one or the
+/// run is over.
+fn estimate(
+    processor: &MediaProcessor,
+    items: &[(ItemId, PathBuf)],
+    cancel: &CancelToken,
+    tell: &Tell,
+) {
+    for (item, input) in items {
+        if cancel.is_cancelled() {
+            return;
+        }
+        if let Some(work) = processor.estimated_work(input, cancel) {
+            tell.tell(Message::Estimated { item: *item, work });
+        }
+    }
+}
+
+fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failure> {
     let no_folder = || Failure::Other("no app data folder for this user".to_owned());
-    let data = request.folders.data.clone().ok_or_else(no_folder)?;
-    let store = SessionStore::new(data.join("sessions"));
+    let store = request.folders.sessions().ok_or_else(no_folder)?;
     if let Ok(left) = store.sweep() {
         for (path, e) in left {
-            tell(Message::Note(format!("{}: {e}", path.display())));
+            tell.tell(Message::Note(format!("{}: {e}", path.display())));
         }
     }
     let id = SessionId::generate();
@@ -227,7 +272,7 @@ fn run(request: Request, cancel: &CancelToken, tell: &impl Fn(Message)) -> Resul
             request.folders.app_models,
             models,
             Acceleration::Gpu,
-            |note| tell(Message::Note(note.to_string())),
+            |note| tell.tell(Message::Note(note.to_string())),
         )
         .map_err(|e| match e {
             StartError::Load(LoadError::Missing { model, .. }) => {
@@ -236,19 +281,31 @@ fn run(request: Request, cancel: &CancelToken, tell: &impl Fn(Message)) -> Resul
             e => other(e),
         })?
     };
-    let items = job.items.iter().map(|i| (i.id, i.input.clone())).collect();
+    let items: Vec<(ItemId, PathBuf)> = job.items.iter().map(|i| (i.id, i.input.clone())).collect();
     let handle = start_under(job, Arc::clone(&processor), started.handle, cancel).map_err(other)?;
-    tell(Message::Started {
-        items,
+    tell.tell(Message::Started {
+        items: items.clone(),
         progress: handle.progress().clone(),
+        cancels: handle.item_cancels(),
     });
     let mut report = None;
-    for event in handle.events().iter() {
-        match event {
-            Event::ItemState { item, state } => tell(Message::State { item, state }),
-            Event::RunFinished(r) => report = Some(r),
+    let estimating = cancel.child();
+    std::thread::scope(|scope| {
+        let spawned = std::thread::Builder::new()
+            .name("cloakframe-app-estimate".into())
+            .spawn_scoped(scope, || estimate(&processor, &items, &estimating, tell));
+        // Without estimates the items the engine has not reached count their kind's average.
+        if let Err(e) = spawned {
+            tell.tell(Message::Note(format!("cannot estimate the work: {e}")));
         }
-    }
+        for event in handle.events().iter() {
+            match event {
+                Event::ItemState { item, state } => tell.tell(Message::State { item, state }),
+                Event::RunFinished(r) => report = Some(r),
+            }
+        }
+        estimating.cancel();
+    });
     let report = handle
         .finish()
         .or(report)
@@ -278,7 +335,7 @@ fn run(request: Request, cancel: &CancelToken, tell: &impl Fn(Message)) -> Resul
     for (item, reason) in left_out {
         problems.push(format!("item {}: {reason}", item.0));
     }
-    tell(Message::Finished(Finished {
+    tell.tell(Message::Finished(Finished {
         report,
         session,
         problems,
@@ -286,34 +343,178 @@ fn run(request: Request, cancel: &CancelToken, tell: &impl Fn(Message)) -> Resul
     Ok(())
 }
 
+/// A line of a run's log, worded when the window draws it.
+#[derive(Debug, Clone, PartialEq)]
+pub enum Logged {
+    State(ItemId, ItemState),
+    /// The engine's own words, in English like the CLI's (plan 6: the log is the detail).
+    Note(Option<ItemId>, String),
+    Failed(ItemId, String),
+}
+
 /// The latest state of each item of a run, as the window shows it.
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Board {
+    pub started: Instant,
     pub items: Vec<(ItemId, PathBuf)>,
     pub states: BTreeMap<ItemId, ItemState>,
     pub progress: Option<ProgressBoard>,
+    pub estimates: BTreeMap<ItemId, u64>,
+    cancels: BTreeMap<ItemId, CancelToken>,
+    /// Items the user cancelled that the engine has not stopped yet.
+    pub cancelling: BTreeSet<ItemId>,
+    pub log: Vec<(Duration, Logged)>,
     pub notes: Vec<String>,
     pub finished: Option<Finished>,
     pub failure: Option<Failure>,
+    pace: Pace,
+    /// The bar never moves back when an estimate turns out too small.
+    shown: f32,
 }
 
 impl Board {
+    pub fn new(started: Instant) -> Self {
+        Self {
+            started,
+            items: Vec::new(),
+            states: BTreeMap::new(),
+            progress: None,
+            estimates: BTreeMap::new(),
+            cancels: BTreeMap::new(),
+            cancelling: BTreeSet::new(),
+            log: Vec::new(),
+            notes: Vec::new(),
+            finished: None,
+            failure: None,
+            pace: Pace::new(started),
+            shown: 0.0,
+        }
+    }
+
     pub fn take(&mut self, message: Message) {
+        let at = self.started.elapsed();
         match message {
-            Message::Started { items, progress } => {
+            Message::Started {
+                items,
+                progress,
+                cancels,
+            } => {
                 self.items = items;
                 self.progress = Some(progress);
+                self.cancels = cancels;
+            }
+            Message::Estimated { item, work } => {
+                self.estimates.insert(item, work);
             }
             Message::State { item, state } => {
                 self.states.insert(item, state);
+                if state.is_terminal() || state == ItemState::NeedsReview {
+                    self.cancelling.remove(&item);
+                }
+                self.log.push((at, Logged::State(item, state)));
             }
-            Message::Note(note) => self.notes.push(note),
-            Message::Finished(finished) => self.finished = Some(finished),
+            Message::Note(note) => {
+                self.log.push((at, Logged::Note(None, note.clone())));
+                self.notes.push(note);
+            }
+            Message::Finished(finished) => {
+                for outcome in &finished.report.items {
+                    if let Some(failure) = &outcome.failure {
+                        self.log
+                            .push((at, Logged::Failed(outcome.item, failure.clone())));
+                    }
+                    for note in &outcome.notes {
+                        self.log
+                            .push((at, Logged::Note(Some(outcome.item), note.to_string())));
+                    }
+                }
+                for problem in &finished.problems {
+                    self.log.push((at, Logged::Note(None, problem.clone())));
+                }
+                self.cancelling.clear();
+                self.finished = Some(finished);
+            }
             Message::Failed(failure) => self.failure = Some(failure),
         }
     }
 
     pub fn is_over(&self) -> bool {
         self.finished.is_some() || self.failure.is_some()
+    }
+
+    pub fn cancel_item(&mut self, item: ItemId) {
+        if let Some(token) = self.cancels.get(&item) {
+            token.cancel();
+            self.cancelling.insert(item);
+        }
+    }
+
+    pub fn overall(&self) -> Overall {
+        let snapshot = self
+            .progress
+            .as_ref()
+            .map(ProgressBoard::snapshot)
+            .unwrap_or_default();
+        progress::overall(&self.items, &self.states, &snapshot, &self.estimates)
+    }
+
+    /// Takes the progress as of `now`: the fraction the bar shows and the time left, if there is
+    /// a pace to go on.
+    pub fn measure(&mut self, now: Instant) -> (f32, Option<Duration>) {
+        let overall = self.overall();
+        self.pace.record(now, overall.done);
+        if let Some(fraction) = overall.fraction() {
+            self.shown = self.shown.max(fraction);
+        }
+        (self.shown, self.pace.left(now, overall))
+    }
+
+    pub fn name(&self, item: ItemId) -> String {
+        self.items
+            .iter()
+            .find(|(id, _)| *id == item)
+            .and_then(|(_, path)| path.file_name())
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Cancelling one item cancels its token only, and the row shows it as cancelling until the
+    /// engine says the item stopped.
+    #[test]
+    fn an_item_is_cancelled_alone_until_the_engine_stops_it() {
+        let run = CancelToken::new();
+        let (a, b) = (run.child(), run.child());
+        let mut board = Board::new(Instant::now());
+        board.take(Message::Started {
+            items: vec![
+                (ItemId(0), PathBuf::from("a.jpg")),
+                (ItemId(1), PathBuf::from("b.jpg")),
+            ],
+            progress: ProgressBoard::default(),
+            cancels: BTreeMap::from([(ItemId(0), a.clone()), (ItemId(1), b.clone())]),
+        });
+        board.cancel_item(ItemId(1));
+        assert!(b.is_cancelled() && !a.is_cancelled() && !run.is_cancelled());
+        assert!(board.cancelling.contains(&ItemId(1)));
+        board.take(Message::State {
+            item: ItemId(1),
+            state: ItemState::Analyzed,
+        });
+        assert!(board.cancelling.contains(&ItemId(1)));
+        board.take(Message::State {
+            item: ItemId(1),
+            state: ItemState::Cancelled,
+        });
+        assert!(board.cancelling.is_empty());
+        assert_eq!(
+            board.log.last().map(|(_, l)| l),
+            Some(&Logged::State(ItemId(1), ItemState::Cancelled))
+        );
+        assert_eq!(board.name(ItemId(1)), "b.jpg");
     }
 }

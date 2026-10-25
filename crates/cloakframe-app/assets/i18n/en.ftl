@@ -88,10 +88,83 @@ state-verified = Checked
 state-published = Saved
 state-failed = Failed
 state-cancelled = Cancelled
-run-summary = { $saved ->
-    [one] One saved
-   *[other] { $saved } saved
-}, { $review } to review, { $failed } failed
+state-cancelling = Cancelling
+summary-saved = { $count } saved
+summary-review = { $count } to review
+summary-failed = { $count } failed
+summary-cancelled = { $count } cancelled
+summary-none = Nothing was saved
+summary-with-details = { $counts } — { $details }
+summary-missed-faces = faces missed for { $seconds } s in { $videos ->
+    [one] one video
+   *[other] { $videos } videos
+}
+summary-missed-plates = license plates missed for { $seconds } s in { $videos ->
+    [one] one video
+   *[other] { $videos } videos
+}
+summary-capped = the detection limit reached in { $count ->
+    [one] one item
+   *[other] { $count } items
+}
+summary-weak = { $count ->
+    [one] an uncertain detection in one item
+   *[other] uncertain detections in { $count } items
+}
+summary-failed-frames = frames that could not be analyzed in { $count ->
+    [one] one video
+   *[other] { $count } videos
+}
+list-separator = {", "}
+problem-missed-face = Face lost in frames { $first }–{ $last } ({ $seconds } s)
+problem-missed-plate = License plate lost in frames { $first }–{ $last } ({ $seconds } s)
+problem-capped = Detection limit reached: { $kept } of { $found } kept
+problem-failed-frame = Frame { $frame } could not be analyzed
+problem-weak = Uncertain detection (score { $score })
+progress-percent = { $percent }%
+progress-left-estimating = estimating the time left
+progress-left-under-minute = less than a minute left
+progress-left-minutes = about { $minutes ->
+    [one] one minute
+   *[other] { $minutes } minutes
+} left
+progress-left-hours = about { $hours } h { $minutes } min left
+run-session-kept = The items to review are kept, and stay listed after the app restarts.
+item-reveal = Show in Folder
+item-open = Open
+item-reveal-source = Show Original
+shell-failed = Cannot show { $path }: { $error }
+log-title = Details
+log-copy = Copy
+quit-title = A run is in progress
+quit-body = Quitting cancels it. Saved files stay, and the items waiting for review are kept for later.
+quit-confirm = Cancel and Quit
+quit-keep = Keep Working
+quit-waiting = Stopping; the window closes once the run has stopped.
+
+sessions-title = Waiting for review
+session-age = { $days ->
+    [0] Today
+    [1] Yesterday
+   *[other] { $days } days ago
+}
+session-row = { $items ->
+    [one] one item
+   *[other] { $items } items
+} for { $output }
+session-changed = { $count ->
+    [one] one original changed
+   *[other] { $count } originals changed
+}
+session-unreadable = Cannot read it: { $error }
+session-open = Open
+session-discard = Discard…
+session-back = Back
+session-item-changed = The original changed or is gone; run it again
+discard-title = Discard this review?
+discard-body = The detections kept for the review are deleted. The originals and the saved files stay as they are.
+discard-confirm = Discard
+discard-keep = Keep
 run-new = New run
 start-needs-runtime = ONNX Runtime was not found next to the app.
 model-missing = The detection model { $name } is not downloaded yet.

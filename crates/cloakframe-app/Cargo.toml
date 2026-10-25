@@ -26,6 +26,11 @@ rfd.workspace = true
 muda = { version = "=0.21.2", default-features = false }
 arboard = { version = "=3.7.0", default-features = false }
 
+[target.'cfg(not(any(target_os = "macos", target_os = "windows")))'.dependencies]
+# Already in the tree for AccessKit and the file dialogs; the blocking API asks a file manager
+# to select a file.
+zbus = { version = "=5.19.0", default-features = false, features = ["async-io", "blocking-api"] }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 raw-window-handle = "=0.6.2"
 winit = { version = "=0.30.13", default-features = false }

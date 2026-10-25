@@ -1,18 +1,24 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc;
+use std::time::{Duration, Instant, SystemTime};
 
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::scan::{MediaKind, ScanRequest, ScanResult, scan};
+use cloakframe_engine::session::{SessionId, StoredMedia};
 use eframe::egui;
 use fluent_bundle::FluentValue;
 
-use cloakframe_core::item::ItemState;
+use cloakframe_core::item::{ItemId, ItemState};
 
 use crate::fonts;
 use crate::i18n::{Language, Translator};
 use crate::models::Models;
-use crate::run::{self, Board, Failure, Running};
+use crate::progress::Left;
+use crate::run::{self, Board, Failure, Logged, Running};
+use crate::sessions::{self, SavedSessions};
 use crate::settings::{Method, Notice, Settings, SettingsFile, Theme};
+use crate::shell;
+use crate::summary;
 use crate::thumbnails::Thumbnails;
 use crate::tools::Tools;
 
@@ -24,6 +30,16 @@ pub enum Command {
     Models,
     About,
     Quit,
+}
+
+/// Closing the window while a run works: the run is cancelled first, so the items it holds for
+/// review are saved before the app ends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Quit {
+    No,
+    Asking,
+    /// Cancelled; the window closes once the run has stopped.
+    AfterRun,
 }
 
 /// A scan of the inputs, on its own thread so the window keeps drawing.
@@ -57,6 +73,13 @@ pub struct AppState {
     pub models: Models,
     /// The run in progress or the last one, until the user starts anew.
     pub board: Option<Board>,
+    pub sessions: SavedSessions,
+    sessions_read: bool,
+    /// The saved session the window shows instead of the main screen.
+    pub opened: Option<SessionId>,
+    /// The saved session the user asked to discard, until they confirm.
+    pub discarding: Option<SessionId>,
+    pub quit: Quit,
 }
 
 impl AppState {
@@ -82,14 +105,25 @@ impl AppState {
             thumbnails: None,
             models: Models::new(None, false),
             board: None,
+            sessions: SavedSessions::new(run::Folders::default()),
+            sessions_read: false,
+            opened: None,
+            discarding: None,
+            quit: Quit::No,
         }
     }
 
     pub fn with_tools(mut self, tools: Tools, folders: run::Folders) -> Self {
         self.tools = tools;
-        self.models = Models::new(folders.models.clone(), folders.app_models);
-        self.folders = folders;
+        self.set_folders(folders);
         self
+    }
+
+    pub fn set_folders(&mut self, folders: run::Folders) {
+        self.models = Models::new(folders.models.clone(), folders.app_models);
+        self.sessions = SavedSessions::new(folders.clone());
+        self.sessions_read = false;
+        self.folders = folders;
     }
 
     pub fn tr(&self) -> &Translator {
@@ -205,6 +239,12 @@ impl AppState {
         }
         self.take_run_messages();
         self.models.take(&ctx);
+        if !self.sessions_read {
+            self.sessions_read = true;
+            self.sessions.reload(&ctx);
+        }
+        self.sessions.take();
+        self.watch_close(&ctx);
 
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         egui::Panel::top("menu").show(ui, |ui| crate::menu::bar(ui, self));
@@ -215,7 +255,10 @@ impl AppState {
             }
             if self.board.is_some() {
                 self.run_view(ui);
+            } else if self.opened.is_some() {
+                self.session_view(ui);
             } else {
+                self.saved_sessions(ui);
                 self.drop_area(ui, &ctx);
                 ui.separator();
                 self.what_and_how(ui);
@@ -223,6 +266,58 @@ impl AppState {
         });
         crate::about::window(&ctx, self);
         self.models.window(&ctx, &self.tr);
+        self.discard_dialog(&ctx);
+        self.quit_dialog(&ctx);
+    }
+
+    /// Keeps the window open while a run works, until the user agrees to cancel it.
+    fn watch_close(&mut self, ctx: &egui::Context) {
+        let working = self.running.is_some();
+        if working && ctx.input(|i| i.viewport().close_requested()) {
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            if self.quit == Quit::No {
+                self.quit = Quit::Asking;
+            }
+        }
+        if !working && self.quit != Quit::No {
+            if self.quit == Quit::AfterRun {
+                ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+            }
+            self.quit = Quit::No;
+        }
+    }
+
+    fn quit_dialog(&mut self, ctx: &egui::Context) {
+        if self.quit != Quit::Asking {
+            return;
+        }
+        let tr = &self.tr;
+        let mut choice = None;
+        let modal = egui::Modal::new(egui::Id::unique("quit")).show(ctx, |ui| {
+            ui.heading(tr.get("quit-title"));
+            ui.label(tr.get("quit-body"));
+            ui.horizontal(|ui| {
+                if ui.button(tr.get("quit-confirm")).clicked() {
+                    choice = Some(true);
+                }
+                if ui.button(tr.get("quit-keep")).clicked() {
+                    choice = Some(false);
+                }
+            });
+        });
+        if modal.should_close() && choice.is_none() {
+            choice = Some(false);
+        }
+        match choice {
+            Some(true) => {
+                if let Some(running) = &self.running {
+                    running.cancel();
+                }
+                self.quit = Quit::AfterRun;
+            }
+            Some(false) => self.quit = Quit::No,
+            None => {}
+        }
     }
 
     fn run(&mut self, command: Command, ctx: &egui::Context) {
@@ -491,7 +586,8 @@ impl AppState {
         match run::start(request, ctx) {
             Ok(running) => {
                 self.running = Some(running);
-                self.board = Some(Board::default());
+                self.board = Some(Board::new(Instant::now()));
+                self.opened = None;
             }
             Err(e) => self.notices.push(e.to_string()),
         }
@@ -506,6 +602,7 @@ impl AppState {
         }
         if board.is_over() {
             self.running = None;
+            self.sessions_read = false;
         }
     }
 
@@ -521,39 +618,72 @@ impl AppState {
             }
         }
         self.running = None;
+        self.sessions_read = false;
+    }
+
+    /// Waits for the saved sessions being read, for tests.
+    pub fn wait_for_sessions(&mut self) {
+        self.sessions.wait();
+    }
+
+    fn show(&mut self, path: &Path, open: bool) {
+        let result = if open {
+            shell::open(path)
+        } else {
+            shell::reveal(path)
+        };
+        if let Err(e) = result {
+            let path = path.display().to_string();
+            self.notices.push(self.tr.with(
+                "shell-failed",
+                &[
+                    ("path", FluentValue::from(path)),
+                    ("error", FluentValue::from(e.to_string())),
+                ],
+            ));
+        }
     }
 
     fn run_view(&mut self, ui: &mut egui::Ui) {
-        let Some(board) = &self.board else {
+        let Some(board) = &mut self.board else {
             return;
         };
+        let (fraction, left) = board.measure(Instant::now());
+        let board = &*board;
         let tr = &self.tr;
-        let mut cancel = false;
-        let mut again = false;
-        let mut models = false;
+        let mut act = Act::None;
         ui.horizontal(|ui| {
             if let Some(finished) = &board.finished {
-                let count = |f: fn(ItemState) -> bool| {
-                    FluentValue::from(finished.report.items.iter().filter(|o| f(o.state)).count())
-                };
-                ui.heading(tr.with(
-                    "run-summary",
-                    &[
-                        ("saved", count(|s| matches!(s, ItemState::Published(_)))),
-                        ("review", count(|s| s == ItemState::NeedsReview)),
-                        ("failed", count(|s| s == ItemState::Failed)),
-                    ],
-                ));
+                let summary =
+                    summary::summarize(finished.report.items.iter().map(|o| summary::Item {
+                        state: o.state,
+                        evidence: &o.analysis.evidence,
+                        video: o.analysis.video.as_ref().map(|v| (v.frames, v.seconds)),
+                    }));
+                ui.heading(summary::sentence(&summary, tr));
             } else if board.failure.is_none() {
                 ui.spinner();
                 ui.heading(tr.get("running"));
             }
             if board.is_over() {
-                again = ui.button(tr.get("run-new")).clicked();
-            } else {
-                cancel = ui.button(tr.get("cancel")).clicked();
+                if ui.button(tr.get("run-new")).clicked() {
+                    act = Act::NewRun;
+                }
+            } else if self.quit == Quit::AfterRun {
+                ui.label(tr.get("quit-waiting"));
+            } else if ui.button(tr.get("cancel")).clicked() {
+                act = Act::CancelRun;
             }
         });
+        if !board.is_over() && board.progress.is_some() {
+            let percent = FluentValue::from((fraction * 100.0).floor() as u64);
+            let text = format!(
+                "{} · {}",
+                tr.with("progress-percent", &[("percent", percent)]),
+                time_left(tr, left)
+            );
+            ui.add(egui::ProgressBar::new(fraction).text(text));
+        }
         if let Some(failure) = &board.failure {
             let text = match failure {
                 Failure::NoRuntime => tr.get("start-needs-runtime"),
@@ -563,9 +693,14 @@ impl AppState {
                 Failure::Other(e) => e.clone(),
             };
             ui.colored_label(ui.visuals().error_fg_color, text);
-            if matches!(failure, Failure::MissingModel(_)) {
-                models = ui.button(tr.get("models-open")).clicked();
+            if matches!(failure, Failure::MissingModel(_))
+                && ui.button(tr.get("models-open")).clicked()
+            {
+                act = Act::Models;
             }
+        }
+        if board.finished.as_ref().is_some_and(|f| f.session.is_some()) {
+            ui.label(tr.get("run-session-kept"));
         }
         for note in board
             .notes
@@ -579,30 +714,263 @@ impl AppState {
             .as_ref()
             .map(|p| p.snapshot())
             .unwrap_or_default();
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            for (item, input) in &board.items {
-                let state = board.states.get(item).copied().unwrap_or(ItemState::Queued);
+        let outcomes = board.finished.as_ref().map(|f| &f.report.items);
+        egui::ScrollArea::vertical()
+            .max_height((ui.available_height() - 40.0).max(120.0))
+            .show(ui, |ui| {
+                for (item, input) in &board.items {
+                    let state = board.states.get(item).copied().unwrap_or(ItemState::Queued);
+                    let outcome = outcomes.and_then(|o| o.iter().find(|o| o.item == *item));
+                    let cancelling = board.cancelling.contains(item);
+                    ui.horizontal(|ui| {
+                        let shown = if cancelling {
+                            "state-cancelling"
+                        } else {
+                            state_id(state)
+                        };
+                        ui.label(tr.get(shown));
+                        ui.label(board.name(*item));
+                        let working = !state.is_terminal() && state != ItemState::NeedsReview;
+                        if working && let Some(p) = progress.get(item).filter(|p| p.total > 0) {
+                            ui.add(
+                                egui::ProgressBar::new(p.done as f32 / p.total as f32)
+                                    .desired_width(160.0),
+                            );
+                        }
+                        if working
+                            && !cancelling
+                            && !board.is_over()
+                            && ui.button(tr.get("cancel")).clicked()
+                        {
+                            act = Act::CancelItem(*item);
+                        }
+                        if let Some(o) = outcome {
+                            if matches!(o.state, ItemState::Published(_)) {
+                                if ui.button(tr.get("item-reveal")).clicked() {
+                                    act = Act::Show(o.destination.clone(), false);
+                                }
+                                if ui.button(tr.get("item-open")).clicked() {
+                                    act = Act::Show(o.destination.clone(), true);
+                                }
+                            } else if o.state == ItemState::NeedsReview
+                                && ui.button(tr.get("item-reveal-source")).clicked()
+                            {
+                                act = Act::Show(input.clone(), false);
+                            }
+                        }
+                    });
+                    if let Some(o) = outcome {
+                        ui.indent(("why", item.0), |ui| {
+                            if let Some(failure) = &o.failure {
+                                ui.colored_label(ui.visuals().error_fg_color, failure);
+                            }
+                            if o.state == ItemState::NeedsReview {
+                                let video =
+                                    o.analysis.video.as_ref().map(|v| (v.frames, v.seconds));
+                                for e in o.analysis.evidence.iter().filter(|e| !e.is_resolved()) {
+                                    ui.weak(summary::problem(e, video, tr));
+                                }
+                            }
+                        });
+                    }
+                }
+            });
+        log_panel(ui, board, tr);
+        match act {
+            Act::None => {}
+            Act::CancelRun => {
+                if let Some(running) = &self.running {
+                    running.cancel();
+                }
+            }
+            Act::CancelItem(item) => {
+                if let Some(board) = &mut self.board {
+                    board.cancel_item(item);
+                }
+            }
+            Act::NewRun => self.board = None,
+            Act::Models => self.command(Command::Models),
+            Act::Show(path, open) => self.show(&path, open),
+        }
+    }
+
+    /// The sessions earlier runs left for review, above the drop area.
+    fn saved_sessions(&mut self, ui: &mut egui::Ui) {
+        if let Some(e) = &self.sessions.error {
+            ui.colored_label(ui.visuals().warn_fg_color, e);
+        }
+        if self.sessions.list.is_empty() {
+            return;
+        }
+        let tr = &self.tr;
+        let now = SystemTime::now();
+        let mut open = None;
+        let mut discard = None;
+        egui::Frame::group(ui.style()).show(ui, |ui| {
+            ui.heading(tr.get("sessions-title"));
+            for saved in &self.sessions.list {
                 ui.horizontal(|ui| {
-                    ui.label(tr.get(state_id(state)));
-                    let name = input.file_name().map(|n| n.to_string_lossy().into_owned());
-                    ui.label(name.unwrap_or_default());
-                    if !state.is_terminal()
-                        && state != ItemState::NeedsReview
-                        && let Some(p) = progress.get(item).filter(|p| p.total > 0)
-                    {
-                        ui.add(egui::ProgressBar::new(p.done as f32 / p.total as f32));
+                    if let Some(created) = saved.created {
+                        let days = sessions::age_days(created, now);
+                        ui.label(tr.with("session-age", &[("days", FluentValue::from(days))]));
+                    }
+                    match &saved.content {
+                        Ok(loaded) => {
+                            let output = loaded.session.output.display().to_string();
+                            ui.label(tr.with(
+                                "session-row",
+                                &[
+                                    ("items", FluentValue::from(loaded.session.items.len())),
+                                    ("output", FluentValue::from(output)),
+                                ],
+                            ));
+                            let changed = loaded.changed_count();
+                            if changed > 0 {
+                                ui.colored_label(
+                                    ui.visuals().warn_fg_color,
+                                    tr.with(
+                                        "session-changed",
+                                        &[("count", FluentValue::from(changed))],
+                                    ),
+                                );
+                            }
+                            if ui.button(tr.get("session-open")).clicked() {
+                                open = Some(saved.id.clone());
+                            }
+                        }
+                        Err(e) => {
+                            ui.colored_label(
+                                ui.visuals().warn_fg_color,
+                                tr.with(
+                                    "session-unreadable",
+                                    &[("error", FluentValue::from(e.as_str()))],
+                                ),
+                            );
+                        }
+                    }
+                    if ui.button(tr.get("session-discard")).clicked() {
+                        discard = Some(saved.id.clone());
                     }
                 });
             }
         });
-        if cancel && let Some(running) = &self.running {
-            running.cancel();
+        if open.is_some() {
+            self.opened = open;
         }
-        if again {
-            self.board = None;
+        if discard.is_some() {
+            self.discarding = discard;
         }
-        if models {
-            self.command(Command::Models);
+    }
+
+    /// A saved session's items and what each waits for, in place of the main screen.
+    fn session_view(&mut self, ui: &mut egui::Ui) {
+        let tr = &self.tr;
+        let Some(saved) = self
+            .opened
+            .as_ref()
+            .and_then(|id| self.sessions.list.iter().find(|s| &s.id == id))
+        else {
+            self.opened = None;
+            return;
+        };
+        let Ok(loaded) = &saved.content else {
+            self.opened = None;
+            return;
+        };
+        let session = &loaded.session;
+        let video = |media: &StoredMedia| match media {
+            StoredMedia::Video {
+                frames, seconds, ..
+            } => Some((*frames, *seconds)),
+            StoredMedia::Photo { .. } => None,
+        };
+        let mut act = Act::None;
+        ui.horizontal(|ui| {
+            if ui.button(tr.get("session-back")).clicked() {
+                act = Act::NewRun;
+            }
+            let summary = summary::summarize(session.items.iter().map(|i| summary::Item {
+                state: ItemState::NeedsReview,
+                evidence: &i.evidence,
+                video: video(&i.media),
+            }));
+            ui.heading(summary::sentence(&summary, tr));
+        });
+        ui.horizontal(|ui| {
+            ui.label(tr.get("output-folder"));
+            ui.label(session.output.display().to_string());
+        });
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            for (item, changed) in session.items.iter().zip(&loaded.changed) {
+                ui.horizontal(|ui| {
+                    if *changed {
+                        ui.colored_label(
+                            ui.visuals().warn_fg_color,
+                            tr.get("session-item-changed"),
+                        );
+                    } else {
+                        ui.label(tr.get("state-needs-review"));
+                    }
+                    let name = item
+                        .input
+                        .file_name()
+                        .map(|n| n.to_string_lossy().into_owned());
+                    ui.label(name.unwrap_or_default());
+                    if !*changed && ui.button(tr.get("item-reveal-source")).clicked() {
+                        act = Act::Show(item.input.clone(), false);
+                    }
+                });
+                ui.indent(("why", item.item.0), |ui| {
+                    for e in item.evidence.iter().filter(|e| !e.is_resolved()) {
+                        ui.weak(summary::problem(e, video(&item.media), tr));
+                    }
+                });
+            }
+        });
+        let discard = ui.button(tr.get("session-discard")).clicked();
+        if discard {
+            self.discarding = Some(saved.id.clone());
+        }
+        match act {
+            Act::NewRun => self.opened = None,
+            Act::Show(path, open) => self.show(&path, open),
+            _ => {}
+        }
+    }
+
+    fn discard_dialog(&mut self, ctx: &egui::Context) {
+        let Some(id) = self.discarding.clone() else {
+            return;
+        };
+        let tr = &self.tr;
+        let mut choice = None;
+        let modal = egui::Modal::new(egui::Id::unique("discard")).show(ctx, |ui| {
+            ui.heading(tr.get("discard-title"));
+            ui.label(tr.get("discard-body"));
+            ui.horizontal(|ui| {
+                if ui.button(tr.get("discard-confirm")).clicked() {
+                    choice = Some(true);
+                }
+                if ui.button(tr.get("discard-keep")).clicked() {
+                    choice = Some(false);
+                }
+            });
+        });
+        if modal.should_close() && choice.is_none() {
+            choice = Some(false);
+        }
+        match choice {
+            Some(true) => {
+                if let Err(e) = self.sessions.discard(&id) {
+                    self.notices.push(e.to_string());
+                }
+                if self.opened.as_ref() == Some(&id) {
+                    self.opened = None;
+                }
+                self.discarding = None;
+            }
+            Some(false) => self.discarding = None,
+            None => {}
         }
     }
 
@@ -648,6 +1016,75 @@ fn describe(tr: &Translator, notice: &Notice) -> String {
             &[("version", FluentValue::from(*version))],
         ),
     }
+}
+
+/// What a click asked for, done once drawing no longer borrows the state.
+enum Act {
+    None,
+    CancelRun,
+    CancelItem(ItemId),
+    NewRun,
+    Models,
+    /// Show in the file manager, or open with `true`.
+    Show(PathBuf, bool),
+}
+
+fn time_left(tr: &Translator, left: Option<Duration>) -> String {
+    match left.map(Left::of) {
+        None => tr.get("progress-left-estimating"),
+        Some(Left::UnderAMinute) => tr.get("progress-left-under-minute"),
+        Some(Left::Minutes(minutes)) => tr.with(
+            "progress-left-minutes",
+            &[("minutes", FluentValue::from(minutes))],
+        ),
+        Some(Left::Hours { hours, minutes }) => tr.with(
+            "progress-left-hours",
+            &[
+                ("hours", FluentValue::from(hours)),
+                ("minutes", FluentValue::from(minutes)),
+            ],
+        ),
+    }
+}
+
+/// One log line: time since the start, the item's name, and what happened.
+pub fn log_line(board: &Board, at: Duration, logged: &Logged, tr: &Translator) -> String {
+    let secs = at.as_secs();
+    let time = format!("{:02}:{:02}", secs / 60, secs % 60);
+    let (item, text) = match logged {
+        Logged::State(item, state) => (Some(*item), tr.get(state_id(*state))),
+        Logged::Note(item, note) => (*item, note.clone()),
+        Logged::Failed(item, failure) => (Some(*item), failure.clone()),
+    };
+    match item {
+        Some(item) => format!("{time}  {}  {text}", board.name(item)),
+        None => format!("{time}  {text}"),
+    }
+}
+
+/// The run's log, folded away under the list (plan 6).
+fn log_panel(ui: &mut egui::Ui, board: &Board, tr: &Translator) {
+    egui::CollapsingHeader::new(tr.get("log-title"))
+        .id_salt("log")
+        .show(ui, |ui| {
+            let lines: Vec<String> = board
+                .log
+                .iter()
+                .map(|(at, logged)| log_line(board, *at, logged, tr))
+                .collect();
+            if ui.button(tr.get("log-copy")).clicked() {
+                ui.ctx().copy_text(lines.join("\n"));
+            }
+            egui::ScrollArea::vertical()
+                .id_salt("log-lines")
+                .max_height(200.0)
+                .stick_to_bottom(true)
+                .show(ui, |ui| {
+                    for line in &lines {
+                        ui.monospace(line);
+                    }
+                });
+        });
 }
 
 fn state_id(state: ItemState) -> &'static str {
