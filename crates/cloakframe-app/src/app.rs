@@ -12,6 +12,7 @@ use crate::fonts;
 use crate::i18n::{Language, Translator};
 use crate::run::{self, Board, Failure, Running};
 use crate::settings::{Method, Notice, Settings, SettingsFile, Theme};
+use crate::thumbnails::Thumbnails;
 use crate::tools::Tools;
 
 /// What a menu, a shortcut or a button asks of the app outside the widget it is in.
@@ -50,6 +51,7 @@ pub struct AppState {
     pub tools: Tools,
     pub folders: run::Folders,
     running: Option<Running>,
+    thumbnails: Option<Thumbnails>,
     /// The run in progress or the last one, until the user starts anew.
     pub board: Option<Board>,
 }
@@ -74,6 +76,7 @@ impl AppState {
             tools: Tools::default(),
             folders: run::Folders::default(),
             running: None,
+            thumbnails: None,
             board: None,
         }
     }
@@ -108,6 +111,7 @@ impl AppState {
         self.inputs.clear();
         self.scanning = None;
         self.found = None;
+        self.thumbnails = None;
     }
 
     fn rescan(&mut self, ctx: &egui::Context) {
@@ -303,19 +307,63 @@ impl AppState {
                     .with("unreadable", &[("path", FluentValue::from(path))]),
             );
         }
+        if self.thumbnails.is_none() {
+            match Thumbnails::new(ctx) {
+                Ok(thumbnails) => self.thumbnails = Some(thumbnails),
+                Err(e) => self.notices.push(e.to_string()),
+            }
+        }
+        if let Some(thumbnails) = &mut self.thumbnails {
+            thumbnails.take(ctx);
+        }
+        let thumbnails = &mut self.thumbnails;
         egui::ScrollArea::vertical()
-            .max_height(240.0)
+            .max_height(280.0)
             .show(ui, |ui| {
                 ui.horizontal_wrapped(|ui| {
                     for file in &found.files {
-                        let mark = match file.kind {
-                            MediaKind::Image => "▣",
-                            MediaKind::Video => "▶",
+                        let (cell, _) =
+                            ui.allocate_exact_size(egui::vec2(128.0, 148.0), egui::Sense::hover());
+                        if !ui.is_rect_visible(cell) {
+                            continue;
+                        }
+                        let picture = egui::Rect::from_min_size(cell.min, egui::vec2(128.0, 128.0));
+                        let shown = match (file.kind, thumbnails.as_mut()) {
+                            (MediaKind::Image, Some(t)) => t.get(&file.path).flatten(),
+                            _ => None,
                         };
-                        ui.group(|ui| {
-                            ui.set_width(160.0);
-                            ui.label(format!("{mark} {}", file.relative.display()));
-                        });
+                        match shown {
+                            Some(texture) => {
+                                let size = texture.size_vec2();
+                                let fit = size * (128.0 / size.max_elem());
+                                let at = egui::Rect::from_center_size(picture.center(), fit);
+                                egui::Image::new(texture).paint_at(ui, at);
+                            }
+                            None => {
+                                let mark = match file.kind {
+                                    MediaKind::Image => "▣",
+                                    MediaKind::Video => "▶",
+                                };
+                                ui.painter()
+                                    .rect_filled(picture, 4.0, ui.visuals().faint_bg_color);
+                                ui.painter().text(
+                                    picture.center(),
+                                    egui::Align2::CENTER_CENTER,
+                                    mark,
+                                    egui::FontId::proportional(28.0),
+                                    ui.visuals().weak_text_color(),
+                                );
+                            }
+                        }
+                        let label = egui::Rect::from_min_max(
+                            egui::pos2(cell.min.x, picture.max.y + 2.0),
+                            cell.max,
+                        );
+                        let name = file.relative.display().to_string();
+                        ui.put(
+                            label,
+                            egui::Label::new(egui::RichText::new(name).small()).truncate(),
+                        );
                     }
                 });
             });

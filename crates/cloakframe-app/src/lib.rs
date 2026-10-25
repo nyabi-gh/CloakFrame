@@ -7,4 +7,5 @@ pub mod i18n;
 pub mod menu;
 pub mod run;
 pub mod settings;
+pub mod thumbnails;
 pub mod tools;

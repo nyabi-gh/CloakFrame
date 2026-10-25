@@ -268,6 +268,19 @@ fn decode_jpeg(bytes: &[u8]) -> Result<DynamicImage, ReadError> {
 }
 
 /// 1–8 from the EXIF block in any of the containers, 1 when there is none or it is invalid.
+/// A picture of the photo at `path` in display orientation, its longer side at most `side`, as
+/// RGBA rows. It goes through the same checks and memory budget as a run's decode.
+pub fn thumbnail(
+    path: &Path,
+    side: u32,
+    budget: &MemoryBudget,
+    cancel: &CancelToken,
+) -> Result<(u32, u32, Vec<u8>), ReadError> {
+    let decoded = decode(&read_source(path)?, budget, cancel)?;
+    let small = decoded.image.thumbnail(side, side).to_rgba8();
+    Ok((small.width(), small.height(), small.into_raw()))
+}
+
 pub fn exif_orientation(bytes: &[u8]) -> u8 {
     exif::Reader::new()
         .read_from_container(&mut Cursor::new(bytes))
@@ -422,6 +435,26 @@ mod tests {
         }
         assert_eq!(exif_orientation(&jpeg_with_orientation(&base, 9)), 1);
         assert_eq!(exif_orientation(&jpeg(&base)), 1);
+    }
+
+    #[test]
+    fn thumbnails_are_turned_and_fit_the_side() {
+        let dir = TestDir::new();
+        let base = RgbImage::from_fn(400, 200, |x, _| Rgb([(x / 2) as u8, 0, 0]));
+        let path = dir.path().join("turned.jpg");
+        std::fs::write(&path, jpeg_with_orientation(&base, 6)).unwrap();
+        let (width, height, rgba) = thumbnail(&path, 100, &budget(), &CancelToken::new()).unwrap();
+        assert_eq!((width, height), (50, 100));
+        assert_eq!(rgba.len(), 50 * 100 * 4);
+        assert!(matches!(
+            thumbnail(
+                &dir.path().join("missing.jpg"),
+                100,
+                &budget(),
+                &CancelToken::new()
+            ),
+            Err(ReadError::Io(_))
+        ));
     }
 
     #[test]
