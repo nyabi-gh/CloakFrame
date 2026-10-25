@@ -6,7 +6,7 @@ schema = 1
 
 [toolchain]
 channel = "1.98.1"
-# eframe 0.36의 MSRV. channel을 이 아래로 내리지 않는다.
+# eframe 0.36·0.37의 MSRV. channel을 이 아래로 내리지 않는다.
 msrv = "1.95"
 evidence = "docs/RUST_PORT_PLAN.md#3-기술-스택"
 
@@ -23,22 +23,68 @@ features-windows = ["directml"]
 evidence = "docs/M0_ORT_SPIKE.md"
 
 [crates.eframe]
-version = "=0.36.2"
+version = "=0.37.0"
 default-features = false
-features = ["accesskit", "default_fonts", "wgpu", "glow", "wayland", "x11"]
+features = ["accesskit", "clipboard", "wgpu", "glow", "wayland", "x11"]
+# M6 0단계에서 0.36.2에서 올림(docs/M0_EGUI.md#0370-재확인-2026-10-25). clipboard는 입력란 복사·붙여넣기.
+# persistence는 directories(option-ext, MPL-2.0)를 끌어와 쓰지 않고 창 위치는 settings.toml에 둔다.
 evidence = "docs/M0_EGUI.md"
 
 [crates.egui_kittest]
-version = "=0.36.2"
+version = "=0.37.0"
 features = ["wgpu", "snapshot"]
 dev = true
 evidence = "docs/M0_EGUI.md"
 
 [crates.muda]
-version = "=0.20.0"
+version = "=0.21.2"
 default-features = false
 # GTK 창에만 붙으므로 Linux에서는 쓰지 않는다. Windows는 winit with_msg_hook에서 TranslateAcceleratorW가 필요하다.
 targets = ["macos", "windows"]
+evidence = "docs/M0_EGUI.md"
+
+[crates.rfd]
+version = "=0.17.2"
+# 파일·폴더 대화상자. Linux는 기본 xdg-portal(GTK 없음).
+evidence = "docs/M6_PLAN.md"
+
+[crates.fluent-bundle]
+version = "=0.16.0"
+# 앱 문장(영어 원문 en.ftl, ko·ja). fluent-syntax =0.12.0은 시험에서 메시지 id를 셈(dev).
+evidence = "docs/M6_PLAN.md"
+
+[crates.unic-langid]
+version = "=0.9.6"
+evidence = "docs/M6_PLAN.md"
+
+[crates.sys-locale]
+version = "=0.3.2"
+# 언어를 "시스템"으로 둘 때 OS의 선호 언어.
+evidence = "docs/M6_PLAN.md"
+
+[crates.toml]
+version = "=1.1.8"
+# 앱 데이터 폴더의 settings.toml.
+evidence = "docs/M6_PLAN.md"
+
+[crates.arboard]
+version = "=3.7.0"
+default-features = false
+targets = ["macos", "windows"]
+# muda custom 편집 메뉴의 붙여넣기(메뉴가 단축키를 가져가므로 앱이 클립보드를 읽어 egui에 넣음).
+evidence = "docs/M0_EGUI.md"
+
+[crates.winit]
+version = "=0.30.13"
+default-features = false
+targets = ["windows"]
+# eframe 0.37과 같은 판. Windows 메뉴 가속키를 winit 메시지 훅에서 TranslateAcceleratorW로.
+evidence = "docs/M0_EGUI.md"
+
+[crates.raw-window-handle]
+version = "=0.6.2"
+targets = ["windows"]
+# muda init_for_hwnd에 줄 HWND.
 evidence = "docs/M0_EGUI.md"
 
 [crates.image]
@@ -54,7 +100,7 @@ evidence = "docs/M0_EXIF_WRITER.md"
 
 [crates.windows-sys]
 version = "=0.61.2"
-features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_SystemInformation", "Win32_UI_Shell"]
+features = ["Win32_Foundation", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_JobObjects", "Win32_System_Threading", "Win32_System_SystemInformation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging"]
 targets = ["windows"]
 # 파일 identity(GetFileInformationByHandleEx FileIdInfo), no-replace 이동(MoveFileExW), 앱 데이터 폴더
 # (SHGetKnownFolderPath), 메모리 예산의 실제 RAM(GlobalMemoryStatusEx), FFmpeg 프로세스 트리를 묶는 Job Object. 앱 데이터 폴더를 directories crate로 찾지 않는 이유는 그 의존성 option-ext가

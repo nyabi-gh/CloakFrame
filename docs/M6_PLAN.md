@@ -25,6 +25,15 @@
 | 4 | `m6-settings` | 고급 설정(정확/빠름, 민감도, 타일, 메타데이터·GPS, 오디오 제거, 영상 품질·코덱, GPU), 샘플 사진 미리보기, 하드웨어 인코드 실패 이유 표시(M5에서 넘어옴), 번역 이전 완료, 접근성 이름·역할·포커스 순서(목록은 표 대신 역할을 붙인 리스트, egui #8700) |
 | 5 | `m6-verify` | 모든 흐름의 `egui_kittest` 시험 표, macOS 실제 OS 점검, Windows·Linux CI 실행과 스크린샷, M0 공개 이슈 표의 재확인, 범위 조정 점검, preview 릴리스 준비 |
 
+## 0단계 진행(2026-10-25)
+
+- **egui 0.37 재확인:** [M0 기록](M0_EGUI.md#0370-재확인-2026-10-25). API 변경 두 곳과, `egui_kittest` 0.37이 그릴 수 없는 글자에 panic하는 것(첫 프레임 전에 글꼴을 넣어야 함)을 찾았다. 앱도 창을 만들 때(`AppState::install_fonts`) 첫 프레임 전에 넣는다.
+- **글꼴:** `tools/fonts/subset.sh`가 만든 부분 집합을 저장소에 넣는다(`include_bytes!`로 빌드에 들어가므로). 일본어는 JIS X 0213에 cp932의 NEC·IBM 확장을 더했다: 髙는 JIS X 0213에 없고 IBM 확장에만 있다. 결과는 한국어 3.4 MB(17,725자), 일본어 4.1 MB(14,538자)로 합계 7.5 MB, M0의 4.1 MB보다 3.4 MB 크다(계획의 예상 +1.5 MB보다 큼). 이름 이체자 髙·﨑·德·瀨·栁·濵·彅·塚은 모두 일본어 글꼴에 있다. 한국어 글꼴에도 한자가 들어가므로, 앞에 둔 글꼴의 자형이 쓰인다: 화면 언어가 한국어면 한국어 글꼴, 그 밖에는 일본어 글꼴을 앞에 둔다.
+- **결정(2026-10-25, 메인테이너가 추천대로):**
+  - egui 내장 글꼴(`epaint_default_fonts`, OFL-1.1 + Ubuntu Font Licence)은 라이선스 허용 목록 밖이라 eframe의 `default_fonts`를 끄고 영문까지 Noto 부분 집합으로 그린다. 허용 목록은 그대로다. 시험이 빠진 글자에서 실패하므로 빠진 글자는 부분 집합 스크립트에 더한다.
+  - zbus 5의 unmaintained 권고 세 건(RUSTSEC-2026-0370–0372, zbus 6에 합쳐진 crate)은 `deny.toml`에서 이유와 함께 무시한다. Linux 접근성(AccessKit AT-SPI)과 파일 대화상자(rfd xdg-portal)가 아직 zbus 5라 빼면 Linux 스크린리더나 대화상자를 잃는다. 둘이 zbus 6으로 옮기면 해제한다.
+- **함께 정한 것(질문하지 않음):** eframe `clipboard`를 켠다(입력란 복사·붙여넣기). eframe `persistence`는 `directories`(option-ext, MPL-2.0)를 끌어와 쓰지 않고 창 위치를 `settings.toml`에 둔다. 테마·언어는 OS마다 같은 창 안 "보기" 메뉴에 두고, 네이티브 메뉴에는 정보·끝내기·파일·편집을 둔다. 메뉴 편집 항목은 `raw_input_hook`에서 egui 입력 이벤트로 넣는다. 설정 저장은 알 수 없는 키(중첩 포함)를 남기고, 읽을 수 없거나 새 판이 쓴 파일은 덮어쓰지 않는다.
+
 ## 근거
 
 - **engine 쪽은 준비됨:** `run::start`·`RunHandle`(이벤트, 진행, 항목 취소), `SessionStore`(저장·잠금·정리), `VideoProcessor::preview`(프레임 k의 pixel·영역·마스크 미리보기), core `mask::render`, `app_dirs`(앱 데이터·모델 폴더)가 있다. M6은 주로 앱 crate다.

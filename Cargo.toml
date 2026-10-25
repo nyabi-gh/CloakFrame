@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/cloakframe-core", "crates/cloakframe-engine"]
+members = ["crates/cloakframe-core", "crates/cloakframe-engine", "crates/cloakframe-app"]
 
 [workspace.package]
 version = "2.0.0-alpha.0"
@@ -23,6 +23,15 @@ ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "
 libwebp-sys = "=0.14.4"
 tiff = { version = "=0.11.3", default-features = false, features = ["lzw"] }
 unicode-normalization = "=0.1.25"
+cloakframe-engine = { path = "crates/cloakframe-engine" }
+eframe = { version = "=0.37.0", default-features = false, features = ["accesskit", "clipboard", "wgpu", "glow", "wayland", "x11"] }
+egui_kittest = { version = "=0.37.0", features = ["wgpu", "snapshot"] }
+fluent-bundle = "=0.16.0"
+fluent-syntax = "=0.12.0"
+unic-langid = "=0.9.6"
+sys-locale = "=0.3.2"
+toml = "=1.1.8"
+rfd = "=0.17.2"
 
 [workspace.lints.rust]
 # OS·FFI 어댑터에서만 #[allow(unsafe_code)]로 국소 허용한다(계획 4.1).

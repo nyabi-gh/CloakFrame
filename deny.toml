@@ -34,3 +34,12 @@ unknown-git = "deny"
 
 [advisories]
 yanked = "deny"
+# zbus 6 folded these crates into itself, so the zbus 5 ones are no longer maintained apart. The
+# app's Linux accessibility (AccessKit's AT-SPI) and file dialogs (rfd's xdg-portal) still use
+# zbus 5 and have no release on zbus 6 yet. Not a security defect; remove these once they move
+# (2026-10-25 decision, docs/M6_PLAN.md).
+ignore = [
+    { id = "RUSTSEC-2026-0370", reason = "zvariant, merged into zbus 6; AccessKit and rfd still on zbus 5" },
+    { id = "RUSTSEC-2026-0371", reason = "zbus_names, merged into zbus 6; AccessKit and rfd still on zbus 5" },
+    { id = "RUSTSEC-2026-0372", reason = "zvariant_derive, merged into zbus 6; AccessKit and rfd still on zbus 5" },
+]
