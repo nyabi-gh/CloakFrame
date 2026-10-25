@@ -5,13 +5,16 @@ use egui_kittest::kittest::Queryable;
 use egui_spike::{JAPANESE_SAMPLE, KOREAN_SAMPLE, SpikeState, install_fonts, load_test_card, spike_ui};
 
 fn harness() -> Harness<'static, SpikeState> {
-    let mut harness = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_ui_state(
-        |ui, state: &mut SpikeState| {
-            spike_ui(ui, state);
-        },
-        SpikeState::default(),
-    );
-    install_fonts(&harness.ctx);
+    // Fonts before the first frame: egui_kittest 0.37 panics on a glyph no font has.
+    let mut harness = Harness::builder()
+        .with_size(egui::vec2(1200.0, 800.0))
+        .with_context_setup(install_fonts)
+        .build_ui_state(
+            |ui, state: &mut SpikeState| {
+                spike_ui(ui, state);
+            },
+            SpikeState::default(),
+        );
     let ctx = harness.ctx.clone();
     load_test_card(&ctx, harness.state_mut(), 640, 360);
     harness.run();

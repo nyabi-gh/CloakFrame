@@ -6,6 +6,7 @@
 //! Without --bench it is an interactive window for the manual checks (IME, VoiceOver, file
 //! drop, native menu). With --bench it runs N frames, prints JSON and exits.
 
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use eframe::egui;
@@ -155,6 +156,7 @@ struct App {
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     menu: Option<native_menu::NativeMenu>,
     screenshot: Option<std::path::PathBuf>,
+    shot: Arc<Mutex<Option<Arc<egui::ColorImage>>>>,
     shown_frames: usize,
 }
 
@@ -297,14 +299,13 @@ impl App {
         let Some(path) = self.screenshot.clone() else { return };
         self.shown_frames += 1;
         if self.shown_frames == 30 {
-            ctx.send_viewport_cmd(egui::ViewportCommand::Screenshot(egui::UserData::default()));
+            let (slot, repaint) = (Arc::clone(&self.shot), ctx.clone());
+            ctx.request_screenshot(move |image| {
+                *slot.lock().unwrap() = Some(image);
+                repaint.request_repaint();
+            });
         }
-        let shot = ctx.input(|i| {
-            i.raw.events.iter().find_map(|e| match e {
-                egui::Event::Screenshot { image, .. } => Some(image.clone()),
-                _ => None,
-            })
-        });
+        let shot = self.shot.lock().unwrap().take();
         if let Some(image) = shot {
             let [w, h] = image.size;
             let bytes: Vec<u8> = image.pixels.iter().flat_map(|c| c.to_array()).collect();
@@ -426,6 +427,7 @@ fn main() -> eframe::Result {
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 menu,
                 screenshot: args.screenshot.clone(),
+                shot: Arc::default(),
                 shown_frames: 0,
             }))
         }),

@@ -83,7 +83,7 @@ impl ZoomView {
         self.center = self.center.clamp(half, egui::vec2(1.0, 1.0) - half);
         let uv = egui::Rect::from_min_max((self.center - half).to_pos2(), (self.center + half).to_pos2());
         ui.painter().image(texture.id(), rect, uv, Color32::WHITE);
-        response.widget_info(|| egui::WidgetInfo::labeled(egui::WidgetType::Other, true, "4K 미리보기"));
+        response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Image, true, "4K 미리보기"));
     }
 }
 

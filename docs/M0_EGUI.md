@@ -19,6 +19,28 @@
 
 필수 항목(IME·접근성)은 자동 시험 범위에서 실패가 없고, 공개 이슈 조사(아래)에서도 대안 재평가가 필요한 결함이 없다. **egui 유지로 확정한다(2026-10-17).** 아래 사람 확인 절차는 M0에서 돌리지 않고 M6의 실제 OS 점검에서 쓴다.
 
+## 0.37.0 재확인 (2026-10-25)
+
+M6 0단계 첫 일로 spike를 eframe·egui_kittest **0.37.0**, muda **0.21.2**로 올려 같은 장치에서 자동 시험과 측정을 다시 돌렸다([M6 계획](M6_PLAN.md)).
+
+- **API 변경 두 곳:** `egui::WidgetType`이 AccessKit의 `egui::Role`로 바뀌어 `Other`가 없다(4K 미리보기는 `Role::Image`). 창 캡처는 `Event::Screenshot` 입력 이벤트 대신 `Context::request_screenshot`의 callback으로 받는다.
+- **자동 시험 8개 통과**(IME 조합·취소·일본어 변환, AccessKit 트리, 파일 드롭, 한글·가나 글리프, CJK 렌더, 이름 이체자). 처음에는 8개 모두 "No glyph for '사'"로 실패했다. `egui_kittest` 0.37은 글리프가 없는 글자에 panic하는데(`MissingGlyphPolicy::Panic`, 앱의 기본값은 tofu), harness가 `build_ui_state` 안에서 첫 프레임을 그린 뒤에 시험이 글꼴을 넣고 있었다. 0.36에서는 첫 프레임이 소리 없이 tofu로 그려졌던 순서 오류다. `HarnessBuilder::with_context_setup`으로 첫 프레임 전에 글꼴을 넣었다. 앱 시험도 같은 방식으로 한다.
+- **창 캡처:** 3200×1902 px를 저장했다(빈 화면 아님).
+- **측정**(M0과 같은 창·프레임 수):
+
+| 렌더러 | 시험 | vsync | fps | 프레임 간격 p50 / p95 | 프레임 CPU p50 / p95 | RGB→ColorImage p50 | 최대 텍스처 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| wgpu(Metal) | 1080p 업로드 | 켬 | 60.1 | 16.6 / 17.0 ms | 5.2 / 5.7 ms | 1.20 ms | 8192 |
+| wgpu(Metal) | 1080p 업로드 | 끔 | 154.9 | 3.6 / 17.5 ms | 3.5 / 3.8 ms | 0.82 ms | 8192 |
+| wgpu(Metal) | 4K 확대·이동 | 켬 | 60.0 | 16.7 / 17.0 ms | 1.0 / 1.2 ms | — | 8192 |
+| wgpu(Metal) | 4K 확대·이동 | 끔 | 137.4 | 4.1 / 18.9 ms | 0.7 / 1.0 ms | — | 8192 |
+| glow(OpenGL) | 1080p 업로드 | 켬 | 120.2 | 6.6 / 12.7 ms | 3.8 / 4.0 ms | 0.82 ms | 16384 |
+| glow(OpenGL) | 1080p 업로드 | 끔 | 226.2 | 4.0 / 6.9 ms | 3.7 / 4.1 ms | 0.82 ms | 16384 |
+| glow(OpenGL) | 4K 확대·이동 | 켬 | 88.6 | 11.7 / 17.3 ms | 0.2 / 1.3 ms | — | 16384 |
+| glow(OpenGL) | 4K 확대·이동 | 끔 | 804.2 | 1.2 / 3.4 ms | 0.1 / 0.4 ms | — | 16384 |
+
+0.36.2(위 [측정](#측정))와 비교하면 vsync 켬의 프레임 간격과 프레임 CPU는 같은 범위이고(1080p 업로드 wgpu 5.3 → 5.2 ms), vsync 끔 fps는 흔들림 안이다. wgpu 최대 텍스처는 그대로 8192라 사진 검토의 타일 텍스처 결정은 그대로다. 사람이 하는 확인(아래 절차)은 M6 5단계에서 0.37로 한다.
+
 ## 공개 이슈 조사 (2026-10-17)
 
 실제 입력기·스크린리더 확인 대신 egui·winit 이슈 트래커를 한국어·일본어 IME와 AccessKit 기준으로 조사했다. CJK IME는 0.34–0.35에서 크게 고쳐졌다(조합 확정 Enter의 줄바꿈 [#7876](https://github.com/emilk/egui/issues/7876), 조합 중 Backspace가 확정 글자를 지움 [#7908](https://github.com/emilk/egui/issues/7908), 일본어 확정 뒤 포커스 해제 [#7809](https://github.com/emilk/egui/issues/7809), 합자 조합 중복 [#8087](https://github.com/emilk/egui/issues/8087)이 모두 닫힘). 0.36.2에 남은 것은 아래와 같고, 모두 우회 가능하거나 이 앱의 입력 범위(설정·짧은 이름 칸)에서 영향이 작다.
