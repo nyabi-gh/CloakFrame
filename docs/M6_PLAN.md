@@ -42,6 +42,20 @@
 - **병합(2026-10-25):** PR #57의 CI 9개(3개 OS 시험, 형식·린트·라이선스, 탐지 벤치마크, 영상 추적 벤치마크, 3개 OS 1패스 release)가 `4da94d0`에서 통과했고 메인테이너 지시로 main을 fast-forward했다. 값은 [계획](RUST_PORT_PLAN.md) 8장 M6 0단계 줄에 있다.
 - **함께 정한 것(질문하지 않음):** eframe `clipboard`를 켠다(입력란 복사·붙여넣기). eframe `persistence`는 `directories`(option-ext, MPL-2.0)를 끌어와 쓰지 않고 창 위치를 `settings.toml`에 둔다. 테마·언어는 OS마다 같은 창 안 "보기" 메뉴에 두고, 네이티브 메뉴에는 정보·끝내기·파일·편집을 둔다. 메뉴 편집 항목은 `raw_input_hook`에서 egui 입력 이벤트로 넣는다. 설정 저장은 알 수 없는 키(중첩 포함)를 남기고, 읽을 수 없거나 새 판이 쓴 파일은 덮어쓰지 않는다.
 
+## 1단계(2026-10-25)
+
+- **결정(2026-10-25, 메인테이너가 추천대로):**
+  - 진행률: 모든 항목을 pixel 작업량으로 센다. engine의 영상 진행을 원본 프레임 수에서 프레임 pixel 수(표시 크기)로 바꿔 사진(pixel × 2단계)과 같은 단위로 둔다. engine이 아직 닿지 않은 항목은 파일 앞부분으로 추정한다: 사진은 첫 256 KiB의 헤더 크기, 영상은 프레임 목록 없는 ffprobe 보고(추정 프레임 수 × 표시 크기 × 2패스). 추정이 없는 항목(헤더가 끝에 있는 TIFF 등)은 같은 종류 항목의 평균을 쓴다. 예상 시간은 최근 30초 속도로 내고, 시작 5초 전이나 1% 전에는 "계산 중", 분 단위로 올림, 60분부터 시간·분.
+  - 취소: 실행 전체와 항목별(engine `RunHandle::item_cancels`). 실행 중 창을 닫거나 끝내면 확인을 받고, 동의하면 실행을 취소한 뒤 검토 세션 저장이 끝나야 창이 닫힌다.
+  - 세션 다시 열기: 메인 화면 위 "검토를 기다리는 작업" 목록(만든 때를 24시간 단위로 오늘·어제·N일 전, 저장 위치, 항목 수, 원본이 바뀐 항목 수). 열기 → 항목과 미해결 문제(편집기는 2단계), 버리기 → 확인 뒤 세션과 레코드만 지움(원본·출력 그대로, 다른 실행·검토가 잡고 있으면 거부). 자동 만료 없음.
+  - 바로가기: 자체 구현. 저장된 항목은 "폴더에서 보기"(macOS `open -R`, Windows `explorer /select,`, Linux freedesktop `FileManager1.ShowItems` → 안 되면 폴더를 `xdg-open`)와 "열기"(`open`, `explorer`, `xdg-open`), 검토 필요는 "원본 보기", 실패는 이유를 행 아래에. Linux D-Bus는 이미 tree에 있는 zbus 5.19.0에 `blocking-api` feature를 더해 쓴다(새 crate 없음).
+- **함께 정한 것(질문하지 않음):** 로그 패널은 결과 목록 아래 접힘, 메모리에만, 복사 버튼. 항목 상태는 번역하고 engine의 알림·실패 문장은 CLI처럼 영어(번역은 4단계). 문장 요약의 gap 길이는 영상의 평균 프레임 길이로 내므로 영상 길이를 `VideoAnalysis::seconds`·세션 `StoredMedia::Video::seconds`에 더했다(세션 형식 2는 공개된 적이 없어 판을 올리지 않음). 전체 진행 막대는 추정이 실제보다 작았을 때도 뒤로 가지 않는다.
+- **구현(2026-10-25, 브랜치 `m6-run`):**
+  - engine: 영상 1·2패스 진행을 프레임 pixel로, `VideoProcessor::estimated_work`·`MediaProcessor::estimated_work`, `photo::decode::start_dimensions`, `RunHandle::item_cancels`, `SessionId::created`, `VideoAnalysis::seconds`. CLI 출력은 같다.
+  - 앱: `progress`(전체 작업량·속도·남은 시간), `summary`(문장 요약과 문제 문장, 계획 6장 예 "12개 저장, 2개 검토 필요 — 영상 1개에서 얼굴을 1.2초간 놓침"), `sessions`(목록을 스레드에서 읽음, 원본 stat 포함), `shell`(파일 관리자), `run`(추정 스레드, 항목 취소 token, 로그). 처리 화면은 전체 진행률·남은 시간, 행마다 상태·진행·취소, 결과는 문장 요약·바로가기·문제, 세션을 남겼으면 그 안내. 영·한·일 문장 48개를 더하고 `run-summary`는 지움(일본어는 "검토 필요").
+  - 시험: engine 단위 2개(영상 진행이 pixel이고 추정이 그 합계와 같음·길이, 파일 앞부분 크기와 끝에 헤더가 있는 TIFF), 앱 단위 9개(작업량·평균·검토로 줄어든 작업, 속도 창·늦은 시작·추정 변경, 남은 시간 표기, 문장 요약 영·한·해결된 문제·없음, gap 문장, URI, 항목 취소), `egui_kittest` 3개(재시작 뒤 목록·열기·버리기 확인, 실행 중 닫기 → 계속 → 취소하고 끝내기 → 실행이 멈춘 뒤 닫힘, 세 언어의 모든 문장을 번들 글꼴로 그림). 실행 결과 시험은 요약·"폴더에서 보기"·로그 줄까지 본다. mutation: 닫기 취소를 빼거나 확인 없이 버리면 시험이 잡고, 글꼴에 없는 글자(U+A66E)를 문장에 넣으면 잡는다(☃은 JIS X 0213에 있어 통과). 로컬 전체 531개 통과, fmt·clippy 두 조합·cargo-deny 통과. Linux의 zbus 호출은 스크래치 crate에서 같은 판·feature로 컴파일만 확인했고, Windows·Linux 코드는 CI가 처음 컴파일한다.
+  - 남긴 것: "검토" 바로가기와 편집기(2단계), engine 알림·실패 문장 번역(4단계), Finder·Explorer·Linux 파일 관리자에서 실제로 선택되는지(5단계 macOS, Windows는 M7 VM).
+
 ## 근거
 
 - **engine 쪽은 준비됨:** `run::start`·`RunHandle`(이벤트, 진행, 항목 취소), `SessionStore`(저장·잠금·정리), `VideoProcessor::preview`(프레임 k의 pixel·영역·마스크 미리보기), core `mask::render`, `app_dirs`(앱 데이터·모델 폴더)가 있다. M6은 주로 앱 crate다.
