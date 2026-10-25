@@ -110,6 +110,7 @@ pub struct FrameReader {
     size: (u32, u32),
     listed: usize,
     decoded: usize,
+    cancel: CancelToken,
 }
 
 impl FrameReader {
@@ -140,6 +141,7 @@ impl FrameReader {
             size,
             listed: frames.len(),
             decoded: 0,
+            cancel: cancel.clone(),
         })
     }
 
@@ -154,6 +156,11 @@ impl FrameReader {
         frame.width = width;
         frame.height = height;
         frame.data.resize(width as usize * height as usize * 3, 0);
+        // The process watcher looks for a cancel only now and then; a short video can be read to
+        // its end before it does, and would then pass as complete.
+        if self.cancel.is_cancelled() {
+            return Err(self.end_with(DecodeError::Cancelled));
+        }
         let stdout = self.stdout.as_mut().expect("not finished");
         match read_frame(stdout, &mut frame.data) {
             Ok(true) => {

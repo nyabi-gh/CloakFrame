@@ -73,6 +73,8 @@
 
 찾은 것: `video_analysis.rs` `cancelling_the_first_pass_stops_it_and_removes_its_records`가 전체 시험을 한 번 돌릴 때 감지 호출 12번으로 실패했다(혼자 20번은 모두 통과). 989b94d부터 1패스는 프레임 10의 결과를 기다리기 전에 프레임 11을 감지기에 넣는다. 부하로 감지기가 늦으면 프레임 10에서 취소할 때 11이 이미 채널에 있어 한 번 더 돈다. 이 시험의 "정확히 11번"은 그 전 동작의 기대값이다. 이번 수정과는 상관없고 main에도 있다. 메인테이너 결정(2026-10-25)으로 시험이 취소 때 이미 넣은 프레임 하나를 받아들인다(11–12번, 위 "확인했고 문제없는 것"의 "취소는 약 2프레임 안에 닿는다"와 같음).
 
+PR #55의 macOS CI에서 `media_decode.rs` `cancelling_stops_a_pass`가 취소 대신 `Ok(false)`(끝까지 읽음)로 실패했다. 프로세스 감시 스레드는 취소를 50 ms마다만 보는데, 시험의 20초 320×240 영상은 이 Mac에서 파이프로 전부 디코드하는 데 약 63 ms라 runner가 조금만 늦어도 kill 전에 FFmpeg가 정상 종료한다. 그러면 취소한 패스가 끝까지 읽은 것으로 보였다. `FrameReader::next_into`가 프레임마다 취소를 직접 보게 고쳤다(이번 수정 전부터 있던 경쟁).
+
 ## 1. 재시도 결정에서 남는 "수동 마스크로 덮음"
 
 - **위치:** `crates/cloakframe-engine/src/review.rs:253-336`(`check`), `bin/cloakframe-cli.rs:836-843`.
