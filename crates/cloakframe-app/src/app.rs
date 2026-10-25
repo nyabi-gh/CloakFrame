@@ -316,7 +316,8 @@ impl AppState {
             );
         }
         if self.thumbnails.is_none() {
-            match Thumbnails::new(ctx) {
+            let video = self.tools.ffmpeg.clone().zip(self.tools.ffprobe.clone());
+            match Thumbnails::new(ctx, video) {
                 Ok(thumbnails) => self.thumbnails = Some(thumbnails),
                 Err(e) => self.notices.push(e.to_string()),
             }
@@ -336,10 +337,9 @@ impl AppState {
                             continue;
                         }
                         let picture = egui::Rect::from_min_size(cell.min, egui::vec2(128.0, 128.0));
-                        let shown = match (file.kind, thumbnails.as_mut()) {
-                            (MediaKind::Image, Some(t)) => t.get(&file.path).flatten(),
-                            _ => None,
-                        };
+                        let shown = thumbnails
+                            .as_mut()
+                            .and_then(|t| t.get(&file.path, file.kind).flatten());
                         match shown {
                             Some(texture) => {
                                 let size = texture.size_vec2();

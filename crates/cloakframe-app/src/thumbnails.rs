@@ -1,4 +1,4 @@
-//! Photo thumbnails for the input grid, made one at a time on a worker thread for the cells on
+//! Photo and video thumbnails for the input grid, made one at a time on a worker thread for the cells on
 //! screen. Only the most recently made are kept, so a folder of thousands of photos does not fill
 //! the GPU's memory.
 
@@ -7,8 +7,11 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 
 use cloakframe_engine::cancel::CancelToken;
+use cloakframe_engine::media::decode::{frame_size, source_frame};
+use cloakframe_engine::media::source;
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::decode::thumbnail;
+use cloakframe_engine::scan::MediaKind;
 use eframe::egui;
 
 /// Pixels along the longer side: enough for a 128-point cell at twice the pixel density.
@@ -17,8 +20,11 @@ const KEPT: usize = 200;
 
 type Made = (PathBuf, Option<(u32, u32, Vec<u8>)>);
 
+/// FFmpeg and ffprobe, for the first frame of a video.
+pub type VideoTools = (PathBuf, PathBuf);
+
 pub struct Thumbnails {
-    requests: mpsc::Sender<PathBuf>,
+    requests: mpsc::Sender<(PathBuf, MediaKind)>,
     made: mpsc::Receiver<Made>,
     cancel: CancelToken,
     asked: HashSet<PathBuf>,
@@ -27,8 +33,8 @@ pub struct Thumbnails {
 }
 
 impl Thumbnails {
-    pub fn new(ctx: &egui::Context) -> std::io::Result<Self> {
-        let (requests, incoming) = mpsc::channel::<PathBuf>();
+    pub fn new(ctx: &egui::Context, video: Option<VideoTools>) -> std::io::Result<Self> {
+        let (requests, incoming) = mpsc::channel::<(PathBuf, MediaKind)>();
         let (send, made) = mpsc::channel();
         let cancel = CancelToken::new();
         let (token, repaint) = (cancel.clone(), ctx.clone());
@@ -36,11 +42,16 @@ impl Thumbnails {
             .name("cloakframe-thumbnails".into())
             .spawn(move || {
                 let budget = MemoryBudget::for_this_computer();
-                for path in incoming {
+                for (path, kind) in incoming {
                     if token.is_cancelled() {
                         return;
                     }
-                    let picture = thumbnail(&path, SIDE, &budget, &token).ok();
+                    let picture = match kind {
+                        MediaKind::Image => thumbnail(&path, SIDE, &budget, &token).ok(),
+                        MediaKind::Video => video
+                            .as_ref()
+                            .and_then(|tools| first_frame(tools, &path, &token)),
+                    };
                     if send.send((path, picture)).is_err() {
                         return;
                     }
@@ -82,15 +93,34 @@ impl Thumbnails {
 
     /// The thumbnail of `path` if it is made; asks for it otherwise. `None` inside means the
     /// photo could not be read.
-    pub fn get(&mut self, path: &Path) -> Option<Option<&egui::TextureHandle>> {
+    pub fn get(&mut self, path: &Path, kind: MediaKind) -> Option<Option<&egui::TextureHandle>> {
         if let Some(texture) = self.textures.get(path) {
             return Some(texture.as_ref());
         }
         if self.asked.insert(path.to_path_buf()) {
-            let _ = self.requests.send(path.to_path_buf());
+            let _ = self.requests.send((path.to_path_buf(), kind));
         }
         None
     }
+}
+
+/// The video's first frame as the passes see it, in display orientation, as RGBA rows.
+fn first_frame(
+    (ffmpeg, ffprobe): &VideoTools,
+    path: &Path,
+    cancel: &CancelToken,
+) -> Option<(u32, u32, Vec<u8>)> {
+    let opened = source::open(ffprobe, path, cancel).ok()?;
+    let size = frame_size(&opened.spec, Some(SIDE));
+    let frame = source_frame(ffmpeg, path, &opened.spec, &opened.frames, 0, size, cancel).ok()?;
+    let rgba = frame
+        .data
+        .as_chunks::<3>()
+        .0
+        .iter()
+        .flat_map(|&[r, g, b]| [r, g, b, 255])
+        .collect();
+    Some((frame.width, frame.height, rgba))
 }
 
 impl Drop for Thumbnails {
@@ -116,10 +146,13 @@ mod tests {
         let photo = assets.join("lena.jpg");
 
         let ctx = egui::Context::default();
-        let mut thumbnails = Thumbnails::new(&ctx).unwrap();
-        assert!(thumbnails.get(&photo).is_none());
-        assert!(thumbnails.get(&broken).is_none());
-        assert!(thumbnails.get(&photo).is_none(), "asked once only");
+        let mut thumbnails = Thumbnails::new(&ctx, None).unwrap();
+        assert!(thumbnails.get(&photo, MediaKind::Image).is_none());
+        assert!(thumbnails.get(&broken, MediaKind::Image).is_none());
+        assert!(
+            thumbnails.get(&photo, MediaKind::Image).is_none(),
+            "asked once only"
+        );
         for _ in 0..2 {
             let made = thumbnails
                 .made
@@ -127,9 +160,40 @@ mod tests {
                 .unwrap();
             thumbnails.made_now(made, &ctx);
         }
-        let texture = thumbnails.get(&photo).unwrap().unwrap();
+        let texture = thumbnails.get(&photo, MediaKind::Image).unwrap().unwrap();
         assert_eq!(texture.size_vec2().max_elem(), SIDE as f32);
-        assert!(thumbnails.get(&broken).unwrap().is_none());
+        assert!(thumbnails.get(&broken, MediaKind::Image).unwrap().is_none());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    fn tool(name: &str) -> PathBuf {
+        std::env::var_os(name)
+            .map(PathBuf::from)
+            .unwrap_or_else(|| panic!("{name} is not set (see CONTRIBUTING.md)"))
+    }
+
+    /// The first frame, at the thumbnail size in display orientation; none without FFmpeg.
+    #[test]
+    fn videos_get_their_first_frame() {
+        let video = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/fixtures/defects/P-3/rotated-90.mp4");
+        let ctx = egui::Context::default();
+        let tools = (tool("CLOAKFRAME_FFMPEG"), tool("CLOAKFRAME_FFPROBE"));
+        for (tools, expected) in [(Some(tools), true), (None, false)] {
+            let mut thumbnails = Thumbnails::new(&ctx, tools).unwrap();
+            assert!(thumbnails.get(&video, MediaKind::Video).is_none());
+            let made = thumbnails
+                .made
+                .recv_timeout(Duration::from_secs(60))
+                .unwrap();
+            thumbnails.made_now(made, &ctx);
+            let texture = thumbnails.get(&video, MediaKind::Video).unwrap();
+            assert_eq!(texture.is_some(), expected);
+            if let Some(texture) = texture {
+                let [width, height] = texture.size();
+                assert_eq!(width.max(height), SIDE as usize);
+                assert!(height > width, "turned upright: {width}x{height}");
+            }
+        }
     }
 }
