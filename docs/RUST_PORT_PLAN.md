@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md), [조사와 TimelineSpec](M4_PROBE.md), [디코드와 프레임 대응](M4_DECODE.md), [0–2단계 재검토](M4_REVIEW.md), [인코드](M4_ENCODE.md), [영상 처리기](M4_VIDEO.md), [완료 확인](M4_VERIFY.md). M5 기록: [단계 계획 실험](M5_PLAN.md), [core 추적](M5_TRACK.md), [분석 1패스](M5_ANALYSIS.md), [2패스와 게시 게이트](M5_RENDER.md), [검토 세션과 결정](M5_REVIEW.md), [영상 탐지 품질](M5_BENCHMARK.md), [완료 확인](M5_VERIFY.md), [M0–M5 재검토](M0_M5_REVIEW.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md), [조사와 TimelineSpec](M4_PROBE.md), [디코드와 프레임 대응](M4_DECODE.md), [0–2단계 재검토](M4_REVIEW.md), [인코드](M4_ENCODE.md), [영상 처리기](M4_VIDEO.md), [완료 확인](M4_VERIFY.md). M5 기록: [단계 계획 실험](M5_PLAN.md), [core 추적](M5_TRACK.md), [분석 1패스](M5_ANALYSIS.md), [2패스와 게시 게이트](M5_RENDER.md), [검토 세션과 결정](M5_REVIEW.md), [영상 탐지 품질](M5_BENCHMARK.md), [완료 확인](M5_VERIFY.md), [M0–M5 재검토](M0_M5_REVIEW.md). M6 기록: [단계 계획](M6_PLAN.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -83,7 +83,7 @@
 | 분야 | 선정 | 메모 |
 | --- | --- | --- |
 | 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.36.x 기준 1.95)가 결정 |
-| UI | egui/eframe 0.36.x(wgpu 기본, glow 대체 경로), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda`로 macOS·Windows만(Windows는 winit 메시지 훅에서 `TranslateAcceleratorW`). muda는 GTK 창에만 붙어 Linux는 egui 메뉴 막대. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL, Regular 2개 4.1 MB, 이름 이체자 처리는 M6). UI 시험은 `egui_kittest`([M0 기록](M0_EGUI.md)) |
+| UI | egui/eframe 0.37.x(M6 0단계에서 0.36.2에서 올림, wgpu 기본, glow 대체 경로), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda`로 macOS·Windows만(Windows는 winit 메시지 훅에서 `TranslateAcceleratorW`). muda는 GTK 창에만 붙어 Linux는 egui 메뉴 막대. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL, Regular 2개 4.1 MB, 이름 이체자 처리는 M6). UI 시험은 `egui_kittest`([M0 기록](M0_EGUI.md)) |
 | 추론 | `ort` =2.0.0-rc.15(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 `api-27`로 macOS 공식 1.30.0·Windows ML 1.27.1 모두 세 모델의 CPU 결과와 CoreML·DML 결과가 1.12.1과 같음을 확인. `ort`의 세션 빌더는 EP 자동 선택 정책 `MaxEfficiency`를 기본으로 걸어 ORT 1.31이 CPU 세션에도 CoreML을 붙이므로, 세션마다 `with_auto_device(PreferCPU)`로 덮고 EP를 명시한다. RC이므로 정확한 버전으로 고정. M5 5단계에서 rc.14의 세션 출력 누수(실행마다 272 B) 때문에 rc.15로 올림([기록](M5_VERIFY.md#찾은-것-ort-rc14의-출력-누수)) |
 | 이미지 | `image` 0.25(PNG·TIFF·BMP·WebP, 필요 codec만), JPEG 디코드·인코드는 libjpeg-turbo(`turbojpeg`, 2026-10-18 결정: `image`의 zune-jpeg 0.5.15가 non-interleaved 4:2:0 JPEG를 조용히 잘못 디코드하고, libjpeg-turbo는 1.12.1의 OpenCV와 pixel까지 같음, [기록](M2_ENCODE_SPIKE.md)), 손실 WebP 인코드는 libwebp(`libwebp-sys`), TIFF 인코드(LZW)와 TIFF ICC 판독은 `tiff`(M2 5단계: `image`의 TIFF 인코더는 압축을 고를 수 없고, `image`는 작은 TIFF의 ICC를 limit 때문에 버림), BMP V5의 내장 ICC는 자체 판독(`image`가 읽지 않음, M2 7단계), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer(`engine::photo::metadata`) | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(`engine::detect::resize`). 정확히 2배 축소일 때 OpenCV가 바꿔 쓰는 `INTER_AREA` 경로까지 옮겼고, x86 OpenCV 5.0.0 일반 경로와 92개 크기 조합에서 바이트 일치를 시험으로 고정했다(M2 3단계, `tests/fixtures/resize`). `fast_image_resize`는 화면 표시용에만 |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
@@ -389,7 +389,15 @@ crates/
 ### M6 — desktop 앱
 
 - **작업:** 6장 UX 전체, 사진·영상 검토 화면, 설정, 3개 언어·테마, 정보 창
-- **완료 기준:** 모든 흐름을 UI로 수행, `egui_kittest` 상호작용 시험, 실제 OS의 IME·파일 대화상자·스크린리더·드롭·메뉴 단축키·GPU 없는 환경·원격 데스크톱 점검([M0 egui 절차와 공개 이슈 목록](M0_EGUI.md), [Windows·Linux 절차](M0_PLATFORM_RUNBOOK.md)). preview 릴리스 가능
+- **완료 기준:** 모든 흐름을 UI로 수행, `egui_kittest` 상호작용 시험, macOS 실제 OS의 IME·파일 대화상자·스크린리더·드롭·메뉴 단축키 점검([M0 egui 절차와 공개 이슈 목록](M0_EGUI.md)), Windows·Linux는 CI runner에서 앱 실행·`egui_kittest`·GPU 없는 환경의 렌더러 대체 경로·창 스크린샷. Windows Narrator·실제 IME·원격 데스크톱은 M7 Windows 10 VM과 M8 실기기로 옮김(2026-10-25, [Windows·Linux 절차](M0_PLATFORM_RUNBOOK.md)). macOS 확인 뒤 preview 릴리스 가능
+- **단계(2026-10-25 계획, [기록](M6_PLAN.md)):** 단계마다 main에서 브랜치·PR 하나.
+  0. 앱 골격·메인 화면(`m6-app`): 새 crate `cloakframe-app`, egui 0.37 재측정, 글꼴, fluent, 테마, `settings.toml`, 메뉴, 정보 창, 창 위치, 드롭·썸네일·무엇을/어떻게·저장 위치, engine 작업 스레드와 이벤트, `egui_kittest` 틀
+  1. 처리·결과·세션(`m6-run`): 파일별 상태, 진행률·예상 시간, 취소, 로그 패널, 문장 요약, 앱 재시작 뒤 검토 세션 다시 열기(범위 조정 ②)
+  2. 사진 검토(`m6-photo-review`): 검토 큐, 타일 텍스처 확대, 토글·추가·키보드·undo/redo, Space 미리보기, `?` 안내, 해결 표시와 두 내보내기, 결정을 `ReviewKey`까지 묶음([재검토](M0_M5_REVIEW.md) 9번)
+  3. 영상 검토(`m6-video-review`): 타임라인·track 레인·gap, 프레임 이동·미리보기, 저해상도 연속 재생(범위 조정 ①), keyframe, gap 결정, 미리보기 전 `VideoEdits::check`(재검토 11번)
+  4. 설정·미리보기·번역·접근성(`m6-settings`): 고급 설정, 샘플 미리보기, 하드웨어 인코드 실패 이유 표시(M5에서 넘어옴), `.ts` 이전 완료, 접근성 이름·역할·포커스
+  5. 완료 확인(`m6-verify`): 흐름별 시험 표, macOS 실제 OS 점검, Windows·Linux CI 실행·스크린샷, 범위 조정 점검
+- **결정(2026-10-25, [기록](M6_PLAN.md)):** 위 단계, 범위 조정 ①②는 미루지 않음, 재검토 7·10번은 M8 품질 비교 전 별도 브랜치. egui·egui_kittest·eframe은 0.37.x(0.37.0이 10월 29일에 공개 2주, 0단계는 그 뒤 시작하고 M0 자동 시험을 다시 돌림), muda·rfd도 그때 2주 지난 최신 판. 글꼴은 JIS X 0213 전체와 KS X 1001 한자를 번들, 메뉴는 muda "custom"(Linux는 egui 메뉴 막대), 번역은 영어 `.ftl` 기준으로 1.12.1 `.ts`에서 쓰는 문장만 옮김(새 일본어는 기계 초안 + 검토 필요 표시), 설정은 앱 데이터 폴더의 `settings.toml`, 렌더러는 wgpu 기본·실패 시 glow
 
 ### M7 — 배포·업데이트·이전
 
