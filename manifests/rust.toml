@@ -11,13 +11,14 @@ msrv = "1.95"
 evidence = "docs/RUST_PORT_PLAN.md#3-기술-스택"
 
 [crates.ort]
-version = "=2.0.0-rc.14"
+version = "=2.0.0-rc.15"
 default-features = false
 features = ["std", "load-dynamic", "api-27"]
 features-macos = ["coreml"]
 features-windows = ["directml"]
 # api-N은 세 OS 중 가장 낮은 ORT(Windows ML 2.4.89 안의 1.27.1)가 정한다. api-30이면 Windows에서 BadVersion.
 # 세션마다 with_auto_device(PreferCPU)로 기본 EP 자동 선택(MaxEfficiency)을 덮는다.
+# rc.14는 세션 출력마다 OrtTypeInfo를 놓지 않아 rc.15로 올림(docs/M5_VERIFY.md).
 # engine은 M2 3단계부터 CPU만 쓴다(crates/cloakframe-engine/src/detect/runtime.rs). coreml·directml은 M3에서 붙인다.
 evidence = "docs/M0_ORT_SPIKE.md"
 

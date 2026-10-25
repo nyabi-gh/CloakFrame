@@ -19,7 +19,7 @@ image = { version = "=0.25.10", default-features = false, features = ["png", "ti
 turbojpeg = { version = "=1.5.1", default-features = false, features = ["cmake"] }
 kamadak-exif = "=0.6.1"
 moxcms = "=0.9.1"
-ort = { version = "=2.0.0-rc.14", default-features = false, features = ["std", "load-dynamic", "api-27"] }
+ort = { version = "=2.0.0-rc.15", default-features = false, features = ["std", "load-dynamic", "api-27"] }
 libwebp-sys = "=0.14.4"
 tiff = { version = "=0.11.3", default-features = false, features = ["lzw"] }
 unicode-normalization = "=0.1.25"
