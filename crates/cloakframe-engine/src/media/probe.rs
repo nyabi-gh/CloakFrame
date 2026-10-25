@@ -140,6 +140,7 @@ struct Stream {
     avg_frame_rate: Option<String>,
     time_base: Option<String>,
     start_pts: Option<i64>,
+    duration_ts: Option<i64>,
     duration: Option<String>,
     nb_frames: Option<String>,
     color_space: Option<String>,
@@ -296,6 +297,16 @@ pub fn parse(report: &[u8]) -> Result<TimelineSpec, ProbeError> {
             index: s.index,
             codec: s.codec_name.clone().unwrap_or_else(|| "unknown".into()),
             language: s.tags.language.as_deref().and_then(language::mp4_language),
+            end: match (
+                s.start_pts,
+                s.duration_ts,
+                s.time_base.as_deref().and_then(rational),
+            ) {
+                (Some(start), Some(length), Some(time_base)) => start
+                    .checked_add(length)
+                    .map(|end| Seconds::of_ticks(end, time_base)),
+                _ => None,
+            },
         })
         .collect();
 

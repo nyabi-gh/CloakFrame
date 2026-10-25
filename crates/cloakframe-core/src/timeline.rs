@@ -293,6 +293,8 @@ pub struct AudioStream {
     pub codec: String,
     /// An ISO 639-2 code, the form MP4 stores; `und` and anything else is dropped.
     pub language: Option<String>,
+    /// Where its last sample ends on the source's timeline, when the container says.
+    pub end: Option<Seconds>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

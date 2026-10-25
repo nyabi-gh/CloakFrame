@@ -63,6 +63,7 @@ fn an_early_audio_start_moves_only_the_video_start() {
     assert_eq!(s.start, Seconds::new(2, 5).unwrap());
     assert_eq!(s.audio.len(), 1);
     assert_eq!((s.audio[0].index, s.audio[0].codec.as_str()), (1, "aac"));
+    assert_eq!(s.audio[0].end.map(Seconds::as_f64), Some(2.4));
 
     let s = fixture("P-5", "odd-641x361-audio-longer.mp4");
     assert_eq!((s.coded_width, s.coded_height), (641, 361));

@@ -23,7 +23,7 @@
 
 `media::verify::check`가 임시 파일에 대해:
 
-- **ffprobe**(`-show_streams -show_format -show_chapters`): stream이 정확히 [영상, 원본 오디오 수만큼 오디오], chapter 없음. 영상 코덱(h264·hevc), 크기(패딩한 크기), D1 네 태그(이름이 아니라 값으로 비교: ffprobe가 `gamma28`로 낼 수 있는 것을 `bt470bg`와 같게 봄). 영상 길이는 프레임 수 ÷ 속도와 1프레임 안. 오디오는 영상 + 1프레임을 넘지 않음(원본 오디오가 먼저 끝나면 짧을 수 있음), 언어는 spec과 같음. 태그는 allowlist만: format `major_brand·minor_version·compatible_brands·encoder`, stream `language·handler_name·vendor_id·encoder`.
+- **ffprobe**(`-show_streams -show_format -show_chapters`): stream이 정확히 [영상, 원본 오디오 수만큼 오디오], chapter 없음. 영상 코덱(h264·hevc), 크기(패딩한 크기), D1 네 태그(이름이 아니라 값으로 비교: ffprobe가 `gamma28`로 낼 수 있는 것을 `bt470bg`와 같게 봄). 영상 길이는 프레임 수 ÷ 속도와 1프레임 안. 오디오는 영상 + 1프레임을 넘지 않음(원본 오디오가 먼저 끝나면 짧을 수 있음). 원본 오디오가 영상 끝까지 있으면(`start_pts + duration_ts`) 출력 오디오도 시작 + 길이가 영상 끝 − 1프레임에 닿아야 함([M0–M5 재검토](M0_M5_REVIEW.md) 2번). 언어는 spec과 같음. 태그는 allowlist만: format `major_brand·minor_version·compatible_brands·encoder`, stream `language·handler_name·vendor_id·encoder`.
 - **전체 디코드:** `ffmpeg -xerror -i out -map 0 -fps_mode passthrough -f null -progress pipe:1 -`로 오디오까지 디코드하고, 마지막 `frame=`이 기대 프레임 수와 같아야 한다.
 
 실험:

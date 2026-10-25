@@ -34,14 +34,22 @@ pub struct Expected {
     pub primaries: Primaries,
     pub transfer: Transfer,
     pub range: Range,
-    /// The language of each audio stream, in order.
-    pub audio: Vec<Option<String>>,
+    pub audio: Vec<ExpectedAudio>,
+}
+
+/// An audio stream of the output, in order.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ExpectedAudio {
+    pub language: Option<String>,
+    /// The source's sound lasts to the video's end, so the output's must too.
+    pub to_the_end: bool,
 }
 
 impl Expected {
     /// The output [`FrameWriter`](crate::media::encode::FrameWriter) makes of `spec` with
     /// `frames` frames and the source's audio.
     pub fn of(spec: &TimelineSpec, codec: OutputCodec, frames: u64) -> Self {
+        let seconds = frames as f64 * f64::from(spec.rate.den()) / f64::from(spec.rate.num());
         Self {
             codec,
             size: encoded_size(spec.display_size()),
@@ -51,7 +59,16 @@ impl Expected {
             primaries: spec.color.primaries,
             transfer: spec.color.transfer,
             range: spec.color.range,
-            audio: spec.audio.iter().map(|a| a.language.clone()).collect(),
+            audio: spec
+                .audio
+                .iter()
+                .map(|a| ExpectedAudio {
+                    language: a.language.clone(),
+                    to_the_end: a
+                        .end
+                        .is_some_and(|end| end.as_f64() - spec.start.as_f64() >= seconds),
+                })
+                .collect(),
         }
     }
 
@@ -175,6 +192,7 @@ struct Stream {
     color_range: Option<String>,
     color_primaries: Option<String>,
     color_transfer: Option<String>,
+    start_time: Option<String>,
     duration: Option<String>,
     #[serde(default)]
     tags: BTreeMap<String, String>,
@@ -213,16 +231,21 @@ fn check_report(report: &[u8], expected: &Expected) -> Result<(), VerifyError> {
             found: video_seconds,
         });
     }
-    for (i, (stream, language)) in audio.iter().zip(&expected.audio).enumerate() {
+    for (i, (stream, kept)) in audio.iter().zip(&expected.audio).enumerate() {
         // Audio may end before the video when the source's does, never after it.
         let found = seconds(stream);
-        if !found.is_some_and(|s| s <= expected.seconds() + tolerance) {
+        let too_long = !found.is_some_and(|s| s <= expected.seconds() + tolerance);
+        let end = found.map(|s| start_time(stream) + s - start_time(video));
+        let too_short =
+            kept.to_the_end && !end.is_some_and(|e| e >= expected.seconds() - tolerance);
+        if too_long || too_short {
             return Err(VerifyError::Duration {
                 stream: format!("audio stream {}", i + 1),
                 expected: expected.seconds(),
                 found,
             });
         }
+        let language = &kept.language;
         let tagged = stream.tags.get("language").map(String::as_str);
         let tagged = tagged.filter(|&l| l != "und");
         if tagged != language.as_deref() {
@@ -334,6 +357,15 @@ fn seconds(stream: &Stream) -> Option<f64> {
         .filter(|s: &f64| s.is_finite())
 }
 
+fn start_time(stream: &Stream) -> f64 {
+    stream
+        .start_time
+        .as_deref()
+        .and_then(|s| s.parse().ok())
+        .filter(|s: &f64| s.is_finite())
+        .unwrap_or(0.0)
+}
+
 /// Every stream decoded to nothing; the number of video frames the decode gave. `-xerror` makes
 /// a damaged packet fail the decode instead of being skipped: without it a cut-off file decodes
 /// with exit status 0, one frame short.
@@ -371,7 +403,10 @@ mod tests {
             primaries: Primaries::Bt470bg,
             transfer: Transfer::Bt470bg,
             range: Range::Tv,
-            audio: vec![Some("eng".to_owned())],
+            audio: vec![ExpectedAudio {
+                language: Some("eng".to_owned()),
+                to_the_end: false,
+            }],
         }
     }
 
@@ -467,5 +502,20 @@ mod tests {
         let mut r = report();
         r["streams"][1]["duration"] = json!("0.500000");
         checked(&r).unwrap();
+    }
+
+    /// Sound in the source up to the video's end must reach it in the output, from wherever it
+    /// starts.
+    #[test]
+    fn audio_must_last_as_long_as_the_sources() {
+        let mut to_the_end = expected();
+        to_the_end.audio[0].to_the_end = true;
+        let check = |r: &serde_json::Value| check_report(r.to_string().as_bytes(), &to_the_end);
+        let mut r = report();
+        check(&r).unwrap();
+        r["streams"][1]["duration"] = json!("1.500000");
+        assert!(matches!(check(&r), Err(VerifyError::Duration { .. })));
+        r["streams"][1]["start_time"] = json!("0.500000");
+        check(&r).unwrap();
     }
 }

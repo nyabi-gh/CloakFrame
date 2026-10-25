@@ -323,6 +323,12 @@ impl FrameWriter {
             if COPIED_AUDIO.contains(&stream.codec.as_str()) {
                 command.args([format!("-c:a:{i}").as_str(), "copy"]);
             } else {
+                // -t counts from a stream's first frame, which for sound decoded from before the
+                // video is before zero; sound encoded again is cut on its samples instead.
+                command.args([
+                    format!("-filter:a:{i}"),
+                    format!("atrim=start=0:end={length:.9}"),
+                ]);
                 command.args([format!("-c:a:{i}").as_str(), "aac"]);
                 command.args([format!("-b:a:{i}").as_str(), "192k"]);
             }

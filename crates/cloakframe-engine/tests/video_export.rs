@@ -504,6 +504,18 @@ fn sound_that_starts_before_the_video() {
     });
 }
 
+/// Sound that is encoded again is cut on its decoded samples; FFmpeg's -t counted from the
+/// first of them and ended it as much sooner as it started.
+#[test]
+fn pcm_sound_that_starts_before_the_video() {
+    exports_keep_frames_and_sound(&Recipe {
+        container: "mov",
+        audio_codec: "pcm_s16le",
+        audio_lead: 1.0,
+        ..Recipe::new("pcm-early")
+    });
+}
+
 #[test]
 fn sound_that_starts_after_the_video() {
     exports_keep_frames_and_sound(&Recipe {
