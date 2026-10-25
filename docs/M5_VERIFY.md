@@ -140,7 +140,15 @@ CLI `run`, 기본 설정(YOLO5Face-n CoreML, 타일 켬, VideoToolbox), `--revie
 
 ## spin의 3개 OS release 측정
 
-`video-throughput.yml`이 release 1패스(1080p 5초, YOLO5Face-n CPU, spin 끔/켬/끔/타일)를 3개 OS에서 출력한다. 이 Mac의 release는 1단계에서 spin 끔 24.4 fps·켬 8.6 fps였다([기록](M5_ANALYSIS.md#처리량)). runner 값은 이 PR의 첫 실행에서 적는다.
+`video-throughput.yml`이 release 1패스(1080p 5초, YOLO5Face-n CPU, spin 끔/켬/끔/타일)를 3개 OS에서 출력한다. 이 Mac의 release는 1단계에서 spin 끔 24.4 fps·켬 8.6 fps였다([기록](M5_ANALYSIS.md#처리량)). PR #54의 실행에서 runner 값은 이렇다(fps).
+
+| OS | spin 끔 | 켬 | 끔 | 타일 |
+| --- | --- | --- | --- | --- |
+| macOS runner | 12.1 | 12.6 | 9.7 | 3.6 |
+| Linux | 17.8 | 17.3 | 17.9 | 6.3 |
+| Windows | 14.4 | 15.9 | 15.7 | 5.5 |
+
+runner(코어 3–4개)에서는 release에서도 spin 차이가 runner 편차 안이다. spin 이득은 이 Mac(10코어)처럼 코어가 많을 때 보인다. 같은 실행의 ci.yml debug 1패스(macOS 10.5/10.7/12.2/4.4, Linux 10.6/7.1/10.5/4.0, Windows 17.1/13.5/17.1/6.5)는 전처리 겹침 뒤 release와 비슷하거나 높아, 이 workflow를 따로 두는 이유는 [M0–M5 재검토](M0_M5_REVIEW.md) 12번에서 다시 본다.
 
 ## 범위 조정 점검
 
@@ -200,4 +208,5 @@ RSS는 CLI 프로세스와 그 자식(FFmpeg)을 `ps -o rss`로 5초마다 따�
 - P-4 디코드 비용(4K 2.4–2.5초): M4 결정대로 둔다. 하드웨어 디코드로 줄이는 것은 손상을 같은 방식으로 잡는지 확인한 뒤에만 한다.
 - NVENC·QSV, Windows 4K 파이프 상한: M7·M8 실기기(M4에서 넘어옴).
 - 하드웨어 인코드 실패의 이유를 결과에 남기기: M6 결과 표시와 함께([위](#찾은-것-60분-출력의-하드웨어-인코더-실패)).
+- 9.3 목표 문구와 4K의 P-4 비용, 1패스 밖의 나머지 약 1.6초: [M0–M5 재검토](M0_M5_REVIEW.md) 12번.
 - Windows ML DML 결과를 ort rc.15로 다시 확인: M8 실제 장치(M0는 rc.14로 확인, CI는 3개 OS CPU와 x86 ORT 비교만 돎).
