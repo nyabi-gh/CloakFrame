@@ -149,6 +149,12 @@ struct Candidate {
     frames_since: u32,
 }
 
+impl Candidate {
+    fn went_back(&self, current: &Thumbnail) -> bool {
+        current.mean_abs_diff(&self.before) < MIN_CUT_DIFF.min(self.diff * 0.5)
+    }
+}
+
 /// Fed every frame's thumbnail in order. A frame that differs from the one before by at least
 /// 22 grey levels and 2.5 times the recent median is a candidate cut.
 #[derive(Default)]
@@ -156,7 +162,8 @@ pub struct SceneCutDetector {
     previous: Option<Thumbnail>,
     next_frame: FrameIndex,
     recent: VecDeque<f32>,
-    candidate: Option<Candidate>,
+    /// Candidates still waiting, oldest first; each came while the one before it waited.
+    waiting: Vec<Candidate>,
     cuts: Vec<FrameIndex>,
 }
 
@@ -170,16 +177,17 @@ impl SceneCutDetector {
         let current = self.previous.as_ref().expect("just stored");
         let diff = current.mean_abs_diff(&previous);
         let spike = self.is_spike(diff);
-        if let Some(candidate) = &mut self.candidate {
-            if current.mean_abs_diff(&candidate.before) < MIN_CUT_DIFF.min(candidate.diff * 0.5) {
-                self.candidate = None;
+        if !self.waiting.is_empty() {
+            // Going back to the content before a waiting candidate makes it and every later one a
+            // flash, even one that faded over several frames.
+            if let Some(back) = self.waiting.iter().position(|c| c.went_back(current)) {
+                self.waiting.truncate(back);
                 return;
             }
             // A new spike while the last one waits means the short shot between them was real:
             // both are cuts (P-6). 1.12.1 looked again only after the wait and missed the second.
             if spike {
-                self.cuts.push(candidate.frame);
-                self.candidate = Some(Candidate {
+                self.waiting.push(Candidate {
                     frame,
                     diff,
                     before: previous,
@@ -187,15 +195,15 @@ impl SceneCutDetector {
                 });
                 return;
             }
-            candidate.frames_since += 1;
-            if candidate.frames_since < CONFIRM_FRAMES {
+            let last = self.waiting.last_mut().expect("not empty");
+            last.frames_since += 1;
+            if last.frames_since < CONFIRM_FRAMES {
                 return;
             }
-            self.cuts.push(candidate.frame);
-            self.candidate = None;
+            self.cuts.extend(self.waiting.drain(..).map(|c| c.frame));
         }
         if spike {
-            self.candidate = Some(Candidate {
+            self.waiting.push(Candidate {
                 frame,
                 diff,
                 before: previous,
@@ -221,11 +229,9 @@ impl SceneCutDetector {
         sorted[sorted.len() / 2]
     }
 
-    /// The cuts, including a candidate the video ended on.
+    /// The cuts, including candidates the video ended on.
     pub fn finish(mut self) -> SceneCuts {
-        if let Some(candidate) = self.candidate.take() {
-            self.cuts.push(candidate.frame);
-        }
+        self.cuts.extend(self.waiting.drain(..).map(|c| c.frame));
         SceneCuts::new(self.cuts)
     }
 }
@@ -324,6 +330,35 @@ mod tests {
             [10, 12]
         );
         assert_eq!(cuts(&[(a.clone(), 10), (solid(255), 1), (a, 10)]), []);
+    }
+
+    /// A flash that fades over several frames is a new spike on each of them, and then the
+    /// video goes back to the scene before the first: no cut at all.
+    #[test]
+    fn a_flash_over_several_frames_that_goes_back_is_no_cut() {
+        let a = gradient(true);
+        let fade = |steps: &[u8], back: Thumbnail| {
+            let mut scenes = vec![(solid(100), 10)];
+            scenes.extend(steps.iter().map(|&v| (solid(v), 1)));
+            scenes.push((back, 10));
+            scenes
+        };
+        assert_eq!(cuts(&fade(&[255, 180], solid(100))), []);
+        assert_eq!(cuts(&fade(&[255, 200, 150], solid(100))), []);
+        assert_eq!(cuts(&fade(&[255, 255], solid(100))), []);
+        let mut scenes = vec![(a.clone(), 10), (solid(255), 1), (solid(180), 1)];
+        scenes.push((a.clone(), 10));
+        assert_eq!(cuts(&scenes), []);
+        // Back to the first short shot after a flash in it: that shot's cuts stand.
+        assert_eq!(
+            cuts(&[
+                (solid(0), 10),
+                (solid(255), 1),
+                (solid(110), 1),
+                (solid(255), 10)
+            ]),
+            [10]
+        );
     }
 
     #[test]
