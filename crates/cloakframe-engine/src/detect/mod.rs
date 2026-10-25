@@ -7,6 +7,7 @@ pub mod tiles;
 pub mod yolo5face;
 pub mod yunet;
 
+use std::any::Any;
 use std::fmt;
 use std::sync::mpsc;
 use std::thread;
@@ -56,10 +57,55 @@ pub struct Found {
     pub reran_on_cpu: bool,
 }
 
+/// The model input a detector's [`Preparer`] made from one image.
+pub type Prepared = Box<dyn Any + Send>;
+
+/// Makes a detector's model input from an image without its session.
+pub type Preparer = Box<dyn Fn(&Rgb8Image) -> Prepared + Send>;
+
 /// A loaded model session. `Send` but not required to be `Sync`: the inference thread is its
 /// only owner, so no two callers can run one session at the same time (D8).
 pub trait Detector: Send {
     fn detect(&mut self, image: &Rgb8Image, thresholds: &Thresholds) -> Result<Found, DetectError>;
+
+    /// The work on an image that needs no session, which [`DetectorHandle`] does on its own
+    /// thread while the session runs the image before. On an accelerator the session waits for
+    /// the device, and the input made in line with it took a tenth of each frame
+    /// (docs/M5_VERIFY.md).
+    fn preparer(&self) -> Option<Preparer> {
+        None
+    }
+
+    /// [`detect`](Self::detect) given what the preparer made from `image`.
+    fn detect_prepared(
+        &mut self,
+        image: &Rgb8Image,
+        _prepared: Prepared,
+        thresholds: &Thresholds,
+    ) -> Result<Found, DetectError> {
+        self.detect(image, thresholds)
+    }
+}
+
+/// `prepare`'s input for `image`, or nothing for an empty image, in which a detector finds
+/// nothing without running its session.
+fn input_unless_empty<T: Send + 'static>(
+    image: &Rgb8Image,
+    prepare: fn(&Rgb8Image) -> T,
+) -> Prepared {
+    if image.width == 0 || image.height == 0 {
+        Box::new(())
+    } else {
+        Box::new(prepare(image))
+    }
+}
+
+/// The input a detector's own preparer made. Another type is a detector wired to the wrong
+/// preparer, a bug.
+fn prepared<T: 'static>(prepared: Prepared) -> T {
+    *prepared
+        .downcast::<T>()
+        .expect("model input from another detector's preparer")
 }
 
 /// Finds nothing. For runs that do not detect, and for tests.
@@ -71,11 +117,8 @@ impl Detector for NoDetections {
     }
 }
 
-type Request = (
-    Rgb8Image,
-    Thresholds,
-    mpsc::SyncSender<Result<Found, DetectError>>,
-);
+type Reply = mpsc::SyncSender<Result<Found, DetectError>>;
+type Request = (Rgb8Image, Thresholds, Reply);
 
 /// Cloneable access to the detector running on its own thread. The thread ends when the last
 /// handle is dropped.
@@ -87,22 +130,62 @@ pub struct DetectorHandle {
 impl DetectorHandle {
     pub fn spawn(mut detector: Box<dyn Detector>) -> std::io::Result<Self> {
         let (requests, incoming) = mpsc::sync_channel::<Request>(4);
+        let Some(prepare) = detector.preparer() else {
+            thread::Builder::new()
+                .name("cloakframe-inference".into())
+                .spawn(move || {
+                    for (image, thresholds, reply) in incoming {
+                        let _ = reply.send(detector.detect(&image, &thresholds));
+                    }
+                })?;
+            return Ok(Self { requests });
+        };
+        // One input made ahead: the next image's input is ready when the session is free.
+        let (ready, inputs) = mpsc::sync_channel::<(Rgb8Image, Prepared, Thresholds, Reply)>(1);
         thread::Builder::new()
             .name("cloakframe-inference".into())
             .spawn(move || {
+                for (image, input, thresholds, reply) in inputs {
+                    let _ = reply.send(detector.detect_prepared(&image, input, &thresholds));
+                }
+            })?;
+        thread::Builder::new()
+            .name("cloakframe-prepare".into())
+            .spawn(move || {
                 for (image, thresholds, reply) in incoming {
-                    let _ = reply.send(detector.detect(&image, &thresholds));
+                    let input = prepare(&image);
+                    // Fails when the inference thread is gone; dropping the replies tells the
+                    // callers.
+                    if ready.send((image, input, thresholds, reply)).is_err() {
+                        return;
+                    }
                 }
             })?;
         Ok(Self { requests })
     }
 
     pub fn detect(&self, image: Rgb8Image, thresholds: Thresholds) -> Result<Found, DetectError> {
+        self.submit(image, thresholds)?.wait()
+    }
+
+    /// Queues `image` and returns at once, so the caller can queue the next image before taking
+    /// this one's result. Images are detected in the order they are queued.
+    pub fn submit(&self, image: Rgb8Image, thresholds: Thresholds) -> Result<Pending, DetectError> {
         let (reply, response) = mpsc::sync_channel(1);
         self.requests
             .send((image, thresholds, reply))
             .map_err(|_| DetectError::Unavailable)?;
-        response.recv().map_err(|_| DetectError::Unavailable)?
+        Ok(Pending(response))
+    }
+}
+
+/// The result of a queued image, see [`DetectorHandle::submit`].
+#[derive(Debug)]
+pub struct Pending(mpsc::Receiver<Result<Found, DetectError>>);
+
+impl Pending {
+    pub fn wait(self) -> Result<Found, DetectError> {
+        self.0.recv().map_err(|_| DetectError::Unavailable)?
     }
 }
 
@@ -187,5 +270,59 @@ mod tests {
         let t = thresholds();
         assert_eq!(handle.detect(image(13), t), Err(DetectError::Unavailable));
         assert_eq!(handle.detect(image(4), t), Err(DetectError::Unavailable));
+    }
+
+    /// Its input is the image's width and the name of the thread that made it; the face it
+    /// finds is as wide as the input says.
+    struct MadeAhead;
+
+    impl Detector for MadeAhead {
+        fn detect(&mut self, _: &Rgb8Image, _: &Thresholds) -> Result<Found, DetectError> {
+            unreachable!("the handle detects what the preparer made")
+        }
+
+        fn preparer(&self) -> Option<Preparer> {
+            Some(Box::new(|image| {
+                let thread = thread::current().name().map(str::to_owned);
+                Box::new((image.width, thread))
+            }))
+        }
+
+        fn detect_prepared(
+            &mut self,
+            image: &Rgb8Image,
+            input: Prepared,
+            _: &Thresholds,
+        ) -> Result<Found, DetectError> {
+            let (width, thread) = prepared::<(u32, Option<String>)>(input);
+            assert_eq!(thread.as_deref(), Some("cloakframe-prepare"));
+            assert_ne!(width, 13, "detector bug");
+            let bbox = Rect::new(0.0, 0.0, width as f32, image.height as f32).unwrap();
+            let face = Detection::new(ModelId::YuNet, 0.9, bbox, None, None).unwrap();
+            Ok(Found {
+                detections: vec![face],
+                ..Found::default()
+            })
+        }
+    }
+
+    #[test]
+    fn inputs_are_made_on_their_own_thread_and_queued_images_keep_their_order() {
+        let handle = DetectorHandle::spawn(Box::new(MadeAhead)).unwrap();
+        let queued: Vec<Pending> = (1..=6)
+            .map(|w| handle.submit(image(w), thresholds()).unwrap())
+            .collect();
+        for (w, pending) in (1..=6).zip(queued) {
+            let found = pending.wait().unwrap();
+            assert_eq!(found.detections[0].bbox().width(), w as f32);
+        }
+        assert_eq!(
+            handle.detect(image(13), thresholds()),
+            Err(DetectError::Unavailable)
+        );
+        assert_eq!(
+            handle.detect(image(4), thresholds()),
+            Err(DetectError::Unavailable)
+        );
     }
 }

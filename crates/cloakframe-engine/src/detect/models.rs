@@ -9,7 +9,7 @@ use sha2::{Digest as _, Sha256};
 
 use super::fallback::{self, Acceleration, Backends};
 use super::runtime::OrtRuntime;
-use super::{DetectError, Detector, Found, Rgb8Image};
+use super::{DetectError, Detector, Found, Prepared, Preparer, Rgb8Image, prepared};
 use crate::model_files::{ModelStore, model_file};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -182,13 +182,50 @@ impl Detector for Combined {
     fn detect(&mut self, image: &Rgb8Image, thresholds: &Thresholds) -> Result<Found, DetectError> {
         let mut all = Found::default();
         for detector in &mut self.0 {
-            let found = detector.detect(image, thresholds)?;
-            all.detections.extend(found.detections);
-            all.over_limit.extend(found.over_limit);
-            all.reran_on_cpu |= found.reran_on_cpu;
+            add(&mut all, detector.detect(image, thresholds)?);
         }
         Ok(all)
     }
+
+    /// Each model's input; a model without a preparer is given nothing and makes its own.
+    fn preparer(&self) -> Option<Preparer> {
+        let preparers: Vec<Option<Preparer>> = self.0.iter().map(|d| d.preparer()).collect();
+        if preparers.iter().all(Option::is_none) {
+            return None;
+        }
+        Some(Box::new(move |image| {
+            let inputs: Vec<Prepared> = preparers
+                .iter()
+                .map(|p| {
+                    p.as_ref()
+                        .map_or_else(|| Box::new(()) as Prepared, |p| p(image))
+                })
+                .collect();
+            Box::new(inputs)
+        }))
+    }
+
+    fn detect_prepared(
+        &mut self,
+        image: &Rgb8Image,
+        input: Prepared,
+        thresholds: &Thresholds,
+    ) -> Result<Found, DetectError> {
+        let mut all = Found::default();
+        for (detector, input) in self.0.iter_mut().zip(prepared::<Vec<Prepared>>(input)) {
+            add(
+                &mut all,
+                detector.detect_prepared(image, input, thresholds)?,
+            );
+        }
+        Ok(all)
+    }
+}
+
+fn add(all: &mut Found, found: Found) {
+    all.detections.extend(found.detections);
+    all.over_limit.extend(found.over_limit);
+    all.reran_on_cpu |= found.reran_on_cpu;
 }
 
 #[cfg(test)]

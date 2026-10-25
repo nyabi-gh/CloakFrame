@@ -11,7 +11,7 @@ use super::plate::Plate;
 use super::runtime::{Backend, OrtRuntime};
 use super::yolo5face::Yolo5Face;
 use super::yunet::YuNet;
-use super::{DetectError, Detector, Found, Rgb8Image};
+use super::{DetectError, Detector, Found, Prepared, Preparer, Rgb8Image};
 
 /// Whether a run may use the accelerator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -158,7 +158,35 @@ struct WithCpuFallback {
 
 impl Detector for WithCpuFallback {
     fn detect(&mut self, image: &Rgb8Image, thresholds: &Thresholds) -> Result<Found, DetectError> {
-        match self.detector.detect(image, thresholds) {
+        let found = self.detector.detect(image, thresholds);
+        self.on_cpu_if_failed(found, image, thresholds)
+    }
+
+    /// The model's input is the same on every backend, so the CPU session made later takes
+    /// what this preparer makes.
+    fn preparer(&self) -> Option<Preparer> {
+        self.detector.preparer()
+    }
+
+    fn detect_prepared(
+        &mut self,
+        image: &Rgb8Image,
+        input: Prepared,
+        thresholds: &Thresholds,
+    ) -> Result<Found, DetectError> {
+        let found = self.detector.detect_prepared(image, input, thresholds);
+        self.on_cpu_if_failed(found, image, thresholds)
+    }
+}
+
+impl WithCpuFallback {
+    fn on_cpu_if_failed(
+        &mut self,
+        found: Result<Found, DetectError>,
+        image: &Rgb8Image,
+        thresholds: &Thresholds,
+    ) -> Result<Found, DetectError> {
+        match found {
             Err(DetectError::Failed(reason)) if self.backend != Backend::Cpu => {
                 self.detector = (self.make)(Backend::Cpu)?;
                 let from = std::mem::replace(&mut self.backend, Backend::Cpu);

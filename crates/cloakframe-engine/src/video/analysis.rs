@@ -258,7 +258,7 @@ fn detect_frames(
     let mut capped = Vec::new();
     let mut reran_on_cpu = false;
     let mut entries = Vec::new();
-    let checkpoint = |_, _| {
+    let checkpoint = || {
         if cancel.is_cancelled() {
             Err(AnalysisError::Cancelled)
         } else {
@@ -266,26 +266,37 @@ fn detect_frames(
         }
     };
     let mut frame: FrameIndex = 0;
+    // The frame queued to the detector and not yet recorded: queuing the next frame first keeps
+    // the session busy while the next input is made (docs/M5_VERIFY.md).
+    let mut queued: Option<tiles::Views> = None;
     loop {
-        let image = match frames.recv() {
-            Ok(Decoded::Frame(image)) => image,
-            Ok(Decoded::End) => break,
+        let next = match frames.recv() {
+            Ok(Decoded::Frame(image)) => {
+                scenes.push(Thumbnail::from_rgb(
+                    image.width as usize,
+                    image.height as usize,
+                    &image.data,
+                ));
+                Some(tiles::submit_views(
+                    detector,
+                    image,
+                    thresholds,
+                    settings.tiles,
+                    checkpoint,
+                )?)
+            }
+            Ok(Decoded::End) => None,
             Ok(Decoded::Failed(e)) => return Err(e.into()),
             Err(mpsc::RecvError) => return Err(AnalysisError::DecoderGone),
         };
-        scenes.push(Thumbnail::from_rgb(
-            image.width as usize,
-            image.height as usize,
-            &image.data,
-        ));
-        let found = tiles::detect_views(
-            detector,
-            image,
-            thresholds,
-            &settings.thresholds,
-            settings.tiles,
-            checkpoint,
-        )?;
+        let last = next.is_none();
+        let Some(views) = std::mem::replace(&mut queued, next) else {
+            if last {
+                break;
+            }
+            continue;
+        };
+        let found = views.finish::<AnalysisError>(&settings.thresholds)?;
         reran_on_cpu |= found.reran_on_cpu;
         for &(model, dropped) in found.over_limit.iter().filter(|(_, d)| *d > 0) {
             let kept = found
@@ -317,6 +328,9 @@ fn detect_frames(
         writer.frame(frame, &entries)?;
         frame += 1;
         progress(frame);
+        if last {
+            break;
+        }
     }
     let cuts = scenes.finish();
     writer.finish(cuts.frames())?;

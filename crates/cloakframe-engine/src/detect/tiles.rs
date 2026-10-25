@@ -21,7 +21,7 @@ use cloakframe_core::detection::{
 use cloakframe_core::geometry::{Point, Rect};
 
 use super::resize::{Region, resize_region_linear};
-use super::{DetectError, DetectorHandle, Found, Rgb8Image};
+use super::{DetectError, DetectorHandle, Found, Pending, Rgb8Image};
 
 /// A tile's side in model pixels: the largest input of the pinned models. The plate model scales
 /// it to its 512.
@@ -206,6 +206,53 @@ pub fn detect_views<E: From<DetectError>>(
     before(views - 1, views)?;
     let whole = detector.detect(image, thresholds)?;
     Ok(merge_judged(whole, found, &thresholds, masking))
+}
+
+/// The views of one image queued to the inference thread, see [`submit_views`].
+#[derive(Debug)]
+pub struct Views {
+    tiles: Vec<(Tile, Pending)>,
+    whole: Pending,
+    thresholds: Thresholds,
+}
+
+/// Queues the views [`detect_views`] detects and returns at once, so a video can queue the next
+/// frame while this one is detected. `before` runs before each view is queued.
+pub fn submit_views<E: From<DetectError>>(
+    detector: &DetectorHandle,
+    image: Rgb8Image,
+    thresholds: Thresholds,
+    tiled: bool,
+    mut before: impl FnMut() -> Result<(), E>,
+) -> Result<Views, E> {
+    let tiles = if tiled {
+        layout(image.width, image.height)
+    } else {
+        Vec::new()
+    };
+    let mut queued = Vec::with_capacity(tiles.len());
+    for tile in tiles {
+        before()?;
+        queued.push((tile, detector.submit(tile.image(&image), thresholds)?));
+    }
+    before()?;
+    Ok(Views {
+        tiles: queued,
+        whole: detector.submit(image, thresholds)?,
+        thresholds,
+    })
+}
+
+impl Views {
+    /// The views merged as [`detect_views`] merges them.
+    pub fn finish<E: From<DetectError>>(self, masking: &Thresholds) -> Result<Found, E> {
+        let mut found = Vec::with_capacity(self.tiles.len());
+        for (tile, pending) in self.tiles {
+            found.push((tile, pending.wait()?));
+        }
+        let whole = self.whole.wait()?;
+        Ok(merge_judged(whole, found, &self.thresholds, masking))
+    }
 }
 
 /// The whole view's and the tiles' findings as one result. A tile's box larger than

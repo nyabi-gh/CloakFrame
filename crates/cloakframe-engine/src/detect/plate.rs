@@ -10,7 +10,9 @@ use sha2::{Digest as _, Sha256};
 
 use super::resize::resize_linear;
 use super::runtime::{Backend, OrtRuntime};
-use super::{DetectError, Detector, Found, Rgb8Image};
+use super::{
+    DetectError, Detector, Found, Prepared, Preparer, Rgb8Image, input_unless_empty, prepared,
+};
 
 const SIZE: usize = 512;
 /// Batch index, x1, y1, x2, y2, class, score.
@@ -167,13 +169,31 @@ fn decode_row(
         .map_err(|e| unexpected(&format!("output: {e}")))
 }
 
+fn model_input(image: &Rgb8Image) -> Prepared {
+    input_unless_empty(image, prepare)
+}
+
 impl Detector for Plate {
     fn detect(&mut self, image: &Rgb8Image, thresholds: &Thresholds) -> Result<Found, DetectError> {
+        let input = model_input(image);
+        self.detect_prepared(image, input, thresholds)
+    }
+
+    fn preparer(&self) -> Option<Preparer> {
+        Some(Box::new(model_input))
+    }
+
+    fn detect_prepared(
+        &mut self,
+        image: &Rgb8Image,
+        input: Prepared,
+        thresholds: &Thresholds,
+    ) -> Result<Found, DetectError> {
         if image.width == 0 || image.height == 0 {
             return Ok(Found::default());
         }
         let min_score = thresholds.of(ModelId::PlateYolov9T.kind()).score();
-        let (input, lb) = prepare(image);
+        let (input, lb) = prepared::<(Vec<f32>, Letterbox)>(input);
         let tensor = TensorRef::from_array_view(([1usize, 3, SIZE, SIZE], input.as_slice()))
             .map_err(failed)?;
         let outputs = self.session.run(ort::inputs![tensor]).map_err(failed)?;
