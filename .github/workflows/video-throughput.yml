@@ -1,0 +1,75 @@
+name: Video throughput
+
+# A video's first pass in a release build on every OS, with ORT's CPU sessions not spinning, as
+# they run, and spinning, as 1.12.1 ran them (plan M5, docs/M5_VERIFY.md). The debug measurement
+# in ci.yml spends most of its time in unoptimized preprocessing, which hides what spinning costs.
+# Runs when the first pass or the detectors change; the log has the frames per second.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - .github/workflows/video-throughput.yml
+      - Cargo.lock
+      - crates/cloakframe-engine/src/detect/**
+      - crates/cloakframe-engine/src/video/analysis.rs
+      - crates/cloakframe-engine/tests/video_detect.rs
+
+permissions:
+  contents: read
+
+concurrency:
+  group: video-throughput-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  first-pass:
+    name: First pass, release (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            runtime: onnxruntime linux-x86_64
+            platform: linux-x86_64
+            python: python3
+          - os: macos-15
+            runtime: onnxruntime macos-arm64
+            platform: macos-arm64
+            python: python3
+          - os: windows-2025
+            runtime: windows-ml windows-x64
+            platform: windows-x64
+            python: python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Fetch ONNX Runtime, FFmpeg, models and sample images
+        shell: bash
+        run: |
+          lib=$(${{ matrix.python }} -I tools/fetch_native.py ${{ matrix.runtime }} "$RUNNER_TEMP/native")
+          ffmpeg=$(${{ matrix.python }} -I tools/fetch_native.py ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")
+          if [ "${{ matrix.platform }}" = macos-arm64 ]; then
+            ffprobe=$(${{ matrix.python }} -I tools/fetch_native.py ffprobe ${{ matrix.platform }} "$RUNNER_TEMP/native")
+          else
+            ffprobe="${ffmpeg%ffmpeg*}ffprobe${ffmpeg##*ffmpeg}"
+          fi
+          assets=$(${{ matrix.python }} -I tools/fetch_test_assets.py "$RUNNER_TEMP/cloakframe-test-assets")
+          echo "CLOAKFRAME_ORT_LIBRARY=$lib" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_FFMPEG=$ffmpeg" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_FFPROBE=$ffprobe" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_TEST_ASSETS=$assets" >> "$GITHUB_ENV"
+
+      - name: Measure the first pass
+        env:
+          ORT_DISABLE_TELEMETRY: "1"
+        run: cargo test --release -p cloakframe-engine --locked --test video_detect first_pass_throughput -- --ignored --nocapture

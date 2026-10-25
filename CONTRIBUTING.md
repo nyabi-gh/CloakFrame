@@ -126,6 +126,11 @@ and says why; a change to detection records the detections again with
 `tools/benchmark/record_video.sh` (the clips come from `tools/benchmark/video_fetch.py`).
 See [docs/M5_BENCHMARK.md](docs/M5_BENCHMARK.md).
 
+Changes to the first pass or the detectors also run `.github/workflows/video-throughput.yml`,
+which prints a release first pass's frames per second on every OS. Whole video runs are
+timed against CloakFrame 1.12.1 on a Mac with `tools/benchmark/video_speed.sh`
+([docs/M5_VERIFY.md](docs/M5_VERIFY.md)).
+
 The parser of ffprobe's report has libFuzzer targets in `fuzz/`, a separate
 Cargo project on a pinned nightly (CI's `fuzz.yml` runs them when the parser
 changes). `probe_report` mutates raw reports from `fuzz/seeds/`; `probe_fields`
