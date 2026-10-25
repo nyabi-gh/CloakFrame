@@ -187,3 +187,89 @@ model-different = The file in its place is not this model; downloading replaces 
 model-accept-terms = I accept these terms
 model-download = Download
 model-download-failed = The download failed: { $error }
+
+run-review = Review Now
+item-review = Review
+start-during-review = Close the review first.
+review-in-use = Another run or review has this session open.
+review-done = Every item of this review is saved.
+review-options-guessed = The app did not make this session, so it is saved with the current settings; items analyzed with other settings are refused.
+review-badge-changed = Original changed
+review-badge-saving = Saving…
+review-badge-again = Decide again
+review-badge-problems = { $count ->
+    [one] One problem
+   *[other] { $count } problems
+}
+review-badge-nothing = Nothing detected
+review-badge-waiting = To review
+editor-canvas = Photo editor
+editor-to-queue = All Items
+editor-previous = Previous
+editor-next = Next
+editor-position = { $at } of { $count }
+editor-failed = Not saved: { $error }
+editor-detections = { $count ->
+    [one] { $masked } of one detection masked
+   *[other] { $masked } of { $count } detections masked
+}
+editor-added = { $count ->
+    [one] One area added
+   *[other] { $count } areas added
+}
+editor-problems = Problems
+editor-no-problems = No problems found.
+editor-problem-open = Not resolved
+editor-problem-covered = Covered by a mask
+editor-problem-dismissed = Nothing to mask
+editor-cover = Mask It
+editor-dismiss = Nothing to Mask
+editor-reopen = Reopen
+editor-undo = Undo
+editor-redo = Redo
+editor-shortcuts = Shortcuts (?)
+editor-approve = Approve and Save
+editor-approve-blocked = Resolve every problem first, or export with warnings.
+editor-export-warnings = Export with Warnings…
+editor-more = More
+editor-export-plain = Export Without Anonymization…
+editor-video = Video tracks cannot be edited here yet. You can resolve this video's problems and save it.
+editor-loading = Opening the photo…
+editor-unreadable = The photo cannot be shown: { $error }
+editor-preview = Masking preview
+refused-settings = This item was analyzed with other settings; run it again.
+refused-stale = This item was decided elsewhere meanwhile; open the review again.
+refused-name = The output folder already has a file of this name. A free name: { $name }
+refused-rename = Save as { $name }
+refused-other = The decision was refused: { $reason }
+confirm-warnings-title = Export with unresolved problems?
+confirm-warnings-body = { $count ->
+    [one] One problem is
+   *[other] { $count } problems are
+} not resolved, so a face or license plate may be left unmasked. The item is not counted as finished normally.
+confirm-warnings = Export with Warnings
+confirm-plain-title = Export without anonymization?
+confirm-plain-body = Nothing is masked: the photo is saved again under the metadata rules only. The item is not counted as finished normally.
+confirm-plain = Export Without Anonymization
+confirm-cancel = Cancel
+shortcuts-title = Shortcuts
+shortcuts-close = Close
+keys-click = Click
+keys-drag = Drag
+keys-arrows = Arrow keys
+keys-alt-arrows = Alt + arrow keys
+keys-space = Space (hold)
+shortcut-click = Mask or unmask a detection; select an added area
+shortcut-drag = Add an area to mask; drag an added area to move it
+shortcut-tab = Select the next or previous box
+shortcut-enter = Mask or unmask the selected detection
+shortcut-arrows = Move the selected area (Shift: 10 pixels); move the view
+shortcut-alt-arrows = Resize the selected area
+shortcut-delete = Remove the selected area
+shortcut-space = Preview the masking
+shortcut-undo = Undo
+shortcut-redo = Redo
+shortcut-zoom = Zoom in, zoom out, fit, full resolution
+shortcut-pages = Previous or next item
+shortcut-help = Show or hide this list
+shortcut-scroll = Scroll to move the view; pinch or Ctrl + scroll to zoom.

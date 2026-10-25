@@ -4,16 +4,18 @@ use std::time::{Duration, Instant, SystemTime};
 
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::scan::{MediaKind, ScanRequest, ScanResult, scan};
-use cloakframe_engine::session::{SessionId, StoredMedia};
+use cloakframe_engine::session::{SessionError, SessionId};
 use eframe::egui;
 use fluent_bundle::FluentValue;
 
 use cloakframe_core::item::{ItemId, ItemState};
 
+use crate::editor::{ReviewScreen, ScreenAct};
 use crate::fonts;
 use crate::i18n::{Language, Translator};
 use crate::models::Models;
 use crate::progress::Left;
+use crate::review::{OpenError, Review};
 use crate::run::{self, Board, Failure, Logged, Running};
 use crate::sessions::{self, SavedSessions};
 use crate::settings::{Method, Notice, Settings, SettingsFile, Theme};
@@ -75,8 +77,8 @@ pub struct AppState {
     pub board: Option<Board>,
     pub sessions: SavedSessions,
     sessions_read: bool,
-    /// The saved session the window shows instead of the main screen.
-    pub opened: Option<SessionId>,
+    /// The session under review, which the window shows instead of the other screens.
+    pub review: Option<ReviewScreen>,
     /// The saved session the user asked to discard, until they confirm.
     pub discarding: Option<SessionId>,
     pub quit: Quit,
@@ -107,7 +109,7 @@ impl AppState {
             board: None,
             sessions: SavedSessions::new(run::Folders::default()),
             sessions_read: false,
-            opened: None,
+            review: None,
             discarding: None,
             quit: Quit::No,
         }
@@ -253,10 +255,10 @@ impl AppState {
             for notice in &self.notices {
                 ui.colored_label(ui.visuals().warn_fg_color, notice);
             }
-            if self.board.is_some() {
+            if self.review.is_some() {
+                self.review_view(ui);
+            } else if self.board.is_some() {
                 self.run_view(ui);
-            } else if self.opened.is_some() {
-                self.session_view(ui);
             } else {
                 self.saved_sessions(ui);
                 self.drop_area(ui, &ctx);
@@ -270,9 +272,19 @@ impl AppState {
         self.quit_dialog(&ctx);
     }
 
-    /// Keeps the window open while a run works, until the user agrees to cancel it.
+    /// A run, or a review's renders, still working.
+    fn working(&self) -> bool {
+        self.running.is_some()
+            || self
+                .review
+                .as_ref()
+                .is_some_and(|r| r.review.is_rendering())
+    }
+
+    /// Keeps the window open while a run or a review's renders work, until the user agrees to
+    /// cancel them.
     fn watch_close(&mut self, ctx: &egui::Context) {
-        let working = self.running.is_some();
+        let working = self.working();
         if working && ctx.input(|i| i.viewport().close_requested()) {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             if self.quit == Quit::No {
@@ -312,6 +324,9 @@ impl AppState {
             Some(true) => {
                 if let Some(running) = &self.running {
                     running.cancel();
+                }
+                if let Some(screen) = &self.review {
+                    screen.review.cancel();
                 }
                 self.quit = Quit::AfterRun;
             }
@@ -557,7 +572,9 @@ impl AppState {
 
     /// The message saying why the run cannot start yet.
     pub fn start_blocker(&self) -> Option<&'static str> {
-        if self.board.is_some() {
+        if self.review.is_some() {
+            Some("start-during-review")
+        } else if self.board.is_some() {
             Some("running")
         } else if !self.settings.faces && !self.settings.plates {
             Some("models-need-one")
@@ -587,9 +604,49 @@ impl AppState {
             Ok(running) => {
                 self.running = Some(running);
                 self.board = Some(Board::new(Instant::now()));
-                self.opened = None;
             }
             Err(e) => self.notices.push(e.to_string()),
+        }
+    }
+
+    /// Opens session `id` for review, at `item` if given; a session another run or review
+    /// holds is refused.
+    pub fn open_review(&mut self, id: SessionId, item: Option<ItemId>, ctx: &egui::Context) {
+        match Review::open(id, &self.folders, &self.tools, &self.settings, ctx) {
+            Ok(review) => {
+                let mut screen = ReviewScreen::new(review);
+                if let Some(item) = item {
+                    screen.open_item(item, ctx);
+                }
+                self.review = Some(screen);
+            }
+            Err(OpenError::Session(SessionError::InUse)) => {
+                self.notices.push(self.tr.get("review-in-use"));
+            }
+            Err(e) => self.notices.push(e.to_string()),
+        }
+    }
+
+    /// Waits for the review's renders, for tests.
+    pub fn wait_for_review(&mut self) {
+        if let Some(screen) = &mut self.review {
+            screen.review.wait();
+        }
+    }
+
+    fn review_view(&mut self, ui: &mut egui::Ui) {
+        let Some(screen) = &mut self.review else {
+            return;
+        };
+        let video = self.tools.ffmpeg.clone().zip(self.tools.ffprobe.clone());
+        match screen.ui(ui, &self.tr, video) {
+            Some(ScreenAct::Back) => {
+                self.review = None;
+                self.sessions_read = false;
+            }
+            Some(ScreenAct::Discard) => self.discarding = Some(screen.review.id.clone()),
+            Some(ScreenAct::Show(path, open)) => self.show(&path, open),
+            None => {}
         }
     }
 
@@ -699,9 +756,15 @@ impl AppState {
                 act = Act::Models;
             }
         }
-        if board.finished.as_ref().is_some_and(|f| f.session.is_some()) {
-            ui.label(tr.get("run-session-kept"));
+        if let Some(session) = board.finished.as_ref().and_then(|f| f.session.as_ref()) {
+            ui.horizontal(|ui| {
+                ui.label(tr.get("run-session-kept"));
+                if ui.button(tr.get("run-review")).clicked() {
+                    act = Act::Review(session.clone(), None);
+                }
+            });
         }
+        let session = board.finished.as_ref().and_then(|f| f.session.clone());
         for note in board
             .notes
             .iter()
@@ -752,10 +815,15 @@ impl AppState {
                                 if ui.button(tr.get("item-open")).clicked() {
                                     act = Act::Show(o.destination.clone(), true);
                                 }
-                            } else if o.state == ItemState::NeedsReview
-                                && ui.button(tr.get("item-reveal-source")).clicked()
-                            {
-                                act = Act::Show(input.clone(), false);
+                            } else if o.state == ItemState::NeedsReview {
+                                if let Some(session) = &session
+                                    && ui.button(tr.get("item-review")).clicked()
+                                {
+                                    act = Act::Review(session.clone(), Some(*item));
+                                }
+                                if ui.button(tr.get("item-reveal-source")).clicked() {
+                                    act = Act::Show(input.clone(), false);
+                                }
                             }
                         }
                     });
@@ -791,6 +859,10 @@ impl AppState {
             Act::NewRun => self.board = None,
             Act::Models => self.command(Command::Models),
             Act::Show(path, open) => self.show(&path, open),
+            Act::Review(id, item) => {
+                let ctx = ui.ctx().clone();
+                self.open_review(id, item, &ctx);
+            }
         }
     }
 
@@ -854,87 +926,12 @@ impl AppState {
                 });
             }
         });
-        if open.is_some() {
-            self.opened = open;
+        if let Some(id) = open {
+            let ctx = ui.ctx().clone();
+            self.open_review(id, None, &ctx);
         }
         if discard.is_some() {
             self.discarding = discard;
-        }
-    }
-
-    /// A saved session's items and what each waits for, in place of the main screen.
-    fn session_view(&mut self, ui: &mut egui::Ui) {
-        let tr = &self.tr;
-        let Some(saved) = self
-            .opened
-            .as_ref()
-            .and_then(|id| self.sessions.list.iter().find(|s| &s.id == id))
-        else {
-            self.opened = None;
-            return;
-        };
-        let Ok(loaded) = &saved.content else {
-            self.opened = None;
-            return;
-        };
-        let session = &loaded.session;
-        let video = |media: &StoredMedia| match media {
-            StoredMedia::Video {
-                frames, seconds, ..
-            } => Some((*frames, *seconds)),
-            StoredMedia::Photo { .. } => None,
-        };
-        let mut act = Act::None;
-        ui.horizontal(|ui| {
-            if ui.button(tr.get("session-back")).clicked() {
-                act = Act::NewRun;
-            }
-            let summary = summary::summarize(session.items.iter().map(|i| summary::Item {
-                state: ItemState::NeedsReview,
-                evidence: &i.evidence,
-                video: video(&i.media),
-            }));
-            ui.heading(summary::sentence(&summary, tr));
-        });
-        ui.horizontal(|ui| {
-            ui.label(tr.get("output-folder"));
-            ui.label(session.output.display().to_string());
-        });
-        egui::ScrollArea::vertical().show(ui, |ui| {
-            for (item, changed) in session.items.iter().zip(&loaded.changed) {
-                ui.horizontal(|ui| {
-                    if *changed {
-                        ui.colored_label(
-                            ui.visuals().warn_fg_color,
-                            tr.get("session-item-changed"),
-                        );
-                    } else {
-                        ui.label(tr.get("state-needs-review"));
-                    }
-                    let name = item
-                        .input
-                        .file_name()
-                        .map(|n| n.to_string_lossy().into_owned());
-                    ui.label(name.unwrap_or_default());
-                    if !*changed && ui.button(tr.get("item-reveal-source")).clicked() {
-                        act = Act::Show(item.input.clone(), false);
-                    }
-                });
-                ui.indent(("why", item.item.0), |ui| {
-                    for e in item.evidence.iter().filter(|e| !e.is_resolved()) {
-                        ui.weak(summary::problem(e, video(&item.media), tr));
-                    }
-                });
-            }
-        });
-        let discard = ui.button(tr.get("session-discard")).clicked();
-        if discard {
-            self.discarding = Some(saved.id.clone());
-        }
-        match act {
-            Act::NewRun => self.opened = None,
-            Act::Show(path, open) => self.show(&path, open),
-            _ => {}
         }
     }
 
@@ -961,11 +958,13 @@ impl AppState {
         }
         match choice {
             Some(true) => {
+                // The review holds the session; it lets go first.
+                if self.review.as_ref().is_some_and(|r| r.review.id == id) {
+                    self.review = None;
+                    self.sessions_read = false;
+                }
                 if let Err(e) = self.sessions.discard(&id) {
                     self.notices.push(e.to_string());
-                }
-                if self.opened.as_ref() == Some(&id) {
-                    self.opened = None;
                 }
                 self.discarding = None;
             }
@@ -1027,6 +1026,8 @@ enum Act {
     Models,
     /// Show in the file manager, or open with `true`.
     Show(PathBuf, bool),
+    /// Open the session for review, at an item if given.
+    Review(SessionId, Option<ItemId>),
 }
 
 fn time_left(tr: &Translator, left: Option<Duration>) -> String {

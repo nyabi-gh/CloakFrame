@@ -2,21 +2,26 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use cloakframe_app::app::{AppState, Quit};
+use cloakframe_app::draft::Pick;
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
 use cloakframe_app::run::Folders;
-use cloakframe_app::settings::Settings;
+use cloakframe_app::settings::{Method, Settings};
 use cloakframe_app::tools::Tools;
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, ModelId};
+use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis};
 use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
+use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::identity::SourceStamp;
+use cloakframe_engine::photo::budget::MemoryBudget;
+use cloakframe_engine::photo::decode::{decode, read_source};
 use cloakframe_engine::session::{FORMAT_VERSION, Session, SessionId, SessionItem, StoredMedia};
 use eframe::egui;
 use egui::accesskit::Role;
 use egui_kittest::Harness;
-use egui_kittest::kittest::Queryable;
+use egui_kittest::kittest::{NodeT, Queryable};
 
 struct Dir(PathBuf);
 
@@ -266,8 +271,9 @@ fn session_item(
     }
 }
 
-/// A session a run left is listed when the app starts again, opens to its items and their
-/// problems, and is discarded only once the user confirms.
+/// A session a run left is listed when the app starts again and opens to its queue: items with
+/// unresolved problems first, each with what it waits for; the editor lists an item's problems.
+/// It is discarded only once the user confirms.
 #[test]
 fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     let dir = Dir::new("sessions");
@@ -301,9 +307,10 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         options: None,
         output: output.clone(),
         items: vec![
-            session_item(0, photo, photo_media(), vec![capped]),
+            session_item(0, gone.clone(), photo_media(), Vec::new()),
+            session_item(1, photo, photo_media(), vec![capped]),
             session_item(
-                1,
+                2,
                 clip,
                 StoredMedia::Video {
                     frames: 300,
@@ -315,7 +322,6 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
                 },
                 vec![gap],
             ),
-            session_item(2, gone.clone(), photo_media(), Vec::new()),
         ],
     };
     let store = folders.sessions().unwrap();
@@ -338,12 +344,58 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label(
         "3 to review — faces missed for 1.2 s in one video, the detection limit reached in one item",
     );
-    harness.get_by_label("Face lost in frames 30–65 (1.2 s)");
+    let order: Vec<u64> = harness
+        .state()
+        .review
+        .as_ref()
+        .unwrap()
+        .review
+        .order
+        .iter()
+        .map(|i| i.item.0)
+        .collect();
+    assert_eq!(order, [1, 2, 0], "unresolved problems first");
+    assert!(store.lock(&id).is_err(), "held while it is open");
+
+    harness.get_by_label_contains("photo.jpg").click();
+    harness.run();
     harness.get_by_label("Detection limit reached: 100 of 259 kept");
+    harness.get_by_label("Not resolved");
+    assert!(
+        harness
+            .get_by_role_and_label(Role::Button, "Approve and Save")
+            .accesskit_node()
+            .is_disabled()
+    );
+    harness
+        .get_by_role_and_label(Role::Button, "Nothing to Mask")
+        .click();
+    harness.run();
+    harness.get_by_label("Nothing to mask");
+    assert!(
+        !harness
+            .get_by_role_and_label(Role::Button, "Approve and Save")
+            .accesskit_node()
+            .is_disabled()
+    );
+    harness.get_by_role_and_label(Role::Button, "Next").click();
+    harness.run();
+    harness.get_by_label("Face lost in frames 30–65 (1.2 s)");
+    harness.get_by_label_contains("Video tracks cannot be edited here yet");
+    harness.get_by_role_and_label(Role::Button, "Next").click();
+    harness.run();
     harness.get_by_label("The original changed or is gone; run it again");
+    harness
+        .get_by_role_and_label(Role::Button, "All Items")
+        .click();
+    harness.run();
+    harness.get_by_label("gone.jpg, Original changed");
+    harness.get_by_label("photo.jpg, To review");
+    harness.get_by_label("clip.mp4, One problem");
     harness.get_by_role_and_label(Role::Button, "Back").click();
     harness.run();
-    assert!(harness.state().opened.is_none());
+    assert!(harness.state().review.is_none());
+    assert!(store.lock(&id).is_ok(), "let go once it is closed");
 
     harness
         .get_by_role_and_label(Role::Button, "Discard…")
@@ -364,6 +416,294 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     assert!(store.list().unwrap().is_empty());
     assert!(harness.state().sessions.list.is_empty());
     assert!(harness.query_by_label("Waiting for review").is_none());
+}
+
+fn pixels(path: &Path) -> image::RgbImage {
+    let budget = MemoryBudget::new(1 << 30);
+    let source = read_source(path).unwrap();
+    decode(&source, &budget, &CancelToken::new())
+        .unwrap()
+        .image
+        .to_rgb8()
+}
+
+/// The mean absolute difference of two images' pixels in `area`.
+fn difference(a: &image::RgbImage, b: &image::RgbImage, area: Rect) -> f64 {
+    let (x0, y0) = (area.x() as u32, area.y() as u32);
+    let (x1, y1) = (area.right() as u32, area.bottom() as u32);
+    let mut sum = 0u64;
+    let mut n = 0u64;
+    for y in y0..y1 {
+        for x in x0..x1 {
+            let (p, q) = (a.get_pixel(x, y).0, b.get_pixel(x, y).0);
+            sum += (0..3).map(|c| u64::from(p[c].abs_diff(q[c]))).sum::<u64>();
+            n += 3;
+        }
+    }
+    sum as f64 / n as f64
+}
+
+/// A run held for review opens in the editor from its result. Clicking a detection leaves it
+/// unmasked, undo and redo walk the changes, a drag adds an area, Space previews the masking and
+/// `?` lists the shortcuts; the saved photo is masked as decided. Exporting without
+/// anonymization asks first. Needs the ONNX Runtime and the models (CONTRIBUTING.md).
+#[test]
+fn the_editor_decides_what_is_masked_and_saves_it() {
+    let dir = Dir::new("editor");
+    let input = dir.0.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    for name in ["a.jpg", "b.jpg"] {
+        std::fs::copy(assets.join("lena.jpg"), input.join(name)).unwrap();
+    }
+    let output = dir.0.join("out");
+    let settings = Settings {
+        output: Some(output.clone()),
+        method: Method::Fill,
+        ..Settings::default()
+    };
+    let mut harness = harness(Language::En, settings);
+    harness.state_mut().tools = Tools {
+        ort_library: Some(required_env("CLOAKFRAME_ORT_LIBRARY")),
+        ..Tools::default()
+    };
+    let folders = Folders {
+        data: Some(dir.0.join("data")),
+        models: Some(assets.clone()),
+        app_models: false,
+    };
+    harness.state_mut().set_folders(folders.clone());
+    drop_files(&mut harness, std::slice::from_ref(&input));
+    harness.get_by_role_and_label(Role::Button, "Start").click();
+    harness.step();
+    harness.state_mut().wait_for_run();
+    harness.run();
+    let rows = harness.query_all_by_label("Review").count();
+    assert_eq!(rows, 2, "one Review button for each item held");
+    // The review masks as the run would have, whatever the main screen says by then.
+    harness.state_mut().settings.method = Method::Blur;
+    harness
+        .get_by_role_and_label(Role::Button, "Review Now")
+        .click();
+    harness.run();
+    harness.get_by_label_contains("a.jpg").click();
+    harness.step();
+    let ctx = harness.ctx.clone();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.run();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.run();
+
+    let (face, view) = {
+        let screen = harness.state().review.as_ref().unwrap();
+        let item = &screen.review.order[0];
+        let StoredMedia::Photo { detections, .. } = &item.media else {
+            panic!("a photo")
+        };
+        assert_eq!(detections.len(), 1, "Lena's face");
+        (
+            detections[0].bbox(),
+            screen.editor.as_ref().unwrap().view.unwrap(),
+        )
+    };
+    let canvas = harness.get_by_label("Photo editor").rect();
+    let origin = canvas.center() - view.center.to_vec2() * view.scale;
+    let on_screen = |x: f32, y: f32| origin + egui::vec2(x, y) * view.scale;
+    let item = ItemId(0);
+    let draft =
+        |h: &Harness<'_, AppState>| h.state().review.as_ref().unwrap().review.drafts[&item].clone();
+
+    let center = face.center();
+    harness.hover_at(on_screen(center.x, center.y));
+    harness.step();
+    harness.drag_at(on_screen(center.x, center.y));
+    harness.step();
+    harness.drop_at(on_screen(center.x, center.y));
+    harness.step();
+    assert!(
+        draft(&harness).is_excluded(0),
+        "a click leaves the face unmasked"
+    );
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Z);
+    harness.step();
+    assert!(!draft(&harness).is_excluded(0), "undone");
+    harness.key_press_modifiers(
+        egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
+        egui::Key::Z,
+    );
+    harness.step();
+    assert!(draft(&harness).is_excluded(0), "redone");
+
+    let added = Rect::new(20.0, 20.0, 60.0, 50.0).unwrap();
+    harness.hover_at(on_screen(added.x(), added.y()));
+    harness.step();
+    harness.drag_at(on_screen(added.x(), added.y()));
+    harness.step();
+    for t in [0.3, 0.6, 1.0] {
+        harness.hover_at(on_screen(
+            added.x() + added.width() * t,
+            added.y() + added.height() * t,
+        ));
+        harness.step();
+    }
+    harness.drop_at(on_screen(added.right(), added.bottom()));
+    harness.step();
+    let areas = draft(&harness).doc.edits.added;
+    assert_eq!(areas.len(), 1, "a drag adds an area");
+    assert!(
+        (areas[0].x() - added.x()).abs() < 2.0 && (areas[0].width() - added.width()).abs() < 2.0,
+        "{areas:?}"
+    );
+    harness.key_press(egui::Key::ArrowRight);
+    harness.step();
+    let moved = draft(&harness).doc.edits.added[0];
+    assert_eq!(
+        moved.x(),
+        areas[0].x() + 1.0,
+        "the arrow keys move the selected area"
+    );
+
+    harness.key_down(egui::Key::Space);
+    harness.step();
+    assert!(
+        harness
+            .state()
+            .review
+            .as_ref()
+            .unwrap()
+            .editor
+            .as_ref()
+            .unwrap()
+            .previewing
+    );
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.key_up(egui::Key::Space);
+    harness.step();
+    assert!(
+        !harness
+            .state()
+            .review
+            .as_ref()
+            .unwrap()
+            .editor
+            .as_ref()
+            .unwrap()
+            .previewing
+    );
+
+    harness.event(egui::Event::Text("?".to_owned()));
+    harness.step();
+    harness.run();
+    harness.get_by_label("Shortcuts");
+    harness.get_by_label("Preview the masking");
+    harness.get_by_role_and_label(Role::Button, "Close").click();
+    harness.run();
+    assert!(harness.query_by_label("Preview the masking").is_none());
+    harness.key_press(egui::Key::Escape);
+    harness.step();
+    harness.key_press(egui::Key::Tab);
+    harness.step();
+    assert_eq!(
+        draft(&harness).selected,
+        Some(Pick::Detection(0)),
+        "Tab selects the face"
+    );
+    harness.key_press(egui::Key::Enter);
+    harness.step();
+    assert!(!draft(&harness).is_excluded(0), "Enter masks it again");
+    harness.key_press(egui::Key::Enter);
+    harness.step();
+    assert!(draft(&harness).is_excluded(0));
+
+    harness
+        .get_by_role_and_label(Role::Button, "Approve and Save")
+        .click();
+    // The next photo opens while this one renders.
+    harness.step();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.run();
+    let screen = harness.state().review.as_ref().unwrap();
+    assert_eq!(
+        screen.editor.as_ref().map(|e| e.item),
+        Some(ItemId(1)),
+        "on to the next item"
+    );
+
+    harness.get_by_role_and_label(Role::Button, "More").click();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Button, "Export Without Anonymization…")
+        .click();
+    harness.run();
+    harness.get_by_label("Export without anonymization?");
+    harness
+        .get_by_role_and_label(Role::Button, "Cancel")
+        .click();
+    harness.run();
+    assert!(harness.state().review.as_ref().unwrap().confirm.is_none());
+    assert!(
+        harness
+            .state()
+            .review
+            .as_ref()
+            .unwrap()
+            .review
+            .is_open(ItemId(1)),
+        "not decided"
+    );
+    harness.get_by_role_and_label(Role::Button, "More").click();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Button, "Export Without Anonymization…")
+        .click();
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Button, "Export Without Anonymization")
+        .click();
+    harness.step();
+    harness.state_mut().wait_for_review();
+    harness.run();
+    harness.get_by_label("Every item of this review is saved.");
+    assert!(
+        folders.sessions().unwrap().list().unwrap().is_empty(),
+        "the finished session is removed"
+    );
+
+    let original = pixels(&input.join("a.jpg"));
+    let masked = pixels(&output.join("a.jpg"));
+    let plain = pixels(&output.join("b.jpg"));
+    assert!(
+        difference(&original, &masked, face) < 6.0,
+        "the face was left unmasked"
+    );
+    assert!(
+        difference(&original, &masked, moved) > 40.0,
+        "the added area is filled"
+    );
+    assert!(difference(&original, &plain, face) < 6.0, "nothing masked");
+    harness.get_by_role_and_label(Role::Button, "Back").click();
+    harness.run();
+    assert!(harness.state().review.is_none());
 }
 
 fn close(harness: &mut Harness<'_, AppState>) {

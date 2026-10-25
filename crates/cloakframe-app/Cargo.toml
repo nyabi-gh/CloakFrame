@@ -16,9 +16,11 @@ cloakframe-core.workspace = true
 cloakframe-engine.workspace = true
 eframe.workspace = true
 fluent-bundle.workspace = true
+image.workspace = true
 unic-langid.workspace = true
 sys-locale.workspace = true
 serde.workspace = true
+serde_json.workspace = true
 toml.workspace = true
 rfd.workspace = true
 

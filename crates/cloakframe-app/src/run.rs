@@ -24,6 +24,7 @@ use cloakframe_engine::startup::{self, StartError};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools as VideoTools, VideoProcessor, VideoSettings};
 use eframe::egui;
+use serde::{Deserialize, Serialize};
 
 use crate::progress::{self, Overall, Pace};
 use crate::settings::{Method, Settings};
@@ -161,38 +162,65 @@ fn other(e: impl std::fmt::Display) -> Failure {
     Failure::Other(e.to_string())
 }
 
-fn detection_models(settings: &Settings) -> Result<DetectionModels, Failure> {
-    let face = settings
-        .faces
-        .then(|| DetectionModels::default().face())
-        .flatten();
-    DetectionModels::new(face, settings.plates).map_err(other)
+/// The settings a run processes with, which its review session keeps so that the review renders
+/// with them whatever the main screen says by then.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RunOptions {
+    pub faces: bool,
+    pub plates: bool,
+    pub method: Method,
+    pub mosaic_strength: u8,
 }
 
-fn processor(
-    request: &Request,
-    models: DetectionModels,
+impl RunOptions {
+    pub fn of(settings: &Settings) -> Self {
+        Self {
+            faces: settings.faces,
+            plates: settings.plates,
+            method: settings.method,
+            mosaic_strength: settings.mosaic_strength,
+        }
+    }
+
+    pub fn style(&self) -> MaskStyle {
+        let mut style = MaskStyle {
+            method: match self.method {
+                Method::Fill => MaskMethod::Fill,
+                Method::Mosaic => MaskMethod::Mosaic,
+                Method::Blur => MaskMethod::Blur,
+            },
+            ..MaskStyle::default()
+        };
+        if let Ok(strength) = MosaicStrength::new(self.mosaic_strength) {
+            style.mosaic_strength = strength;
+        }
+        style
+    }
+
+    fn models(&self) -> Result<DetectionModels, Failure> {
+        let face = self
+            .faces
+            .then(|| DetectionModels::default().face())
+            .flatten();
+        DetectionModels::new(face, self.plates).map_err(other)
+    }
+}
+
+/// What processes a run's items, or renders a review's; `records` holds a video's analysis.
+pub fn processor(
+    options: &RunOptions,
+    tools: &Tools,
     records: PathBuf,
 ) -> Result<MediaProcessor, Failure> {
-    let mut style = MaskStyle {
-        method: match request.settings.method {
-            Method::Fill => MaskMethod::Fill,
-            Method::Mosaic => MaskMethod::Mosaic,
-            Method::Blur => MaskMethod::Blur,
-        },
-        ..MaskStyle::default()
-    };
-    if let Ok(strength) = MosaicStrength::new(request.settings.mosaic_strength) {
-        style.mosaic_strength = strength;
-    }
+    let models = options.models()?;
     let photo = PhotoProcessor::new(PhotoSettings {
         models,
         thresholds: models.default_thresholds(),
-        style,
+        style: options.style(),
         ..PhotoSettings::default()
     })
     .map_err(other)?;
-    let video = match (&request.tools.ffmpeg, &request.tools.ffprobe) {
+    let video = match (&tools.ffmpeg, &tools.ffprobe) {
         (Some(ffmpeg), Some(ffprobe)) => {
             let photo_settings = photo.settings();
             let settings = VideoSettings {
@@ -261,8 +289,9 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
     let id = SessionId::generate();
     let _lock = store.lock(&id).map_err(other)?;
 
-    let models = detection_models(&request.settings)?;
-    let processor = Arc::new(processor(&request, models, store.records_dir(&id))?);
+    let options = RunOptions::of(&request.settings);
+    let models = options.models()?;
+    let processor = Arc::new(processor(&options, &request.tools, store.records_dir(&id))?);
     let workers = std::thread::available_parallelism().map_or(1, |n| n.get());
     let review = if request.settings.review {
         ReviewMode::Required
@@ -335,7 +364,7 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
         &plan,
         &request.output,
         |input| processor.fingerprint(input),
-        None,
+        serde_json::to_value(options).ok(),
     );
     let mut problems = Vec::new();
     let session = match saved {
