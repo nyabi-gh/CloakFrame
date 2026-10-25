@@ -91,6 +91,16 @@ impl Thumbnails {
         }
     }
 
+    /// Waits for every thumbnail asked for, for tests.
+    pub fn wait(&mut self, ctx: &egui::Context) {
+        while self.asked.iter().any(|p| !self.textures.contains_key(p)) {
+            match self.made.recv() {
+                Ok(made) => self.made_now(made, ctx),
+                Err(_) => return,
+            }
+        }
+    }
+
     /// The thumbnail of `path` if it is made; asks for it otherwise. `None` inside means the
     /// photo could not be read.
     pub fn get(&mut self, path: &Path, kind: MediaKind) -> Option<Option<&egui::TextureHandle>> {

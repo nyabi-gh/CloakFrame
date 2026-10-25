@@ -103,6 +103,13 @@ impl ReviewScreen {
         }
     }
 
+    /// Waits for the queue's thumbnails, for tests.
+    pub fn wait_for_thumbnails(&mut self, ctx: &egui::Context) {
+        if let Some(thumbnails) = &mut self.thumbnails {
+            thumbnails.wait(ctx);
+        }
+    }
+
     /// Waits for the photo in the editor and its tiles on screen, for tests.
     pub fn wait_for_picture(&mut self, ctx: &egui::Context) {
         if let Some(picture) = self.editor.as_mut().and_then(|e| e.picture.as_mut()) {

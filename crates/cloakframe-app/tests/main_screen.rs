@@ -340,6 +340,16 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label("one original changed");
 
     harness.get_by_role_and_label(Role::Button, "Open").click();
+    // The queue's thumbnails and the editor's photo are made on threads of their own; the
+    // harness waits for them before it settles.
+    harness.step();
+    let ctx = harness.ctx.clone();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_thumbnails(&ctx);
     harness.run();
     harness.get_by_label(
         "3 to review — faces missed for 1.2 s in one video, the detection limit reached in one item",
@@ -358,6 +368,13 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     assert!(store.lock(&id).is_err(), "held while it is open");
 
     harness.get_by_label_contains("photo.jpg").click();
+    harness.step();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
     harness.run();
     harness.get_by_label("Detection limit reached: 100 of 259 kept");
     harness.get_by_label("Not resolved");
@@ -383,6 +400,13 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label("Face lost in frames 30–65 (1.2 s)");
     harness.get_by_label_contains("Video tracks cannot be edited here yet");
     harness.get_by_role_and_label(Role::Button, "Next").click();
+    harness.step();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
     harness.run();
     harness.get_by_label("The original changed or is gone; run it again");
     harness
@@ -485,10 +509,17 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     harness
         .get_by_role_and_label(Role::Button, "Review Now")
         .click();
+    harness.step();
+    let ctx = harness.ctx.clone();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_thumbnails(&ctx);
     harness.run();
     harness.get_by_label_contains("a.jpg").click();
     harness.step();
-    let ctx = harness.ctx.clone();
     harness
         .state_mut()
         .review
