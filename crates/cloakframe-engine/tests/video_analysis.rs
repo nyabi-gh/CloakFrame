@@ -633,7 +633,10 @@ fn cancelling_the_first_pass_stops_it_and_removes_its_records() {
     with_context(&input, detector, &cancel, |ctx| {
         assert!(matches!(processor.analyze(ctx), Err(StepError::Cancelled)));
     });
-    assert_eq!(calls.lock().unwrap().len(), 11);
+    // The pass queues frame 11 before it waits for frame 10, so a detector that lags behind
+    // the decode has it already when the cancel lands.
+    let calls = calls.lock().unwrap().len();
+    assert!((11..=12).contains(&calls), "{calls}");
     assert_eq!(records_left(&dir), 0);
 }
 
