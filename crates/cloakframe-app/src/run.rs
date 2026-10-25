@@ -328,9 +328,15 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
         saved,
         cleaned,
         left_out,
-    } = keep_for_review(&store, &id, &report, &plan, &request.output, |input| {
-        processor.fingerprint(input)
-    });
+    } = keep_for_review(
+        &store,
+        &id,
+        &report,
+        &plan,
+        &request.output,
+        |input| processor.fingerprint(input),
+        None,
+    );
     let mut problems = Vec::new();
     let session = match saved {
         Some(Ok(())) => Some(id.clone()),

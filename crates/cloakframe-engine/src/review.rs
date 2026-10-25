@@ -510,6 +510,7 @@ mod tests {
         };
         Session {
             version: FORMAT_VERSION,
+            options: None,
             output: dir.mkdir("out"),
             items: names
                 .iter()

@@ -70,8 +70,9 @@ pub struct Kept {
     pub left_out: Vec<(ItemId, LeftOut)>,
 }
 
-/// Saves as session `id` the items `report` left for review, and removes the video records of
-/// the rest. Done before anything is shown, which can fail once a terminal is gone.
+/// Saves as session `id` the items `report` left for review, with the front end's `options`
+/// ([`Session::options`]), and removes the video records of the rest. Done before anything is
+/// shown, which can fail once a terminal is gone.
 pub fn keep_for_review(
     store: &SessionStore,
     id: &SessionId,
@@ -79,8 +80,12 @@ pub fn keep_for_review(
     plan: &[PlannedOutput],
     output: &Path,
     fingerprint: impl Fn(&Path) -> Fingerprint,
+    options: Option<serde_json::Value>,
 ) -> Kept {
-    let (session, left_out) = session_from_report(report, plan, output, fingerprint);
+    let (mut session, left_out) = session_from_report(report, plan, output, fingerprint);
+    if let Some(session) = &mut session {
+        session.options = options;
+    }
     let saved = session.as_ref().map(|session| store.save(id, session));
     let cleaned = match (&session, &saved) {
         (Some(session), Some(Ok(()))) => store.prune(id, session),
@@ -185,6 +190,7 @@ pub fn session_from_report(
         version: FORMAT_VERSION,
         output: output.to_path_buf(),
         items,
+        options: None,
     });
     (session, left_out)
 }

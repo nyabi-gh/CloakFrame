@@ -26,6 +26,10 @@ pub struct Session {
     pub version: u32,
     pub output: PathBuf,
     pub items: Vec<SessionItem>,
+    /// The options the front end ran with, in its own form, so that its review renders with the
+    /// same ones; the engine does not read them. The CLI's review is given its options again.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub options: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -349,6 +353,7 @@ mod tests {
         };
         Session {
             version: FORMAT_VERSION,
+            options: None,
             output: dir.path().join("out"),
             items: vec![SessionItem {
                 item: ItemId(0),

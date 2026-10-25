@@ -298,6 +298,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     };
     let session = Session {
         version: FORMAT_VERSION,
+        options: None,
         output: output.clone(),
         items: vec![
             session_item(0, photo, photo_media(), vec![capped]),

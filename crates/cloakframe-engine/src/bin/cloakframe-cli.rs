@@ -649,9 +649,15 @@ fn run_with<P: ItemProcessor>(
         saved,
         cleaned,
         left_out,
-    } = keep_for_review(&store, &id, &report, &plan, output, |input| {
-        processor.fingerprint(input)
-    });
+    } = keep_for_review(
+        &store,
+        &id,
+        &report,
+        &plan,
+        output,
+        |input| processor.fingerprint(input),
+        None,
+    );
     print_report(&report);
     print_fallbacks(&started.backends.get());
     for (item, reason) in &left_out {
