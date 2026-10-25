@@ -47,6 +47,32 @@
   - 12번: 계획 9.3에 4K의 P-4 전체 디코드 비용을 예외로 적고, M8 고정 장치에서 2패스와 출력 검사를 따로 잰다.
 - **turbojpeg:** 같은 수정의 열린 honzasp/rust-turbojpeg#43이 릴리스되기를 기다린다. 로컬 우회는 넣지 않는다.
 
+## 수정(2026-10-25, `m0-m5-fixes`)
+
+항목마다 실패하는 시험을 먼저 넣어 실패를 확인한 뒤 고쳤다. 커밋은 항목마다 하나다.
+
+| # | 고친 것 | 시험 | 확인 |
+| --- | --- | --- | --- |
+| 1 | `check`가 결정마다 모든 해결 표시를 미해결로 되돌린 뒤 결정의 것만 적용한다 | `review` 단위 `a_retry_decides_the_resolutions_again`(사진의 수동 상자, 영상의 수동 track) | 고치기 전 `rejected=[]`로 실패 |
+| 4 | 장면 전환 감지기가 확인을 기다리는 후보를 모두 들고, 어느 후보의 앞 장면으로 돌아오면 그 후보와 뒤의 후보를 버린다 | `scene` 단위 `a_flash_over_several_frames_that_goes_back_is_no_cut`(위 표의 넷과, 섬광 뒤 짧은 장면으로 돌아오는 경우) | 고치기 전 [10, 11, 12]로 실패. 1.12.1 fixture 시험은 그대로 통과. 영상 벤치마크는 기록된 전환을 쓰므로 CI 값은 그대로 |
+| 2 | 다시 인코드하는 오디오는 `atrim=start=0:end=<길이>`로 디코드한 샘플을 자른다. P-4는 원본 오디오의 끝(`start_pts + duration_ts`)이 영상 끝에 닿으면 출력 오디오의 시작 + 길이도 영상 끝 − 1프레임에 닿아야 한다 | `video_export.rs` `pcm_sound_that_starts_before_the_video`(MOV, PCM 1초 앞섬), `verify` 단위, `media_probe` | 고치기 전 마지막 클릭이 3.8초(영상 5초)로 실패. atrim만 빼면 P-4가 "audio stream 1 lasts 4.000 s instead of 5.000 s"로 게시를 막음 |
+| 5 | `integer_twin`은 N·1000/1001인 속도에만 정수 속도를 짝짓는다 | `timeline` 단위 `rates_slower_than_one_frame_a_second`(500/1001, 1/2) | 고치기 전 panic. 엔진 CLI로 500/1001 영상이 5프레임 그대로 게시됨 |
+| 3 | Unix의 SIGHUP은 `ctrlc` 대신 자체 처리기(원자 저장과 `write(2)`만)가 받아 취소만 한다. 바로 종료는 ctrlc 처리기의 두 번째 호출(SIGINT·SIGTERM)에만 | `cli.rs` `hangups_only_cancel`(첫 hangup의 안내를 본 뒤 두 번째, 합성 `held` 항목이 취소와 상관없이 2초 렌더) | 고치기 전 130이지만 세션 0개로 실패. pty로 대화형 zsh를 닫는 재현(SIGHUP 2번)과 bash(1번)에서 두 번씩 세션 JSON이 남고 출력 폴더에 임시 파일이 없음 |
+| 6 | 종료 코드를 `worse`로 합친다: 실패(1) > 검토 대기(3) > 완료(0). run의 레코드 정리·스캔 문제·빠진 항목과 review의 거부·재개 결과 | `cli.rs` `a_scan_problem_fails_the_run_even_with_items_waiting_for_review` | 고치기 전 3으로 실패 |
+| 8 | 시험용 감지기에 preparer를 두고 `DetectorHandle`을 거쳐 가속기 실패를 시험 | `fallback` 단위 `a_prepared_image_that_fails_is_analyzed_again_on_the_cpu` | `detect_prepared`에서 폴백을 빼는 mutation을 잡음 |
+| 13 | 위 13번 표의 문서·주석(M0_M2_REVIEW 10번은 6번을 고쳐 다시 맞음). M3_TILES의 36MP 타일 수는 `layout`으로 다시 셌다: 6000×6000·6016×6016 185개, 7360×4912 165개 | — | — |
+
+구현 중 바꾼 것:
+
+- **3번:** 처음에는 SIGHUP을 모든 스레드에서 막고 `sigwait` 스레드가 받게 했다. 그런데 `std::process`는 자식의 signal mask를 비우지 않아(작은 프로그램으로 확인: 자식이 SIGHUP을 막은 채 시작) FFmpeg 같은 자식이 막힌 SIGHUP을 물려받았다. 도구는 자기 프로세스 그룹에서 돌아 터미널의 hangup을 받지 않지만, 자식에 상태를 흘리지 않도록 처리기로 바꿨다. exec는 처리기를 건 신호를 기본 동작으로 되돌린다.
+- **2번:** P-4의 오디오 끝 기준은 원본 오디오가 영상 끝에 정확히 닿거나 넘을 때만 건다. 원본이 조금이라도 먼저 끝나면 확인하지 않는다(거짓 거부를 피하는 쪽).
+
+남긴 것: 7·9·10·11번(M6에서 다시 봄, 9번은 문서만 고침), 도구·CI의 두 항목(`video_speed.sh`·`record_video.sh`의 target 경로, `benchmark.yml` 제외 목록).
+
+확인(macOS arm64): `cargo fmt --check`, clippy 두 조합, `cargo test --workspace --locked --all-features --no-fail-fast` 498개 통과(490 + 이번 8개), 무시 3개.
+
+찾은 것: `video_analysis.rs` `cancelling_the_first_pass_stops_it_and_removes_its_records`가 전체 시험을 한 번 돌릴 때 감지 호출 12번으로 실패했다(혼자 20번은 모두 통과). 989b94d부터 1패스는 프레임 10의 결과를 기다리기 전에 프레임 11을 감지기에 넣는다. 부하로 감지기가 늦으면 프레임 10에서 취소할 때 11이 이미 채널에 있어 한 번 더 돈다. 이 시험의 "정확히 11번"은 그 전 동작의 기대값이다. 이번 수정과는 상관없고 main에도 있다. 고칠 방향은 메인테이너가 정한다.
+
 ## 1. 재시도 결정에서 남는 "수동 마스크로 덮음"
 
 - **위치:** `crates/cloakframe-engine/src/review.rs:253-336`(`check`), `bin/cloakframe-cli.rs:836-843`.
