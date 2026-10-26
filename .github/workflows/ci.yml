@@ -115,6 +115,34 @@ jobs:
           ORT_DISABLE_TELEMETRY: "1"
         run: cargo test --workspace --locked --all-features
 
+      # Plan M6 stage 5: the app's window on a runner without a GPU, as it starts and with wgpu
+      # unable to, which falls back to OpenGL. The screenshots are kept with the run.
+      - name: Open the app window (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb xdotool imagemagick x11-utils mesa-vulkan-drivers \
+            libxcursor1 libxrandr2 libxi6 libxkbcommon-x11-0 libgl1 libegl1
+          cargo build --workspace --locked --all-features
+          tools/ci/app_window.sh target/debug/cloakframe "$RUNNER_TEMP/app-window"
+
+      - name: Open the app window (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo build --workspace --locked --all-features
+          tools/ci/app_window.ps1 target/debug/cloakframe.exe "$env:RUNNER_TEMP/app-window"
+
+      - name: Keep the app window screenshots
+        if: always() && runner.os != 'macOS'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: app-window-${{ runner.os }}-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/app-window/*.png
+            ${{ runner.temp }}/app-window/*.log
+          if-no-files-found: ignore
+
       # Plan M4 stage 2: the stdout pipe on every OS, measured (1.12.1 used a named pipe on
       # Windows). The test prints frames per second and MB/s; the log keeps it with --nocapture.
       - name: Measure the decode pipe
