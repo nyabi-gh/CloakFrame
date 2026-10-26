@@ -137,6 +137,8 @@
 
 결정·시험 표·CI·macOS 점검 목록·preview 준비는 [완료 확인 기록](M6_VERIFY.md)에 있다.
 
+**병합(2026-10-26, PR #62, main `d10636a`):** CI 4개 통과. 앱 창 실행 결과, 오류 창 문구 수정, main push CI에서 드러난 세션 목록 읽기 대기 누락, FFmpeg 없는 preview 결정은 [기록](M6_VERIFY.md#windowslinuxci)에 있다.
+
 ## 근거
 
 - **engine 쪽은 준비됨:** `run::start`·`RunHandle`(이벤트, 진행, 항목 취소), `SessionStore`(저장·잠금·정리), `VideoProcessor::preview`(프레임 k의 pixel·영역·마스크 미리보기), core `mask::render`, `app_dirs`(앱 데이터·모델 폴더)가 있다. M6은 주로 앱 crate다.

@@ -50,11 +50,16 @@
 - **macOS 로컬:** 기본 `graphics: wgpu, metal, Apple M4`, `WGPU_BACKEND=vulkan`이면 OpenGL로 대체해 `graphics: OpenGL, Apple M4, 4.1 Metal - 91.7`.
 - **첫 CI(PR #62, 2026-10-26):** macOS 시험 통과. Windows 기본 실행은 `graphics: wgpu, dx12, Microsoft Basic Render Driver (software)`로 떴지만, 스크립트가 제목 없는 다른 최상위 창을 앱 창으로 잡았고 화면 전체를 찍어 runner 데스크톱의 색만으로 "그려짐"이 참이 되어(앱 창은 runner 터미널 뒤) 실패했다. 제목이 맞는 창을 기다리고 그 창만 `PrintWindow`로 찍게 고쳤다. Linux는 창 실행 전에 기존 세션 시험이 실패했다(아래 결함).
 - **찾은 결함(세션 목록):** 검토를 닫으면(뒤로) 세션 목록을 스레드에서 다시 읽는다. 그 읽기가 끝나기 전에 사용자가 세션을 버리면, 버리기 전에 읽은 목록이 나중에 도착해 버린 세션이 목록에 다시 보였다(다음 읽기까지). Linux runner에서 `reviews_kept_by_earlier_runs_are_listed_opened_and_discarded`가 이 순서로 실패했고, 읽은 뒤 결과를 보내기 전에 300 ms를 늦춘 복사본에서 같은 실패를 재현했다(시작 전에 늦추면 버린 뒤의 상태를 읽어 재현되지 않음). 버리면 진행 중인 읽기 결과를 버리고 지운 뒤의 상태로 다시 읽게 고쳤고, 같은 복사본에서 통과한다.
-- **CI 결과:** (고친 뒤의 실행에서 적는다)
+- **CI 결과(PR #62 run 40280951135, 2026-10-26, artifact `app-window-*`):** 4개 job 통과.
+  - Linux 기본 `graphics: wgpu, vulkan, llvmpipe (LLVM 20.1.2, 256 bits) (software)`. Vulkan을 막으면 "wgpu could not start"를 거쳐 `graphics: OpenGL, llvmpipe (LLVM 20.1.2, 256 bits), 4.5 (Core Profile) Mesa 25.2.8`. 사전 실행과 같고 x86 runner라 llvmpipe 폭만 256 bits다.
+  - Windows 기본 `graphics: wgpu, dx12, Microsoft Basic Render Driver (software)`. WM_CLOSE로 닫혀 종료 코드 0, `settings.toml`에 `[window]`가 저장됐다.
+  - Windows `WGPU_BACKEND=vulkan`: runner에 Vulkan 드라이버가 없어 wgpu가 실패하고, OpenGL은 1.1뿐이라 glow가 "egui_glow requires opengl 2.0+"로 실패해 "CloakFrame cannot start" 오류 창이 떴다(셋 중 세 번째).
+- **오류 창 문구의 겹친 접두:** 창에 `OpenGL: egui_glow: OpenGL: egui_glow requires opengl 2.0+.`가 보였다. 앱이 붙인 `OpenGL: `, eframe `Error::OpenGL`의 Display가 붙이는 `egui_glow: `, egui_glow `PainterError`의 Display가 붙이는 `OpenGL: `, 메시지 본문(`"egui_glow requires opengl 2.0+. "`)이 겹친 것이다. egui master도 같다. 결정(추천대로): 앱의 렌더러 라벨을 없애고 두 오류를 eframe의 Display 그대로 줄마다 보인다(`WGPU error: …` / `egui_glow: OpenGL: …`). 남는 겹침은 upstream 몫이다. stderr 줄(`wgpu could not start (…)`)은 CI 스크립트가 찾으므로 그대로 둔다.
+- **main push CI(d10636a, run 40291125802)의 Windows 실패:** `start_runs_the_engine_and_shows_the_result`의 마지막 `harness.run()`이 "exceeded max_steps (4) … would have settled after 6", 원인 `sessions.rs:90`(세션 목록 읽기 스레드의 `request_repaint`)으로 실패했다. 실행이 끝나면 다음 frame이 세션 목록을 스레드에서 다시 읽는데, 시험이 이 읽기를 기다리지 않았다. 다른 스레드의 repaint 요청은 pass 두 번을 부르므로, 결과가 원래 4단계인 마지막 `run()`의 3–4단계 도중에 오면 한도를 넘는다. 복사본에서 읽기 스레드가 파일 신호를 기다리게 하고 시험이 마지막 `run()` 직전에 신호를 주자, 6.0–7.8 ms 늦출 때 같은 오류(`steps_to_settle: Some(6)`)가 재현됐다. 300 ms 늦춘 확인에서 못 잡은 것은 결과가 시험이 끝난 뒤에 와서다. 이 시험은 `SavedSessions`에 데이터 폴더를 주지 않아 읽을 것도 없었다. 고친 것: 세션 저장소가 없으면 스레드 없이 빈 목록으로 두고, `wait`는 결과를 받은 뒤 스레드를 join해 repaint 요청까지 끝난 뒤 돌아온다. 데이터 폴더가 있는 시험은 읽기가 시작되는 곳(파일 놓기 뒤, 실행 끝, 검토에서 뒤로, 버리기)마다 기다린 뒤 정착한다. 확인: 복사본에서 UI frame의 `take`가 세션 결과를 받으면 panic하게 하고 앱 시험 전체를 그대로, 보내기 전 300 ms, 보낸 뒤 repaint 전 300 ms 늦춰 돌려 모두 통과했다(고치기 전에는 편집기 시험의 마지막 "Back"에서 잡힘). 이 수정으로 b128154(버리기 전에 시작한 읽기)의 경합은 시험이 더 이상 우연히 밟지 않는다. 그 수정은 코드에 남아 있다.
 
 ## macOS 사람 점검(메인테이너)
 
-preview zip(아래) 또는 개발 빌드(`cargo run -p cloakframe-app`, CONTRIBUTING의 환경 변수)로 한다. 항목마다 "정상 / 이상(증상)"을 적는다. [M0 절차](M0_EGUI.md#사람이-할-확인-macos)를 앱에 맞게 고쳤다. 앱에는 글자 입력 칸이 없으므로(저장 위치는 대화상자로 고름) IME는 단축키와 겹치는지만 본다.
+preview zip(아래) 또는 개발 빌드(`cargo run -p cloakframe-app`, CONTRIBUTING의 환경 변수)로 한다. 항목마다 "정상 / 이상(증상)"을 적는다. [M0 절차](M0_EGUI.md#사람이-할-확인-macos)를 앱에 맞게 고쳤다. 앱에는 글자 입력 칸이 없으므로(저장 위치는 대화상자로 고름) IME는 단축키와 겹치는지만 본다. preview zip에는 FFmpeg가 없으므로(아래 preview 릴리스 준비) 영상이 걸린 항목(2의 영상, 7)은 개발 빌드로 한다.
 
 1. **열기:** zip을 풀어 "CloakFrame Preview"를 연다. 공증이 없으므로 처음에는 막히고, 시스템 설정 > 개인정보 보호 및 보안의 "그래도 열기"로 연다. 정보 창(앱 메뉴 > CloakFrame 정보)의 그래픽 줄을 적는다.
 2. **Finder 드롭:** 파일 하나, 여러 개, 폴더, 이름에 한글·일본어(髙橋 등)·공백·이모지가 있는 파일, 외장 드라이브·iCloud Drive의 파일. 놓기 전 "놓으면 N개 추가", 놓은 뒤 형식별 개수와 썸네일. 사진 앱에서 끌어 놓으면 무엇이 들어오는지.
@@ -86,12 +91,11 @@ M6은 2026-10-25에 시작해 지금까지 2일(예산 7주)이다. M1–M5 누�
 
 ## preview 릴리스 준비
 
-- `tools/package/macos_preview.sh`: release 실행 파일, ORT, FFmpeg·ffprobe를 `Contents/MacOS`에(앱은 실행 파일 옆에서 찾음, `tools.rs`), 아이콘과 `LICENSE`·`THIRD_PARTY_NOTICES.txt`를 `Contents/Resources`에 넣고, 안쪽부터 ad-hoc 서명한 뒤 `ditto`로 zip을 만든다. 이 Mac에서 만든 zip(84 MB)을 풀어 연 앱이 Metal로 뜨고 FFmpeg를 찾았다(영상 안내 없음).
+- `tools/package/macos_preview.sh`: release 실행 파일과 ORT를 `Contents/MacOS`에(앱은 실행 파일 옆에서 찾음, `tools.rs`), 아이콘과 `LICENSE`·`THIRD_PARTY_NOTICES.txt`를 `Contents/Resources`에 넣고, 안쪽부터 ad-hoc 서명한 뒤 `ditto`로 zip을 만든다. 처음에는 FFmpeg·ffprobe도 넣었다(zip 84 MB, 앱이 Metal로 뜨고 FFmpeg를 찾음). 사진만으로 바꾼 뒤(아래) 이 Mac에서 만든 zip은 28 MB이고, 풀어 연 앱이 `graphics: wgpu, metal, Apple M4`로 뜨고 "앱 옆에서 FFmpeg를 찾지 못해 동영상은 뺐습니다."를 보였다.
 - `.github/workflows/preview.yml`(수동 실행, 입력 `tag`): macOS 15 runner에서 위 스크립트로 zip을 만들어 artifact로 남기고 같은 zip으로 초안 prerelease를 만든다. 설명은 `docs/PREVIEW_NOTES.md`.
-- **게시 전에 정할 것:** 번들 FFmpeg는 GPL-3.0-or-later 빌드다. 계획 10.1은 GPL 고지와 대응 소스 위치를 THIRD_PARTY_NOTICES에 두라고 하지만 아직 FFmpeg 항목이 없다(M7 작업 "라이선스·대응 소스"). preview를 게시하기 전에 이 항목을 앞당겨 넣을지, FFmpeg 없는 preview(사진만)로 낼지 정해야 한다.
+- **FFmpeg(2026-10-26 결정):** 번들 FFmpeg는 GPL-3.0-or-later 빌드인데 THIRD_PARTY_NOTICES에 고지와 대응 소스가 없었다. 처음에는 macOS 고지를 앞당기기로 했다. 그런데 Martin Riedl 9.0.2 빌드는 x264를 빌드할 때마다 `master` tarball로 받고(`script/build-x264.sh`), 공개 빌드 스크립트는 9.0.1 커밋까지만 있으며, 버전 목록에도 x264가 "0.165.x"로만 적혀 있다. 이 바이너리의 대응 소스(GPLv3 6조)는 낼 수 없다. 결정(추천대로): preview는 사진만 낸다. FFmpeg는 M7에서 고정한 소스로 직접 빌드하고, 그 소스와 스크립트를 대응 소스로 낸다(계획 10.1).
 
 ## 남긴 것
 
-- Windows CI 대체 경로의 실제 결과, Linux CI 결과(첫 CI 뒤 적음).
 - macOS 사람 점검 결과와 M6 완료 표시.
 - 일본어 "검토 필요" 문장(새 2개 포함)은 일본어 검토자가 생길 때까지 남는다.
