@@ -11,6 +11,7 @@ use crate::detect::Rgb8Image;
 use crate::identity::SourceStamp;
 use crate::photo::budget::{BudgetError, MemoryBudget, MemoryPermit, PixelLayout, estimated_bytes};
 use crate::photo::format::{ImageFormat, has_several_frames, sniff};
+use crate::run::{Classify, FailureKind};
 
 pub const MAX_FILE_BYTES: u64 = 2 << 30;
 pub const MAX_PIXELS: u64 = 512_000_000;
@@ -53,6 +54,20 @@ impl fmt::Display for ReadError {
             Self::Memory(e) => e.fmt(f),
             Self::Unsupported(what) => write!(f, "{what} is not supported"),
             Self::Decode(e) => write!(f, "the image could not be decoded: {e}"),
+        }
+    }
+}
+
+impl Classify for ReadError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Io(_) | Self::Decode(_) => FailureKind::Unreadable,
+            Self::FileTooLarge { .. } | Self::TooManyPixels { .. } => FailureKind::TooLarge,
+            Self::Memory(BudgetError::TooLarge { .. }) => FailureKind::TooLarge,
+            Self::Memory(BudgetError::Cancelled) => FailureKind::Other,
+            Self::NotAnImage | Self::SeveralFrames(_) | Self::Unsupported(_) => {
+                FailureKind::Unsupported
+            }
         }
     }
 }
@@ -527,13 +542,15 @@ mod tests {
         let dir = TestDir::new();
         let huge = source(&dir, "huge.png", &png_header(30_000, 20_000)).unwrap();
         assert_eq!(dimensions(&huge).unwrap(), (30_000, 20_000));
+        let error = decode(&huge, &budget(), &CancelToken::new()).unwrap_err();
         assert!(matches!(
-            decode(&huge, &budget(), &CancelToken::new()),
-            Err(ReadError::TooManyPixels {
+            error,
+            ReadError::TooManyPixels {
                 width: 30_000,
                 height: 20_000
-            })
+            }
         ));
+        assert_eq!(error.kind(), FailureKind::TooLarge);
         let big = source(&dir, "big.png", &png_header(10_000, 10_000)).unwrap();
         assert!(matches!(
             decode(&big, &MemoryBudget::new(1 << 30), &CancelToken::new()),
@@ -677,9 +694,8 @@ mod tests {
         let path = dir.path().join("sparse.jpg");
         let f = File::create(&path).unwrap();
         f.set_len(MAX_FILE_BYTES + 1).unwrap();
-        assert!(matches!(
-            read_source(&path),
-            Err(ReadError::FileTooLarge { .. })
-        ));
+        let error = read_source(&path).unwrap_err();
+        assert!(matches!(error, ReadError::FileTooLarge { .. }));
+        assert_eq!(error.kind(), FailureKind::TooLarge);
     }
 }

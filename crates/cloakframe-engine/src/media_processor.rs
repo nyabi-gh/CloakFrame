@@ -6,7 +6,9 @@ use cloakframe_core::item::PublishPermit;
 
 use crate::cancel::CancelToken;
 use crate::photo::process::{self as photo, PhotoProcessor};
-use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError};
+use crate::run::{
+    Analysis, FailureKind, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError,
+};
 use crate::scan::MediaKind;
 use crate::video::process::{self as video, VideoProcessor};
 
@@ -35,9 +37,9 @@ impl MediaProcessor {
 
     /// The video processor, which the preview of a video under review opens with.
     pub fn video(&self) -> Result<&VideoProcessor, StepError> {
-        self.video
-            .as_ref()
-            .ok_or_else(|| StepError::Failed("this run does not process videos".into()))
+        self.video.as_ref().ok_or_else(|| {
+            StepError::failed(FailureKind::Unsupported, "this run does not process videos")
+        })
     }
 }
 

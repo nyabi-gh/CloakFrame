@@ -37,7 +37,8 @@ use crate::media::verify::{self, Expected, VerifyError};
 use crate::photo::mask::{self, ApplyError};
 use crate::publish::TempOutput;
 use crate::run::{
-    Analysis, Fingerprint, ItemContext, ItemProcessor, Note, Notes, RenderRequest, StepError,
+    Analysis, Classify, FailureKind, Fingerprint, ItemContext, ItemProcessor, Note, Notes,
+    RenderRequest, StepError,
 };
 
 /// The bundled tools (plan 0.1: run as external processes).
@@ -53,6 +54,9 @@ pub struct VideoSettings {
     pub quality: Quality,
     /// Try the platform's hardware encoders before software (1.12.1's default).
     pub hardware_encode: bool,
+    /// Leave the source's audio out of the output. Kept by default, as 1.12.1 did; voices and
+    /// anything said in them are not anonymized.
+    pub remove_audio: bool,
     /// Areas masked in every frame, in display pixels.
     pub masks: Vec<Rect>,
     pub style: MaskStyle,
@@ -65,6 +69,7 @@ impl Default for VideoSettings {
             codec: OutputCodec::H264,
             quality: Quality::High,
             hardware_encode: true,
+            remove_audio: false,
             masks: Vec::new(),
             style: MaskStyle::default(),
             analysis: AnalysisSettings::default(),
@@ -77,10 +82,11 @@ impl VideoSettings {
         let s = &self.style;
         let mut h = Sha256::new();
         h.update(format!(
-            "codec {:?} quality {:?} hardware {}\nstyle {:?} {:?} padding {:08x} soft {} mosaic {}\n",
+            "codec {:?} quality {:?} hardware {} audio removed {}\nstyle {:?} {:?} padding {:08x} soft {} mosaic {}\n",
             self.codec,
             self.quality,
             self.hardware_encode,
+            self.remove_audio,
             s.method,
             s.shape,
             s.padding.ratio().to_bits(),
@@ -141,19 +147,26 @@ impl fmt::Display for VideoError {
 
 impl std::error::Error for VideoError {}
 
-fn failed(e: impl std::error::Error + Send + Sync + 'static) -> StepError {
-    StepError::Failed(Box::new(e))
+impl Classify for VideoError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::ChangedWhileProcessing | Self::ChangedSinceAnalysis => FailureKind::SourceChanged,
+            Self::NameTaken => FailureKind::NameTaken,
+            Self::NotAnalyzed | Self::MaskOutside { .. } => FailureKind::Other,
+        }
+    }
+}
+
+fn failed(e: impl Classify + std::error::Error + Send + Sync + 'static) -> StepError {
+    e.into()
 }
 
 /// A tool stopped by the item's cancel reports its own error; the cancel is what happened.
-fn failed_unless_cancelled(
-    ctx: &ItemContext<'_>,
-    e: impl std::error::Error + Send + Sync + 'static,
-) -> StepError {
+fn failed_unless_cancelled(ctx: &ItemContext<'_>, e: impl Into<StepError>) -> StepError {
     if ctx.cancel.is_cancelled() {
         StepError::Cancelled
     } else {
-        failed(e)
+        e.into()
     }
 }
 
@@ -355,21 +368,43 @@ impl fmt::Display for PassError {
 
 impl std::error::Error for PassError {}
 
-/// Runs the pass with the encoder `pick` gives. If a hardware encoder fails it, the run gives
-/// up on hardware and the pass is made again with whatever `pick` gives then, which is software
-/// (plan 4.4, as a failing GPU detector moves to the CPU in M3).
+impl Classify for PassError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Decode(e) => e.kind(),
+            Self::Encode(e) => e.kind(),
+            Self::Verify(_) => FailureKind::Encode,
+            Self::Mask(e) => e.kind(),
+            Self::Regions(e) => e.kind(),
+            Self::Output(_) => FailureKind::Output,
+        }
+    }
+}
+
+/// Runs the pass with the encoder `pick` gives. If a hardware encoder fails it, the pass is made
+/// again with `software`; only when that one succeeds was the hardware at fault, and the run gives
+/// up on hardware (plan 4.4, as a failing GPU detector moves to the CPU in M3). A failure the
+/// software encode shares, such as audio FFmpeg cannot read, fails the item and leaves hardware
+/// to the next one.
 fn encode_with_fallback<T>(
     encoders: &mut Encoders,
     notes: &Notes,
-    mut pick: impl FnMut(&Encoders) -> Result<Encoder, EncodeError>,
+    software: Encoder,
+    pick: impl FnOnce(&Encoders) -> Result<Encoder, EncodeError>,
     mut pass: impl FnMut(Encoder) -> Result<T, PassError>,
 ) -> Result<T, PassError> {
     let encoder = pick(encoders).map_err(PassError::Encode)?;
     match pass(encoder) {
         Err(e) if encoder.hardware && e.encoders_fault() => {
-            encoders.note_hardware_failure();
-            notes.add(Note::EncodedAgainInSoftware);
-            pass(pick(encoders).map_err(PassError::Encode)?)
+            let retried = pass(software);
+            if retried.is_ok() {
+                encoders.note_hardware_failure();
+                notes.add(Note::EncodedAgainInSoftware {
+                    encoder: encoder.name,
+                    reason: e.to_string(),
+                });
+            }
+            retried
         }
         result => result,
     }
@@ -515,7 +550,7 @@ impl VideoProcessor {
             self.settings.quality,
             spec,
             total,
-            Some(ctx.input),
+            (!self.settings.remove_audio).then_some(ctx.input),
             Destination::Made(output.temp_path()),
             ctx.cancel,
         )
@@ -570,7 +605,10 @@ impl VideoProcessor {
         // The reader checks the decoded count against the list once it reaches the end.
         while reader.next_into(&mut frame).map_err(PassError::Decode)? {}
         writer.finish().map_err(PassError::Encode)?;
-        let expected = Expected::of(spec, self.settings.codec, total);
+        let mut expected = Expected::of(spec, self.settings.codec, total);
+        if self.settings.remove_audio {
+            expected.audio.clear();
+        }
         verify::check(
             &self.tools.ffprobe,
             &self.tools.ffmpeg,
@@ -617,7 +655,7 @@ fn beside_a_digest<T>(
         let digest = std::thread::Builder::new()
             .name("cloakframe-digest".into())
             .spawn_scoped(scope, || file_digest(ctx.input, &reading))
-            .map_err(failed)?;
+            .map_err(|e| StepError::failed(FailureKind::Other, e))?;
         let result = work();
         if result.is_err() {
             reading.cancel();
@@ -626,7 +664,9 @@ fn beside_a_digest<T>(
             .join()
             .unwrap_or_else(|panic| std::panic::resume_unwind(panic));
         let value = result?;
-        let digest = digest.map_err(|e| failed_unless_cancelled(ctx, e))?;
+        let digest = digest.map_err(|e| {
+            failed_unless_cancelled(ctx, StepError::failed(FailureKind::Unreadable, e))
+        })?;
         Ok((value, digest))
     })
 }
@@ -703,12 +743,14 @@ impl ItemProcessor for VideoProcessor {
 
     /// The first half of the item's progress is the first pass, a frame's pixels per source frame.
     fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, Analyzed), StepError> {
-        let before = SourceStamp::of(ctx.input).map_err(failed)?;
+        let before = SourceStamp::of(ctx.input)
+            .map_err(|e| StepError::failed(FailureKind::Unreadable, e))?;
         let source = source::open(&self.tools.ffprobe, ctx.input, ctx.cancel)
             .map_err(|e| failed_unless_cancelled(ctx, e))?;
         unchanged(ctx, before)?;
         self.regions(source.spec.display_size()).map_err(failed)?;
-        let mut records = ItemRecords::create(&self.records, ctx.item).map_err(failed)?;
+        let mut records = ItemRecords::create(&self.records, ctx.item)
+            .map_err(|e| StepError::failed(FailureKind::Other, e))?;
         let ((first, tracked), input) =
             beside_a_digest(ctx, || self.first_pass(ctx, &source, &records))?;
         unchanged(ctx, before)?;
@@ -784,6 +826,7 @@ impl ItemProcessor for VideoProcessor {
             encode_with_fallback(
                 &mut encoders,
                 ctx.notes,
+                Encoder::software(self.settings.codec),
                 |encoders| {
                     encoders.pick(
                         &self.tools.ffmpeg,
@@ -843,7 +886,7 @@ impl ItemProcessor for VideoProcessor {
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
                 Err(failed(VideoError::NameTaken))
             }
-            Err(e) => Err(failed(e)),
+            Err(e) => Err(StepError::failed(FailureKind::Output, e)),
         }
     }
 
@@ -893,7 +936,7 @@ mod tests {
     }
 
     fn changed(result: Result<impl Sized, StepError>) -> bool {
-        matches!(result, Err(StepError::Failed(e)) if e.to_string() == VideoError::ChangedWhileProcessing.to_string())
+        matches!(result, Err(StepError::Failed { kind: FailureKind::SourceChanged, error }) if error.to_string() == VideoError::ChangedWhileProcessing.to_string())
     }
 
     /// Both passes count a frame's pixels, as photos do, so a run's items share a unit; the
@@ -1033,7 +1076,7 @@ mod tests {
                 },
                 Some(analyzed),
             );
-            let Err(StepError::Failed(e)) = result else {
+            let Err(StepError::Failed { error: e, .. }) = result else {
                 panic!("rendered with regions short of the frames");
             };
             assert!(
@@ -1138,6 +1181,7 @@ mod tests {
         let result = encode_with_fallback(
             &mut encoders,
             &notes,
+            software(),
             |e| {
                 Ok(if hardware_first && !e.hardware_failed() {
                     hardware()
@@ -1163,11 +1207,18 @@ mod tests {
             }),
         ];
         for failure in failures {
+            let reason = failure.to_string();
             let (used, result, encoders, notes) = run(true, vec![Err(failure), Ok(())]);
             assert_eq!(used, [hardware(), software()]);
             result.unwrap();
             assert!(encoders.hardware_failed());
-            assert_eq!(notes.into_vec(), [Note::EncodedAgainInSoftware]);
+            assert_eq!(
+                notes.into_vec(),
+                [Note::EncodedAgainInSoftware {
+                    encoder: hardware().name,
+                    reason
+                }]
+            );
         }
     }
 
@@ -1199,13 +1250,19 @@ mod tests {
         assert!(!encoders.hardware_failed());
     }
 
+    /// Review 11: a failure software shares, such as audio FFmpeg cannot copy, is the item's
+    /// and not the hardware's, which the next item still uses.
     #[test]
-    fn a_software_retry_that_fails_too_fails_the_item() {
-        let (used, result, _, notes) =
-            run(true, vec![Err(broken_encoder()), Err(broken_encoder())]);
+    fn a_software_retry_that_fails_too_fails_the_item_and_keeps_the_hardware() {
+        let audio = PassError::Verify(VerifyError::Streams("no audio stream 1".to_owned()));
+        let (used, result, encoders, notes) = run(true, vec![Err(broken_encoder()), Err(audio)]);
         assert_eq!(used, [hardware(), software()]);
-        assert!(result.is_err());
-        assert_eq!(notes.into_vec(), [Note::EncodedAgainInSoftware]);
+        assert!(matches!(
+            result,
+            Err(PassError::Verify(VerifyError::Streams(_)))
+        ));
+        assert!(!encoders.hardware_failed());
+        assert!(notes.into_vec().is_empty());
     }
 
     /// A track's grid is the cell its largest box needs, so none of its frames gets more cells

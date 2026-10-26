@@ -468,9 +468,9 @@ impl Board {
             }
             Message::Finished(finished) => {
                 for outcome in &finished.report.items {
-                    if let Some(failure) = &outcome.failure {
+                    if let Some(failure) = outcome.failure_reason() {
                         self.log
-                            .push((at, Logged::Failed(outcome.item, failure.clone())));
+                            .push((at, Logged::Failed(outcome.item, failure.to_owned())));
                     }
                     for note in &outcome.notes {
                         self.log

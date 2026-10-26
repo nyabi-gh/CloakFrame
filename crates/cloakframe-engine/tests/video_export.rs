@@ -250,6 +250,19 @@ const EXPORTS: [(OutputCodec, bool); 2] = [(OutputCodec::H264, true), (OutputCod
 /// `input` through the runner in automatic mode with the corner tracked, published as
 /// `out/<name>.mp4`.
 fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -> PathBuf {
+    let settings = VideoSettings {
+        codec,
+        hardware_encode,
+        analysis: AnalysisSettings {
+            tiles: false,
+            ..AnalysisSettings::default()
+        },
+        ..VideoSettings::default()
+    };
+    export_with(input, name, settings)
+}
+
+fn export_with(input: &Path, name: &str, settings: VideoSettings) -> PathBuf {
     let destination = input
         .parent()
         .unwrap()
@@ -266,15 +279,6 @@ fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -
         }],
         review: ReviewMode::Off,
         workers: 1,
-    };
-    let settings = VideoSettings {
-        codec,
-        hardware_encode,
-        analysis: AnalysisSettings {
-            tiles: false,
-            ..AnalysisSettings::default()
-        },
-        ..VideoSettings::default()
     };
     let processor = Arc::new(VideoProcessor::new(
         Tools {
@@ -406,6 +410,24 @@ fn exports_keep_frames_and_sound(recipe: &Recipe) {
         let shown = check_frames(&what, &input, &output);
         check_sync(&what, &input, &made, &output, &shown);
     }
+}
+
+#[test]
+fn removed_audio_leaves_the_frames() {
+    let dir = TestDir::new();
+    let (input, _) = Recipe::new("no-sound").make(dir.path());
+    assert!(!opened(&input).spec.audio.is_empty());
+    let settings = VideoSettings {
+        remove_audio: true,
+        analysis: AnalysisSettings {
+            tiles: false,
+            ..AnalysisSettings::default()
+        },
+        ..VideoSettings::default()
+    };
+    let output = export_with(&input, "no-sound", settings);
+    check_frames("without sound", &input, &output);
+    assert!(opened(&output).spec.audio.is_empty());
 }
 
 #[test]

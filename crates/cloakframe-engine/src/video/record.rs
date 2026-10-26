@@ -20,6 +20,7 @@ use std::io::{self, BufWriter, Read, Seek, SeekFrom, Write};
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
+use crate::run::{Classify, FailureKind};
 use cloakframe_core::detection::{DetectionKind, FrameIndex, MAX_ROLL, ModelId};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::tracking::tracker::Assignment;
@@ -52,6 +53,12 @@ impl fmt::Display for RecordError {
             Self::UnsupportedVersion(v) => write!(f, "analysis record format {v} is not supported"),
             Self::Damaged(why) => write!(f, "the analysis record is damaged: {why}"),
         }
+    }
+}
+
+impl Classify for RecordError {
+    fn kind(&self) -> FailureKind {
+        FailureKind::Other
     }
 }
 

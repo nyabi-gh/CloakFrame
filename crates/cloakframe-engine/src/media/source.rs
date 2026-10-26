@@ -10,6 +10,7 @@ use sha2::{Digest as _, Sha256};
 use crate::cancel::CancelToken;
 use crate::media::frames::{self, FramesError};
 use crate::media::probe::{self, MAX_DURATION_SECONDS, MAX_FRAMES, ProbeError, Unsupported};
+use crate::run::{Classify, FailureKind};
 
 pub struct Source {
     pub spec: TimelineSpec,
@@ -30,6 +31,16 @@ impl fmt::Display for OpenError {
             Self::Probe(e) => e.fmt(f),
             Self::Frames(e) => e.fmt(f),
             Self::Unsupported(u) => u.fmt(f),
+        }
+    }
+}
+
+impl Classify for OpenError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Probe(e) => e.kind(),
+            Self::Frames(e) => e.kind(),
+            Self::Unsupported(_) => FailureKind::Unsupported,
         }
     }
 }

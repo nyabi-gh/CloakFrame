@@ -11,6 +11,7 @@ use moxcms::{
 use crate::detect::Rgb8Image;
 use crate::photo::decode::{self, Source, detection_rgb8};
 use crate::photo::format::ImageFormat;
+use crate::run::{Classify, FailureKind};
 
 /// Color spaces whose pixels are kept as they are, with a bundled profile attached (D2).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -83,6 +84,12 @@ impl fmt::Display for ColorError {
 }
 
 impl std::error::Error for ColorError {}
+
+impl Classify for ColorError {
+    fn kind(&self) -> FailureKind {
+        FailureKind::Unreadable
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EmbeddedIcc {

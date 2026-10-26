@@ -22,6 +22,7 @@ use crate::detect::models::DetectionModels;
 use crate::detect::{DetectError, DetectorHandle, Rgb8Image, tiles};
 use crate::media::decode::{DecodeError, FrameReader, frame_size};
 use crate::media::source::Source;
+use crate::run::{Classify, FailureKind};
 
 /// The long edge frames are analyzed at (1.12.1's).
 pub const LONG_EDGE: u32 = 960;
@@ -128,6 +129,18 @@ impl fmt::Display for AnalysisError {
             Self::Detect(e) => e.fmt(f),
             Self::Record(e) => e.fmt(f),
             Self::Cancelled => f.write_str("cancelled"),
+        }
+    }
+}
+
+impl Classify for AnalysisError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Decode(e) => e.kind(),
+            Self::DecoderGone => FailureKind::Unreadable,
+            Self::Detect(e) => e.kind(),
+            Self::Record(e) => e.kind(),
+            Self::Cancelled => FailureKind::Other,
         }
     }
 }

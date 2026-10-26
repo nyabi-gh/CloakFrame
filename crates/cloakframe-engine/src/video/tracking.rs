@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 use super::analysis::DETECTION_FLOOR;
 use super::record::{Assigned, Detected, Order, Record, RecordError, RecordWriter, TrackRegion};
 use crate::cancel::CancelToken;
+use crate::run::{Classify, FailureKind};
 
 #[derive(Debug)]
 pub enum TrackingError {
@@ -44,6 +45,15 @@ impl fmt::Display for TrackingError {
         match self {
             Self::Record(e) => e.fmt(f),
             Self::Cancelled => f.write_str("cancelled"),
+        }
+    }
+}
+
+impl Classify for TrackingError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Record(e) => e.kind(),
+            Self::Cancelled => FailureKind::Other,
         }
     }
 }

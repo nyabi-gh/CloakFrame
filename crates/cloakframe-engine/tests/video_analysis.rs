@@ -24,8 +24,8 @@ use cloakframe_engine::identity::content_digest;
 use cloakframe_engine::media::decode::{FrameReader, frame_size};
 use cloakframe_engine::media::source;
 use cloakframe_engine::run::{
-    self, ItemContext, ItemOutcome, ItemProcessor, Job, JobItem, Note, Notes, RenderRequest, Start,
-    StepError,
+    self, FailureKind, ItemContext, ItemOutcome, ItemProcessor, Job, JobItem, Note, Notes,
+    RenderRequest, Start, StepError,
 };
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::preview::PreviewError;
@@ -824,7 +824,10 @@ fn a_review_is_rendered_only_from_the_analyzed_bytes_and_timeline() {
     let mut other_timeline = analysis.clone();
     other_timeline.video.as_mut().unwrap().timeline = Digest([0; 32]);
     for changed in [other_bytes, other_timeline] {
-        let Err(StepError::Failed(e)) = resume(&processor, &input, &changed, VideoEdits::default())
+        let Err(StepError::Failed {
+            kind: FailureKind::SourceChanged,
+            error: e,
+        }) = resume(&processor, &input, &changed, VideoEdits::default())
         else {
             panic!("rendered a changed source");
         };

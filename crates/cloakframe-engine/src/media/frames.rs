@@ -13,6 +13,7 @@ use cloakframe_core::timeline::{SourceFrames, SourceFramesError, TimelineSpec};
 use crate::cancel::CancelToken;
 use crate::media::probe::MAX_FRAMES;
 use crate::media::process::{ToolCommand, ToolError};
+use crate::run::{Classify, FailureKind};
 
 #[derive(Debug)]
 pub enum FramesError {
@@ -33,6 +34,16 @@ impl fmt::Display for FramesError {
             Self::NoTimestamp => f.write_str("a video frame has no timestamp"),
             Self::TooMany => f.write_str("the video frame count exceeds the limit"),
             Self::Frames(e) => e.fmt(f),
+        }
+    }
+}
+
+impl Classify for FramesError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Tool(e) => e.kind_or(FailureKind::Unreadable),
+            Self::Malformed(_) | Self::NoTimestamp | Self::Frames(_) => FailureKind::Unreadable,
+            Self::TooMany => FailureKind::TooLarge,
         }
     }
 }

@@ -14,6 +14,7 @@ use crate::cancel::CancelToken;
 use crate::detect::Rgb8Image;
 use crate::media::decode::swscale_matrix;
 use crate::media::process::{Supervised, ToolCommand, ToolError};
+use crate::run::{Classify, FailureKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputCodec {
@@ -217,6 +218,18 @@ impl fmt::Display for EncodeError {
                 "the video should have {expected} frames but {written} were written"
             ),
             Self::Cancelled => f.write_str("cancelled"),
+        }
+    }
+}
+
+impl Classify for EncodeError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Tool(e) => e.kind_or(FailureKind::Encode),
+            Self::Output(_) => FailureKind::Output,
+            Self::FrameSize { .. } | Self::FrameCount { .. } | Self::Cancelled => {
+                FailureKind::Other
+            }
         }
     }
 }

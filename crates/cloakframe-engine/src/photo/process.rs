@@ -25,7 +25,8 @@ use crate::detect::{Found, Rgb8Image, tiles};
 use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
 use crate::run::{
-    Analysis, Fingerprint, ItemContext, ItemProcessor, Note, RenderRequest, StepError,
+    Analysis, Classify, FailureKind, Fingerprint, ItemContext, ItemProcessor, Note, RenderRequest,
+    StepError,
 };
 
 /// Everything besides the input that decides a photo's output. A stored review is bound to all of
@@ -126,8 +127,18 @@ impl fmt::Display for PhotoError {
 
 impl std::error::Error for PhotoError {}
 
-fn failed(e: impl std::error::Error + Send + Sync + 'static) -> StepError {
-    StepError::Failed(Box::new(e))
+impl Classify for PhotoError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::ChangedSinceAnalysis | Self::ChangedWhileProcessing => FailureKind::SourceChanged,
+            Self::NameTaken => FailureKind::NameTaken,
+            Self::UnreadableOutput(_) => FailureKind::Encode,
+        }
+    }
+}
+
+fn failed(e: impl Classify + std::error::Error + Send + Sync + 'static) -> StepError {
+    e.into()
 }
 
 fn read_failed(e: ReadError) -> StepError {
@@ -359,8 +370,9 @@ impl ItemProcessor for PhotoProcessor {
         let source = prepared.source.stamp;
         drop(prepared);
 
-        let mut output = TempOutput::create(ctx.destination).map_err(failed)?;
-        output.file().write_all(&bytes).map_err(failed)?;
+        let output_failed = |e| StepError::failed(FailureKind::Output, e);
+        let mut output = TempOutput::create(ctx.destination).map_err(output_failed)?;
+        output.file().write_all(&bytes).map_err(output_failed)?;
         ctx.progress.set(2 * pixels, 2 * pixels);
         Ok(Rendered { output, source })
     }
@@ -384,7 +396,7 @@ impl ItemProcessor for PhotoProcessor {
             Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
                 Err(failed(PhotoError::NameTaken))
             }
-            Err(e) => Err(failed(e)),
+            Err(e) => Err(StepError::failed(FailureKind::Output, e)),
         }
     }
 

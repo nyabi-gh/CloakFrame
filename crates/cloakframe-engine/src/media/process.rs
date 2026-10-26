@@ -12,6 +12,7 @@ use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use crate::cancel::CancelToken;
+use crate::run::FailureKind;
 
 /// How much of a tool's stderr is kept for the error message.
 const STDERR_TAIL: usize = 8 * 1024;
@@ -227,6 +228,16 @@ impl fmt::Display for ToolError {
                 stderr,
             } => write!(f, "{tool} failed ({status}): {stderr}"),
             Self::Cancelled => f.write_str("cancelled"),
+        }
+    }
+}
+
+impl ToolError {
+    /// A tool that cannot be started is missing or broken; anything else is the work's `kind`.
+    pub(crate) fn kind_or(&self, kind: FailureKind) -> FailureKind {
+        match self {
+            Self::Spawn { .. } => FailureKind::Tool,
+            _ => kind,
         }
     }
 }

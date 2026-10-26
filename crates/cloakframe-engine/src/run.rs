@@ -19,26 +19,90 @@ use crate::video::process::VideoAnalysis;
 
 const EVENT_CAPACITY: usize = 64;
 
+/// What went wrong with an item, for a front end to word in its own language; the error's own
+/// English is the detail.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FailureKind {
+    /// A format, codec or stream layout the engine does not process.
+    Unsupported,
+    /// Beyond the engine's limits for one item.
+    TooLarge,
+    /// The source cannot be read or decoded.
+    Unreadable,
+    /// The source changed or went away during the run or since its analysis.
+    SourceChanged,
+    /// Something took the output name during the run; it is not replaced.
+    NameTaken,
+    /// The output cannot be written.
+    Output,
+    /// Encoding the output, or the check of what was encoded, failed.
+    Encode,
+    Detection,
+    /// FFmpeg or ffprobe cannot be started.
+    Tool,
+    /// Anything else, including the engine's own faults.
+    Other,
+}
+
+/// The kind of failure an error is when it fails an item.
+pub trait Classify {
+    fn kind(&self) -> FailureKind;
+}
+
+impl Classify for DetectError {
+    fn kind(&self) -> FailureKind {
+        FailureKind::Detection
+    }
+}
+
 #[derive(Debug)]
 pub enum StepError {
     Cancelled,
-    Failed(Box<dyn std::error::Error + Send + Sync>),
+    Failed {
+        kind: FailureKind,
+        error: Box<dyn std::error::Error + Send + Sync>,
+    },
+}
+
+impl StepError {
+    pub fn failed(
+        kind: FailureKind,
+        error: impl Into<Box<dyn std::error::Error + Send + Sync>>,
+    ) -> Self {
+        Self::Failed {
+            kind,
+            error: error.into(),
+        }
+    }
 }
 
 impl fmt::Display for StepError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Cancelled => f.write_str("cancelled"),
-            Self::Failed(e) => e.fmt(f),
+            Self::Failed { error, .. } => error.fmt(f),
         }
     }
 }
 
 impl std::error::Error for StepError {}
 
-impl From<DetectError> for StepError {
-    fn from(e: DetectError) -> Self {
-        Self::Failed(Box::new(e))
+impl<E: Classify + std::error::Error + Send + Sync + 'static> From<E> for StepError {
+    fn from(e: E) -> Self {
+        Self::failed(e.kind(), e)
+    }
+}
+
+/// Why an item failed: its kind and the engine's English, as the CLI prints it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Failure {
+    pub kind: FailureKind,
+    pub reason: String,
+}
+
+impl fmt::Display for Failure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&self.reason)
     }
 }
 
@@ -54,7 +118,7 @@ pub struct ItemContext<'a> {
 }
 
 /// Something about an item's result the user should be told that is not a failure.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Note {
     /// The source's color profile was converted to sRGB (D2).
     ColorConverted,
@@ -71,8 +135,12 @@ pub enum Note {
     /// the CPU for that model (plan 3).
     AnalyzedAgainOnCpu,
     /// The hardware encoder failed on this item, which was encoded again in software; the rest
-    /// of the run encodes in software.
-    EncodedAgainInSoftware,
+    /// of the run encodes in software. `reason` is the encoder's failure, in FFmpeg's or the
+    /// output check's English.
+    EncodedAgainInSoftware {
+        encoder: &'static str,
+        reason: String,
+    },
     /// The video's odd width or height was padded to this even size by repeating the last
     /// column or row (P-5).
     Padded { width: u32, height: u32 },
@@ -107,8 +175,12 @@ impl fmt::Display for Note {
                 return write!(f, "tracked {}", subjects.join(" and "));
             }
             Self::AnalyzedAgainOnCpu => "the GPU failed; analyzed again on the CPU",
-            Self::EncodedAgainInSoftware => {
-                "the hardware encoder failed; encoded again in software, as is the rest of the run"
+            Self::EncodedAgainInSoftware { encoder, reason } => {
+                return write!(
+                    f,
+                    "the hardware encoder {encoder} failed ({reason}); encoded again in software, \
+                     as is the rest of the run"
+                );
             }
             Self::Padded { width, height } => {
                 return write!(f, "odd size padded to {width}×{height}");
@@ -238,8 +310,14 @@ pub struct ItemOutcome {
     pub destination: PathBuf,
     pub state: ItemState,
     pub analysis: Analysis,
-    pub failure: Option<String>,
+    pub failure: Option<Failure>,
     pub notes: Vec<Note>,
+}
+
+impl ItemOutcome {
+    pub fn failure_reason(&self) -> Option<&str> {
+        self.failure.as_ref().map(|f| f.reason.as_str())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -467,13 +545,19 @@ impl<P: ItemProcessor> Runner<P> {
                 item.cancel().expect("non-terminal items can be cancelled");
                 None
             }
-            Ok(Err(StepError::Failed(e))) => {
+            Ok(Err(StepError::Failed { kind, error })) => {
                 item.fail().expect("non-terminal items can fail");
-                Some(e.to_string())
+                Some(Failure {
+                    kind,
+                    reason: error.to_string(),
+                })
             }
             Err(payload) if !item.state().is_terminal() => {
                 item.fail().expect("non-terminal items can fail");
-                Some(format!("internal error: {}", panic_message(&*payload)))
+                Some(Failure {
+                    kind: FailureKind::Other,
+                    reason: format!("internal error: {}", panic_message(&*payload)),
+                })
             }
             Err(payload) => std::panic::resume_unwind(payload),
         };
@@ -541,7 +625,7 @@ impl<P: ItemProcessor> Runner<P> {
                 match decision {
                     Decision::Approve => item
                         .approve_review(&analysis.evidence)
-                        .map_err(|e| StepError::Failed(e.into()))?,
+                        .map_err(|e| StepError::failed(FailureKind::Other, e))?,
                     Decision::ExportWithWarnings => {
                         item.export_with_warnings().expect("item awaiting review")
                     }
@@ -571,7 +655,7 @@ impl<P: ItemProcessor> Runner<P> {
 
         checkpoint()?;
         let permit = PublishPermit::issue(item, &analysis.evidence)
-            .map_err(|refusal| StepError::Failed(refusal.into()))?;
+            .map_err(|refusal| StepError::failed(FailureKind::Other, refusal))?;
         self.processor.publish(ctx, rendered, &permit)?;
         item.publish(permit).expect("permit issued for this item");
         moved(item);
@@ -641,9 +725,12 @@ mod tests {
                     },
                     DetectionModels::default().default_thresholds(),
                 )
-                .map_err(|e| StepError::Failed(e.into()))?;
+                .map_err(|e| StepError::failed(FailureKind::Detection, e))?;
             match name(ctx) {
-                "fail-analyze" => Err(StepError::Failed(Box::new(Broken("decode failed")))),
+                "fail-analyze" => Err(StepError::failed(
+                    FailureKind::Unreadable,
+                    Broken("decode failed"),
+                )),
                 "panic-analyze" => panic!("decoder bug"),
                 "gap" => Ok((
                     Analysis {
@@ -681,7 +768,10 @@ mod tests {
             );
             assert_eq!(prepared.is_none(), resumed);
             match name(ctx) {
-                "fail-render" => Err(StepError::Failed(Box::new(Broken("encode failed")))),
+                "fail-render" => Err(StepError::failed(
+                    FailureKind::Encode,
+                    Broken("encode failed"),
+                )),
                 "panic-render" => panic!("encoder bug"),
                 "cancel-in-render" => {
                     ctx.cancel.cancel();
@@ -707,7 +797,10 @@ mod tests {
             assert_eq!(permit.item(), ctx.item);
             assert_eq!(permit.basis(), rendered);
             match name(ctx) {
-                "fail-publish" => Err(StepError::Failed(Box::new(Broken("name taken")))),
+                "fail-publish" => Err(StepError::failed(
+                    FailureKind::NameTaken,
+                    Broken("name taken"),
+                )),
                 _ => {
                     self.published
                         .lock()
@@ -818,13 +911,17 @@ mod tests {
             ReviewMode::Off,
             1,
         ));
-        let failures: Vec<_> = report.items.iter().map(|o| o.failure.as_deref()).collect();
+        let failures: Vec<_> = report
+            .items
+            .iter()
+            .map(|o| o.failure.as_ref().map(|f| (f.kind, f.reason.as_str())))
+            .collect();
         assert_eq!(
             failures,
             [
-                Some("decode failed"),
-                Some("encode failed"),
-                Some("name taken"),
+                Some((FailureKind::Unreadable, "decode failed")),
+                Some((FailureKind::Encode, "encode failed")),
+                Some((FailureKind::NameTaken, "name taken")),
                 None
             ]
         );
@@ -854,11 +951,14 @@ mod tests {
             ]
         );
         assert_eq!(
-            report.items[2].failure.as_deref(),
-            Some("internal error: decoder bug")
+            report.items[2].failure,
+            Some(Failure {
+                kind: FailureKind::Other,
+                reason: "internal error: decoder bug".to_owned()
+            })
         );
         assert_eq!(
-            report.items[3].failure.as_deref(),
+            report.items[3].failure_reason(),
             Some("internal error: encoder bug")
         );
         assert_eq!(published.len(), 2);

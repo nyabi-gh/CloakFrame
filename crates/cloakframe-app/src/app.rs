@@ -829,7 +829,7 @@ impl AppState {
                     });
                     if let Some(o) = outcome {
                         ui.indent(("why", item.0), |ui| {
-                            if let Some(failure) = &o.failure {
+                            if let Some(failure) = o.failure_reason() {
                                 ui.colored_label(ui.visuals().error_fg_color, failure);
                             }
                             if o.state == ItemState::NeedsReview {

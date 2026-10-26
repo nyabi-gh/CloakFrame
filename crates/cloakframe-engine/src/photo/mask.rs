@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use crate::run::{Classify, FailureKind};
 use cloakframe_core::mask::{
     ImageMut, Layout, MaskError, MaskStyle, Overlay, Pixels, Region, render,
 };
@@ -20,6 +21,12 @@ impl fmt::Display for ApplyError {
             Self::UnsupportedSamples => f.write_str("only 8- and 16-bit images can be masked"),
             Self::Mask(e) => e.fmt(f),
         }
+    }
+}
+
+impl Classify for ApplyError {
+    fn kind(&self) -> FailureKind {
+        FailureKind::Other
     }
 }
 

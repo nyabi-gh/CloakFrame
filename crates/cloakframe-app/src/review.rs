@@ -250,8 +250,8 @@ impl Review {
                     ItemState::Cancelled => Status::Failed("cancelled".to_owned()),
                     _ => Status::Failed(
                         outcome
-                            .failure
-                            .clone()
+                            .failure_reason()
+                            .map(str::to_owned)
                             .unwrap_or_else(|| "the item was not saved".to_owned()),
                     ),
                 };

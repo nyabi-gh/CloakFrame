@@ -13,6 +13,7 @@ use serde::Deserialize;
 use crate::cancel::CancelToken;
 use crate::media::language;
 use crate::media::process::{ToolCommand, ToolError};
+use crate::run::{Classify, FailureKind};
 
 pub const MAX_SIDE: u32 = 16_384;
 pub const MAX_PIXELS: u64 = 36_000_000;
@@ -86,6 +87,16 @@ impl fmt::Display for ProbeError {
             Self::Tool(e) => write!(f, "cannot inspect the video: {e}"),
             Self::Malformed(e) => write!(f, "cannot read ffprobe's report: {e}"),
             Self::Unsupported(e) => write!(f, "unsupported video: {e}"),
+        }
+    }
+}
+
+impl Classify for ProbeError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Tool(e) => e.kind_or(FailureKind::Unreadable),
+            Self::Malformed(_) => FailureKind::Unreadable,
+            Self::Unsupported(_) => FailureKind::Unsupported,
         }
     }
 }

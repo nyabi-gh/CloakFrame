@@ -231,7 +231,7 @@ fn benchmark(o: &Options) -> Result<Value, String> {
             .collect();
         results.push(json!({
             "name": image["name"],
-            "failure": outcome.failure,
+            "failure": outcome.failure_reason(),
             "views": views,
             "unresolved": outcome.analysis.evidence.len(),
             "detections": detections,

@@ -20,6 +20,7 @@ use super::metadata::{
     self, Container, ContainerError, MetadataPolicy, Output, exif_block, jpeg_with, tiff_with,
     webp_with,
 };
+use crate::run::{Classify, FailureKind};
 
 pub const JPEG_QUALITY: i32 = 92;
 pub const WEBP_LOSSY_QUALITY: f32 = 90.0;
@@ -40,6 +41,12 @@ impl fmt::Display for EncodeError {
             Self::Metadata(e) => e.fmt(f),
             Self::ProfileNotEmbeddable => f.write_str("a BMP cannot carry this color profile"),
         }
+    }
+}
+
+impl Classify for EncodeError {
+    fn kind(&self) -> FailureKind {
+        FailureKind::Encode
     }
 }
 

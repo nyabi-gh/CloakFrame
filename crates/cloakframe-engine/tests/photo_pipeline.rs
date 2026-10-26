@@ -22,7 +22,9 @@ use cloakframe_engine::photo::color::{EmbeddedIcc, Standard, embedded_icc};
 use cloakframe_engine::photo::decode::{decode, read_source};
 use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
-use cloakframe_engine::run::{Analysis, Decision, Job, JobItem, Note, RunReport, Start, start};
+use cloakframe_engine::run::{
+    Analysis, Decision, Failure, FailureKind, Job, JobItem, Note, RunReport, Start, start,
+};
 use common::{TestDir, bmp_v5_with_profile, fixtures, png_header, rgb, rgb_of};
 use exif::{In, Tag};
 use image::{Rgb, RgbImage};
@@ -447,8 +449,11 @@ fn a_source_changed_during_processing_is_not_published() {
     );
     assert_eq!(report.items[0].state, ItemState::Failed);
     assert_eq!(
-        report.items[0].failure.as_deref(),
-        Some("the source changed while it was processed")
+        report.items[0].failure,
+        Some(Failure {
+            kind: FailureKind::SourceChanged,
+            reason: "the source changed while it was processed".to_owned()
+        })
     );
     assert!(dir.outputs().is_empty(), "{:?}", dir.outputs());
 }
@@ -478,7 +483,7 @@ fn a_review_of_an_older_source_is_not_rendered() {
     );
     assert_eq!(report.items[0].state, ItemState::Failed);
     assert_eq!(
-        report.items[0].failure.as_deref(),
+        report.items[0].failure_reason(),
         Some("the source changed since it was analyzed; run it again")
     );
     assert!(dir.outputs().is_empty());
@@ -527,7 +532,7 @@ fn a_review_of_other_bytes_with_the_same_stamp_is_not_rendered() {
     );
     assert_eq!(report.items[0].state, ItemState::Failed);
     assert_eq!(
-        report.items[0].failure.as_deref(),
+        report.items[0].failure_reason(),
         Some("the source changed since it was analyzed; run it again")
     );
     assert!(dir.outputs().is_empty());
@@ -761,13 +766,13 @@ fn only_supported_content_is_decoded_and_the_output_follows_its_name() {
         Scripted::default(),
     );
     assert_eq!(report.items[0].state, ItemState::Failed);
+    let failure = report.items[0].failure.as_ref().unwrap();
     assert!(
-        report.items[0]
-            .failure
-            .as_deref()
-            .unwrap()
+        failure
+            .reason
             .contains("not a JPEG, PNG, BMP, TIFF or WebP")
     );
+    assert_eq!(failure.kind, FailureKind::Unsupported);
     assert_eq!(
         report.items[1].state,
         ItemState::Published(PublishBasis::AutomaticUnreviewed)
@@ -836,8 +841,7 @@ fn a_multi_page_tiff_is_refused() {
     assert_eq!(report.items[0].state, ItemState::Failed);
     assert!(
         report.items[0]
-            .failure
-            .as_deref()
+            .failure_reason()
             .unwrap()
             .contains("holds several images")
     );
@@ -857,8 +861,9 @@ fn an_image_larger_than_the_memory_budget_is_refused() {
         Scripted::default(),
     );
     assert_eq!(report.items[0].state, ItemState::Failed);
-    let failure = report.items[0].failure.as_deref().unwrap();
-    assert!(failure.contains("more than the 64 MiB"), "{failure}");
+    let failure = report.items[0].failure.as_ref().unwrap();
+    assert!(failure.reason.contains("more than the 64 MiB"), "{failure}");
+    assert_eq!(failure.kind, FailureKind::TooLarge);
     assert!(dir.outputs().is_empty());
 }
 

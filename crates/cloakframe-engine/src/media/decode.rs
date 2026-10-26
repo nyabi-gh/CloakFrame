@@ -12,6 +12,7 @@ use cloakframe_core::timeline::{Matrix, Range, SourceFrames, TimelineSpec};
 use crate::cancel::CancelToken;
 use crate::detect::Rgb8Image;
 use crate::media::process::{Supervised, ToolCommand, ToolError};
+use crate::run::{Classify, FailureKind};
 
 #[derive(Debug)]
 pub enum DecodeError {
@@ -36,6 +37,16 @@ impl fmt::Display for DecodeError {
             ),
             Self::NoFrame => f.write_str("the requested video frame could not be decoded"),
             Self::Cancelled => f.write_str("cancelled"),
+        }
+    }
+}
+
+impl Classify for DecodeError {
+    fn kind(&self) -> FailureKind {
+        match self {
+            Self::Tool(e) => e.kind_or(FailureKind::Unreadable),
+            Self::FrameCount { .. } | Self::NoFrame => FailureKind::Unreadable,
+            Self::Cancelled => FailureKind::Other,
         }
     }
 }

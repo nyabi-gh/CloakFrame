@@ -17,7 +17,9 @@ use sha2::{Digest as _, Sha256};
 use crate::detect::{DetectError, Detector, Found, Rgb8Image};
 use crate::identity::{SourceStamp, content_digest};
 use crate::publish::TempOutput;
-use crate::run::{Analysis, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError};
+use crate::run::{
+    Analysis, FailureKind, Fingerprint, ItemContext, ItemProcessor, RenderRequest, StepError,
+};
 
 #[derive(Default)]
 pub struct SyntheticProcessor;
@@ -45,12 +47,16 @@ impl Detector for FixedDetection {
     }
 }
 
-fn failed(message: &str) -> StepError {
-    StepError::Failed(message.into())
+fn failed(kind: FailureKind, message: &str) -> StepError {
+    StepError::failed(kind, message)
 }
 
-fn io_failed(e: io::Error) -> StepError {
-    StepError::Failed(Box::new(e))
+fn read_failed(e: io::Error) -> StepError {
+    StepError::failed(FailureKind::Unreadable, e)
+}
+
+fn write_failed(e: io::Error) -> StepError {
+    StepError::failed(FailureKind::Output, e)
 }
 
 fn stem(ctx: &ItemContext<'_>) -> String {
@@ -67,7 +73,7 @@ impl ItemProcessor for SyntheticProcessor {
     fn analyze(&self, ctx: &ItemContext<'_>) -> Result<(Analysis, ()), StepError> {
         let stem = stem(ctx);
         if stem.contains("fail") {
-            return Err(failed("synthetic decode failure"));
+            return Err(failed(FailureKind::Unreadable, "synthetic decode failure"));
         }
         let mut evidence = Vec::new();
         if stem.contains("gap") {
@@ -86,9 +92,9 @@ impl ItemProcessor for SyntheticProcessor {
                 found: 280,
             }));
         }
-        let source = Some(SourceStamp::of(ctx.input).map_err(io_failed)?);
+        let source = Some(SourceStamp::of(ctx.input).map_err(read_failed)?);
         let input = Some(content_digest(
-            &std::fs::read(ctx.input).map_err(io_failed)?,
+            &std::fs::read(ctx.input).map_err(read_failed)?,
         ));
         Ok((
             Analysis {
@@ -108,16 +114,19 @@ impl ItemProcessor for SyntheticProcessor {
         request: &RenderRequest<'_>,
         _: Option<()>,
     ) -> Result<Self::Rendered, StepError> {
-        let stamp = SourceStamp::of(ctx.input).map_err(io_failed)?;
-        let mut bytes = std::fs::read(ctx.input).map_err(io_failed)?;
+        let stamp = SourceStamp::of(ctx.input).map_err(read_failed)?;
+        let mut bytes = std::fs::read(ctx.input).map_err(read_failed)?;
         if request.analysis.source != Some(stamp)
             || request.analysis.input != Some(content_digest(&bytes))
         {
-            return Err(failed("the source changed since it was analyzed"));
+            return Err(failed(
+                FailureKind::SourceChanged,
+                "the source changed since it was analyzed",
+            ));
         }
         bytes.reverse();
-        let mut out = TempOutput::create(ctx.destination).map_err(io_failed)?;
-        out.file().write_all(&bytes).map_err(io_failed)?;
+        let mut out = TempOutput::create(ctx.destination).map_err(write_failed)?;
+        out.file().write_all(&bytes).map_err(write_failed)?;
         let stem = stem(ctx);
         let hold = if stem.contains("slow") || stem.contains("stuck") {
             Duration::from_secs(60)
@@ -146,7 +155,10 @@ impl ItemProcessor for SyntheticProcessor {
         permit: &PublishPermit,
     ) -> Result<(), StepError> {
         if SourceStamp::of(ctx.input).ok() != Some(stamp) {
-            return Err(failed("the source changed while it was processed"));
+            return Err(failed(
+                FailureKind::SourceChanged,
+                "the source changed while it was processed",
+            ));
         }
         match out.publish(permit) {
             Ok(published) => {
@@ -155,10 +167,11 @@ impl ItemProcessor for SyntheticProcessor {
                 }
                 Ok(())
             }
-            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
-                Err(failed("the output name was taken during the run"))
-            }
-            Err(e) => Err(io_failed(e)),
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => Err(failed(
+                FailureKind::NameTaken,
+                "the output name was taken during the run",
+            )),
+            Err(e) => Err(write_failed(e)),
         }
     }
 
