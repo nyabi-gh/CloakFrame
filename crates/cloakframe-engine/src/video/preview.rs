@@ -10,18 +10,18 @@ use std::path::{Path, PathBuf};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::ItemId;
 use cloakframe_core::mask::{MaskStyle, MosaicGrid, Region};
-use cloakframe_core::review::{ManualBox, VideoEdits};
+use cloakframe_core::review::{EditError, ManualBox, VideoEdits};
 use cloakframe_core::tracking::TrackId;
 
 use super::process::{
     Masks, VideoError, VideoProcessor, item_records_dir, mask_frame, track_grids,
 };
-use super::record::{Record, RecordError, TrackRegion};
+use super::record::{Frames, Record, RecordError, TrackRegion};
 use super::tracking::TrackSummary;
 use crate::cancel::CancelToken;
 use crate::detect::Rgb8Image;
 use crate::identity::SourceStamp;
-use crate::media::decode::{self, DecodeError, frame_size};
+use crate::media::decode::{self, DecodeError, FrameReader, frame_size};
 use crate::media::source::{self, OpenError, Source};
 use crate::photo::mask::ApplyError;
 use crate::run::Analysis;
@@ -33,6 +33,8 @@ pub enum PreviewError {
     /// The source is not the analyzed file, or no longer has its timeline.
     ChangedSinceAnalysis,
     NoSuchFrame(u64),
+    /// Edits the item's render would refuse; a preview of them would show what is not made.
+    Edits(EditError),
     Open(OpenError),
     Records(RecordError),
     Decode(DecodeError),
@@ -46,6 +48,7 @@ impl fmt::Display for PreviewError {
             Self::NotAnalyzed => VideoError::NotAnalyzed.fmt(f),
             Self::ChangedSinceAnalysis => VideoError::ChangedSinceAnalysis.fmt(f),
             Self::NoSuchFrame(k) => write!(f, "the video has no frame {k}"),
+            Self::Edits(e) => e.fmt(f),
             Self::Open(e) => e.fmt(f),
             Self::Records(e) => write!(f, "the tracked regions cannot be read: {e}"),
             Self::Decode(e) => e.fmt(f),
@@ -133,6 +136,12 @@ impl Preview {
         self.source.spec.display_size()
     }
 
+    /// When frame `k` shows, in seconds after the first frame; playback keeps to it.
+    pub fn seconds(&self, k: u64) -> f64 {
+        let frames = &self.source.frames;
+        frames.time(k as usize).as_f64() - frames.time(0).as_f64()
+    }
+
     pub fn tracks(&self) -> &[TrackSummary] {
         &self.tracks
     }
@@ -182,8 +191,21 @@ impl Preview {
         Ok(entries)
     }
 
+    /// The render's own check of the edits (docs/M0_M5_REVIEW.md, item 11): a manual track
+    /// with unordered keyframes has no box to show.
+    fn check_edits(&self, edits: &VideoEdits) -> Result<(), PreviewError> {
+        edits
+            .check(
+                |id| self.tracks.iter().any(|t| t.id == id),
+                self.frames(),
+                self.size(),
+            )
+            .map_err(PreviewError::Edits)
+    }
+
     pub fn regions(&self, k: u64, edits: &VideoEdits) -> Result<FrameRegions, PreviewError> {
         self.check(k)?;
+        self.check_edits(edits)?;
         let size = self.size();
         Ok(FrameRegions {
             tracked: self.tracked(k)?,
@@ -205,17 +227,28 @@ impl Preview {
         long_edge: Option<u32>,
         cancel: &CancelToken,
     ) -> Result<Rgb8Image, PreviewError> {
+        self.check_edits(edits)?;
         let mut frame = self.frame(k, long_edge, cancel)?;
         let entries = self.tracked(k)?;
-        let size = self.size();
-        let tracked = self.regions.as_ref().map(|r| (r, self.grids.clone()));
-        let masks = Masks::new(self.fixed.clone(), tracked, edits, &self.style, size);
+        let masks = self.masks(edits);
         let mut regions = Vec::new();
         masks.frame(k, &entries, &mut regions);
+        self.mask(&mut frame, &mut regions)?;
+        Ok(frame)
+    }
+
+    fn masks<'a>(&'a self, edits: &'a VideoEdits) -> Masks<'a> {
+        let tracked = self.regions.as_ref().map(|r| (r, self.grids.clone()));
+        Masks::new(self.fixed.clone(), tracked, edits, &self.style, self.size())
+    }
+
+    /// Masks `frame` with display-size `regions`, scaled with the frame.
+    fn mask(&self, frame: &mut Rgb8Image, regions: &mut [Region]) -> Result<(), PreviewError> {
+        let size = self.size();
         if (frame.width, frame.height) != size {
             let sx = frame.width as f32 / size.0 as f32;
             let sy = frame.height as f32 / size.1 as f32;
-            for r in &mut regions {
+            for r in regions.iter_mut() {
                 let b = r.bbox;
                 r.bbox = Rect::new(b.x() * sx, b.y() * sy, b.width() * sx, b.height() * sy)
                     .expect("a box scaled by a positive factor");
@@ -224,7 +257,97 @@ impl Preview {
                     .map(|g| MosaicGrid::new((g.cell() as f32 * sx).round() as u32));
             }
         }
-        mask_frame(&mut frame, &regions, &self.style).map_err(PreviewError::Mask)?;
-        Ok(frame)
+        mask_frame(frame, regions, &self.style).map_err(PreviewError::Mask)
+    }
+
+    /// Frames `from..` one after another at `long_edge`, masked under `edits` if given, for
+    /// playback: one decoder for them all rather than a seek for each.
+    pub fn play<'a>(
+        &'a self,
+        from: u64,
+        edits: Option<&'a VideoEdits>,
+        long_edge: Option<u32>,
+        cancel: &CancelToken,
+    ) -> Result<Playback<'a>, PreviewError> {
+        self.check(from)?;
+        if let Some(edits) = edits {
+            self.check_edits(edits)?;
+        }
+        let Source { spec, frames } = &self.source;
+        let reader = FrameReader::start_at(
+            &self.ffmpeg,
+            &self.input,
+            spec,
+            frames,
+            from as usize,
+            frame_size(spec, long_edge),
+            cancel,
+        )
+        .map_err(PreviewError::Decode)?;
+        let tracked = match (edits, &self.regions) {
+            (Some(_), Some(record)) => Some(
+                record
+                    .ascending_from(from)
+                    .map_err(PreviewError::Records)?
+                    .ok_or(PreviewError::NoSuchFrame(from))?,
+            ),
+            _ => None,
+        };
+        Ok(Playback {
+            preview: self,
+            reader,
+            tracked,
+            masks: edits.map(|e| self.masks(e)),
+            next: from,
+            entries: Vec::new(),
+            regions: Vec::new(),
+        })
+    }
+}
+
+/// [`Preview::play`]'s frames.
+pub struct Playback<'a> {
+    preview: &'a Preview,
+    reader: FrameReader,
+    tracked: Option<Frames<TrackRegion>>,
+    masks: Option<Masks<'a>>,
+    next: u64,
+    entries: Vec<TrackRegion>,
+    regions: Vec<Region>,
+}
+
+impl Playback<'_> {
+    /// The next frame and its number; `None` after the last.
+    pub fn next_frame(&mut self) -> Result<Option<(u64, Rgb8Image)>, PreviewError> {
+        let mut frame = Rgb8Image {
+            width: 0,
+            height: 0,
+            data: Vec::new(),
+        };
+        if !self
+            .reader
+            .next_into(&mut frame)
+            .map_err(PreviewError::Decode)?
+        {
+            return Ok(None);
+        }
+        let k = self.next;
+        self.next += 1;
+        if let Some(masks) = &self.masks {
+            self.entries.clear();
+            if let Some(tracked) = &mut self.tracked {
+                let read = tracked
+                    .next_into(&mut self.entries)
+                    .map_err(PreviewError::Records)?;
+                if read != Some(k) {
+                    return Err(PreviewError::Records(RecordError::Damaged(
+                        "missing frames",
+                    )));
+                }
+            }
+            masks.frame(k, &self.entries, &mut self.regions);
+            self.preview.mask(&mut frame, &mut self.regions)?;
+        }
+        Ok(Some((k, frame)))
     }
 }

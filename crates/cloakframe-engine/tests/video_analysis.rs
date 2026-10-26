@@ -907,3 +907,79 @@ fn the_preview_shows_a_frame_its_regions_and_its_masks() {
         Err(PreviewError::ChangedSinceAnalysis)
     ));
 }
+
+/// Playback gives every frame from the one asked for to the last, each the very frame a single
+/// preview gives at that size, masked under the edits if given.
+#[test]
+fn playback_gives_the_frames_from_one_on_as_the_preview_shows_them() {
+    let dir = TestDir::new();
+    let (input, processor, analysis) = analyzed_for_review(&dir);
+    let cancel = CancelToken::new();
+    let preview = processor
+        .preview(ItemId(1), &input, &analysis, &cancel)
+        .unwrap();
+    let none = VideoEdits::default();
+    let drawn = excluding(vec![by_hand()]);
+    for (from, edits) in [(0, None), (37, None), (37, Some(&none)), (61, Some(&drawn))] {
+        let mut playback = preview.play(from, edits, Some(640), &cancel).unwrap();
+        let mut next = from;
+        while let Some((k, frame)) = playback.next_frame().unwrap() {
+            assert_eq!(k, next);
+            next += 1;
+            let alone = match edits {
+                Some(edits) => preview.masked(k, edits, Some(640), &cancel).unwrap(),
+                None => preview.frame(k, Some(640), &cancel).unwrap(),
+            };
+            assert!(frame == alone, "from {from}, frame {k}");
+            if k % 10 == 0 {
+                let s = square(k);
+                let i =
+                    (((s.y() + 40.0) / 2.0) as usize * 640 + ((s.x() + 40.0) / 2.0) as usize) * 3;
+                let dark = frame.data[i..i + 3].iter().all(|&c| c <= 16);
+                assert_eq!(dark, edits.is_some(), "from {from}, frame {k}");
+            }
+        }
+        assert_eq!(next, 90, "from {from}");
+    }
+    assert!(matches!(
+        preview.play(90, None, Some(640), &cancel),
+        Err(PreviewError::NoSuchFrame(90))
+    ));
+}
+
+/// Edits the render would refuse are refused by the preview too, rather than shown, or a panic
+/// on keyframes out of order (docs/M0_M5_REVIEW.md, item 11).
+#[test]
+fn the_preview_refuses_edits_the_render_would() {
+    let dir = TestDir::new();
+    let (input, processor, analysis) = analyzed_for_review(&dir);
+    let cancel = CancelToken::new();
+    let preview = processor
+        .preview(ItemId(1), &input, &analysis, &cancel)
+        .unwrap();
+    let mut unordered = by_hand();
+    unordered.keyframes.reverse();
+    let mut leaving = by_hand();
+    leaving.keyframes[1].bbox = Rect::new(1300.0, 200.0, 80.0, 80.0).unwrap();
+    for edits in [
+        excluding(vec![unordered]),
+        excluding(vec![leaving]),
+        VideoEdits {
+            excluded_tracks: vec![2],
+            added_tracks: Vec::new(),
+        },
+    ] {
+        assert!(
+            matches!(preview.regions(45, &edits), Err(PreviewError::Edits(_))),
+            "{edits:?}"
+        );
+        assert!(matches!(
+            preview.masked(45, &edits, Some(640), &cancel),
+            Err(PreviewError::Edits(_))
+        ));
+        assert!(matches!(
+            preview.play(45, Some(&edits), Some(640), &cancel),
+            Err(PreviewError::Edits(_))
+        ));
+    }
+}

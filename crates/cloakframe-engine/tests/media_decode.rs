@@ -237,6 +237,40 @@ fn the_preview_of_a_frame_is_the_passs_frame() {
     }
 }
 
+/// P-3 for playback: reading on from frame k, after a seek, gives the pass's frames from k.
+#[test]
+fn playback_from_a_frame_gives_the_passs_frames_from_it() {
+    for name in P3 {
+        let path = defect(name);
+        let (spec, listed) = opened(&path);
+        let size = frame_size(&spec, Some(320));
+        let pass = all_frames(&path, &spec, &listed, size);
+        for from in [1, pass.len() / 2, pass.len() - 1] {
+            let mut reader = FrameReader::start_at(
+                &ffmpeg(),
+                &path,
+                &spec,
+                &listed,
+                from,
+                size,
+                &CancelToken::new(),
+            )
+            .unwrap();
+            let mut frame = Rgb8Image {
+                width: 0,
+                height: 0,
+                data: Vec::new(),
+            };
+            let mut k = from;
+            while reader.next_into(&mut frame).unwrap() {
+                assert!(frame == pass[k], "{name} from {from}, frame {k}");
+                k += 1;
+            }
+            assert_eq!(k, pass.len(), "{name} from {from}");
+        }
+    }
+}
+
 /// D1, decode side: the fixtures' source colour (0xC83C28) comes back through each file's own
 /// matrix and range, tagged or not.
 #[test]

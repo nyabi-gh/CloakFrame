@@ -386,8 +386,8 @@ fn check(
     Ok(item)
 }
 
-/// What the item's render resumes from: its stored analysis.
-fn stored_analysis(stored: &SessionItem) -> Analysis {
+/// What the item's render resumes from, and its preview opens with: its stored analysis.
+pub fn stored_analysis(stored: &SessionItem) -> Analysis {
     let key = stored.revision.key();
     let (detections, video) = match &stored.media {
         StoredMedia::Photo { detections, .. } => (detections.clone(), None),

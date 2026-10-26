@@ -122,13 +122,40 @@ impl FrameReader {
         size: (u32, u32),
         cancel: &CancelToken,
     ) -> Result<Self, DecodeError> {
+        Self::start_at(ffmpeg, input, spec, frames, 0, size, cancel)
+    }
+
+    /// Source frames `from..`, for the preview's playback: a seek to frame `from` as
+    /// [`source_frame`] seeks, then every frame from its timestamp on.
+    pub fn start_at(
+        ffmpeg: &Path,
+        input: &Path,
+        spec: &TimelineSpec,
+        frames: &SourceFrames,
+        from: usize,
+        size: (u32, u32),
+        cancel: &CancelToken,
+    ) -> Result<Self, DecodeError> {
+        if from >= frames.len() {
+            return Err(DecodeError::NoFrame);
+        }
         let mut command = ToolCommand::ffmpeg(ffmpeg);
         // -xerror: a damaged frame fails the item instead of silently shortening the video.
+        command.arg("-xerror");
+        let filter = if from == 0 {
+            rgb_filter(spec, size)
+        } else {
+            command.args(["-copyts", "-ss", &seek_to(spec, frames, from)]);
+            format!(
+                "select=gte(pts\\,{}),{}",
+                frames.pts(from),
+                rgb_filter(spec, size)
+            )
+        };
         command
-            .arg("-xerror")
             .input_file(input)
             .args(["-map", &stream_map(spec), "-fps_mode", "passthrough"])
-            .args(["-vf", &rgb_filter(spec, size)])
+            .args(["-vf", &filter])
             .args(["-f", "rawvideo", "-pix_fmt", "rgb24"])
             .output_pipe();
         let mut running = command
@@ -139,7 +166,7 @@ impl FrameReader {
             running: Some(running),
             stdout: Some(stdout),
             size,
-            listed: frames.len(),
+            listed: frames.len() - from,
             decoded: 0,
             cancel: cancel.clone(),
         })
@@ -226,6 +253,14 @@ fn read_frame(stdout: &mut ChildStdout, buf: &mut [u8]) -> io::Result<bool> {
     Ok(true)
 }
 
+/// The `-ss` that lands at or before frame `k`. FFmpeg adds the container's start to it. The
+/// margin covers the start time's decimal rounding; the frames before `k` are dropped by
+/// matching its timestamp.
+fn seek_to(spec: &TimelineSpec, frames: &SourceFrames, k: usize) -> String {
+    let seek = (frames.time(k).as_f64() - spec.container_start_seconds - 0.001).max(0.0);
+    format!("{seek:.6}")
+}
+
 /// Source frame `k` alone, for the preview: a seek to its time, then exactly the frame with its
 /// timestamp, so it is the very frame a full pass gives as its `k`-th.
 pub fn source_frame(
@@ -237,12 +272,9 @@ pub fn source_frame(
     size: (u32, u32),
     cancel: &CancelToken,
 ) -> Result<Rgb8Image, DecodeError> {
-    // FFmpeg adds the container's start to -ss. The margin covers the start time's decimal
-    // rounding; frames before the target are dropped by the exact match below.
-    let seek = (frames.time(k).as_f64() - spec.container_start_seconds - 0.001).max(0.0);
     let mut command = ToolCommand::ffmpeg(ffmpeg);
     command
-        .args(["-copyts", "-ss", &format!("{seek:.6}")])
+        .args(["-copyts", "-ss", &seek_to(spec, frames, k)])
         .input_file(input)
         .args(["-map", &stream_map(spec)])
         .args([

@@ -33,7 +33,8 @@ impl MediaProcessor {
         }
     }
 
-    fn video(&self) -> Result<&VideoProcessor, StepError> {
+    /// The video processor, which the preview of a video under review opens with.
+    pub fn video(&self) -> Result<&VideoProcessor, StepError> {
         self.video
             .as_ref()
             .ok_or_else(|| StepError::Failed("this run does not process videos".into()))
