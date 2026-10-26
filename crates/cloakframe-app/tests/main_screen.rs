@@ -678,7 +678,8 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     harness
         .get_by_role_and_label(Role::Button, "Approve and Save")
         .click();
-    // The next photo opens while this one renders.
+    // The next photo opens while this one renders. The render's end repaints, so the harness
+    // waits for it too before it settles.
     harness.step();
     harness
         .state_mut()
@@ -686,6 +687,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
+    harness.state_mut().wait_for_review();
     harness.run();
     let screen = harness.state().review.as_ref().unwrap();
     assert_eq!(
