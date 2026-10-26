@@ -68,6 +68,7 @@ language-system = システム
 about-title = CloakFrame について
 about-version = バージョン { $version }
 about-license = CloakFrame は Apache License 2.0 のフリーソフトウェアです。
+about-graphics = グラフィックス: { $graphics }
 about-third-party = サードパーティーの表示
 about-models = 検出モデル
 ## 1.12.1
@@ -387,3 +388,10 @@ found-photo = 写真 { $name }
 found-video = 動画 { $name }
 run-list = この実行の項目
 review-queue = 確認する項目
+
+## needs review
+graphics-failed-title = CloakFrame を起動できません
+graphics-failed =
+    このコンピューターのグラフィックスでは CloakFrame のウィンドウを描画できませんでした。グラフィックスドライバーを更新すると解決する場合があります。
+
+    { $errors }

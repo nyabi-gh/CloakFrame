@@ -6,6 +6,7 @@ pub mod app;
 pub mod draft;
 pub mod editor;
 pub mod fonts;
+pub mod graphics;
 pub mod i18n;
 pub mod lanes;
 pub mod menu;

@@ -52,6 +52,7 @@ language-system = 시스템
 about-title = CloakFrame 정보
 about-version = 버전 { $version }
 about-license = CloakFrame은 Apache License 2.0을 따르는 자유 소프트웨어입니다.
+about-graphics = 그래픽: { $graphics }
 about-third-party = 서드파티 고지
 about-models = 감지 모델
 close = 닫기
@@ -339,3 +340,9 @@ found-photo = 사진 { $name }
 found-video = 동영상 { $name }
 run-list = 이번 실행의 항목
 review-queue = 검토할 항목
+
+graphics-failed-title = CloakFrame을 시작할 수 없습니다
+graphics-failed =
+    이 컴퓨터의 그래픽으로 CloakFrame 창을 그릴 수 없습니다. 그래픽 드라이버를 업데이트하면 해결될 수 있습니다.
+
+    { $errors }

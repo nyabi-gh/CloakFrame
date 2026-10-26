@@ -69,6 +69,7 @@ language-system = System
 about-title = About CloakFrame
 about-version = Version { $version }
 about-license = CloakFrame is free software under the Apache License 2.0.
+about-graphics = Graphics: { $graphics }
 about-third-party = Third-party notices
 about-models = Detection models
 close = Close
@@ -413,3 +414,9 @@ found-photo = Photo { $name }
 found-video = Video { $name }
 run-list = Items of this run
 review-queue = Items to review
+
+graphics-failed-title = CloakFrame cannot start
+graphics-failed =
+    CloakFrame could not draw its window with the graphics this computer offers. Updating the graphics driver may help.
+
+    { $errors }

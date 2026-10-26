@@ -82,6 +82,8 @@ pub struct AppState {
     scanning: Option<Scanning>,
     pub found: Option<ScanResult>,
     pub about_open: bool,
+    /// The renderer the window runs on, shown in the About window.
+    pub graphics: Option<String>,
     commands: Vec<Command>,
     /// The fonts were made for this language; a change of language makes them again.
     fonts_for: Option<Language>,
@@ -117,6 +119,7 @@ impl AppState {
             scanning: None,
             found: None,
             about_open: false,
+            graphics: None,
             commands: Vec::new(),
             fonts_for: None,
             tools: Tools::default(),

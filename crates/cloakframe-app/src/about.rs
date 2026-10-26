@@ -20,6 +20,12 @@ pub fn window(ctx: &egui::Context, state: &mut AppState) {
                 "about-version",
                 &[("version", FluentValue::from(env!("CARGO_PKG_VERSION")))],
             ));
+            if let Some(graphics) = &state.graphics {
+                ui.label(tr.with(
+                    "about-graphics",
+                    &[("graphics", FluentValue::from(graphics.as_str()))],
+                ));
+            }
             ui.label(tr.get("about-license"));
             ui.separator();
             ui.strong(tr.get("about-models"));

@@ -2,8 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use cloakframe_app::app::AppState;
-use cloakframe_app::settings::{Settings, SettingsFile, WindowPlace};
+use cloakframe_app::i18n::{Language, Translator};
+use cloakframe_app::settings::{Notice, Settings, SettingsFile, WindowPlace};
 use eframe::egui;
+use fluent_bundle::FluentValue;
 
 struct App {
     state: AppState,
@@ -93,14 +95,18 @@ fn options(settings: &Settings, renderer: eframe::Renderer) -> eframe::NativeOpt
     options
 }
 
-fn run(renderer: eframe::Renderer) -> eframe::Result {
-    let (file, settings, notices) = match cloakframe_engine::app_dirs::data_dir() {
+fn load_settings() -> (Option<SettingsFile>, Settings, Vec<Notice>) {
+    match cloakframe_engine::app_dirs::data_dir() {
         Some(dir) => {
             let (file, settings, notices) = SettingsFile::load(dir.join("settings.toml"));
             (Some(file), settings, notices)
         }
         None => (None, Settings::default(), Vec::new()),
-    };
+    }
+}
+
+fn run(renderer: eframe::Renderer) -> eframe::Result {
+    let (file, settings, notices) = load_settings();
     let options = options(&settings, renderer);
     eframe::run_native(
         "CloakFrame",
@@ -110,6 +116,10 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
                 cloakframe_app::tools::Tools::locate(),
                 cloakframe_app::run::Folders::of_the_app(),
             );
+            state.graphics = cloakframe_app::graphics::of(cc);
+            if let Some(graphics) = &state.graphics {
+                eprintln!("graphics: {graphics}");
+            }
             state.install_fonts(&cc.egui_ctx);
             #[cfg(any(target_os = "macos", target_os = "windows"))]
             let menu = native_menu(cc, &state);
@@ -163,11 +173,30 @@ fn main() -> eframe::Result {
         cloakframe_engine::detect::runtime::disable_telemetry()
     };
     // Where wgpu finds no adapter (no GPU driver, some remote desktops), OpenGL often still runs.
-    match run(eframe::Renderer::Wgpu) {
-        Err(eframe::Error::Wgpu(e)) => {
-            eprintln!("wgpu could not start ({e}); trying OpenGL");
-            run(eframe::Renderer::Glow)
-        }
-        other => other,
+    let wgpu = match run(eframe::Renderer::Wgpu) {
+        Err(eframe::Error::Wgpu(e)) => e,
+        other => return other,
+    };
+    eprintln!("wgpu could not start ({wgpu}); trying OpenGL");
+    let result = run(eframe::Renderer::Glow);
+    if let Err(opengl) = &result {
+        cannot_draw(&format!("wgpu: {wgpu}\nOpenGL: {opengl}"));
     }
+    result
+}
+
+/// Without a window the app has nowhere else to say why it ends, and a release build on Windows
+/// has no console either.
+fn cannot_draw(errors: &str) {
+    let language = load_settings()
+        .1
+        .language
+        .unwrap_or_else(Language::of_system);
+    let tr = Translator::new(language);
+    rfd::MessageDialog::new()
+        .set_level(rfd::MessageLevel::Error)
+        .set_title(tr.get("graphics-failed-title"))
+        .set_description(tr.with("graphics-failed", &[("errors", FluentValue::from(errors))]))
+        .set_buttons(rfd::MessageButtons::Ok)
+        .show();
 }
