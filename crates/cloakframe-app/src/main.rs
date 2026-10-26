@@ -180,7 +180,8 @@ fn main() -> eframe::Result {
     eprintln!("wgpu could not start ({wgpu}); trying OpenGL");
     let result = run(eframe::Renderer::Glow);
     if let Err(opengl) = &result {
-        cannot_draw(&format!("wgpu: {wgpu}\nOpenGL: {opengl}"));
+        // eframe's text already names the renderer each error comes from.
+        cannot_draw(&format!("{}\n{opengl}", eframe::Error::Wgpu(wgpu)));
     }
     result
 }
