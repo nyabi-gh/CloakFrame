@@ -177,7 +177,7 @@ PR #55의 macOS CI에서 `media_decode.rs` `cancelling_stops_a_pass`가 취소 �
 | `session.rs:224-236`, `:290-301` | 잠금 파일을 만든 직후 `try_lock` 전에 다른 프로세스의 sweep이 그 파일을 잠그고 JSON이 없다고 지울 수 있다. 그러면 거짓 "in use"가 나거나, 지워진 inode를 잠근 실행이 죽었을 때 그 레코드가 영영 sweep되지 않는다. 저장 중 종료로 남은 `.cloakframe-tmp-<id>.json`도 아무도 지우지 않는다(3번에서 관찰) | 하위 검토, 임시 JSON은 재현 |
 | `video/record.rs:583-600` | 뒤로 읽기에서 블록 길이 0–7이면 `u32_at`이 panic한다. 같은 분석이 쓴 파일만 읽으므로 실행 중 디스크 손상에서만 닿는다 | 하위 검토 |
 | `video/process.rs:588-609` | `beside_a_digest`의 작업이 panic하면 digest 스레드를 취소하지 않아, 파일 전체를 다 읽을 때까지 panic 전달이 늦어진다 | 하위 검토 |
-| `video/process.rs:311-319` | 오디오 쪽 실패(디코드할 수 없는 오디오, 언어 불일치)도 `encoders_fault`로 하드웨어 탓이 된다. 그러면 소프트웨어 재시도를 하고, 실행 나머지를 소프트웨어로 돌리고, `EncodedAgainInSoftware`를 붙인다 | 하위 검토 |
+| `video/process.rs:311-319` | 오디오 쪽 실패(디코드할 수 없는 오디오, 언어 불일치)도 `encoders_fault`로 하드웨어 탓이 된다. 그러면 소프트웨어 재시도를 하고, 실행 나머지를 소프트웨어로 돌리고, `EncodedAgainInSoftware`를 붙인다. M6 4단계에서 소프트웨어 재시도가 성공할 때만 하드웨어 탓으로 보게 고쳤다(재시도도 실패하면 항목 실패, 하드웨어 유지) | 하위 검토 |
 | core `review.rs:219-245` | `unchecked_rect_at`은 정렬되지 않은 keyframe에서 u64 뺄셈이나 `Rect` expect로 panic할 수 있다. 미리보기 API는 편집을 검사하지 않으므로, M6 호출자가 `VideoEdits::check`를 먼저 불러야 한다. M6 3단계에서 미리보기(`regions`·`masked`·`play`)가 직접 검사하고 `PreviewError::Edits`로 거절하게 고쳤다 | 하위 검토 |
 | `detect/yunet.rs:145-162` | `nms_int`의 i32 면적 곱이 비현실적으로 큰 출력에서 넘친다(debug panic). 넓이 0인 두 box를 OpenCV와 달리 둘 다 남긴다(더 가리는 쪽) | 코드(넘침), 하위 검토(OpenCV 비교) |
 | `tracking/stream.rs:323-325` | `PostProcessor::ended`가 마지막 전환 뒤 끝난 track마다 하나씩(약 56 B) 쌓인다. 긴 한 장면 끝에 전환이 있으면 track 수만큼이다. 시험 `what_is_held_does_not_grow_with_the_video`는 track 하나다 | 하위 검토 |
