@@ -48,7 +48,9 @@
 - **Windows(`tools/ci/app_window.ps1`):** runner 데스크톱에서 (1) 기본 실행을 띄우고 찍은 뒤 `CloseMainWindow`(WM_CLOSE)로 닫아 종료 코드 0과 `settings.toml`의 `[window]`를 확인한다. (2) `WGPU_BACKEND=vulkan`. runner에 Vulkan 드라이버가 있으면 wgpu로 뜨고, 없으면 OpenGL로 대체하거나, OpenGL도 1.1뿐이면 오류 창이 뜬다. 셋 중 무엇이 되는지가 결과이고 첫 CI 결과를 아래에 적는다.
 - **사전 실행(2026-10-26, 이 Mac의 Docker arm64 Ubuntu 24.04, Mesa 25.2.8):** (1) `graphics: wgpu, vulkan, llvmpipe (LLVM 20.1.2, 128 bits) (software)`, (2) `wgpu could not start (Failed to create surface for any enabled backend: {}); trying OpenGL` → `graphics: OpenGL, llvmpipe (LLVM 20.1.2, 128 bits), 4.5 (Core Profile) Mesa 25.2.8`. 둘 다 메인 화면이 그려졌다. 처음에는 `libXcursor.so.1`이 없어 winit이 창을 못 열었으므로 workflow가 winit이 여는 X 라이브러리를 명시해 설치한다.
 - **macOS 로컬:** 기본 `graphics: wgpu, metal, Apple M4`, `WGPU_BACKEND=vulkan`이면 OpenGL로 대체해 `graphics: OpenGL, Apple M4, 4.1 Metal - 91.7`.
-- **CI 결과:** (첫 실행 뒤 적는다)
+- **첫 CI(PR #62, 2026-10-26):** macOS 시험 통과. Windows 기본 실행은 `graphics: wgpu, dx12, Microsoft Basic Render Driver (software)`로 떴지만, 스크립트가 제목 없는 다른 최상위 창을 앱 창으로 잡았고 화면 전체를 찍어 runner 데스크톱의 색만으로 "그려짐"이 참이 되어(앱 창은 runner 터미널 뒤) 실패했다. 제목이 맞는 창을 기다리고 그 창만 `PrintWindow`로 찍게 고쳤다. Linux는 창 실행 전에 기존 세션 시험이 실패했다(아래 결함).
+- **찾은 결함(세션 목록):** 검토를 닫으면(뒤로) 세션 목록을 스레드에서 다시 읽는다. 그 읽기가 끝나기 전에 사용자가 세션을 버리면, 버리기 전에 읽은 목록이 나중에 도착해 버린 세션이 목록에 다시 보였다(다음 읽기까지). Linux runner에서 `reviews_kept_by_earlier_runs_are_listed_opened_and_discarded`가 이 순서로 실패했고, 읽은 뒤 결과를 보내기 전에 300 ms를 늦춘 복사본에서 같은 실패를 재현했다(시작 전에 늦추면 버린 뒤의 상태를 읽어 재현되지 않음). 버리면 진행 중인 읽기 결과를 버리고 지운 뒤의 상태로 다시 읽게 고쳤고, 같은 복사본에서 통과한다.
+- **CI 결과:** (고친 뒤의 실행에서 적는다)
 
 ## macOS 사람 점검(메인테이너)
 
