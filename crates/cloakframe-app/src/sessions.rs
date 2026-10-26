@@ -127,7 +127,8 @@ impl SavedSessions {
         self.loading.is_some()
     }
 
-    /// Removes the session and its video records; the sources and the saved outputs stay.
+    /// Removes the session and its video records; the sources and the saved outputs stay. The
+    /// caller reads the list again for anything else that changed meanwhile.
     pub fn discard(&mut self, id: &SessionId) -> Result<(), SessionError> {
         let store: SessionStore = self
             .folders
@@ -138,6 +139,8 @@ impl SavedSessions {
         drop(store.lock(id)?);
         store.remove(id)?;
         self.list.retain(|s| &s.id != id);
+        // A read still in flight may have listed the session before it was removed.
+        self.loading = None;
         Ok(())
     }
 }

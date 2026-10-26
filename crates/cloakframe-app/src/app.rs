@@ -1186,8 +1186,9 @@ impl AppState {
                     self.review = None;
                     self.sessions_read = false;
                 }
-                if let Err(e) = self.sessions.discard(&id) {
-                    self.notices.push(e.to_string());
+                match self.sessions.discard(&id) {
+                    Ok(()) => self.sessions_read = false,
+                    Err(e) => self.notices.push(e.to_string()),
                 }
                 self.discarding = None;
             }
