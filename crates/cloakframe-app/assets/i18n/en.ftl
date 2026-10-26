@@ -233,7 +233,40 @@ editor-approve-blocked = Resolve every problem first, or export with warnings.
 editor-export-warnings = Export with Warnings…
 editor-more = More
 editor-export-plain = Export Without Anonymization…
-editor-video = Video tracks cannot be edited here yet. You can resolve this video's problems and save it.
+editor-video-loading = Opening the video…
+editor-video-unreadable = The video cannot be shown: { $error }
+editor-video-canvas = Video editor
+editor-video-decoding = Decoding the frame…
+editor-video-frame-failed = The frame cannot be shown: { $error }
+editor-video-frame = Frame { $frame } of 0–{ $last } · { $time }
+editor-video-play = Play
+editor-video-stop = Stop
+editor-video-masked = Play masked
+editor-timeline = Timeline
+editor-tracks = { $count ->
+    [one] One track, { $masked } masked
+   *[other] { $count } tracks, { $masked } masked
+}
+editor-drawn = { $count ->
+    [one] One drawn track
+   *[other] { $count } drawn tracks
+}
+editor-track-face = Face, frames { $first }–{ $last }
+editor-track-plate = License plate, frames { $first }–{ $last }
+editor-track-low = Low confidence: masked, but check it is a face or plate.
+editor-track-masked = Masked
+editor-track-unmasked = Not masked
+editor-track-mask = Mask This Track
+editor-track-unmask = Do Not Mask This Track
+editor-drawn-track = Drawn track, frames { $first }–{ $last }, { $keyframes ->
+    [one] one keyframe
+   *[other] { $keyframes } keyframes
+}
+editor-drawn-start = Start Here
+editor-drawn-end = End Here
+editor-drawn-remove-keyframe = Remove This Keyframe
+editor-drawn-remove = Remove Track
+editor-cover-gap = Draw a Track Over It
 editor-loading = Opening the photo…
 editor-unreadable = The photo cannot be shown: { $error }
 editor-preview = Masking preview
@@ -249,7 +282,7 @@ confirm-warnings-body = { $count ->
 } not resolved, so a face or license plate may be left unmasked. The item is not counted as finished normally.
 confirm-warnings = Export with Warnings
 confirm-plain-title = Export without anonymization?
-confirm-plain-body = Nothing is masked: the photo is saved again under the metadata rules only. The item is not counted as finished normally.
+confirm-plain-body = Nothing is masked: the item is saved again under the metadata rules only. The item is not counted as finished normally.
 confirm-plain = Export Without Anonymization
 confirm-cancel = Cancel
 shortcuts-title = Shortcuts
@@ -259,6 +292,19 @@ keys-drag = Drag
 keys-arrows = Arrow keys
 keys-alt-arrows = Alt + arrow keys
 keys-space = Space (hold)
+keys-m = M (hold)
+keys-alt-command-arrows = Alt + { $command } + arrow keys
+video-shortcut-click = Mask or unmask a track; select a drawn track
+video-shortcut-drag = Draw a track from this frame for a second; drag a drawn box to set it at this frame
+video-shortcut-space = Play or stop
+video-shortcut-mask = Show this frame masked
+video-shortcut-frames = Previous or next frame (Shift: one second)
+video-shortcut-ends = First or last frame
+video-shortcut-gaps = Previous or next gap
+video-shortcut-enter = Mask or unmask the selected track
+video-shortcut-alt-arrows = Move the selected drawn box at this frame (Shift: 10 pixels)
+video-shortcut-resize = Resize the selected drawn box at this frame
+video-shortcut-delete = Remove the selected drawn track
 shortcut-click = Mask or unmask a detection; select an added area
 shortcut-drag = Add an area to mask; drag an added area to move it
 shortcut-tab = Select the next or previous box

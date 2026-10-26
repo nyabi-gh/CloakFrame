@@ -1,9 +1,10 @@
-//! A reviewer's work on one item until it is decided: which detections stay unmasked, the areas
-//! added, how each problem is resolved, and the history undo and redo walk.
+//! A reviewer's work on one item until it is decided: which detections or tracks stay unmasked,
+//! the areas or tracks added, how each problem is resolved, and the history undo and redo walk.
 
-use cloakframe_core::coverage::{Problem, Resolution};
+use cloakframe_core::coverage::{Problem, Resolution, TrackId};
+use cloakframe_core::detection::FrameIndex;
 use cloakframe_core::geometry::Rect;
-use cloakframe_core::review::{Edits, PhotoEdits};
+use cloakframe_core::review::{Edits, Keyframe, ManualTrack, PhotoEdits, VideoEdits};
 use cloakframe_engine::review::{Action, EvidenceResolution, ItemDecision};
 use cloakframe_engine::session::{SessionItem, StoredMedia};
 
@@ -11,6 +12,7 @@ use cloakframe_engine::session::{SessionItem, StoredMedia};
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Doc {
     pub edits: PhotoEdits,
+    pub video: VideoEdits,
     /// One for each of the item's problems.
     pub resolutions: Vec<Resolution>,
 }
@@ -20,6 +22,18 @@ pub enum Pick {
     Detection(usize),
     Added(usize),
     Problem(usize),
+    Track(TrackId),
+    /// One of the manual tracks.
+    Manual(usize),
+}
+
+/// What a video's edits are checked against.
+#[derive(Debug, Clone, Default)]
+struct Footage {
+    tracks: Vec<TrackId>,
+    frames: u64,
+    /// Frames in a second, on average.
+    rate: f64,
 }
 
 #[derive(Debug, Clone)]
@@ -27,7 +41,8 @@ pub struct Draft {
     pub doc: Doc,
     problems: Vec<Problem>,
     detections: usize,
-    /// The photo's display size, which added areas stay inside, once it is known.
+    footage: Footage,
+    /// The photo's or video's display size, which added areas stay inside, once it is known.
     pub bounds: Option<(f32, f32)>,
     undo: Vec<Doc>,
     redo: Vec<Doc>,
@@ -38,18 +53,47 @@ pub struct Draft {
 
 impl Draft {
     pub fn new(item: &SessionItem) -> Self {
-        let (edits, detections) = match &item.media {
-            StoredMedia::Photo { detections, edits } => (edits.clone(), detections.len()),
-            StoredMedia::Video { .. } => (PhotoEdits::default(), 0),
+        let (edits, video, detections, footage, bounds) = match &item.media {
+            StoredMedia::Photo { detections, edits } => (
+                edits.clone(),
+                VideoEdits::default(),
+                detections.len(),
+                Footage::default(),
+                None,
+            ),
+            StoredMedia::Video {
+                frames,
+                width,
+                height,
+                seconds,
+                tracks,
+                edits,
+            } => (
+                PhotoEdits::default(),
+                edits.clone(),
+                0,
+                Footage {
+                    tracks: tracks.iter().map(|t| t.id).collect(),
+                    frames: *frames,
+                    rate: if *seconds > 0.0 {
+                        *frames as f64 / seconds
+                    } else {
+                        30.0
+                    },
+                },
+                Some((*width as f32, *height as f32)),
+            ),
         };
         Self {
             doc: Doc {
                 edits,
+                video,
                 resolutions: item.evidence.iter().map(|e| e.resolution).collect(),
             },
             problems: item.evidence.iter().map(|e| e.problem.clone()).collect(),
             detections,
-            bounds: None,
+            footage,
+            bounds,
             undo: Vec::new(),
             redo: Vec::new(),
             gesture: None,
@@ -123,13 +167,16 @@ impl Draft {
         }
     }
 
-    /// A manual-mask resolution holds only while the added areas still cover the problem's box,
-    /// as the engine checks; the selection follows what still exists.
+    /// A manual-mask resolution holds only while the added areas or tracks still cover the
+    /// problem, as the engine checks; the selection follows what still exists.
     fn settle(&mut self) {
-        for (resolution, problem) in self.doc.resolutions.iter_mut().zip(&self.problems) {
-            if *resolution == Resolution::CoveredByManualMask
-                && !covers(&self.doc.edits.added, problem)
-            {
+        let Doc {
+            edits,
+            video,
+            resolutions,
+        } = &mut self.doc;
+        for (resolution, problem) in resolutions.iter_mut().zip(&self.problems) {
+            if *resolution == Resolution::CoveredByManualMask && !covers(edits, video, problem) {
                 *resolution = Resolution::Unresolved;
             }
         }
@@ -137,6 +184,8 @@ impl Draft {
             Some(Pick::Detection(i)) => i < self.detections,
             Some(Pick::Added(i)) => i < self.doc.edits.added.len(),
             Some(Pick::Problem(i)) => i < self.problems.len(),
+            Some(Pick::Track(id)) => self.footage.tracks.contains(&id),
+            Some(Pick::Manual(i)) => i < self.doc.video.added_tracks.len(),
             None => true,
         };
         if !exists {
@@ -241,6 +290,225 @@ impl Draft {
         &self.problems
     }
 
+    pub fn frames(&self) -> u64 {
+        self.footage.frames
+    }
+
+    /// Frames in a second, to the nearest, at least one.
+    pub fn second(&self) -> u64 {
+        (self.footage.rate.round() as u64).max(1)
+    }
+
+    pub fn is_track_excluded(&self, track: TrackId) -> bool {
+        self.doc.video.excluded_tracks.contains(&track)
+    }
+
+    pub fn toggle_track(&mut self, track: TrackId) {
+        if !self.footage.tracks.contains(&track) {
+            return;
+        }
+        self.change(|doc, _| {
+            let excluded = &mut doc.video.excluded_tracks;
+            match excluded.iter().position(|&t| t == track) {
+                Some(at) => {
+                    excluded.remove(at);
+                }
+                None => {
+                    excluded.push(track);
+                    excluded.sort_unstable();
+                }
+            }
+        });
+    }
+
+    /// Draws a track from frame `k` for a second (to the video's end at most), its box `area` cut
+    /// to the frame at its one keyframe.
+    pub fn add_track(&mut self, k: FrameIndex, area: Rect) -> Option<usize> {
+        let area = clamp(area, self.bounds)?;
+        if k >= self.footage.frames {
+            return None;
+        }
+        let last = (k + self.second() - 1).min(self.footage.frames - 1);
+        self.change(|doc, _| {
+            doc.video.added_tracks.push(ManualTrack {
+                first: k,
+                last,
+                keyframes: vec![Keyframe {
+                    frame: k,
+                    bbox: area,
+                }],
+            });
+        });
+        let index = self.doc.video.added_tracks.len() - 1;
+        self.selected = Some(Pick::Manual(index));
+        Some(index)
+    }
+
+    /// Sets manual track `track`'s box at frame `k`, in its frames, as a keyframe: `change` turns
+    /// the box it shows there now into the new one, cut to the frame.
+    pub fn set_box(
+        doc: &mut Doc,
+        track: usize,
+        k: FrameIndex,
+        change: impl FnOnce(Rect) -> Option<Rect>,
+        bounds: Option<(f32, f32)>,
+    ) {
+        let Some(manual) = doc.video.added_tracks.get_mut(track) else {
+            return;
+        };
+        let Some(now) = manual.rect_at(k) else {
+            return;
+        };
+        let Some(bbox) = change(now).and_then(|r| clamp(r, bounds)) else {
+            return;
+        };
+        let keyframe = Keyframe { frame: k, bbox };
+        match manual.keyframes.binary_search_by_key(&k, |f| f.frame) {
+            Ok(at) => manual.keyframes[at] = keyframe,
+            Err(at) => manual.keyframes.insert(at, keyframe),
+        }
+    }
+
+    /// Moves a manual track's box at `k` by `(dx, dy)`, keeping it inside the frame.
+    pub fn shift_track(
+        doc: &mut Doc,
+        track: usize,
+        k: FrameIndex,
+        (dx, dy): (f32, f32),
+        bounds: Option<(f32, f32)>,
+    ) {
+        Self::set_box(
+            doc,
+            track,
+            k,
+            |r| {
+                let (mut x, mut y) = (r.x() + dx, r.y() + dy);
+                if let Some((w, h)) = bounds {
+                    x = x.clamp(0.0, (w - r.width()).max(0.0));
+                    y = y.clamp(0.0, (h - r.height()).max(0.0));
+                }
+                Rect::new(x, y, r.width(), r.height()).ok()
+            },
+            bounds,
+        );
+    }
+
+    /// Grows or shrinks a manual track's box at `k` from its right and bottom edges.
+    pub fn grow_track(
+        doc: &mut Doc,
+        track: usize,
+        k: FrameIndex,
+        (dw, dh): (f32, f32),
+        bounds: Option<(f32, f32)>,
+    ) {
+        Self::set_box(
+            doc,
+            track,
+            k,
+            |r| {
+                let width = (r.width() + dw).max(1.0);
+                let height = (r.height() + dh).max(1.0);
+                Rect::new(r.x(), r.y(), width, height).ok()
+            },
+            bounds,
+        );
+    }
+
+    /// Makes `k` the first frame of manual track `track` (`start`) or its last. The box it showed
+    /// nearest `k` becomes a keyframe there, and keyframes left outside go.
+    pub fn trim(&mut self, track: usize, k: FrameIndex, start: bool) {
+        if k >= self.footage.frames {
+            return;
+        }
+        self.change(|doc, _| {
+            let Some(manual) = doc.video.added_tracks.get_mut(track) else {
+                return;
+            };
+            let held = manual.rect_at(k.clamp(manual.first, manual.last));
+            let Some(bbox) = held else {
+                return;
+            };
+            if start {
+                manual.first = k;
+                manual.last = manual.last.max(k);
+            } else {
+                manual.last = k;
+                manual.first = manual.first.min(k);
+            }
+            let (first, last) = (manual.first, manual.last);
+            manual
+                .keyframes
+                .retain(|f| f.frame >= first && f.frame <= last);
+            if let Err(at) = manual.keyframes.binary_search_by_key(&k, |f| f.frame) {
+                manual.keyframes.insert(at, Keyframe { frame: k, bbox });
+            }
+        });
+    }
+
+    /// Removes manual track `track`'s keyframe at `k`, unless it is the track's only one.
+    pub fn remove_keyframe(&mut self, track: usize, k: FrameIndex) {
+        self.change(|doc, _| {
+            if let Some(manual) = doc.video.added_tracks.get_mut(track)
+                && manual.keyframes.len() > 1
+                && let Ok(at) = manual.keyframes.binary_search_by_key(&k, |f| f.frame)
+            {
+                manual.keyframes.remove(at);
+            }
+        });
+    }
+
+    pub fn remove_track(&mut self, track: usize) {
+        self.change(|doc, _| {
+            if track < doc.video.added_tracks.len() {
+                doc.video.added_tracks.remove(track);
+            }
+        });
+    }
+
+    /// Draws a manual track over every frame of gap `problem` and marks the gap covered, as one
+    /// step. Its keyframes are `before`, the box of a track the frame before the gap, at the gap's
+    /// first frame and `after`, one the frame after, at its last; with neither, a box in the
+    /// middle of the frame for the reviewer to place.
+    pub fn cover_gap(&mut self, problem: usize, before: Option<Rect>, after: Option<Rect>) {
+        let Some(&Problem::UnresolvedGap { first, last, .. }) = self.problems.get(problem) else {
+            return;
+        };
+        if first > last || last >= self.footage.frames {
+            return;
+        }
+        let middle = self.bounds.and_then(|(w, h)| {
+            let side = (w.min(h) / 5.0).max(2.0);
+            Rect::new((w - side) / 2.0, (h - side) / 2.0, side, side).ok()
+        });
+        let bounds = self.bounds;
+        let keyframe = |frame, bbox: Option<Rect>| {
+            bbox.and_then(|b| clamp(b, bounds))
+                .map(|bbox| Keyframe { frame, bbox })
+        };
+        let mut keyframes: Vec<Keyframe> = [keyframe(first, before), keyframe(last, after)]
+            .into_iter()
+            .flatten()
+            .collect();
+        keyframes.dedup_by_key(|k| k.frame);
+        if keyframes.is_empty() {
+            keyframes.extend(keyframe(first, middle));
+        }
+        if keyframes.is_empty() {
+            return;
+        }
+        self.change(|doc, _| {
+            doc.video.added_tracks.push(ManualTrack {
+                first,
+                last,
+                keyframes,
+            });
+            if let Some(r) = doc.resolutions.get_mut(problem) {
+                *r = Resolution::CoveredByManualMask;
+            }
+        });
+        self.selected = Some(Pick::Manual(self.doc.video.added_tracks.len() - 1));
+    }
+
     /// The decision for `item` as it now is, bound to the revision and key it was made on.
     pub fn decision(
         &self,
@@ -253,9 +521,8 @@ impl Draft {
                 photo: self.doc.edits.clone(),
                 ..Edits::default()
             },
-            // Video edits come in stage 3; the stored ones stay.
-            StoredMedia::Video { edits, .. } => Edits {
-                video: edits.clone(),
+            StoredMedia::Video { .. } => Edits {
+                video: self.doc.video.clone(),
                 ..Edits::default()
             },
         };
@@ -282,9 +549,10 @@ impl Draft {
 }
 
 /// Whether a manual mask can resolve the problem, and does.
-fn covers(added: &[Rect], problem: &Problem) -> bool {
+fn covers(photo: &PhotoEdits, video: &VideoEdits, problem: &Problem) -> bool {
     match problem {
-        Problem::WeakCandidate { bbox, .. } => bbox.is_covered_by(added),
+        Problem::WeakCandidate { bbox, .. } => bbox.is_covered_by(&photo.added),
+        Problem::UnresolvedGap { first, last, .. } => video.covers(*first, *last),
         _ => false,
     }
 }
@@ -439,6 +707,159 @@ mod tests {
         assert_eq!(draft.doc.resolutions[0], Resolution::CoveredByManualMask);
         draft.remove(0);
         assert_eq!(draft.unresolved(), 1);
+    }
+
+    fn video_item() -> SessionItem {
+        let summary = |id, first, last| cloakframe_engine::video::tracking::TrackSummary {
+            id,
+            kind: cloakframe_core::detection::DetectionKind::Face,
+            first,
+            last,
+            detections: 10,
+            strong: 10,
+            low_confidence: false,
+        };
+        SessionItem {
+            media: StoredMedia::Video {
+                frames: 300,
+                width: 640,
+                height: 360,
+                seconds: 10.0,
+                tracks: vec![summary(1, 0, 29), summary(2, 90, 200)],
+                edits: VideoEdits::default(),
+            },
+            evidence: vec![CoverageEvidence::unresolved(Problem::UnresolvedGap {
+                detection: cloakframe_core::detection::DetectionKind::Face,
+                tracks: vec![1, 2],
+                first: 30,
+                last: 89,
+            })],
+            ..item()
+        }
+    }
+
+    #[test]
+    fn a_drawn_track_runs_a_second_and_takes_a_keyframe_where_its_box_changes() {
+        let stored = video_item();
+        let mut draft = Draft::new(&stored);
+        assert_eq!((draft.frames(), draft.second()), (300, 30));
+        let at = draft.add_track(280, rect(600.0, 0.0, 80.0, 40.0)).unwrap();
+        let track = &draft.doc.video.added_tracks[at];
+        assert_eq!(
+            (track.first, track.last),
+            (280, 299),
+            "cut at the video's end"
+        );
+        assert_eq!(
+            track.keyframes[0].bbox,
+            rect(600.0, 0.0, 40.0, 40.0),
+            "cut to the frame"
+        );
+        assert_eq!(draft.selected, Some(Pick::Manual(0)));
+        draft.remove_track(0);
+        assert_eq!(draft.selected, None);
+
+        draft.add_track(10, rect(0.0, 0.0, 10.0, 10.0)).unwrap();
+        assert_eq!(draft.doc.video.added_tracks[0].last, 39);
+        draft.begin_gesture();
+        for _ in 0..4 {
+            draft.gesture(|doc, b| Draft::shift_track(doc, 0, 30, (5.0, 0.0), b));
+        }
+        draft.end_gesture();
+        let frames: Vec<u64> = draft.doc.video.added_tracks[0]
+            .keyframes
+            .iter()
+            .map(|k| k.frame)
+            .collect();
+        assert_eq!(frames, [10, 30]);
+        let track = &draft.doc.video.added_tracks[0];
+        assert_eq!(track.rect_at(30), Some(rect(20.0, 0.0, 10.0, 10.0)));
+        assert_eq!(track.rect_at(20), Some(rect(10.0, 0.0, 10.0, 10.0)));
+        draft.undo();
+        assert_eq!(
+            draft.doc.video.added_tracks[0].keyframes.len(),
+            1,
+            "the drag is one step"
+        );
+        draft.redo();
+        draft.change(|doc, b| Draft::shift_track(doc, 0, 50, (5.0, 0.0), b));
+        assert_eq!(
+            draft.doc.video.added_tracks[0].keyframes.len(),
+            2,
+            "nothing is set outside the track"
+        );
+        draft.change(|doc, b| Draft::grow_track(doc, 0, 30, (-20.0, 1000.0), b));
+        assert_eq!(
+            draft.doc.video.added_tracks[0].rect_at(30),
+            Some(rect(20.0, 0.0, 1.0, 360.0))
+        );
+
+        draft.trim(0, 20, true);
+        let track = &draft.doc.video.added_tracks[0];
+        assert_eq!((track.first, track.last), (20, 39));
+        let frames: Vec<u64> = track.keyframes.iter().map(|k| k.frame).collect();
+        assert_eq!(frames, [20, 30], "the box at the new start is kept");
+        draft.trim(0, 60, false);
+        assert_eq!(draft.doc.video.added_tracks[0].last, 60);
+        draft.trim(0, 25, false);
+        let track = &draft.doc.video.added_tracks[0];
+        assert_eq!((track.first, track.last), (20, 25));
+        let frames: Vec<u64> = track.keyframes.iter().map(|k| k.frame).collect();
+        assert_eq!(frames, [20, 25]);
+        draft.remove_keyframe(0, 25);
+        draft.remove_keyframe(0, 20);
+        assert_eq!(
+            draft.doc.video.added_tracks[0].keyframes.len(),
+            1,
+            "the last keyframe stays"
+        );
+        assert!(
+            draft
+                .doc
+                .video
+                .check(|id| id == 1 || id == 2, 300, (640, 360))
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn a_gap_is_covered_only_while_drawn_tracks_show_in_all_its_frames() {
+        let stored = video_item();
+        let mut draft = Draft::new(&stored);
+        draft.toggle_track(2);
+        draft.toggle_track(9);
+        assert!(draft.is_track_excluded(2) && !draft.is_track_excluded(9));
+        draft.cover_gap(
+            0,
+            Some(rect(100.0, 100.0, 40.0, 40.0)),
+            Some(rect(300.0, 100.0, 40.0, 40.0)),
+        );
+        assert_eq!(draft.unresolved(), 0);
+        let track = &draft.doc.video.added_tracks[0];
+        assert_eq!((track.first, track.last), (30, 89));
+        assert_eq!(track.rect_at(30), Some(rect(100.0, 100.0, 40.0, 40.0)));
+        assert_eq!(track.rect_at(89), Some(rect(300.0, 100.0, 40.0, 40.0)));
+        draft.trim(0, 31, true);
+        assert_eq!(draft.unresolved(), 1, "frame 30 is no longer covered");
+        draft.undo();
+        assert_eq!(draft.unresolved(), 0);
+
+        let decision = draft.decision(&stored, Action::Approve, None);
+        assert_eq!(decision.edits.video, draft.doc.video);
+        assert!(decision.edits.photo.is_empty());
+        assert_eq!(
+            decision.resolutions,
+            [EvidenceResolution {
+                evidence: 0,
+                resolution: Resolution::CoveredByManualMask
+            }]
+        );
+
+        let mut middle = Draft::new(&stored);
+        middle.cover_gap(0, None, None);
+        let track = &middle.doc.video.added_tracks[0];
+        assert_eq!(track.keyframes.len(), 1);
+        assert_eq!(track.keyframes[0].bbox, rect(284.0, 144.0, 72.0, 72.0));
     }
 
     #[test]

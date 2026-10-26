@@ -303,6 +303,11 @@ impl Review {
             .find(|&i| self.is_open(i))
     }
 
+    /// The processor the session's items render with, which also opens a video's preview.
+    pub fn processor(&self) -> Arc<MediaProcessor> {
+        Arc::clone(&self.processor)
+    }
+
     pub fn is_video(&self, item: ItemId) -> bool {
         self.order
             .iter()

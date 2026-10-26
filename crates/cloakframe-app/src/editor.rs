@@ -1,11 +1,14 @@
-//! The review screen (plan 6 "사진 검토"): the queue of a session's items, and the editor in which
-//! a photo's masks are toggled, added, moved and previewed before the item is decided.
+//! The review screen (plan 6 "사진 검토", "영상 검토"): the queue of a session's items, and the
+//! editor in which a photo's masks or a video's tracks are toggled, added, moved and previewed
+//! before the item is decided.
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem, Resolution};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState};
+use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::review::{Action, Rejection};
 use cloakframe_engine::scan::MediaKind;
 use cloakframe_engine::session::{SessionItem, StoredMedia};
@@ -19,6 +22,8 @@ use crate::review::{Review, Status};
 use crate::summary;
 use crate::thumbnails::{Thumbnails, VideoTools};
 use crate::tiles::Picture;
+use crate::video::Clip;
+use crate::video_editor::{self, VideoEditor};
 
 /// What the screen asks of the window.
 pub enum ScreenAct {
@@ -59,6 +64,7 @@ enum Drag {
 pub struct Editor {
     pub item: ItemId,
     pub picture: Option<Picture>,
+    pub video: Option<VideoEditor>,
     pub view: Option<View>,
     pub help: bool,
     pub previewing: bool,
@@ -69,14 +75,18 @@ pub struct Editor {
 }
 
 impl Editor {
-    fn new(item: &SessionItem, ctx: &egui::Context) -> Self {
-        let picture = match item.media {
-            StoredMedia::Photo { .. } => Picture::open(&item.input, ctx).ok(),
-            StoredMedia::Video { .. } => None,
+    fn new(item: &SessionItem, processor: Arc<MediaProcessor>, ctx: &egui::Context) -> Self {
+        let (picture, video) = match &item.media {
+            StoredMedia::Photo { .. } => (Picture::open(&item.input, ctx).ok(), None),
+            StoredMedia::Video { tracks, .. } => (
+                None,
+                Some(VideoEditor::new(Clip::open(processor, item, ctx), tracks)),
+            ),
         };
         Self {
             item: item.item,
             picture,
+            video,
             view: None,
             help: false,
             previewing: false,
@@ -99,7 +109,7 @@ impl ReviewScreen {
 
     pub fn open_item(&mut self, item: ItemId, ctx: &egui::Context) {
         if let Some(stored) = self.review.order.iter().find(|i| i.item == item) {
-            self.editor = Some(Editor::new(stored, ctx));
+            self.editor = Some(Editor::new(stored, self.review.processor(), ctx));
         }
     }
 
@@ -110,10 +120,14 @@ impl ReviewScreen {
         }
     }
 
-    /// Waits for the photo in the editor and its tiles on screen, for tests.
+    /// Waits for the photo in the editor and its tiles on screen, or the video and its frame,
+    /// for tests.
     pub fn wait_for_picture(&mut self, ctx: &egui::Context) {
         if let Some(picture) = self.editor.as_mut().and_then(|e| e.picture.as_mut()) {
             picture.wait(ctx);
+        }
+        if let Some(video) = self.editor.as_mut().and_then(|e| e.video.as_mut()) {
+            video.clip.wait(ctx);
         }
     }
 
@@ -294,12 +308,19 @@ impl ReviewScreen {
                     }
                 }
             }
-            StoredMedia::Video { .. } => {
-                ui.label(tr.get("editor-video"));
+            StoredMedia::Video { tracks, .. } => {
+                if let (Some(draft), Some(video)) =
+                    (self.review.drafts.get_mut(&item), editor.video.as_mut())
+                    && let Some(step) =
+                        video_editor::ui(ui, tr, video, draft, tracks, open, &mut editor.help)
+                {
+                    asked.go = Some(step);
+                }
             }
         });
         if editor.help {
-            shortcuts(&ctx, tr, &mut editor.help);
+            let video = editor.video.is_some();
+            shortcuts(&ctx, tr, &mut editor.help, video);
         }
         if let Some(action) = asked.decide {
             match action {
@@ -397,7 +418,7 @@ impl ReviewScreen {
     }
 }
 
-enum Go {
+pub(crate) enum Go {
     Queue,
     Step(isize),
     /// Decide again under a free name the engine suggested.
@@ -571,6 +592,9 @@ fn side_panel(
             &[("count", FluentValue::from(draft.doc.edits.added.len()))],
         ));
     }
+    if let (StoredMedia::Video { tracks, .. }, Some(video)) = (&stored.media, &mut editor.video) {
+        video_panel(ui, tr, video, draft, tracks, open);
+    }
     ui.add_space(6.0);
     ui.strong(tr.get("editor-problems"));
     if draft.problems().is_empty() {
@@ -590,6 +614,9 @@ fn side_panel(
             let text = summary::problem(&evidence, video, tr);
             if ui.selectable_label(selected, text).clicked() {
                 draft.selected = Some(Pick::Problem(i));
+                if let (Some(v), Some(k)) = (editor.video.as_mut(), problem_frame(problem)) {
+                    v.seek(k, draft.frames());
+                }
             }
             let state = tr.get(resolution_id(resolution));
             if resolution == Resolution::Unresolved {
@@ -606,6 +633,15 @@ fn side_panel(
                         {
                             resolve = Some((i, Resolution::CoveredByManualMask));
                         }
+                        if matches!(problem, Problem::UnresolvedGap { .. })
+                            && editor
+                                .video
+                                .as_ref()
+                                .is_some_and(|v| v.clip.preview.is_some())
+                            && ui.button(tr.get("editor-cover-gap")).clicked()
+                        {
+                            resolve = Some((i, Resolution::CoveredByManualMask));
+                        }
                         if ui.button(tr.get("editor-dismiss")).clicked() {
                             resolve = Some((i, Resolution::Dismissed));
                         }
@@ -617,7 +653,14 @@ fn side_panel(
         });
     }
     match resolve {
-        Some((i, Resolution::CoveredByManualMask)) => draft.cover(i),
+        Some((i, Resolution::CoveredByManualMask)) => match (&problems[i], &mut editor.video) {
+            (gap @ Problem::UnresolvedGap { first, .. }, Some(video)) => {
+                let (before, after) = video.around_gap(gap);
+                draft.cover_gap(i, before, after);
+                video.seek(*first, draft.frames());
+            }
+            _ => draft.cover(i),
+        },
         Some((i, resolution)) => draft.resolve(i, resolution),
         None => {}
     }
@@ -663,6 +706,161 @@ fn side_panel(
             }
         });
     });
+}
+
+/// Where in a video a problem is.
+fn problem_frame(problem: &Problem) -> Option<u64> {
+    match problem {
+        Problem::UnresolvedGap { first, .. } => Some(*first),
+        Problem::FailedFrame { frame } => Some(*frame),
+        Problem::CappedCandidates { frame, .. } | Problem::WeakCandidate { frame, .. } => *frame,
+    }
+}
+
+enum Drawn {
+    Start,
+    End,
+    RemoveKeyframe,
+    Remove,
+}
+
+/// The frame under review, playback, and what the selected track or drawn track can do.
+fn video_panel(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    video: &mut VideoEditor,
+    draft: &mut Draft,
+    tracks: &[cloakframe_engine::video::tracking::TrackSummary],
+    open: bool,
+) {
+    let at = video.at;
+    let seconds = video.clip.preview.as_ref().map_or(0.0, |p| p.seconds(at));
+    ui.label(tr.with(
+        "editor-video-frame",
+        &[
+            ("frame", FluentValue::from(at)),
+            ("last", FluentValue::from(draft.frames().saturating_sub(1))),
+            ("time", FluentValue::from(video_editor::time(seconds))),
+        ],
+    ));
+    ui.horizontal(|ui| {
+        let play = if video.clip.playing {
+            tr.get("editor-video-stop")
+        } else {
+            tr.get("editor-video-play")
+        };
+        if ui
+            .add_enabled(video.clip.preview.is_some(), egui::Button::new(play))
+            .clicked()
+        {
+            video.toggle_playback(draft);
+        }
+        ui.checkbox(&mut video.masked_playback, tr.get("editor-video-masked"));
+    });
+    let masked = tracks
+        .iter()
+        .filter(|t| !draft.is_track_excluded(t.id))
+        .count();
+    ui.label(tr.with(
+        "editor-tracks",
+        &[
+            ("count", FluentValue::from(tracks.len())),
+            ("masked", FluentValue::from(masked)),
+        ],
+    ));
+    ui.label(tr.with(
+        "editor-drawn",
+        &[(
+            "count",
+            FluentValue::from(draft.doc.video.added_tracks.len()),
+        )],
+    ));
+    match draft.selected {
+        Some(Pick::Track(id)) => {
+            let Some(track) = tracks.iter().find(|t| t.id == id) else {
+                return;
+            };
+            ui.group(|ui| {
+                let kind = match track.kind {
+                    cloakframe_core::detection::DetectionKind::Face => "editor-track-face",
+                    cloakframe_core::detection::DetectionKind::Plate => "editor-track-plate",
+                };
+                ui.strong(tr.with(
+                    kind,
+                    &[
+                        ("first", FluentValue::from(track.first)),
+                        ("last", FluentValue::from(track.last)),
+                    ],
+                ));
+                if track.low_confidence {
+                    ui.weak(tr.get("editor-track-low"));
+                }
+                let excluded = draft.is_track_excluded(id);
+                ui.weak(tr.get(if excluded {
+                    "editor-track-unmasked"
+                } else {
+                    "editor-track-masked"
+                }));
+                let toggle = if excluded {
+                    tr.get("editor-track-mask")
+                } else {
+                    tr.get("editor-track-unmask")
+                };
+                if ui.add_enabled(open, egui::Button::new(toggle)).clicked() {
+                    draft.toggle_track(id);
+                }
+            });
+        }
+        Some(Pick::Manual(i)) => {
+            let Some(track) = draft.doc.video.added_tracks.get(i) else {
+                return;
+            };
+            let (first, last) = (track.first, track.last);
+            let keyframes = track.keyframes.len();
+            let on_keyframe = track.keyframes.iter().any(|k| k.frame == at);
+            let mut action = None;
+            ui.group(|ui| {
+                ui.strong(tr.with(
+                    "editor-drawn-track",
+                    &[
+                        ("first", FluentValue::from(first)),
+                        ("last", FluentValue::from(last)),
+                        ("keyframes", FluentValue::from(keyframes)),
+                    ],
+                ));
+                ui.add_enabled_ui(open, |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        if ui.button(tr.get("editor-drawn-start")).clicked() {
+                            action = Some(Drawn::Start);
+                        }
+                        if ui.button(tr.get("editor-drawn-end")).clicked() {
+                            action = Some(Drawn::End);
+                        }
+                        if ui
+                            .add_enabled(
+                                on_keyframe && keyframes > 1,
+                                egui::Button::new(tr.get("editor-drawn-remove-keyframe")),
+                            )
+                            .clicked()
+                        {
+                            action = Some(Drawn::RemoveKeyframe);
+                        }
+                        if ui.button(tr.get("editor-drawn-remove")).clicked() {
+                            action = Some(Drawn::Remove);
+                        }
+                    });
+                });
+            });
+            match action {
+                Some(Drawn::Start) => draft.trim(i, at, true),
+                Some(Drawn::End) => draft.trim(i, at, false),
+                Some(Drawn::RemoveKeyframe) => draft.remove_keyframe(i, at),
+                Some(Drawn::Remove) => draft.remove_track(i),
+                None => {}
+            }
+        }
+        _ => {}
+    }
 }
 
 /// The photo with its boxes; returns a step through the queue the keys asked for.
@@ -1066,8 +1264,8 @@ fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {
     painter.extend(egui::Shape::dashed_line(&corners, stroke, 6.0, 4.0));
 }
 
-/// The `?` overlay.
-fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool) {
+/// The `?` overlay, of the photo or the video editor.
+fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool, video: bool) {
     let undo = ctx.format_shortcut(&egui::KeyboardShortcut::new(
         egui::Modifiers::COMMAND,
         egui::Key::Z,
@@ -1076,21 +1274,54 @@ fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool) {
         egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
         egui::Key::Z,
     ));
-    let rows: [(String, &str); 13] = [
-        (tr.get("keys-click"), "shortcut-click"),
-        (tr.get("keys-drag"), "shortcut-drag"),
-        ("Tab / Shift+Tab".to_owned(), "shortcut-tab"),
-        ("Enter".to_owned(), "shortcut-enter"),
-        (tr.get("keys-arrows"), "shortcut-arrows"),
-        (tr.get("keys-alt-arrows"), "shortcut-alt-arrows"),
-        ("Delete".to_owned(), "shortcut-delete"),
-        (tr.get("keys-space"), "shortcut-space"),
-        (undo, "shortcut-undo"),
-        (redo, "shortcut-redo"),
-        ("+  −  0  1".to_owned(), "shortcut-zoom"),
-        ("Page Up / Page Down".to_owned(), "shortcut-pages"),
-        ("?".to_owned(), "shortcut-help"),
-    ];
+    let command = if cfg!(target_os = "macos") {
+        "Cmd"
+    } else {
+        "Ctrl"
+    };
+    let rows: Vec<(String, &str)> = if video {
+        vec![
+            (tr.get("keys-click"), "video-shortcut-click"),
+            (tr.get("keys-drag"), "video-shortcut-drag"),
+            ("Space".to_owned(), "video-shortcut-space"),
+            (tr.get("keys-m"), "video-shortcut-mask"),
+            ("← / →".to_owned(), "video-shortcut-frames"),
+            ("Home / End".to_owned(), "video-shortcut-ends"),
+            ("[ / ]".to_owned(), "video-shortcut-gaps"),
+            ("Tab / Shift+Tab".to_owned(), "shortcut-tab"),
+            ("Enter".to_owned(), "video-shortcut-enter"),
+            (tr.get("keys-alt-arrows"), "video-shortcut-alt-arrows"),
+            (
+                tr.with(
+                    "keys-alt-command-arrows",
+                    &[("command", FluentValue::from(command))],
+                ),
+                "video-shortcut-resize",
+            ),
+            ("Delete".to_owned(), "video-shortcut-delete"),
+            (undo, "shortcut-undo"),
+            (redo, "shortcut-redo"),
+            ("+  −  0  1".to_owned(), "shortcut-zoom"),
+            ("Page Up / Page Down".to_owned(), "shortcut-pages"),
+            ("?".to_owned(), "shortcut-help"),
+        ]
+    } else {
+        vec![
+            (tr.get("keys-click"), "shortcut-click"),
+            (tr.get("keys-drag"), "shortcut-drag"),
+            ("Tab / Shift+Tab".to_owned(), "shortcut-tab"),
+            ("Enter".to_owned(), "shortcut-enter"),
+            (tr.get("keys-arrows"), "shortcut-arrows"),
+            (tr.get("keys-alt-arrows"), "shortcut-alt-arrows"),
+            ("Delete".to_owned(), "shortcut-delete"),
+            (tr.get("keys-space"), "shortcut-space"),
+            (undo, "shortcut-undo"),
+            (redo, "shortcut-redo"),
+            ("+  −  0  1".to_owned(), "shortcut-zoom"),
+            ("Page Up / Page Down".to_owned(), "shortcut-pages"),
+            ("?".to_owned(), "shortcut-help"),
+        ]
+    };
     egui::Window::new(tr.get("shortcuts-title"))
         .id(egui::Id::unique("review-shortcuts"))
         .collapsible(false)

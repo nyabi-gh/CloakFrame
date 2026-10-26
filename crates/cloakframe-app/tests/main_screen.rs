@@ -5,7 +5,7 @@ use cloakframe_app::app::{AppState, Quit};
 use cloakframe_app::draft::Pick;
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
-use cloakframe_app::run::Folders;
+use cloakframe_app::run::{Folders, RunOptions, processor};
 use cloakframe_app::settings::{Method, Settings};
 use cloakframe_app::tools::Tools;
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
@@ -14,10 +14,17 @@ use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis};
 use cloakframe_core::review::{Digest, ReviewKey, ReviewRevision};
 use cloakframe_engine::cancel::CancelToken;
-use cloakframe_engine::identity::SourceStamp;
+use cloakframe_engine::detect::Rgb8Image;
+use cloakframe_engine::identity::{SourceStamp, content_digest};
+use cloakframe_engine::media::decode::FrameReader;
+use cloakframe_engine::media::source;
 use cloakframe_engine::photo::budget::MemoryBudget;
 use cloakframe_engine::photo::decode::{decode, read_source};
+use cloakframe_engine::run::ItemProcessor;
 use cloakframe_engine::session::{FORMAT_VERSION, Session, SessionId, SessionItem, StoredMedia};
+use cloakframe_engine::video::process::item_records_dir;
+use cloakframe_engine::video::record::{Order, RecordWriter, TrackRegion};
+use cloakframe_engine::video::tracking::TrackSummary;
 use eframe::egui;
 use egui::accesskit::Role;
 use egui_kittest::Harness;
@@ -396,9 +403,16 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
             .is_disabled()
     );
     harness.get_by_role_and_label(Role::Button, "Next").click();
+    harness.step();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
     harness.run();
     harness.get_by_label("Face lost in frames 30–65 (1.2 s)");
-    harness.get_by_label_contains("Video tracks cannot be edited here yet");
+    harness.get_by_label("The video cannot be shown: this run does not process videos");
     harness.get_by_role_and_label(Role::Button, "Next").click();
     harness.step();
     harness
@@ -735,6 +749,359 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     harness.get_by_role_and_label(Role::Button, "Back").click();
     harness.run();
     assert!(harness.state().review.is_none());
+}
+
+/// Where the test video's square is in frame `k`, in display pixels.
+fn square_at(k: u64) -> Rect {
+    Rect::new(40.0 + k as f32 * 2.0, 100.0, 60.0, 60.0).unwrap()
+}
+
+fn video_frames(path: &Path, ffmpeg: &Path, ffprobe: &Path) -> Vec<Rgb8Image> {
+    let cancel = CancelToken::new();
+    let source = source::open(ffprobe, path, &cancel).unwrap();
+    let size = source.spec.display_size();
+    let mut reader =
+        FrameReader::start(ffmpeg, path, &source.spec, &source.frames, size, &cancel).unwrap();
+    let mut frames = Vec::new();
+    loop {
+        let mut frame = Rgb8Image {
+            width: 0,
+            height: 0,
+            data: Vec::new(),
+        };
+        if !reader.next_into(&mut frame).unwrap() {
+            return frames;
+        }
+        frames.push(frame);
+    }
+}
+
+/// The square's middle in frame `k`: white where it shows, under the fill's black where masked.
+fn square_middle(frames: &[Rgb8Image], k: u64) -> u8 {
+    let frame = &frames[k as usize];
+    let c = square_at(k).center();
+    let i = (c.y as usize * frame.width as usize + c.x as usize) * 3;
+    frame.data[i]
+}
+
+/// A video's review: tracks are listed in the timeline and left unmasked, a gap is covered by a
+/// track drawn over it from the tracks either side, frames are stepped through, previewed masked
+/// and played, a track drawn and removed, and the decision renders as reviewed. The session is
+/// what a run would keep, made with the square's tracks on either side of a gap.
+#[test]
+fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
+    let dir = Dir::new("video-editor");
+    let ffmpeg = required_env("CLOAKFRAME_FFMPEG");
+    let ffprobe = required_env("CLOAKFRAME_FFPROBE");
+    let input = dir.0.join("clip.mp4");
+    let status = std::process::Command::new(&ffmpeg)
+        .args(["-v", "error", "-f", "lavfi", "-i"])
+        .arg(
+            "color=c=black:s=640x360:r=30:d=4[bg];color=c=white:s=60x60:r=30[sq];\
+             [bg][sq]overlay=x='40+t*60':y=100:shortest=1",
+        )
+        .args([
+            "-c:v", "libx264", "-crf", "1", "-g", "30", "-pix_fmt", "yuv420p",
+        ])
+        .arg(&input)
+        .status()
+        .unwrap();
+    assert!(status.success());
+
+    let tools = Tools {
+        ffmpeg: Some(ffmpeg.clone()),
+        ffprobe: Some(ffprobe.clone()),
+        ..Tools::default()
+    };
+    let folders = Folders {
+        data: Some(dir.0.join("data")),
+        models: None,
+        app_models: false,
+    };
+    let output = dir.0.join("out");
+    let options = RunOptions {
+        method: Method::Fill,
+        ..RunOptions::of(&Settings::default())
+    };
+    let store = folders.sessions().unwrap();
+    let id = SessionId::generate();
+    let records = item_records_dir(&store.records_dir(&id), ItemId(0));
+    std::fs::create_dir_all(&records).unwrap();
+    let mut regions =
+        RecordWriter::<TrackRegion>::create(&records.join("regions"), Order::Ascending).unwrap();
+    for k in 0..120 {
+        let track = match k {
+            0..40 => Some(1),
+            80.. => Some(2),
+            _ => None,
+        };
+        let entries: Vec<TrackRegion> = track
+            .map(|track| TrackRegion {
+                kind: DetectionKind::Face,
+                track,
+                bbox: square_at(k),
+                score: 0.9,
+                roll: None,
+                interpolated: false,
+            })
+            .into_iter()
+            .collect();
+        regions.frame(k, &entries).unwrap();
+    }
+    regions.finish(&[]).unwrap();
+    let source = source::open(&ffprobe, &input, &CancelToken::new()).unwrap();
+    assert_eq!(source.frames.len(), 120);
+    let fingerprint = processor(&options, &tools, store.records_dir(&id))
+        .unwrap()
+        .fingerprint(&input);
+    let key = ReviewKey {
+        input: content_digest(&std::fs::read(&input).unwrap()),
+        models: fingerprint.models,
+        settings: fingerprint.settings,
+        timeline: source.timeline_digest(),
+    };
+    let summary = |id, first, last| TrackSummary {
+        id,
+        kind: DetectionKind::Face,
+        first,
+        last,
+        detections: 40,
+        strong: 40,
+        low_confidence: false,
+    };
+    let session = Session {
+        version: FORMAT_VERSION,
+        options: Some(serde_json::to_value(options).unwrap()),
+        output: output.clone(),
+        items: vec![SessionItem {
+            revision: ReviewRevision::first(key),
+            ..session_item(
+                0,
+                input.clone(),
+                StoredMedia::Video {
+                    frames: 120,
+                    width: 640,
+                    height: 360,
+                    seconds: 4.0,
+                    tracks: vec![summary(1, 0, 39), summary(2, 80, 119)],
+                    edits: Default::default(),
+                },
+                vec![CoverageEvidence::unresolved(Problem::UnresolvedGap {
+                    detection: DetectionKind::Face,
+                    tracks: vec![1, 2],
+                    first: 40,
+                    last: 79,
+                })],
+            )
+        }],
+    };
+    store.save(&id, &session).unwrap();
+
+    let mut harness = harness(Language::En, Settings::default());
+    harness.state_mut().tools = tools;
+    harness.state_mut().set_folders(folders.clone());
+    harness.step();
+    harness.state_mut().wait_for_sessions();
+    harness.run();
+    harness.get_by_role_and_label(Role::Button, "Open").click();
+    harness.step();
+    let ctx = harness.ctx.clone();
+    let wait = |h: &mut Harness<'_, AppState>| {
+        h.state_mut()
+            .review
+            .as_mut()
+            .unwrap()
+            .wait_for_picture(&ctx);
+    };
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_thumbnails(&ctx);
+    harness.run();
+    harness.get_by_label_contains("clip.mp4").click();
+    harness.step();
+    wait(&mut harness);
+    harness.step();
+    wait(&mut harness);
+    harness.run();
+    harness.get_by_label("Frame 0 of 0–119 · 0:00.0");
+    harness.get_by_label("2 tracks, 2 masked");
+    harness.get_by_label("Timeline");
+
+    let item = ItemId(0);
+    let draft =
+        |h: &Harness<'_, AppState>| h.state().review.as_ref().unwrap().review.drafts[&item].clone();
+    let at = |h: &Harness<'_, AppState>| {
+        let screen = h.state().review.as_ref().unwrap();
+        screen.editor.as_ref().unwrap().video.as_ref().unwrap().at
+    };
+    let step = |h: &mut Harness<'_, AppState>| {
+        h.step();
+        wait(h);
+        h.step();
+    };
+
+    harness.key_press(egui::Key::Tab);
+    step(&mut harness);
+    assert_eq!(draft(&harness).selected, Some(Pick::Track(1)));
+    harness.key_press(egui::Key::Enter);
+    step(&mut harness);
+    assert!(
+        draft(&harness).is_track_excluded(1),
+        "Enter leaves it unmasked"
+    );
+    harness.run();
+    harness.get_by_label("2 tracks, 1 masked");
+    harness.get_by_role_and_label(Role::Button, "Mask This Track");
+
+    harness.event(egui::Event::Text("]".to_owned()));
+    step(&mut harness);
+    assert_eq!(at(&harness), 40, "] goes to the gap");
+    assert_eq!(draft(&harness).selected, Some(Pick::Problem(0)));
+    harness.run();
+    harness
+        .get_by_role_and_label(Role::Button, "Draw a Track Over It")
+        .click();
+    step(&mut harness);
+    harness.run();
+    harness.get_by_label("Covered by a mask");
+    let drawn = draft(&harness).doc.video.added_tracks[0].clone();
+    assert_eq!((drawn.first, drawn.last), (40, 79));
+    assert_eq!(
+        drawn.rect_at(40),
+        Some(square_at(39)),
+        "from track 1's last box"
+    );
+    assert_eq!(
+        drawn.rect_at(79),
+        Some(square_at(80)),
+        "to track 2's first box"
+    );
+
+    harness.key_press(egui::Key::ArrowRight);
+    step(&mut harness);
+    assert_eq!(at(&harness), 41);
+    harness.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::ArrowRight);
+    step(&mut harness);
+    assert_eq!(at(&harness), 71, "Shift moves a second");
+    harness.key_press(egui::Key::End);
+    step(&mut harness);
+    assert_eq!(at(&harness), 119);
+    harness.key_press(egui::Key::Home);
+    step(&mut harness);
+    assert_eq!(at(&harness), 0);
+    harness.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::ArrowRight);
+    step(&mut harness);
+    harness.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::ArrowRight);
+    step(&mut harness);
+    assert_eq!(at(&harness), 60);
+
+    harness.key_down(egui::Key::M);
+    step(&mut harness);
+    {
+        let screen = harness.state().review.as_ref().unwrap();
+        let clip = &screen.editor.as_ref().unwrap().video.as_ref().unwrap().clip;
+        let shown = clip.shown.as_ref().unwrap();
+        assert!(
+            shown.masked && shown.frame == 60,
+            "M shows the frame masked"
+        );
+    }
+    harness.key_up(egui::Key::M);
+    step(&mut harness);
+
+    let view = harness
+        .state()
+        .review
+        .as_ref()
+        .unwrap()
+        .editor
+        .as_ref()
+        .unwrap()
+        .video
+        .as_ref()
+        .unwrap()
+        .view()
+        .unwrap();
+    let canvas = harness.get_by_label("Video editor").rect();
+    let origin = canvas.center() - view.center.to_vec2() * view.scale;
+    let on_screen = |x: f32, y: f32| origin + egui::vec2(x, y) * view.scale;
+    let area = Rect::new(400.0, 240.0, 80.0, 60.0).unwrap();
+    harness.hover_at(on_screen(area.x(), area.y()));
+    harness.step();
+    harness.drag_at(on_screen(area.x(), area.y()));
+    harness.step();
+    for t in [0.3, 0.6, 1.0] {
+        harness.hover_at(on_screen(
+            area.x() + area.width() * t,
+            area.y() + area.height() * t,
+        ));
+        harness.step();
+    }
+    harness.drop_at(on_screen(area.right(), area.bottom()));
+    step(&mut harness);
+    let tracks = draft(&harness).doc.video.added_tracks;
+    assert_eq!(tracks.len(), 2, "a drag draws a track");
+    assert_eq!((tracks[1].first, tracks[1].last), (60, 89), "for a second");
+    assert_eq!(draft(&harness).selected, Some(Pick::Manual(1)));
+    harness.key_press(egui::Key::Delete);
+    step(&mut harness);
+    assert_eq!(draft(&harness).doc.video.added_tracks.len(), 1);
+
+    harness.key_press(egui::Key::Space);
+    harness.step();
+    // Playback shows the frame it starts from, then the next at its time.
+    for _ in 0..2 {
+        let played = harness
+            .state_mut()
+            .review
+            .as_mut()
+            .unwrap()
+            .editor
+            .as_mut()
+            .unwrap()
+            .video
+            .as_mut()
+            .unwrap()
+            .clip
+            .wait_for_playback(&ctx);
+        assert!(played, "Space plays");
+        harness.step();
+    }
+    harness.key_press(egui::Key::Space);
+    step(&mut harness);
+    harness.run();
+    assert!(at(&harness) > 60, "playback moved on");
+    harness.get_by_role_and_label(Role::Button, "Play");
+
+    harness.event(egui::Event::Text("?".to_owned()));
+    harness.step();
+    harness.run();
+    harness.get_by_label("Play or stop");
+    harness.get_by_role_and_label(Role::Button, "Close").click();
+    harness.run();
+
+    harness
+        .get_by_role_and_label(Role::Button, "Approve and Save")
+        .click();
+    harness.step();
+    harness.state_mut().wait_for_review();
+    harness.run();
+    harness.get_by_label("Every item of this review is saved.");
+
+    let out = video_frames(&output.join("clip.mp4"), &ffmpeg, &ffprobe);
+    assert_eq!(out.len(), 120);
+    for k in [0, 20, 39] {
+        assert!(
+            square_middle(&out, k) > 200,
+            "frame {k}: track 1 is not masked"
+        );
+    }
+    for k in [40, 60, 79, 80, 100, 119] {
+        assert!(square_middle(&out, k) < 30, "frame {k}: masked");
+    }
 }
 
 fn close(harness: &mut Harness<'_, AppState>) {
