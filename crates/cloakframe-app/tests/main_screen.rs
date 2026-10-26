@@ -184,15 +184,37 @@ fn the_language_menu_changes_the_text() {
     harness.get_by_role_and_label(Role::Button, "시작");
 }
 
-/// The notices and the font license are drawn in full, in the bundled fonts only.
+/// The theme is chosen in the View menu, saved, and the window takes it at once.
+#[test]
+fn the_theme_menu_changes_the_colours() {
+    use cloakframe_app::settings::Theme;
+    let mut harness = harness(Language::En, Settings::default());
+    harness.run();
+    for (label, theme, colours) in [
+        ("Dark", Theme::Dark, egui::Theme::Dark),
+        ("Light", Theme::Light, egui::Theme::Light),
+    ] {
+        harness.get_by_label("View").click();
+        harness.run();
+        harness.get_by_label(label).click();
+        harness.run();
+        assert_eq!(harness.state().settings.theme, theme);
+        assert_eq!(harness.ctx.theme(), colours);
+    }
+}
+
+/// The notices and the font license are drawn in full, in the bundled fonts only, and the
+/// renderer the window runs on is named.
 #[test]
 fn the_about_window_draws_in_every_language() {
     for language in Language::ALL {
         let mut harness = harness(language, Settings::default());
         harness.state_mut().about_open = true;
+        harness.state_mut().graphics = Some("wgpu, metal, Apple M4".to_owned());
         harness.run();
         let title = harness.state().tr().get("about-title");
         harness.get_by_label(&title);
+        harness.get_by_label_contains("wgpu, metal, Apple M4");
     }
 }
 
@@ -1136,33 +1158,11 @@ fn commands(harness: &Harness<'_, AppState>) -> Vec<egui::ViewportCommand> {
 
 /// Closing the window while a run works asks first; once the user agrees, the run is
 /// cancelled and the window closes after it has stopped and kept its review. Needs the ONNX
-/// Runtime and the models (CONTRIBUTING.md).
+/// Runtime, the models and FFmpeg (CONTRIBUTING.md).
 #[test]
 fn closing_during_a_run_asks_and_waits_for_the_run_to_stop() {
     let dir = Dir::new("quit");
-    let input = dir.0.join("in");
-    std::fs::create_dir_all(&input).unwrap();
-    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
-    for i in 0..8 {
-        std::fs::copy(assets.join("lena.jpg"), input.join(format!("lena-{i}.jpg"))).unwrap();
-    }
-    let settings = Settings {
-        output: Some(dir.0.join("out")),
-        ..Settings::default()
-    };
-    let mut harness = harness(Language::En, settings);
-    harness.state_mut().tools = Tools {
-        ort_library: Some(required_env("CLOAKFRAME_ORT_LIBRARY")),
-        ..Tools::default()
-    };
-    harness.state_mut().set_folders(Folders {
-        data: Some(dir.0.join("data")),
-        models: Some(assets),
-        app_models: false,
-    });
-    drop_files(&mut harness, &[input]);
-    harness.get_by_role_and_label(Role::Button, "Start").click();
-    harness.step();
+    let mut harness = started_run(&dir);
 
     close(&mut harness);
     assert!(commands(&harness).contains(&egui::ViewportCommand::CancelClose));
@@ -1208,6 +1208,122 @@ fn closing_during_a_run_asks_and_waits_for_the_run_to_stop() {
             .map(|o| o.state)
             .collect::<Vec<_>>()
     );
+}
+
+/// A minute of video, which a run is still analysing when a test acts on it.
+fn long_clip(dir: &Dir) -> PathBuf {
+    let path = dir.0.join("long.mp4");
+    let status = std::process::Command::new(required_env("CLOAKFRAME_FFMPEG"))
+        .args([
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "testsrc2=s=320x180:r=30:d=60",
+        ])
+        .args([
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",
+            "-pix_fmt",
+            "yuv420p",
+        ])
+        .arg(&path)
+        .status()
+        .unwrap();
+    assert!(status.success());
+    path
+}
+
+/// A run of the long clip and a photo, started and drawn. Needs the ONNX Runtime, the models and
+/// FFmpeg (CONTRIBUTING.md).
+fn started_run(dir: &Dir) -> Harness<'static, AppState> {
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    let photo = dir.0.join("lena.jpg");
+    std::fs::copy(assets.join("lena.jpg"), &photo).unwrap();
+    let settings = Settings {
+        output: Some(dir.0.join("out")),
+        ..Settings::default()
+    };
+    let mut harness = harness(Language::En, settings);
+    harness.state_mut().tools = Tools {
+        ort_library: Some(required_env("CLOAKFRAME_ORT_LIBRARY")),
+        ffmpeg: Some(required_env("CLOAKFRAME_FFMPEG")),
+        ffprobe: Some(required_env("CLOAKFRAME_FFPROBE")),
+    };
+    harness.state_mut().set_folders(Folders {
+        data: Some(dir.0.join("data")),
+        models: Some(assets),
+        app_models: false,
+    });
+    drop_files(&mut harness, &[long_clip(dir), photo]);
+    harness.get_by_role_and_label(Role::Button, "Start").click();
+    harness.step();
+    harness.state_mut().wait_for_run_items();
+    harness.step();
+    harness
+}
+
+fn outcome_states(harness: &Harness<'_, AppState>) -> Vec<(String, ItemState)> {
+    let board = harness.state().board.as_ref().unwrap();
+    let finished = board.finished.as_ref().unwrap();
+    finished
+        .report
+        .items
+        .iter()
+        .map(|o| (board.name(o.item), o.state))
+        .collect()
+}
+
+/// An item's Cancel stops that item alone, and the others run on; the run's Cancel stops all of
+/// it. Needs the ONNX Runtime, the models and FFmpeg (CONTRIBUTING.md).
+#[test]
+fn cancel_stops_an_item_or_the_whole_run() {
+    let dir = Dir::new("cancel-item");
+    let mut harness = started_run(&dir);
+    harness
+        .get_by(|node| {
+            node.role() == Role::ListItem
+                && node
+                    .label()
+                    .is_some_and(|label| label.starts_with("long.mp4, "))
+        })
+        .get_by_role_and_label(Role::Button, "Cancel")
+        .click();
+    harness.step();
+    harness.state_mut().wait_for_run();
+    harness.run();
+    let states = outcome_states(&harness);
+    assert_eq!(
+        states,
+        [
+            ("lena.jpg".to_owned(), ItemState::NeedsReview),
+            ("long.mp4".to_owned(), ItemState::Cancelled)
+        ]
+    );
+    harness.get_by_role_and_label(Role::ListItem, "long.mp4, Cancelled");
+
+    let dir = Dir::new("cancel-run");
+    let mut harness = started_run(&dir);
+    // The run's Cancel is above the list of items, each of which has its own.
+    harness
+        .get_all_by_role_and_label(Role::Button, "Cancel")
+        .next()
+        .unwrap()
+        .click();
+    harness.step();
+    harness.state_mut().wait_for_run();
+    harness.run();
+    let states = outcome_states(&harness);
+    assert!(
+        matches!(states[0].1, ItemState::NeedsReview | ItemState::Cancelled),
+        "{states:?}"
+    );
+    assert_eq!(states[1], ("long.mp4".to_owned(), ItemState::Cancelled));
+    assert!(harness.query_by_label("Cancel").is_none());
+    harness.get_by_role_and_label(Role::Button, "New run");
 }
 
 /// Every message of every language, the new screens' included, in the fonts the window uses for

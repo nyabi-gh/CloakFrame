@@ -837,6 +837,19 @@ impl AppState {
         }
     }
 
+    /// Waits until the run in progress has named its items, for tests that act on one.
+    pub fn wait_for_run_items(&mut self) {
+        let (Some(running), Some(board)) = (&self.running, &mut self.board) else {
+            return;
+        };
+        while board.items.is_empty() && !board.is_over() {
+            match running.wait() {
+                Some(message) => board.take(message),
+                None => break,
+            }
+        }
+    }
+
     /// Waits for the run in progress to end, for tests.
     pub fn wait_for_run(&mut self) {
         let (Some(running), Some(board)) = (&self.running, &mut self.board) else {
