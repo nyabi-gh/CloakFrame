@@ -1,0 +1,61 @@
+name: Preview
+
+# Plan M6 stage 5: the macOS arm64 preview (tools/package/macos_preview.sh), once the maintainer
+# has checked the app on macOS. The release it makes is a draft; publishing it is the
+# maintainer's.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of the draft prerelease, such as v2.0.0-preview.1
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  macos:
+    name: macOS arm64 preview
+    runs-on: macos-15
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "15.0"
+        run: cargo build --release --locked -p cloakframe-app
+
+      - name: Fetch ONNX Runtime and FFmpeg
+        run: |
+          echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+          echo "FFMPEG=$(python3 -I tools/fetch_native.py ffmpeg macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+          echo "FFPROBE=$(python3 -I tools/fetch_native.py ffprobe macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+
+      - name: Package
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | python3 -I -c 'import json, sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"] == "cloakframe-app"))')
+          zip=$(tools/package/macos_preview.sh "$version" target/release/cloakframe "$ORT" "$FFMPEG" "$FFPROBE" "$RUNNER_TEMP/preview")
+          echo "ZIP=$zip" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: preview-macos-arm64-${{ github.run_id }}
+          path: ${{ env.ZIP }}
+          if-no-files-found: error
+
+      - name: Draft the prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          gh release create "$TAG" "$ZIP" --draft --prerelease --target "$GITHUB_SHA" \
+            --title "CloakFrame ${TAG#v}" --notes-file docs/PREVIEW_NOTES.md
