@@ -34,16 +34,13 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET: "15.0"
         run: cargo build --release --locked -p cloakframe-app
 
-      - name: Fetch ONNX Runtime and FFmpeg
-        run: |
-          echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
-          echo "FFMPEG=$(python3 -I tools/fetch_native.py ffmpeg macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
-          echo "FFPROBE=$(python3 -I tools/fetch_native.py ffprobe macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+      - name: Fetch ONNX Runtime
+        run: echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
 
       - name: Package
         run: |
           version=$(cargo metadata --no-deps --format-version 1 | python3 -I -c 'import json, sys; print(next(p["version"] for p in json.load(sys.stdin)["packages"] if p["name"] == "cloakframe-app"))')
-          zip=$(tools/package/macos_preview.sh "$version" target/release/cloakframe "$ORT" "$FFMPEG" "$FFPROBE" "$RUNNER_TEMP/preview")
+          zip=$(tools/package/macos_preview.sh "$version" target/release/cloakframe "$ORT" "$RUNNER_TEMP/preview")
           echo "ZIP=$zip" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
