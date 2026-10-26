@@ -6,18 +6,21 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
+use cloakframe_core::detection::{KindThresholds, Thresholds};
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method as MaskMethod, MosaicStrength};
 use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stale_outputs};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::Acceleration;
-use cloakframe_engine::detect::models::{DetectionModels, LoadError};
+use cloakframe_engine::detect::models::{DetectionModels, FaceModel as EngineFaceModel, LoadError};
 use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::events::{Event, ProgressBoard};
+use cloakframe_engine::media::encode::{OutputCodec, Quality};
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::model_files::{ModelStore, model_file};
+use cloakframe_engine::photo::metadata::MetadataPolicy;
 use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
-use cloakframe_engine::run::{ItemProcessor, RunReport, start_under};
+use cloakframe_engine::run::{Failure as ItemFailure, ItemProcessor, Note, RunReport, start_under};
 use cloakframe_engine::scan::ScannedFile;
 use cloakframe_engine::session::{SessionId, SessionStore};
 use cloakframe_engine::startup::{self, StartError};
@@ -27,8 +30,9 @@ use eframe::egui;
 use serde::{Deserialize, Serialize};
 
 use crate::progress::{self, Overall, Pace};
-use crate::settings::{Method, Settings};
+use crate::settings::{Advanced, FaceModel, Method, Settings, VideoCodec, VideoQuality};
 use crate::tools::Tools;
+use crate::wording::RunNote;
 
 /// Where a run keeps its review sessions and finds its models.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -83,7 +87,7 @@ pub enum Message {
         state: ItemState,
     },
     /// Something the user should hear of that does not stop the run.
-    Note(String),
+    Note(RunNote),
     Finished(Finished),
     /// The run could not start.
     Failed(Failure),
@@ -95,6 +99,8 @@ pub enum Failure {
     NoRuntime,
     /// A model is not in the model folder; it has to be downloaded.
     MissingModel(&'static str),
+    NoDataFolder,
+    /// The engine's English, as the CLI words it.
     Other(String),
 }
 
@@ -103,7 +109,7 @@ pub struct Finished {
     pub report: RunReport,
     /// The session holding the items that wait for review, if any do and it was saved.
     pub session: Option<SessionId>,
-    pub problems: Vec<String>,
+    pub problems: Vec<RunNote>,
 }
 
 pub struct Running {
@@ -170,6 +176,10 @@ pub struct RunOptions {
     pub plates: bool,
     pub method: Method,
     pub mosaic_strength: u8,
+    /// Missing from sessions saved before there were advanced settings, which ran with the
+    /// defaults.
+    #[serde(default)]
+    pub advanced: Advanced,
 }
 
 impl RunOptions {
@@ -179,6 +189,7 @@ impl RunOptions {
             plates: settings.plates,
             method: settings.method,
             mosaic_strength: settings.mosaic_strength,
+            advanced: settings.advanced,
         }
     }
 
@@ -198,11 +209,32 @@ impl RunOptions {
     }
 
     fn models(&self) -> Result<DetectionModels, Failure> {
-        let face = self
-            .faces
-            .then(|| DetectionModels::default().face())
-            .flatten();
+        let face = self.faces.then_some(match self.advanced.face_model {
+            FaceModel::Accurate => EngineFaceModel::Yolo5FaceN,
+            FaceModel::Fast => EngineFaceModel::YuNet,
+        });
         DetectionModels::new(face, self.plates).map_err(other)
+    }
+
+    /// The models' thresholds with the sensitivity's score for both kinds.
+    fn thresholds(&self, models: &DetectionModels) -> Thresholds {
+        let defaults = models.default_thresholds();
+        let score = self.advanced.score();
+        let with_score = |t: KindThresholds| {
+            KindThresholds::new(score, t.nms_iou()).expect("a slider score is a valid threshold")
+        };
+        Thresholds {
+            face: with_score(defaults.face),
+            plate: with_score(defaults.plate),
+        }
+    }
+
+    pub fn acceleration(&self) -> Acceleration {
+        if self.advanced.gpu {
+            Acceleration::Gpu
+        } else {
+            Acceleration::CpuOnly
+        }
     }
 }
 
@@ -213,10 +245,19 @@ pub fn processor(
     records: PathBuf,
 ) -> Result<MediaProcessor, Failure> {
     let models = options.models()?;
+    let advanced = &options.advanced;
     let photo = PhotoProcessor::new(PhotoSettings {
         models,
-        thresholds: models.default_thresholds(),
+        thresholds: options.thresholds(&models),
+        tiles: advanced.tiles,
         style: options.style(),
+        metadata: if advanced.keep_metadata {
+            MetadataPolicy::Allowlist {
+                gps: advanced.keep_gps,
+            }
+        } else {
+            MetadataPolicy::Strip
+        },
         ..PhotoSettings::default()
     })
     .map_err(other)?;
@@ -231,6 +272,17 @@ pub fn processor(
                     ..AnalysisSettings::default()
                 },
                 style: photo_settings.style,
+                codec: match advanced.video_codec {
+                    VideoCodec::H264 => OutputCodec::H264,
+                    VideoCodec::Hevc => OutputCodec::Hevc,
+                },
+                quality: match advanced.video_quality {
+                    VideoQuality::High => Quality::High,
+                    VideoQuality::Balanced => Quality::Balanced,
+                    VideoQuality::SpaceSaver => Quality::SpaceSaver,
+                },
+                hardware_encode: advanced.gpu,
+                remove_audio: advanced.remove_audio,
                 ..VideoSettings::default()
             };
             Some(VideoProcessor::new(
@@ -279,11 +331,13 @@ fn estimate(
 }
 
 fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failure> {
-    let no_folder = || Failure::Other("no app data folder for this user".to_owned());
-    let store = request.folders.sessions().ok_or_else(no_folder)?;
+    let store = request.folders.sessions().ok_or(Failure::NoDataFolder)?;
     if let Ok(left) = store.sweep() {
         for (path, e) in left {
-            tell.tell(Message::Note(format!("{}: {e}", path.display())));
+            tell.tell(Message::Note(RunNote::NotSwept {
+                path,
+                error: e.to_string(),
+            }));
         }
     }
     let id = SessionId::generate();
@@ -308,14 +362,18 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
             .ort_library
             .as_ref()
             .ok_or(Failure::NoRuntime)?;
-        let folder = request.folders.models.clone().ok_or_else(no_folder)?;
+        let folder = request
+            .folders
+            .models
+            .clone()
+            .ok_or(Failure::NoDataFolder)?;
         startup::with_runtime(
             runtime(library)?,
             &ModelStore::new(folder),
             request.folders.app_models,
             models,
-            Acceleration::Gpu,
-            |note| tell.tell(Message::Note(note.to_string())),
+            options.acceleration(),
+            |note| tell.tell(Message::Note(RunNote::of_start(&note))),
         )
         .map_err(|e| match e {
             StartError::Load(LoadError::Missing { model, .. }) => {
@@ -339,7 +397,7 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
             .spawn_scoped(scope, || estimate(&processor, &items, &estimating, tell));
         // Without estimates the items the engine has not reached count their kind's average.
         if let Err(e) = spawned {
-            tell.tell(Message::Note(format!("cannot estimate the work: {e}")));
+            tell.tell(Message::Note(RunNote::NoEstimate(e.to_string())));
         }
         for event in handle.events().iter() {
             match event {
@@ -370,19 +428,19 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
     let session = match saved {
         Some(Ok(())) => Some(id.clone()),
         Some(Err(e)) => {
-            problems.push(format!("cannot save the review session: {e}"));
+            problems.push(RunNote::SessionNotSaved(e.to_string()));
             None
         }
         None => None,
     };
     if let Err(e) = cleaned {
-        problems.push(format!(
-            "cannot remove the video analysis records in {}: {e}",
-            store.records_dir(&id).display()
-        ));
+        problems.push(RunNote::RecordsLeft {
+            path: store.records_dir(&id),
+            error: e.to_string(),
+        });
     }
-    for (item, reason) in left_out {
-        problems.push(format!("item {}: {reason}", item.0));
+    for (item, why) in left_out {
+        problems.push(RunNote::LeftOut { item, why });
     }
     tell.tell(Message::Finished(Finished {
         report,
@@ -396,9 +454,9 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
 #[derive(Debug, Clone, PartialEq)]
 pub enum Logged {
     State(ItemId, ItemState),
-    /// The engine's own words, in English like the CLI's (plan 6: the log is the detail).
-    Note(Option<ItemId>, String),
-    Failed(ItemId, String),
+    Note(RunNote),
+    ItemNote(ItemId, Note),
+    Failed(ItemId, ItemFailure),
 }
 
 /// The latest state of each item of a run, as the window shows it.
@@ -413,7 +471,7 @@ pub struct Board {
     /// Items the user cancelled that the engine has not stopped yet.
     pub cancelling: BTreeSet<ItemId>,
     pub log: Vec<(Duration, Logged)>,
-    pub notes: Vec<String>,
+    pub notes: Vec<RunNote>,
     pub finished: Option<Finished>,
     pub failure: Option<Failure>,
     pace: Pace,
@@ -463,22 +521,22 @@ impl Board {
                 self.log.push((at, Logged::State(item, state)));
             }
             Message::Note(note) => {
-                self.log.push((at, Logged::Note(None, note.clone())));
+                self.log.push((at, Logged::Note(note.clone())));
                 self.notes.push(note);
             }
             Message::Finished(finished) => {
                 for outcome in &finished.report.items {
-                    if let Some(failure) = outcome.failure_reason() {
+                    if let Some(failure) = &outcome.failure {
                         self.log
-                            .push((at, Logged::Failed(outcome.item, failure.to_owned())));
+                            .push((at, Logged::Failed(outcome.item, failure.clone())));
                     }
                     for note in &outcome.notes {
                         self.log
-                            .push((at, Logged::Note(Some(outcome.item), note.to_string())));
+                            .push((at, Logged::ItemNote(outcome.item, note.clone())));
                     }
                 }
                 for problem in &finished.problems {
-                    self.log.push((at, Logged::Note(None, problem.clone())));
+                    self.log.push((at, Logged::Note(problem.clone())));
                 }
                 self.cancelling.clear();
                 self.finished = Some(finished);
@@ -565,5 +623,161 @@ mod tests {
             Some(&Logged::State(ItemId(1), ItemState::Cancelled))
         );
         assert_eq!(board.name(ItemId(1)), "b.jpg");
+    }
+
+    /// Every advanced setting reaches the engine: each changes what the photo or the video
+    /// processor fingerprints, so a review made with other settings is refused rather than
+    /// rendered with the main screen's.
+    #[test]
+    fn every_advanced_setting_changes_what_the_engine_processes_with() {
+        let tools = Tools {
+            ffmpeg: Some(PathBuf::from("ffmpeg")),
+            ffprobe: Some(PathBuf::from("ffprobe")),
+            ..Tools::default()
+        };
+        let fingerprints = |advanced: Advanced| {
+            let options = RunOptions {
+                advanced,
+                ..RunOptions::of(&Settings::default())
+            };
+            let processor = processor(&options, &tools, PathBuf::from("records")).unwrap();
+            (
+                processor.fingerprint(Path::new("a.jpg")),
+                processor.fingerprint(Path::new("a.mp4")),
+            )
+        };
+        let default = Advanced::default();
+        let (photo, video) = fingerprints(default);
+        let changed: [(&str, Advanced, bool, bool); 8] = [
+            (
+                "model",
+                Advanced {
+                    face_model: FaceModel::Fast,
+                    ..default
+                },
+                true,
+                true,
+            ),
+            (
+                "sensitivity",
+                Advanced {
+                    sensitivity: 5,
+                    ..default
+                },
+                true,
+                true,
+            ),
+            (
+                "tiles",
+                Advanced {
+                    tiles: false,
+                    ..default
+                },
+                true,
+                true,
+            ),
+            (
+                "metadata",
+                Advanced {
+                    keep_metadata: true,
+                    ..default
+                },
+                true,
+                false,
+            ),
+            (
+                "audio",
+                Advanced {
+                    remove_audio: true,
+                    ..default
+                },
+                false,
+                true,
+            ),
+            (
+                "quality",
+                Advanced {
+                    video_quality: VideoQuality::SpaceSaver,
+                    ..default
+                },
+                false,
+                true,
+            ),
+            (
+                "codec",
+                Advanced {
+                    video_codec: VideoCodec::Hevc,
+                    ..default
+                },
+                false,
+                true,
+            ),
+            (
+                "gpu",
+                Advanced {
+                    gpu: false,
+                    ..default
+                },
+                false,
+                true,
+            ),
+        ];
+        for (name, advanced, photo_changes, video_changes) in changed {
+            let (p, v) = fingerprints(advanced);
+            assert_eq!(p != photo, photo_changes, "{name} and the photo");
+            assert_eq!(v != video, video_changes, "{name} and the video");
+        }
+        let gps = Advanced {
+            keep_metadata: true,
+            ..default
+        };
+        assert_ne!(
+            fingerprints(gps).0,
+            fingerprints(Advanced {
+                keep_gps: true,
+                ..gps
+            })
+            .0
+        );
+        assert_eq!(
+            RunOptions {
+                advanced: Advanced {
+                    gpu: false,
+                    ..default
+                },
+                ..RunOptions::of(&Settings::default())
+            }
+            .acceleration(),
+            Acceleration::CpuOnly
+        );
+    }
+
+    /// A session keeps its run's advanced settings, and one saved before there were any reads
+    /// as the defaults those runs used.
+    #[test]
+    fn sessions_keep_the_advanced_settings() {
+        let options = RunOptions {
+            advanced: Advanced {
+                face_model: FaceModel::Fast,
+                sensitivity: 2,
+                remove_audio: true,
+                ..Advanced::default()
+            },
+            ..RunOptions::of(&Settings::default())
+        };
+        let stored = serde_json::to_value(options).unwrap();
+        assert_eq!(
+            serde_json::from_value::<RunOptions>(stored).unwrap(),
+            options
+        );
+        let before = serde_json::json!({
+            "faces": true, "plates": false, "method": "mosaic", "mosaic_strength": 8
+        });
+        assert_eq!(
+            serde_json::from_value::<RunOptions>(before)
+                .unwrap()
+                .advanced,
+            Advanced::default()
+        );
     }
 }

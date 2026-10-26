@@ -274,7 +274,10 @@ refused-settings = This item was analyzed with other settings; run it again.
 refused-stale = This item was decided elsewhere meanwhile; open the review again.
 refused-name = The output folder already has a file of this name. A free name: { $name }
 refused-rename = Save as { $name }
-refused-other = The decision was refused: { $reason }
+refused-invalid-name = The output name is not a valid file name.
+refused-unresolved = This item still has unresolved problems.
+refused-not-covered = An added area no longer covers a problem marked as covered by it.
+refused-internal = The decision was refused because of a fault in CloakFrame: { $reason }
 confirm-warnings-title = Export with unresolved problems?
 confirm-warnings-body = { $count ->
     [one] One problem is
@@ -319,3 +322,94 @@ shortcut-zoom = Zoom in, zoom out, fit, full resolution
 shortcut-pages = Previous or next item
 shortcut-help = Show or hide this list
 shortcut-scroll = Scroll to move the view; pinch or Ctrl + scroll to zoom.
+
+editor-cancelled = Not saved: cancelled
+
+run-failed = The run could not start: { $error }
+run-failed-no-data-folder = There is no app data folder for this user.
+
+failure-unsupported = This file's format or content is not one CloakFrame processes.
+failure-too-large = This file is larger than CloakFrame processes at once.
+failure-unreadable = The file cannot be read; it may be damaged.
+failure-source-changed = The file changed or went away while it was processed; run it again.
+failure-name-taken = A file of the output's name appeared during the run, and was not replaced.
+failure-output = The output cannot be written to the output folder.
+failure-encode = The output could not be encoded.
+failure-detection = Detection failed on this file.
+failure-tool = FFmpeg could not be started.
+failure-other = Something went wrong with this file.
+
+note-color-converted = Colors converted to sRGB
+note-color-profile-ignored = An unusable color profile was dropped; the colors were read as sRGB
+note-nothing-detected = Nothing was detected
+note-tracked-nothing = Nothing was tracked
+note-tracked-faces = Tracked { $faces ->
+    [one] one face
+   *[other] { $faces } faces
+}
+note-tracked-plates = Tracked { $plates ->
+    [one] one license plate
+   *[other] { $plates } license plates
+}
+note-tracked-both = Tracked { $faces ->
+    [one] one face
+   *[other] { $faces } faces
+} and { $plates ->
+    [one] one license plate
+   *[other] { $plates } license plates
+}
+note-analyzed-again-on-cpu = The GPU failed, so this item was analyzed again on the CPU, as is the rest of the run
+note-encoded-again-in-software = The hardware encoder { $encoder } failed, so this video was encoded again in software, as is the rest of the run: { $reason }
+note-padded = The odd size was padded to { $width }×{ $height }
+note-folder-not-flushed = Saved, but the output folder could not be flushed to disk
+note-temp-file-left = Saved, but a temporary file was left next to it; a later run removes it
+note-records-left = Saved, but the video's analysis records were left in the app's data folder; a later run removes them
+
+run-note-not-swept = Cannot remove { $path }: { $error }
+run-note-model-copied = Copied { $name } from CloakFrame 1.12.1 ({ $from })
+run-note-legacy-coreml = Cannot remove the models CloakFrame 1.12.1 compiled for CoreML: { $error }
+run-note-unused-coreml = Cannot remove compiled CoreML models this version does not use: { $error }
+run-note-no-estimate = Cannot estimate the work: { $error }
+run-note-session-not-saved = Cannot save the review session: { $error }
+run-note-records-left = Cannot remove the video analysis records in { $path }: { $error }
+run-note-left-out-not-analyzed = { $name } cannot wait for review: the run kept no record of what it analyzed.
+run-note-left-out-changed = { $name } cannot wait for review: it changed or went away after it was analyzed.
+
+advanced = Advanced Options
+face-model = Face model
+face-model-accurate = Accurate  ·  YOLO5Face-n
+face-model-fast = Fast  ·  YuNet
+sensitivity = Sensitivity
+sensitivity-lowest = Lowest
+sensitivity-low = Low
+sensitivity-default = Default
+sensitivity-high = High
+sensitivity-highest = Highest
+sensitivity-hint = Higher finds more faces and license plates but masks more that are not; lower misses more. Masks from score { $score }.
+tiles = Look for small faces in tiles
+tiles-hint = Also detects in overlapping parts of large photos and videos, for faces too small to find in the whole picture. Slower.
+keep-metadata = Preserve selected EXIF metadata
+keep-metadata-hint = Off (default): saved photos carry no metadata. On: only the camera, lens, exposure and capture time are copied, and the location only if you also choose it. Videos never keep metadata.
+keep-gps = Also keep location (GPS)
+remove-audio = Remove audio from videos
+remove-audio-hint = Off (default): videos keep their audio. Voices and anything said, such as names or phone numbers, are not anonymized.
+video-quality = Video quality
+video-quality-high = High (near-original)
+video-quality-balanced = Balanced
+video-quality-space-saver = Smaller files
+video-quality-hint = Quality of re-encoded videos. Higher quality produces larger files.
+video-codec = Video codec
+video-codec-h264 = H.264 (most compatible)
+video-codec-hevc = HEVC (smaller files)
+video-codec-hint = Codec for re-encoded videos. HEVC produces smaller files but may not play on older devices.
+gpu = Use GPU acceleration
+gpu-hint = Runs detection models and video encoding on the GPU when available. Applies from the next run.
+advanced-next-run = These apply from the next run; a review saves with the settings its run used.
+sample-title = Preview
+sample-alt = Anonymization style preview
+
+found-list = Photos and videos to process
+found-photo = Photo { $name }
+found-video = Video { $name }
+run-list = Items of this run
+review-queue = Items to review

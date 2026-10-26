@@ -10,6 +10,7 @@ use fluent_bundle::FluentValue;
 
 use cloakframe_core::item::{ItemId, ItemState};
 
+use crate::a11y;
 use crate::editor::{ReviewScreen, ScreenAct};
 use crate::fonts;
 use crate::i18n::{Language, Translator};
@@ -17,12 +18,28 @@ use crate::models::Models;
 use crate::progress::Left;
 use crate::review::{OpenError, Review};
 use crate::run::{self, Board, Failure, Logged, Running};
+use crate::sample::Sample;
 use crate::sessions::{self, SavedSessions};
-use crate::settings::{Method, Notice, Settings, SettingsFile, Theme};
+use crate::settings::{
+    FaceModel, Method, Notice, Settings, SettingsFile, Theme, VideoCodec, VideoQuality,
+};
 use crate::shell;
 use crate::summary;
 use crate::thumbnails::Thumbnails;
 use crate::tools::Tools;
+use crate::wording;
+
+/// The sample photo's side, in points.
+const SAMPLE_SIDE: f32 = 144.0;
+
+/// The words of the sensitivity slider's steps, least sensitive first.
+const SENSITIVITY_LEVELS: [&str; 5] = [
+    "sensitivity-lowest",
+    "sensitivity-low",
+    "sensitivity-default",
+    "sensitivity-high",
+    "sensitivity-highest",
+];
 
 /// What a menu, a shortcut or a button asks of the app outside the widget it is in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -82,6 +99,7 @@ pub struct AppState {
     /// The saved session the user asked to discard, until they confirm.
     pub discarding: Option<SessionId>,
     pub quit: Quit,
+    sample: Sample,
 }
 
 impl AppState {
@@ -112,6 +130,7 @@ impl AppState {
             review: None,
             discarding: None,
             quit: Quit::No,
+            sample: Sample::new(),
         }
     }
 
@@ -250,21 +269,35 @@ impl AppState {
 
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         egui::Panel::top("menu").show(ui, |ui| crate::menu::bar(ui, self));
-        egui::Panel::bottom("start").show(ui, |ui| self.start_row(ui));
         egui::CentralPanel::default().show(ui, |ui| {
-            for notice in &self.notices {
-                ui.colored_label(ui.visuals().warn_fg_color, notice);
-            }
-            if self.review.is_some() {
-                self.review_view(ui);
-            } else if self.board.is_some() {
-                self.run_view(ui);
-            } else {
-                self.saved_sessions(ui);
-                self.drop_area(ui, &ctx);
+            // The start row is laid out last so that Tab reaches it after the screen above it:
+            // egui moves focus in the order widgets are made, and a bottom panel is made first.
+            let spacing = ui.spacing();
+            let row = spacing.interact_size.y + 3.0 * spacing.item_spacing.y + 1.0;
+            let whole = ui.available_rect_before_wrap();
+            let (above, start) = whole.split_top_bottom_at_y(whole.max.y - row);
+            ui.scope_builder(egui::UiBuilder::new().max_rect(above), |ui| {
+                ui.set_clip_rect(above.intersect(ui.clip_rect()));
+                for notice in &self.notices {
+                    ui.colored_label(ui.visuals().warn_fg_color, notice);
+                }
+                if self.review.is_some() {
+                    self.review_view(ui);
+                } else if self.board.is_some() {
+                    self.run_view(ui);
+                } else {
+                    egui::ScrollArea::vertical().id_salt("main").show(ui, |ui| {
+                        self.saved_sessions(ui);
+                        self.drop_area(ui, &ctx);
+                        ui.separator();
+                        self.what_and_how(ui);
+                    });
+                }
+            });
+            ui.scope_builder(egui::UiBuilder::new().max_rect(start), |ui| {
                 ui.separator();
-                self.what_and_how(ui);
-            }
+                self.start_row(ui);
+            });
         });
         crate::about::window(&ctx, self);
         self.models.window(&ctx, &self.tr);
@@ -436,59 +469,200 @@ impl AppState {
             thumbnails.take(ctx);
         }
         let thumbnails = &mut self.thumbnails;
+        let tr = &self.tr;
+        let list = tr.get("found-list");
         egui::ScrollArea::vertical()
             .max_height(280.0)
             .show(ui, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    for file in &found.files {
-                        let (cell, _) =
-                            ui.allocate_exact_size(egui::vec2(128.0, 148.0), egui::Sense::hover());
-                        if !ui.is_rect_visible(cell) {
-                            continue;
-                        }
-                        let picture = egui::Rect::from_min_size(cell.min, egui::vec2(128.0, 128.0));
-                        let shown = thumbnails
-                            .as_mut()
-                            .and_then(|t| t.get(&file.path, file.kind).flatten());
-                        match shown {
-                            Some(texture) => {
-                                let size = texture.size_vec2();
-                                let fit = size * (128.0 / size.max_elem());
-                                let at = egui::Rect::from_center_size(picture.center(), fit);
-                                egui::Image::new(texture).paint_at(ui, at);
+                a11y::list(ui, &list, |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        for file in &found.files {
+                            let (cell, response) = ui.allocate_exact_size(
+                                egui::vec2(128.0, 148.0),
+                                egui::Sense::hover(),
+                            );
+                            let name = file.relative.display().to_string();
+                            let kind = match file.kind {
+                                MediaKind::Image => "found-photo",
+                                MediaKind::Video => "found-video",
+                            };
+                            let described =
+                                tr.with(kind, &[("name", FluentValue::from(name.as_str()))]);
+                            response.widget_info(|| {
+                                egui::WidgetInfo::labeled(egui::Role::ListItem, true, &described)
+                            });
+                            if !ui.is_rect_visible(cell) {
+                                continue;
                             }
-                            None => {
-                                let mark = match file.kind {
-                                    MediaKind::Image => "▣",
-                                    MediaKind::Video => "▶",
-                                };
-                                ui.painter()
-                                    .rect_filled(picture, 4.0, ui.visuals().faint_bg_color);
-                                ui.painter().text(
-                                    picture.center(),
-                                    egui::Align2::CENTER_CENTER,
-                                    mark,
-                                    egui::FontId::proportional(28.0),
-                                    ui.visuals().weak_text_color(),
-                                );
+                            let picture =
+                                egui::Rect::from_min_size(cell.min, egui::vec2(128.0, 128.0));
+                            let shown = thumbnails
+                                .as_mut()
+                                .and_then(|t| t.get(&file.path, file.kind).flatten());
+                            match shown {
+                                Some(texture) => {
+                                    let size = texture.size_vec2();
+                                    let fit = size * (128.0 / size.max_elem());
+                                    let at = egui::Rect::from_center_size(picture.center(), fit);
+                                    egui::Image::new(texture).paint_at(ui, at);
+                                }
+                                None => {
+                                    let mark = match file.kind {
+                                        MediaKind::Image => "▣",
+                                        MediaKind::Video => "▶",
+                                    };
+                                    ui.painter().rect_filled(
+                                        picture,
+                                        4.0,
+                                        ui.visuals().faint_bg_color,
+                                    );
+                                    ui.painter().text(
+                                        picture.center(),
+                                        egui::Align2::CENTER_CENTER,
+                                        mark,
+                                        egui::FontId::proportional(28.0),
+                                        ui.visuals().weak_text_color(),
+                                    );
+                                }
                             }
+                            let label = egui::Rect::from_min_max(
+                                egui::pos2(cell.min.x, picture.max.y + 2.0),
+                                cell.max,
+                            );
+                            ui.put(
+                                label,
+                                egui::Label::new(egui::RichText::new(name).small()).truncate(),
+                            );
                         }
-                        let label = egui::Rect::from_min_max(
-                            egui::pos2(cell.min.x, picture.max.y + 2.0),
-                            cell.max,
-                        );
-                        let name = file.relative.display().to_string();
-                        ui.put(
-                            label,
-                            egui::Label::new(egui::RichText::new(name).small()).truncate(),
-                        );
-                    }
+                    });
                 });
             });
     }
 
     fn what_and_how(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
+        ui.horizontal_top(|ui| {
+            ui.vertical(|ui| {
+                ui.set_max_width((ui.available_width() - SAMPLE_SIDE - 16.0).max(240.0));
+                self.what_and_how_controls(ui);
+                egui::CollapsingHeader::new(self.tr.get("advanced"))
+                    .id_salt("advanced")
+                    .show(ui, |ui| self.advanced(ui));
+            });
+            self.sample_preview(ui);
+        });
+        if self.settings != before {
+            self.save_settings();
+        }
+    }
+
+    /// What a run with the settings as they are would make of the sample photo.
+    fn sample_preview(&mut self, ui: &mut egui::Ui) {
+        let options = run::RunOptions::of(&self.settings);
+        let texture = self.sample.texture(ui.ctx(), &options);
+        ui.vertical(|ui| {
+            ui.label(self.tr.get("sample-title"));
+            let image = egui::Image::new((texture.id(), egui::vec2(SAMPLE_SIDE, SAMPLE_SIDE)))
+                .alt_text(self.tr.get("sample-alt"));
+            ui.add(image);
+        });
+    }
+
+    fn advanced(&mut self, ui: &mut egui::Ui) {
+        let tr = &self.tr;
+        let advanced = &mut self.settings.advanced;
+        ui.add_enabled_ui(self.settings.faces, |ui| {
+            ui.horizontal_wrapped(|ui| {
+                ui.label(tr.get("face-model"));
+                ui.radio_value(
+                    &mut advanced.face_model,
+                    FaceModel::Accurate,
+                    tr.get("face-model-accurate"),
+                );
+                ui.radio_value(
+                    &mut advanced.face_model,
+                    FaceModel::Fast,
+                    tr.get("face-model-fast"),
+                );
+            });
+        });
+        ui.horizontal(|ui| {
+            let step = advanced.sensitivity.clamp(1, 5);
+            advanced.sensitivity = step;
+            let slider = ui
+                .add(
+                    egui::Slider::new(&mut advanced.sensitivity, 1..=5)
+                        .show_value(false)
+                        .text(tr.get("sensitivity")),
+                )
+                .on_hover_text(tr.with(
+                    "sensitivity-hint",
+                    &[(
+                        "score",
+                        FluentValue::from(format!("{:.2}", advanced.score())),
+                    )],
+                ));
+            let level = tr.get(SENSITIVITY_LEVELS[usize::from(advanced.sensitivity) - 1]);
+            slider.widget_info(|| {
+                let mut info = egui::WidgetInfo::slider(
+                    true,
+                    f64::from(advanced.sensitivity),
+                    tr.get("sensitivity"),
+                );
+                info.current_text_value = Some(level.clone());
+                info
+            });
+            ui.label(level);
+        });
+        ui.checkbox(&mut advanced.tiles, tr.get("tiles"))
+            .on_hover_text(tr.get("tiles-hint"));
+        ui.checkbox(&mut advanced.keep_metadata, tr.get("keep-metadata"))
+            .on_hover_text(tr.get("keep-metadata-hint"));
+        ui.indent("gps", |ui| {
+            ui.add_enabled(
+                advanced.keep_metadata,
+                egui::Checkbox::new(&mut advanced.keep_gps, tr.get("keep-gps")),
+            );
+        });
+        ui.checkbox(&mut advanced.remove_audio, tr.get("remove-audio"))
+            .on_hover_text(tr.get("remove-audio-hint"));
+        let quality = |q: VideoQuality| match q {
+            VideoQuality::High => "video-quality-high",
+            VideoQuality::Balanced => "video-quality-balanced",
+            VideoQuality::SpaceSaver => "video-quality-space-saver",
+        };
+        egui::ComboBox::from_label(tr.get("video-quality"))
+            .selected_text(tr.get(quality(advanced.video_quality)))
+            .show_ui(ui, |ui| {
+                for q in [
+                    VideoQuality::High,
+                    VideoQuality::Balanced,
+                    VideoQuality::SpaceSaver,
+                ] {
+                    ui.selectable_value(&mut advanced.video_quality, q, tr.get(quality(q)));
+                }
+            })
+            .response
+            .on_hover_text(tr.get("video-quality-hint"));
+        let codec = |c: VideoCodec| match c {
+            VideoCodec::H264 => "video-codec-h264",
+            VideoCodec::Hevc => "video-codec-hevc",
+        };
+        egui::ComboBox::from_label(tr.get("video-codec"))
+            .selected_text(tr.get(codec(advanced.video_codec)))
+            .show_ui(ui, |ui| {
+                for c in [VideoCodec::H264, VideoCodec::Hevc] {
+                    ui.selectable_value(&mut advanced.video_codec, c, tr.get(codec(c)));
+                }
+            })
+            .response
+            .on_hover_text(tr.get("video-codec-hint"));
+        ui.checkbox(&mut advanced.gpu, tr.get("gpu"))
+            .on_hover_text(tr.get("gpu-hint"));
+        ui.weak(tr.get("advanced-next-run"));
+    }
+
+    fn what_and_how_controls(&mut self, ui: &mut egui::Ui) {
         ui.horizontal_wrapped(|ui| {
             ui.label(self.tr.get("what"));
             ui.checkbox(&mut self.settings.faces, self.tr.get("faces"));
@@ -516,9 +690,6 @@ impl AppState {
         ui.checkbox(&mut self.settings.review, self.tr.get("review-first"));
         if !self.settings.faces && !self.settings.plates {
             ui.colored_label(ui.visuals().warn_fg_color, self.tr.get("models-need-one"));
-        }
-        if self.settings != before {
-            self.save_settings();
         }
     }
 
@@ -747,7 +918,10 @@ impl AppState {
                 Failure::MissingModel(name) => {
                     tr.with("model-missing", &[("name", FluentValue::from(*name))])
                 }
-                Failure::Other(e) => e.clone(),
+                Failure::NoDataFolder => tr.get("run-failed-no-data-folder"),
+                Failure::Other(e) => {
+                    tr.with("run-failed", &[("error", FluentValue::from(e.as_str()))])
+                }
             };
             ui.colored_label(ui.visuals().error_fg_color, text);
             if matches!(failure, Failure::MissingModel(_))
@@ -770,7 +944,8 @@ impl AppState {
             .iter()
             .chain(board.finished.iter().flat_map(|f| f.problems.iter()))
         {
-            ui.colored_label(ui.visuals().warn_fg_color, note);
+            let text = wording::run_note(note, |item| board.name(item), tr);
+            ui.colored_label(ui.visuals().warn_fg_color, text);
         }
         let progress = board
             .progress
@@ -781,67 +956,87 @@ impl AppState {
         egui::ScrollArea::vertical()
             .max_height((ui.available_height() - 40.0).max(120.0))
             .show(ui, |ui| {
-                for (item, input) in &board.items {
-                    let state = board.states.get(item).copied().unwrap_or(ItemState::Queued);
-                    let outcome = outcomes.and_then(|o| o.iter().find(|o| o.item == *item));
-                    let cancelling = board.cancelling.contains(item);
-                    ui.horizontal(|ui| {
-                        let shown = if cancelling {
+                a11y::list(ui, &tr.get("run-list"), |ui| {
+                    for (item, input) in &board.items {
+                        let state = board.states.get(item).copied().unwrap_or(ItemState::Queued);
+                        let outcome = outcomes.and_then(|o| o.iter().find(|o| o.item == *item));
+                        let cancelling = board.cancelling.contains(item);
+                        let shown = tr.get(if cancelling {
                             "state-cancelling"
                         } else {
                             state_id(state)
-                        };
-                        ui.label(tr.get(shown));
-                        ui.label(board.name(*item));
-                        let working = !state.is_terminal() && state != ItemState::NeedsReview;
-                        if working && let Some(p) = progress.get(item).filter(|p| p.total > 0) {
-                            ui.add(
-                                egui::ProgressBar::new(p.done as f32 / p.total as f32)
-                                    .desired_width(160.0),
-                            );
-                        }
-                        if working
-                            && !cancelling
-                            && !board.is_over()
-                            && ui.button(tr.get("cancel")).clicked()
-                        {
-                            act = Act::CancelItem(*item);
-                        }
-                        if let Some(o) = outcome {
-                            if matches!(o.state, ItemState::Published(_)) {
-                                if ui.button(tr.get("item-reveal")).clicked() {
-                                    act = Act::Show(o.destination.clone(), false);
-                                }
-                                if ui.button(tr.get("item-open")).clicked() {
-                                    act = Act::Show(o.destination.clone(), true);
-                                }
-                            } else if o.state == ItemState::NeedsReview {
-                                if let Some(session) = &session
-                                    && ui.button(tr.get("item-review")).clicked()
+                        });
+                        let name = board.name(*item);
+                        a11y::item_vertical(ui, &format!("{name}, {shown}"), |ui| {
+                            ui.horizontal(|ui| {
+                                ui.label(&shown);
+                                ui.label(&name);
+                                let working =
+                                    !state.is_terminal() && state != ItemState::NeedsReview;
+                                if working
+                                    && let Some(p) = progress.get(item).filter(|p| p.total > 0)
                                 {
-                                    act = Act::Review(session.clone(), Some(*item));
+                                    ui.add(
+                                        egui::ProgressBar::new(p.done as f32 / p.total as f32)
+                                            .desired_width(160.0),
+                                    );
                                 }
-                                if ui.button(tr.get("item-reveal-source")).clicked() {
-                                    act = Act::Show(input.clone(), false);
+                                if working
+                                    && !cancelling
+                                    && !board.is_over()
+                                    && ui.button(tr.get("cancel")).clicked()
+                                {
+                                    act = Act::CancelItem(*item);
                                 }
-                            }
-                        }
-                    });
-                    if let Some(o) = outcome {
-                        ui.indent(("why", item.0), |ui| {
-                            if let Some(failure) = o.failure_reason() {
-                                ui.colored_label(ui.visuals().error_fg_color, failure);
-                            }
-                            if o.state == ItemState::NeedsReview {
-                                let video =
-                                    o.analysis.video.as_ref().map(|v| (v.frames, v.seconds));
-                                for e in o.analysis.evidence.iter().filter(|e| !e.is_resolved()) {
-                                    ui.weak(summary::problem(e, video, tr));
+                                if let Some(o) = outcome {
+                                    if matches!(o.state, ItemState::Published(_)) {
+                                        if ui.button(tr.get("item-reveal")).clicked() {
+                                            act = Act::Show(o.destination.clone(), false);
+                                        }
+                                        if ui.button(tr.get("item-open")).clicked() {
+                                            act = Act::Show(o.destination.clone(), true);
+                                        }
+                                    } else if o.state == ItemState::NeedsReview {
+                                        if let Some(session) = &session
+                                            && ui.button(tr.get("item-review")).clicked()
+                                        {
+                                            act = Act::Review(session.clone(), Some(*item));
+                                        }
+                                        if ui.button(tr.get("item-reveal-source")).clicked() {
+                                            act = Act::Show(input.clone(), false);
+                                        }
+                                    }
                                 }
+                            });
+                            if let Some(o) = outcome {
+                                ui.indent(("why", item.0), |ui| {
+                                    if let Some(failure) = &o.failure {
+                                        ui.colored_label(
+                                            ui.visuals().error_fg_color,
+                                            wording::failure(failure, tr),
+                                        );
+                                        ui.weak(&failure.reason);
+                                    }
+                                    for note in &o.notes {
+                                        ui.weak(wording::note(note, tr));
+                                    }
+                                    if o.state == ItemState::NeedsReview {
+                                        let video = o
+                                            .analysis
+                                            .video
+                                            .as_ref()
+                                            .map(|v| (v.frames, v.seconds));
+                                        for e in
+                                            o.analysis.evidence.iter().filter(|e| !e.is_resolved())
+                                        {
+                                            ui.weak(summary::problem(e, video, tr));
+                                        }
+                                    }
+                                });
                             }
                         });
                     }
-                }
+                });
             });
         log_panel(ui, board, tr);
         match act {
@@ -879,52 +1074,64 @@ impl AppState {
         let mut open = None;
         let mut discard = None;
         egui::Frame::group(ui.style()).show(ui, |ui| {
-            ui.heading(tr.get("sessions-title"));
-            for saved in &self.sessions.list {
-                ui.horizontal(|ui| {
-                    if let Some(created) = saved.created {
+            let title = tr.get("sessions-title");
+            ui.heading(&title);
+            a11y::list(ui, &title, |ui| {
+                for saved in &self.sessions.list {
+                    let age = saved.created.map(|created| {
                         let days = sessions::age_days(created, now);
-                        ui.label(tr.with("session-age", &[("days", FluentValue::from(days))]));
-                    }
-                    match &saved.content {
-                        Ok(loaded) => {
-                            let output = loaded.session.output.display().to_string();
-                            ui.label(tr.with(
-                                "session-row",
-                                &[
-                                    ("items", FluentValue::from(loaded.session.items.len())),
-                                    ("output", FluentValue::from(output)),
-                                ],
-                            ));
-                            let changed = loaded.changed_count();
-                            if changed > 0 {
+                        tr.with("session-age", &[("days", FluentValue::from(days))])
+                    });
+                    let row = saved.content.as_ref().ok().map(|loaded| {
+                        let output = loaded.session.output.display().to_string();
+                        tr.with(
+                            "session-row",
+                            &[
+                                ("items", FluentValue::from(loaded.session.items.len())),
+                                ("output", FluentValue::from(output)),
+                            ],
+                        )
+                    });
+                    let name: Vec<&str> = age.iter().chain(&row).map(String::as_str).collect();
+                    a11y::item(ui, &name.join(", "), |ui| {
+                        if let Some(age) = &age {
+                            ui.label(age);
+                        }
+                        match &saved.content {
+                            Ok(loaded) => {
+                                if let Some(row) = &row {
+                                    ui.label(row);
+                                }
+                                let changed = loaded.changed_count();
+                                if changed > 0 {
+                                    ui.colored_label(
+                                        ui.visuals().warn_fg_color,
+                                        tr.with(
+                                            "session-changed",
+                                            &[("count", FluentValue::from(changed))],
+                                        ),
+                                    );
+                                }
+                                if ui.button(tr.get("session-open")).clicked() {
+                                    open = Some(saved.id.clone());
+                                }
+                            }
+                            Err(e) => {
                                 ui.colored_label(
                                     ui.visuals().warn_fg_color,
                                     tr.with(
-                                        "session-changed",
-                                        &[("count", FluentValue::from(changed))],
+                                        "session-unreadable",
+                                        &[("error", FluentValue::from(e.as_str()))],
                                     ),
                                 );
                             }
-                            if ui.button(tr.get("session-open")).clicked() {
-                                open = Some(saved.id.clone());
-                            }
                         }
-                        Err(e) => {
-                            ui.colored_label(
-                                ui.visuals().warn_fg_color,
-                                tr.with(
-                                    "session-unreadable",
-                                    &[("error", FluentValue::from(e.as_str()))],
-                                ),
-                            );
+                        if ui.button(tr.get("session-discard")).clicked() {
+                            discard = Some(saved.id.clone());
                         }
-                    }
-                    if ui.button(tr.get("session-discard")).clicked() {
-                        discard = Some(saved.id.clone());
-                    }
-                });
-            }
+                    });
+                }
+            });
         });
         if let Some(id) = open {
             let ctx = ui.ctx().clone();
@@ -1054,8 +1261,9 @@ pub fn log_line(board: &Board, at: Duration, logged: &Logged, tr: &Translator) -
     let time = format!("{:02}:{:02}", secs / 60, secs % 60);
     let (item, text) = match logged {
         Logged::State(item, state) => (Some(*item), tr.get(state_id(*state))),
-        Logged::Note(item, note) => (*item, note.clone()),
-        Logged::Failed(item, failure) => (Some(*item), failure.clone()),
+        Logged::Note(note) => (None, wording::run_note(note, |item| board.name(item), tr)),
+        Logged::ItemNote(item, note) => (Some(*item), wording::note(note, tr)),
+        Logged::Failed(item, failure) => (Some(*item), wording::failure_with_detail(failure, tr)),
     };
     match item {
         Some(item) => format!("{time}  {}  {text}", board.name(item)),
@@ -1081,9 +1289,11 @@ fn log_panel(ui: &mut egui::Ui, board: &Board, tr: &Translator) {
                 .max_height(200.0)
                 .stick_to_bottom(true)
                 .show(ui, |ui| {
-                    for line in &lines {
-                        ui.monospace(line);
-                    }
+                    a11y::list(ui, &tr.get("log-title"), |ui| {
+                        for line in &lines {
+                            ui.monospace(line);
+                        }
+                    });
                 });
         });
 }

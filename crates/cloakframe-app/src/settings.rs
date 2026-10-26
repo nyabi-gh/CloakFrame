@@ -28,6 +28,81 @@ pub enum Method {
     Blur,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum FaceModel {
+    /// YOLO5Face-n.
+    #[default]
+    Accurate,
+    /// YuNet.
+    Fast,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum VideoQuality {
+    #[default]
+    High,
+    Balanced,
+    SpaceSaver,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum VideoCodec {
+    #[default]
+    H264,
+    Hevc,
+}
+
+/// The score each step of the sensitivity slider masks from, least sensitive first; the middle
+/// one is the models' default (plan 6: one slider, NMS is not shown).
+pub const SENSITIVITY_SCORES: [f32; 5] = [0.70, 0.60, 0.50, 0.40, 0.30];
+
+/// The settings folded away under the main screen's what and how. The defaults are what runs
+/// used before there were any, so a session saved without them reads as it was run.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(default)]
+pub struct Advanced {
+    pub face_model: FaceModel,
+    /// 1 to 5, a step of [`SENSITIVITY_SCORES`].
+    pub sensitivity: u8,
+    pub tiles: bool,
+    /// The allowlisted camera and exposure tags of photos; nothing else is ever kept.
+    pub keep_metadata: bool,
+    /// The photo's location as well, only with `keep_metadata`.
+    pub keep_gps: bool,
+    pub remove_audio: bool,
+    pub video_quality: VideoQuality,
+    pub video_codec: VideoCodec,
+    /// Detection on the GPU and the platform's hardware video encoders.
+    pub gpu: bool,
+}
+
+impl Default for Advanced {
+    fn default() -> Self {
+        Self {
+            face_model: FaceModel::default(),
+            sensitivity: 3,
+            tiles: true,
+            keep_metadata: false,
+            keep_gps: false,
+            remove_audio: false,
+            video_quality: VideoQuality::default(),
+            video_codec: VideoCodec::default(),
+            gpu: true,
+        }
+    }
+}
+
+impl Advanced {
+    /// A value outside the slider, from a hand-edited file, counts as the nearest step.
+    pub fn score(&self) -> f32 {
+        let step = usize::from(self.sensitivity.clamp(1, 5)) - 1;
+        SENSITIVITY_SCORES[step]
+    }
+}
+
 /// The window's outer position and inner size, in points.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct WindowPlace {
@@ -55,6 +130,7 @@ pub struct Settings {
     pub mosaic_strength: u8,
     /// Hold every result for review; off publishes those with no unresolved problem.
     pub review: bool,
+    pub advanced: Advanced,
 }
 
 impl Default for Settings {
@@ -70,6 +146,7 @@ impl Default for Settings {
             method: Method::default(),
             mosaic_strength: cloakframe_core::mask::MosaicStrength::default().cells(),
             review: true,
+            advanced: Advanced::default(),
         }
     }
 }
@@ -256,6 +333,62 @@ mod tests {
         file.save(&changed).unwrap();
         let (_, back, notices) = SettingsFile::load(&path);
         assert_eq!((back, notices), (changed, vec![]));
+    }
+
+    #[test]
+    fn advanced_settings_round_trip_in_their_own_table() {
+        let dir = Dir::new("advanced");
+        let path = dir.0.join("settings.toml");
+        let (mut file, settings, _) = SettingsFile::load(&path);
+        let changed = Settings {
+            advanced: Advanced {
+                face_model: FaceModel::Fast,
+                sensitivity: 5,
+                tiles: false,
+                keep_metadata: true,
+                keep_gps: true,
+                remove_audio: true,
+                video_quality: VideoQuality::SpaceSaver,
+                video_codec: VideoCodec::Hevc,
+                gpu: false,
+            },
+            ..settings
+        };
+        file.save(&changed).unwrap();
+        let text = std::fs::read_to_string(&path).unwrap();
+        let table: toml::Table = text.parse().unwrap();
+        assert_eq!(
+            table["advanced"]["video_quality"].as_str(),
+            Some("space-saver")
+        );
+        assert_eq!(table["advanced"]["face_model"].as_str(), Some("fast"));
+        let (_, back, notices) = SettingsFile::load(&path);
+        assert_eq!((back, notices), (changed, vec![]));
+    }
+
+    /// A file from before the advanced settings, or one with only some of them, reads the rest
+    /// as the defaults; a sensitivity off the slider counts as its nearest end.
+    #[test]
+    fn missing_advanced_settings_are_the_defaults() {
+        let dir = Dir::new("partial");
+        let path = dir.0.join("settings.toml");
+        std::fs::write(
+            &path,
+            "version = 1\n[advanced]\ntiles = false\nsensitivity = 9\n",
+        )
+        .unwrap();
+        let (_, settings, notices) = SettingsFile::load(&path);
+        assert!(notices.is_empty(), "{notices:?}");
+        assert_eq!(
+            settings.advanced,
+            Advanced {
+                tiles: false,
+                sensitivity: 9,
+                ..Advanced::default()
+            }
+        );
+        assert_eq!(settings.advanced.score(), 0.30);
+        assert_eq!(Advanced::default().score(), 0.50);
     }
 
     #[test]

@@ -11,7 +11,9 @@ use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::events::Event;
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::review::{Action, Rejection, ReviewDecisions, apply};
-use cloakframe_engine::run::{ItemOutcome, ItemProcessor, Job, JobItem, start_under};
+use cloakframe_engine::run::{
+    Failure as ItemFailure, FailureKind, ItemOutcome, ItemProcessor, Job, JobItem, start_under,
+};
 use cloakframe_engine::session::{
     Session, SessionError, SessionId, SessionItem, SessionLock, SessionStore, StoredMedia,
 };
@@ -23,6 +25,7 @@ use crate::queue;
 use crate::run::{Failure, Folders, RunOptions, processor};
 use crate::settings::Settings;
 use crate::tools::Tools;
+use crate::wording::RunNote;
 
 /// Where an item stands in this review.
 #[derive(Debug, Clone, PartialEq)]
@@ -34,12 +37,13 @@ pub enum Status {
     Saved(PathBuf),
     Refused(Rejection),
     /// The render failed or was cancelled; the item stays in the session to decide again.
-    Failed(String),
+    Failed(ItemFailure),
+    Cancelled,
 }
 
 enum Rendered {
     Outcome(Box<ItemOutcome>),
-    Failed(ItemId, String),
+    Failed(ItemId, ItemFailure),
 }
 
 pub struct Review {
@@ -62,7 +66,7 @@ pub struct Review {
     jobs: mpsc::Sender<JobItem>,
     rendered: mpsc::Receiver<Rendered>,
     cancel: CancelToken,
-    pub problems: Vec<String>,
+    pub problems: Vec<RunNote>,
 }
 
 #[derive(Debug)]
@@ -183,7 +187,7 @@ impl Review {
         self.item(item).is_some()
             && matches!(
                 self.status(item),
-                Status::Waiting | Status::Refused(_) | Status::Failed(_)
+                Status::Waiting | Status::Refused(_) | Status::Failed(_) | Status::Cancelled
             )
     }
 
@@ -210,7 +214,7 @@ impl Review {
             self.status.insert(job.id, Status::Rendering);
             if self.jobs.send(job).is_err() {
                 self.status
-                    .insert(item, Status::Failed("the render thread ended".to_owned()));
+                    .insert(item, Status::Failed(internal("the render thread ended")));
             }
         }
     }
@@ -247,12 +251,12 @@ impl Review {
                         self.session.items.retain(|i| i.item != outcome.item);
                         Status::Saved(outcome.destination.clone())
                     }
-                    ItemState::Cancelled => Status::Failed("cancelled".to_owned()),
+                    ItemState::Cancelled => Status::Cancelled,
                     _ => Status::Failed(
                         outcome
-                            .failure_reason()
-                            .map(str::to_owned)
-                            .unwrap_or_else(|| "the item was not saved".to_owned()),
+                            .failure
+                            .clone()
+                            .unwrap_or_else(|| internal("the item was not saved")),
                     ),
                 };
                 self.status.insert(outcome.item, status);
@@ -275,8 +279,7 @@ impl Review {
                 .and_then(|()| self.store.prune(&self.id, &self.session))
         };
         if let Err(e) = result {
-            self.problems
-                .push(format!("cannot save the review session: {e}"));
+            self.problems.push(RunNote::SessionNotSaved(e.to_string()));
         }
     }
 
@@ -321,14 +324,22 @@ impl Drop for Review {
     }
 }
 
+/// A failure of the review's own machinery rather than of the item.
+fn internal(reason: impl Into<String>) -> ItemFailure {
+    ItemFailure {
+        kind: FailureKind::Other,
+        reason: reason.into(),
+    }
+}
+
 /// Renders one decided item as a run of its own. Reviewed items are not analyzed again, so no
 /// model is loaded.
 fn render(
     job: JobItem,
     processor: &Arc<MediaProcessor>,
     cancel: &CancelToken,
-) -> Result<ItemOutcome, String> {
-    let started = startup::without_models().map_err(|e| e.to_string())?;
+) -> Result<ItemOutcome, ItemFailure> {
+    let started = startup::without_models().map_err(|e| internal(e.to_string()))?;
     let handle = start_under(
         Job {
             items: vec![job],
@@ -339,7 +350,7 @@ fn render(
         started.handle,
         cancel,
     )
-    .map_err(|e| e.to_string())?;
+    .map_err(|e| internal(e.to_string()))?;
     let mut report = None;
     for event in handle.events().iter() {
         if let Event::RunFinished(r) = event {
@@ -350,5 +361,5 @@ fn render(
         .finish()
         .or(report)
         .and_then(|r| r.items.into_iter().next())
-        .ok_or_else(|| "the render ended without a report".to_owned())
+        .ok_or_else(|| internal("the render ended without a report"))
 }

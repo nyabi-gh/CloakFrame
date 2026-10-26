@@ -127,7 +127,10 @@ fn dropped_files_are_scanned_and_counted() {
     assert_eq!(found.files.len(), 3);
     harness.get_by_label("写真 2 件、動画 1 件");
     harness.get_by_label("txt 形式のファイル 1 件は処理できません");
-    harness.get_by_label_contains("髙橋.jpg");
+    // Each file is a named row of the list (egui #8700: no table roles).
+    harness.get_by_role_and_label(Role::List, "処理する写真と動画");
+    harness.get_by_role_and_label(Role::ListItem, "写真 髙橋.jpg");
+    harness.get_by_role_and_label(Role::ListItem, "動画 clip.mp4");
 
     // Without FFmpeg the videos are left out, and the window says why.
     let mut harness = harness_without_tools(&files);
@@ -245,7 +248,8 @@ fn start_runs_the_engine_and_shows_the_result() {
     harness.get_by_role_and_label(Role::Button, "Show in Folder");
     harness.get_by_label("Details").click();
     harness.run();
-    harness.get_by_label_contains("lena.jpg  Saved");
+    let log = harness.get_by_role_and_label(Role::List, "Details");
+    log.get_by_label_contains("lena.jpg  Saved");
     harness
         .get_by_role_and_label(Role::Button, "New run")
         .click();
@@ -341,9 +345,13 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.step();
     harness.state_mut().wait_for_sessions();
     harness.run();
-    harness.get_by_label("Waiting for review");
+    harness.get_by_role_and_label(Role::List, "Waiting for review");
     harness.get_by_label("Today");
     harness.get_by_label(&format!("3 items for {}", output.display()));
+    harness.get_by_role_and_label(
+        Role::ListItem,
+        &format!("Today, 3 items for {}", output.display()),
+    );
     harness.get_by_label("one original changed");
 
     harness.get_by_role_and_label(Role::Button, "Open").click();
@@ -1223,4 +1231,123 @@ fn every_message_of_every_language_can_be_drawn() {
             });
         harness.run();
     }
+}
+
+/// What Tab moves through, in order, until it comes back to the first widget.
+fn tab_order(harness: &mut Harness<'_, AppState>) -> Vec<String> {
+    let mut order: Vec<String> = Vec::new();
+    for _ in 0..80 {
+        harness.key_press(egui::Key::Tab);
+        harness.run();
+        let focused = harness
+            .query_by(|node| node.is_focused())
+            .map(|node| node.accesskit_node().label().unwrap_or_default());
+        let Some(label) = focused else { continue };
+        if order.first() == Some(&label) {
+            break;
+        }
+        order.push(label);
+    }
+    order
+}
+
+/// Tab goes through the screen as it reads: the files, what and how, the advanced options, then
+/// the folder and Start at the bottom.
+#[test]
+fn tab_follows_the_screen_from_top_to_bottom() {
+    let mut harness = harness(Language::En, Settings::default());
+    harness.run();
+    let order = tab_order(&mut harness);
+    let at = |label: &str| {
+        order
+            .iter()
+            .position(|l| l == label)
+            .unwrap_or_else(|| panic!("{label} is not in {order:?}"))
+    };
+    assert!(at("Add Files…") < at("Faces"), "{order:?}");
+    assert!(at("Faces") < at("Advanced Options"), "{order:?}");
+    assert!(at("Advanced Options") < at("Choose…"), "{order:?}");
+}
+
+/// The advanced options are folded away, and what is chosen in them is saved and runs with the
+/// next run's options.
+#[test]
+fn advanced_options_are_saved_and_run_with() {
+    use cloakframe_app::settings::{Advanced, FaceModel, SettingsFile, VideoCodec};
+    let dir = Dir::new("advanced");
+    let path = dir.0.join("settings.toml");
+    let (file, settings, _) = SettingsFile::load(&path);
+    let state = AppState::new(
+        Settings {
+            language: Some(Language::En),
+            ..settings
+        },
+        Some(file),
+        Vec::new(),
+    );
+    let mut harness = Harness::builder()
+        .with_size(egui::vec2(1100.0, 760.0))
+        .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
+        .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state);
+    harness.run();
+    assert!(harness.query_by_label("Remove audio from videos").is_none());
+    harness.get_by_role_and_label(Role::Image, "Anonymization style preview");
+
+    harness.get_by_label("Advanced Options").click();
+    harness.run();
+    harness.get_by_label("Fast  ·  YuNet").click();
+    harness
+        .get_by_role_and_label(Role::Slider, "Sensitivity")
+        .set_value_accesskit(5.0);
+    harness.run();
+    let slider = harness.get_by_role_and_label(Role::Slider, "Sensitivity");
+    assert_eq!(slider.value().as_deref(), Some("Highest"));
+    harness
+        .get_by_label("Look for small faces in tiles")
+        .click();
+    harness.run();
+    // The location is kept only with the rest of the metadata.
+    assert!(
+        harness
+            .get_by_label("Also keep location (GPS)")
+            .accesskit_node()
+            .is_disabled()
+    );
+    harness
+        .get_by_label("Preserve selected EXIF metadata")
+        .click();
+    harness.run();
+    harness.get_by_label("Also keep location (GPS)").click();
+    harness.get_by_label("Remove audio from videos").click();
+    harness.run();
+    harness.get_by_label("Video codec").click();
+    harness.run();
+    harness.get_by_label("HEVC (smaller files)").click();
+    harness.run();
+
+    let chosen = Advanced {
+        face_model: FaceModel::Fast,
+        sensitivity: 5,
+        tiles: false,
+        keep_metadata: true,
+        keep_gps: true,
+        remove_audio: true,
+        video_codec: VideoCodec::Hevc,
+        ..Advanced::default()
+    };
+    assert_eq!(harness.state().settings.advanced, chosen);
+    assert_eq!(RunOptions::of(&harness.state().settings).advanced, chosen);
+    let (_, saved, notices) = SettingsFile::load(&path);
+    assert!(notices.is_empty(), "{notices:?}");
+    assert_eq!(saved.advanced, chosen);
+
+    // With faces off, the face model has nothing to choose.
+    harness.get_by_label("Faces").click();
+    harness.run();
+    assert!(
+        harness
+            .get_by_label("Accurate  ·  YOLO5Face-n")
+            .accesskit_node()
+            .is_disabled()
+    );
 }

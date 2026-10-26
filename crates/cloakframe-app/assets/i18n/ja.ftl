@@ -8,7 +8,9 @@ drop-hint = 画像、動画、またはフォルダーをここにドロップ
 drop-release = 離すと { $count } 件を追加
 add-files = ファイルを追加…
 add-folder = フォルダーを追加…
+## 1.12.1
 clear-list = クリア
+## needs review
 scanning = 写真と動画を探しています…
 found-summary = 写真 { $photos } 件、動画 { $videos } 件
 skipped-type = { $extension } 形式のファイル { $count } 件は処理できません
@@ -68,24 +70,32 @@ about-version = バージョン { $version }
 about-license = CloakFrame は Apache License 2.0 のフリーソフトウェアです。
 about-third-party = サードパーティーの表示
 about-models = 検出モデル
+## 1.12.1
 close = 閉じる
 
+## needs review
 settings-unknown-keys = このバージョンが知らない設定はそのまま残しました: { $keys }
 settings-unreadable = 設定ファイルを読み込めなかったため、そのまま残しました: { $error }
-## needs review
 settings-newer = 新しいバージョンの CloakFrame が書いた設定です(形式 { $version })。ここでの変更は保存されません。
 
+## 1.12.1
+review-first = 保存前に確認
 ## needs review
-review-first = 保存する前に確認
 running = 処理しています…
+## 1.12.1
 cancel = キャンセル
+## needs review
 state-queued = 待機中
 state-analyzed = 分析済み
 state-needs-review = 確認が必要
+## 1.12.1
 state-rendering = 保存中
+## needs review
 state-verified = 確認済み
+## 1.12.1
 state-published = 保存済み
 state-failed = 失敗
+## needs review
 state-cancelled = キャンセル済み
 state-cancelling = キャンセル中
 summary-saved = { $count } 件保存
@@ -144,7 +154,6 @@ start-needs-runtime = アプリの隣に ONNX Runtime が見つかりません�
 model-missing = 検出モデル { $name } はまだダウンロードされていません。
 videos-need-ffmpeg = アプリの隣に FFmpeg が見つからないため、動画は除外しました。
 
-## needs review
 models-title = 検出モデル
 models-open = 検出モデル…
 models-folder = フォルダー: { $path }
@@ -160,7 +169,9 @@ model-present = ダウンロード済み
 model-not-downloaded = 未ダウンロード
 model-different = その場所のファイルはこのモデルではありません。ダウンロードすると置き換えます。
 model-accept-terms = この条件に同意します
+## 1.12.1
 model-download = ダウンロード
+## needs review
 model-download-failed = ダウンロードできませんでした: { $error }
 run-review = 今すぐ確認
 item-review = 確認
@@ -190,8 +201,10 @@ editor-problem-dismissed = 隠すものなし
 editor-cover = 隠す
 editor-dismiss = 隠すものなし
 editor-reopen = 元に戻す
-editor-undo = 取り消す
+## 1.12.1
+editor-undo = 元に戻す
 editor-redo = やり直す
+## needs review
 editor-shortcuts = ショートカット (?)
 editor-approve = 承認して保存
 editor-approve-blocked = 先にすべての問題を解決するか、警告付きで書き出してください。
@@ -205,7 +218,9 @@ editor-video-decoding = フレームをデコードしています…
 editor-video-frame-failed = フレームを表示できません: { $error }
 editor-video-frame = フレーム { $frame } (0–{ $last }) · { $time }
 editor-video-play = 再生
+## 1.12.1
 editor-video-stop = 停止
+## needs review
 editor-video-masked = 隠した結果で再生
 editor-timeline = タイムライン
 editor-tracks = トラック { $count } 件のうち { $masked } 件を隠す
@@ -230,16 +245,23 @@ refused-settings = この項目は別の設定で解析しました。もう一�
 refused-stale = その間に別の場所でこの項目が判断されました。確認画面を開き直してください。
 refused-name = 保存先に同じ名前のファイルがあります。使える名前: { $name }
 refused-rename = { $name } として保存
-refused-other = 判断が拒否されました: { $reason }
+refused-invalid-name = 出力名がファイル名として正しくありません。
+refused-unresolved = この項目には未解決の問題が残っています。
+refused-not-covered = 追加した領域で覆ったとした問題を、その領域が覆わなくなりました。
+refused-internal = CloakFrame の不具合のため、判断が拒否されました: { $reason }
 confirm-warnings-title = 未解決の問題があるまま書き出しますか？
 confirm-warnings-body = 問題 { $count } 件が未解決のため、隠れていない顔やナンバープレートが残る可能性があります。この項目は正常完了として数えません。
 confirm-warnings = 警告付きで書き出す
 confirm-plain-title = 匿名化せずに書き出しますか？
 confirm-plain-body = 何も隠さず、メタデータの規則だけを適用して保存し直します。この項目は正常完了として数えません。
 confirm-plain = 匿名化せずに書き出す
+## 1.12.1
 confirm-cancel = キャンセル
+## needs review
 shortcuts-title = ショートカット
+## 1.12.1
 shortcuts-close = 閉じる
+## needs review
 keys-click = クリック
 keys-drag = ドラッグ
 keys-arrows = 矢印キー
@@ -266,9 +288,102 @@ shortcut-arrows = 選択した領域を移動 (Shift: 10 ピクセル)、選択�
 shortcut-alt-arrows = 選択した領域の大きさを変更
 shortcut-delete = 選択した領域を削除
 shortcut-space = 隠した結果をプレビュー
-shortcut-undo = 取り消す
+## 1.12.1
+shortcut-undo = 元に戻す
 shortcut-redo = やり直す
+## needs review
 shortcut-zoom = 拡大、縮小、画面に合わせる、元の解像度
 shortcut-pages = 前・次の項目
 shortcut-help = この一覧を表示・非表示
 shortcut-scroll = スクロールで表示を移動し、ピンチか Ctrl + スクロールで拡大します。
+
+editor-cancelled = 保存できませんでした: キャンセルしました
+
+run-failed = 実行を開始できませんでした: { $error }
+run-failed-no-data-folder = このユーザーのアプリデータフォルダーがありません。
+
+failure-unsupported = CloakFrame が処理しない形式または内容のファイルです。
+failure-too-large = CloakFrame が一度に処理できる大きさを超えるファイルです。
+failure-unreadable = ファイルを読み込めません。破損している可能性があります。
+failure-source-changed = 処理中にファイルが変更されたか、なくなりました。もう一度実行してください。
+failure-name-taken = 実行中に出力と同じ名前のファイルができたため、上書きしませんでした。
+failure-output = 保存先に出力を書き込めません。
+failure-encode = 出力をエンコードできませんでした。
+failure-detection = このファイルで検出に失敗しました。
+failure-tool = FFmpeg を起動できません。
+failure-other = このファイルの処理中に問題が起きました。
+
+note-color-converted = 色を sRGB に変換しました
+note-color-profile-ignored = 使用できないカラープロファイルを破棄し、sRGB として読み込みました
+note-nothing-detected = 何も検出されませんでした
+note-tracked-nothing = 追跡したものはありません
+note-tracked-faces = 顔 { $faces } 件を追跡しました
+note-tracked-plates = ナンバープレート { $plates } 件を追跡しました
+note-tracked-both = 顔 { $faces } 件とナンバープレート { $plates } 件を追跡しました
+note-analyzed-again-on-cpu = GPU で失敗したため、この項目を CPU で分析し直しました。この実行の残りも CPU を使います
+note-encoded-again-in-software = ハードウェアエンコーダー { $encoder } が失敗したため、この動画をソフトウェアでエンコードし直しました。この実行の残りもソフトウェアでエンコードします: { $reason }
+note-padded = 奇数のサイズを { $width }×{ $height } に埋めました
+note-folder-not-flushed = 保存しましたが、保存先フォルダーをディスクに書き込めませんでした
+note-temp-file-left = 保存しましたが、隣に一時ファイルが残りました。次回の実行で削除します
+note-records-left = 保存しましたが、動画の分析記録がアプリデータフォルダーに残りました。次回の実行で削除します
+
+run-note-not-swept = { $path } を削除できません: { $error }
+run-note-model-copied = CloakFrame 1.12.1 から { $name } をコピーしました（{ $from }）
+run-note-legacy-coreml = CloakFrame 1.12.1 が CoreML 用にコンパイルしたモデルを削除できません: { $error }
+run-note-unused-coreml = このバージョンが使わないコンパイル済み CoreML モデルを削除できません: { $error }
+run-note-no-estimate = 作業量を見積もれません: { $error }
+run-note-session-not-saved = 確認セッションを保存できません: { $error }
+run-note-records-left = { $path } の動画分析記録を削除できません: { $error }
+run-note-left-out-not-analyzed = { $name } は確認待ちにできません。実行が分析内容の記録を残していません。
+run-note-left-out-changed = { $name } は確認待ちにできません。分析後に変更されたか、なくなりました。
+
+## 1.12.1
+advanced = 詳細オプション
+## needs review
+face-model = 顔モデル
+## 1.12.1
+face-model-accurate = 高精度  ·  YOLO5Face-n
+face-model-fast = 高速  ·  YuNet
+## needs review
+sensitivity = 感度
+sensitivity-lowest = 最低
+sensitivity-low = 低
+sensitivity-default = 標準
+sensitivity-high = 高
+sensitivity-highest = 最高
+sensitivity-hint = 高くすると顔やナンバープレートを多く見つけますが、それ以外も多く隠します。低くすると見逃しが増えます。スコア { $score } 以上を隠します。
+tiles = 小さな顔をタイルで探す
+tiles-hint = 大きな写真や動画の重なり合う部分でも検出し、全体では見つけにくい小さな顔を見つけます。遅くなります。
+## 1.12.1
+keep-metadata = 選択した EXIF メタデータを保持
+## needs review
+keep-metadata-hint = オフ（既定）：保存した写真にメタデータは残りません。オン：カメラ、レンズ、露出、撮影日時のみをコピーし、位置情報は併せて選択した場合のみ保持します。動画はメタデータを残しません。
+## 1.12.1
+keep-gps = 位置情報（GPS）も保持
+remove-audio = 動画から音声を削除
+## needs review
+remove-audio-hint = オフ（既定）：動画の音声を残します。声や話された内容（名前、電話番号など）は匿名化されません。
+## 1.12.1
+video-quality = 動画の品質
+video-quality-high = 高品質（オリジナル相当）
+video-quality-balanced = バランス
+video-quality-space-saver = ファイルサイズ優先
+video-quality-hint = 再エンコードする動画の画質です。画質を上げるとファイルは大きくなります。
+video-codec = 動画コーデック
+video-codec-h264 = H.264（互換性優先）
+video-codec-hevc = HEVC（小さなファイル）
+video-codec-hint = 再エンコードする動画のコーデックです。HEVC はファイルが小さくなりますが、古い端末では再生できないことがあります。
+gpu = GPU アクセラレーションを使用
+gpu-hint = 利用できる場合は、検出モデルと動画のエンコードを GPU で実行します。次回の実行から有効になります。
+## needs review
+advanced-next-run = 次回の実行から有効になります。確認はその実行の設定で保存します。
+## 1.12.1
+sample-title = プレビュー
+sample-alt = 匿名化スタイルのプレビュー
+
+## needs review
+found-list = 処理する写真と動画
+found-photo = 写真 { $name }
+found-video = 動画 { $name }
+run-list = この実行の項目
+review-queue = 確認する項目

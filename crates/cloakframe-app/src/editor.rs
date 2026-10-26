@@ -15,6 +15,7 @@ use cloakframe_engine::session::{SessionItem, StoredMedia};
 use eframe::egui;
 use fluent_bundle::FluentValue;
 
+use crate::a11y;
 use crate::draft::{Doc, Draft, Pick};
 use crate::i18n::Translator;
 use crate::queue::{self, Group};
@@ -24,6 +25,7 @@ use crate::thumbnails::{Thumbnails, VideoTools};
 use crate::tiles::Picture;
 use crate::video::Clip;
 use crate::video_editor::{self, VideoEditor};
+use crate::wording;
 
 /// What the screen asks of the window.
 pub enum ScreenAct {
@@ -181,7 +183,8 @@ impl ReviewScreen {
             ui.colored_label(ui.visuals().warn_fg_color, tr.get("review-options-guessed"));
         }
         for problem in &review.problems {
-            ui.colored_label(ui.visuals().warn_fg_color, problem);
+            let text = wording::run_note(problem, |_| String::new(), tr);
+            ui.colored_label(ui.visuals().warn_fg_color, text);
         }
         if self.thumbnails.is_none() {
             self.thumbnails = Thumbnails::new(&ctx, video).ok();
@@ -194,66 +197,70 @@ impl ReviewScreen {
         egui::ScrollArea::vertical()
             .max_height((ui.available_height() - 40.0).max(120.0))
             .show(ui, |ui| {
-                ui.horizontal_wrapped(|ui| {
-                    for item in &review.order {
-                        let name = file_name(item);
-                        let (cell, response) =
-                            ui.allocate_exact_size(egui::vec2(148.0, 176.0), egui::Sense::click());
-                        let (badge, warn) = badge(review, item, tr);
-                        response.widget_info(|| {
-                            egui::WidgetInfo::labeled(
-                                egui::Role::Button,
-                                true,
-                                format!("{name}, {badge}"),
-                            )
-                        });
-                        if response.clicked() {
-                            open = Some(item.item);
+                a11y::list(ui, &tr.get("review-queue"), |ui| {
+                    ui.horizontal_wrapped(|ui| {
+                        for item in &review.order {
+                            let name = file_name(item);
+                            let (cell, response) = ui.allocate_exact_size(
+                                egui::vec2(148.0, 176.0),
+                                egui::Sense::click(),
+                            );
+                            let (badge, warn) = badge(review, item, tr);
+                            response.widget_info(|| {
+                                egui::WidgetInfo::labeled(
+                                    egui::Role::Button,
+                                    true,
+                                    format!("{name}, {badge}"),
+                                )
+                            });
+                            if response.clicked() {
+                                open = Some(item.item);
+                            }
+                            if !ui.is_rect_visible(cell) {
+                                continue;
+                            }
+                            let painter = ui.painter();
+                            if response.hovered() || response.has_focus() {
+                                painter.rect_filled(cell, 4.0, ui.visuals().faint_bg_color);
+                            }
+                            let picture = egui::Rect::from_min_size(
+                                cell.min + egui::vec2(10.0, 4.0),
+                                egui::vec2(128.0, 128.0),
+                            );
+                            let kind = match item.media {
+                                StoredMedia::Photo { .. } => MediaKind::Image,
+                                StoredMedia::Video { .. } => MediaKind::Video,
+                            };
+                            let shown = thumbnails
+                                .as_mut()
+                                .and_then(|t| t.get(&item.input, kind).flatten());
+                            if let Some(texture) = shown {
+                                let size = texture.size_vec2();
+                                let fit = size * (128.0 / size.max_elem());
+                                let at = egui::Rect::from_center_size(picture.center(), fit);
+                                egui::Image::new(texture).paint_at(ui, at);
+                            } else {
+                                painter.rect_filled(picture, 4.0, ui.visuals().extreme_bg_color);
+                            }
+                            let color = if warn {
+                                ui.visuals().warn_fg_color
+                            } else {
+                                ui.visuals().weak_text_color()
+                            };
+                            let text = ui.visuals().text_color();
+                            let font = egui::FontId::proportional(12.0);
+                            let name_at = egui::pos2(cell.min.x + 10.0, picture.max.y + 4.0);
+                            let galley = painter.layout(name, font.clone(), text, 128.0);
+                            painter.galley(name_at, galley.clone(), text);
+                            painter.text(
+                                name_at + egui::vec2(0.0, galley.size().y.min(16.0) + 2.0),
+                                egui::Align2::LEFT_TOP,
+                                badge,
+                                font,
+                                color,
+                            );
                         }
-                        if !ui.is_rect_visible(cell) {
-                            continue;
-                        }
-                        let painter = ui.painter();
-                        if response.hovered() || response.has_focus() {
-                            painter.rect_filled(cell, 4.0, ui.visuals().faint_bg_color);
-                        }
-                        let picture = egui::Rect::from_min_size(
-                            cell.min + egui::vec2(10.0, 4.0),
-                            egui::vec2(128.0, 128.0),
-                        );
-                        let kind = match item.media {
-                            StoredMedia::Photo { .. } => MediaKind::Image,
-                            StoredMedia::Video { .. } => MediaKind::Video,
-                        };
-                        let shown = thumbnails
-                            .as_mut()
-                            .and_then(|t| t.get(&item.input, kind).flatten());
-                        if let Some(texture) = shown {
-                            let size = texture.size_vec2();
-                            let fit = size * (128.0 / size.max_elem());
-                            let at = egui::Rect::from_center_size(picture.center(), fit);
-                            egui::Image::new(texture).paint_at(ui, at);
-                        } else {
-                            painter.rect_filled(picture, 4.0, ui.visuals().extreme_bg_color);
-                        }
-                        let color = if warn {
-                            ui.visuals().warn_fg_color
-                        } else {
-                            ui.visuals().weak_text_color()
-                        };
-                        let text = ui.visuals().text_color();
-                        let font = egui::FontId::proportional(12.0);
-                        let name_at = egui::pos2(cell.min.x + 10.0, picture.max.y + 4.0);
-                        let galley = painter.layout(name, font.clone(), text, 128.0);
-                        painter.galley(name_at, galley.clone(), text);
-                        painter.text(
-                            name_at + egui::vec2(0.0, galley.size().y.min(16.0) + 2.0),
-                            egui::Align2::LEFT_TOP,
-                            badge,
-                            font,
-                            color,
-                        );
-                    }
+                    });
                 });
             });
         if ui.button(tr.get("session-discard")).clicked() {
@@ -447,7 +454,9 @@ fn badge(review: &Review, item: &SessionItem, tr: &Translator) -> (String, bool)
         Status::Changed => (tr.get("review-badge-changed"), true),
         Status::Rendering => (tr.get("review-badge-saving"), false),
         Status::Saved(_) => (tr.get("state-published"), false),
-        Status::Refused(_) | Status::Failed(_) => (tr.get("review-badge-again"), true),
+        Status::Refused(_) | Status::Failed(_) | Status::Cancelled => {
+            (tr.get("review-badge-again"), true)
+        }
         Status::Waiting => {
             let unresolved = review.drafts.get(&item.item).map_or(0, Draft::unresolved);
             match queue::group(item) {
@@ -470,22 +479,6 @@ fn resolution_id(resolution: Resolution) -> &'static str {
         Resolution::Unresolved => "editor-problem-open",
         Resolution::CoveredByManualMask => "editor-problem-covered",
         Resolution::Dismissed => "editor-problem-dismissed",
-    }
-}
-
-fn refusal(rejection: &Rejection, tr: &Translator) -> String {
-    match rejection {
-        Rejection::SettingsChanged => tr.get("refused-settings"),
-        Rejection::SourceChanged => tr.get("session-item-changed"),
-        Rejection::Stale { .. } | Rejection::ForeignKey => tr.get("refused-stale"),
-        Rejection::NameTaken { suggestion } => tr.with(
-            "refused-name",
-            &[("name", FluentValue::from(suggestion.display().to_string()))],
-        ),
-        other => tr.with(
-            "refused-other",
-            &[("reason", FluentValue::from(other.to_string()))],
-        ),
     }
 }
 
@@ -551,7 +544,10 @@ fn side_panel(
             });
         }
         Status::Refused(rejection) => {
-            ui.colored_label(ui.visuals().error_fg_color, refusal(&rejection, tr));
+            ui.colored_label(
+                ui.visuals().error_fg_color,
+                wording::refusal(&rejection, tr),
+            );
             if let Rejection::NameTaken { suggestion } = &rejection
                 && let Some(name) = suggestion.file_name()
             {
@@ -565,11 +561,16 @@ fn side_panel(
                 }
             }
         }
-        Status::Failed(e) => {
+        Status::Failed(failure) => {
+            let why = wording::failure(&failure, tr);
             ui.colored_label(
                 ui.visuals().error_fg_color,
-                tr.with("editor-failed", &[("error", FluentValue::from(e))]),
+                tr.with("editor-failed", &[("error", FluentValue::from(why))]),
             );
+            ui.weak(failure.reason);
+        }
+        Status::Cancelled => {
+            ui.colored_label(ui.visuals().error_fg_color, tr.get("editor-cancelled"));
         }
     }
     let Some(draft) = review.drafts.get_mut(&item) else {
@@ -603,55 +604,58 @@ fn side_panel(
     let video = video_length(&stored.media);
     let mut resolve = None;
     let problems = draft.problems().to_vec();
-    for (i, problem) in problems.iter().enumerate() {
-        let resolution = draft.doc.resolutions[i];
-        let evidence = CoverageEvidence {
-            problem: problem.clone(),
-            resolution,
-        };
-        let selected = draft.selected == Some(Pick::Problem(i));
-        ui.group(|ui| {
-            let text = summary::problem(&evidence, video, tr);
-            if ui.selectable_label(selected, text).clicked() {
-                draft.selected = Some(Pick::Problem(i));
-                if let (Some(v), Some(k)) = (editor.video.as_mut(), problem_frame(problem)) {
-                    v.seek(k, draft.frames());
-                }
-            }
-            let state = tr.get(resolution_id(resolution));
-            if resolution == Resolution::Unresolved {
-                ui.colored_label(ui.visuals().warn_fg_color, state);
-            } else {
-                ui.weak(state);
-            }
-            ui.add_enabled_ui(open, |ui| {
-                ui.horizontal(|ui| {
-                    if resolution == Resolution::Unresolved {
-                        if matches!(problem, Problem::WeakCandidate { .. })
-                            && matches!(stored.media, StoredMedia::Photo { .. })
-                            && ui.button(tr.get("editor-cover")).clicked()
-                        {
-                            resolve = Some((i, Resolution::CoveredByManualMask));
-                        }
-                        if matches!(problem, Problem::UnresolvedGap { .. })
-                            && editor
-                                .video
-                                .as_ref()
-                                .is_some_and(|v| v.clip.preview.is_some())
-                            && ui.button(tr.get("editor-cover-gap")).clicked()
-                        {
-                            resolve = Some((i, Resolution::CoveredByManualMask));
-                        }
-                        if ui.button(tr.get("editor-dismiss")).clicked() {
-                            resolve = Some((i, Resolution::Dismissed));
-                        }
-                    } else if ui.button(tr.get("editor-reopen")).clicked() {
-                        resolve = Some((i, Resolution::Unresolved));
+    a11y::list(ui, &tr.get("editor-problems"), |ui| {
+        for (i, problem) in problems.iter().enumerate() {
+            let resolution = draft.doc.resolutions[i];
+            let evidence = CoverageEvidence {
+                problem: problem.clone(),
+                resolution,
+            };
+            let selected = draft.selected == Some(Pick::Problem(i));
+            ui.group(|ui| {
+                let text = summary::problem(&evidence, video, tr);
+                let state = tr.get(resolution_id(resolution));
+                a11y::mark_item(ui, &format!("{text}, {state}"));
+                if ui.selectable_label(selected, text).clicked() {
+                    draft.selected = Some(Pick::Problem(i));
+                    if let (Some(v), Some(k)) = (editor.video.as_mut(), problem_frame(problem)) {
+                        v.seek(k, draft.frames());
                     }
+                }
+                if resolution == Resolution::Unresolved {
+                    ui.colored_label(ui.visuals().warn_fg_color, state);
+                } else {
+                    ui.weak(state);
+                }
+                ui.add_enabled_ui(open, |ui| {
+                    ui.horizontal(|ui| {
+                        if resolution == Resolution::Unresolved {
+                            if matches!(problem, Problem::WeakCandidate { .. })
+                                && matches!(stored.media, StoredMedia::Photo { .. })
+                                && ui.button(tr.get("editor-cover")).clicked()
+                            {
+                                resolve = Some((i, Resolution::CoveredByManualMask));
+                            }
+                            if matches!(problem, Problem::UnresolvedGap { .. })
+                                && editor
+                                    .video
+                                    .as_ref()
+                                    .is_some_and(|v| v.clip.preview.is_some())
+                                && ui.button(tr.get("editor-cover-gap")).clicked()
+                            {
+                                resolve = Some((i, Resolution::CoveredByManualMask));
+                            }
+                            if ui.button(tr.get("editor-dismiss")).clicked() {
+                                resolve = Some((i, Resolution::Dismissed));
+                            }
+                        } else if ui.button(tr.get("editor-reopen")).clicked() {
+                            resolve = Some((i, Resolution::Unresolved));
+                        }
+                    });
                 });
             });
-        });
-    }
+        }
+    });
     match resolve {
         Some((i, Resolution::CoveredByManualMask)) => match (&problems[i], &mut editor.video) {
             (gap @ Problem::UnresolvedGap { first, .. }, Some(video)) => {
