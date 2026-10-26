@@ -9,17 +9,33 @@ param(
     [Parameter(Mandatory)] [string] $Out
 )
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Drawing, System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
+Add-Type @'
+using System;
+using System.Runtime.InteropServices;
+public static class Win32 {
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Rect { public int Left, Top, Right, Bottom; }
+    [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr window, out Rect rect);
+    [DllImport("user32.dll")] public static extern bool PrintWindow(IntPtr window, IntPtr dc, uint flags);
+}
+'@
 New-Item -ItemType Directory -Force $Out | Out-Null
 $Out = (Resolve-Path $Out).Path
+$titles = @{ 'CloakFrame' = 'app'; 'CloakFrame cannot start' = 'message' }
 
-function Save-Screen([string] $path) {
-    $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-    $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
+# The window alone, as it draws itself: other windows on the runner's desktop may cover it.
+function Save-Window([IntPtr] $window, [string] $path) {
+    $rect = New-Object Win32+Rect
+    if (-not [Win32]::GetWindowRect($window, [ref] $rect)) { return 0 }
+    $bitmap = New-Object System.Drawing.Bitmap ($rect.Right - $rect.Left), ($rect.Bottom - $rect.Top)
     $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-    $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+    $dc = $graphics.GetHdc()
+    # PW_RENDERFULLCONTENT, without which a DirectX window comes out black.
+    $null = [Win32]::PrintWindow($window, $dc, 2)
+    $graphics.ReleaseHdc($dc)
     $graphics.Dispose()
-    # A blank or half-drawn screen has few colours; a drawn window has many.
+    # A window that has not drawn yet has one or two colours; a drawn one has many.
     $colours = @{}
     for ($x = 0; $x -lt $bitmap.Width; $x += 8) {
         for ($y = 0; $y -lt $bitmap.Height; $y += 8) {
@@ -50,20 +66,21 @@ function Open-App([string] $name, [hashtable] $environment) {
     } finally {
         foreach ($key in $environment.Keys) { Remove-Item "env:$key" }
     }
+    # The process may have other top-level windows first, which have no title.
     Wait-Until {
         $process.Refresh()
-        $process.HasExited -or $process.MainWindowHandle -ne 0
+        $process.HasExited -or $titles.ContainsKey($process.MainWindowTitle)
     } 120 "$name's window"
     if ($process.HasExited) {
         Get-Content $log | Write-Host
         throw "${name}: the app ended with $($process.ExitCode) before it opened a window"
     }
     $shot = Join-Path $Out "$name.png"
-    Wait-Until { (Save-Screen $shot) -gt 20 } 60 "$name's window to draw"
+    $window = $process.MainWindowHandle
+    Wait-Until { (Save-Window $window $shot) -gt 20 } 60 "$name's window to draw"
     Get-Content $log | Write-Host
-    $kind = if ($process.MainWindowTitle -eq 'CloakFrame') { 'app' } else { 'message' }
     Write-Host "${name}: window '$($process.MainWindowTitle)'"
-    return @($process, $kind)
+    return @($process, $titles[$process.MainWindowTitle])
 }
 
 $process, $kind = Open-App 'default' @{}
@@ -85,8 +102,6 @@ if (Select-String -Quiet -Pattern '^graphics: wgpu, ' $log) {
     Write-Output 'no-wgpu: the runner has a Vulkan driver, so wgpu started'
 } elseif ($kind -eq 'app') {
     if (-not (Select-String -Quiet -Pattern '^graphics: OpenGL, ' $log)) { throw 'no-wgpu: expected OpenGL' }
-} elseif ($process.MainWindowTitle -ne 'CloakFrame cannot start') {
-    throw "no-wgpu: unexpected window '$($process.MainWindowTitle)'"
 }
 $null = $process.CloseMainWindow()
 if (-not $process.WaitForExit(30000)) { throw 'no-wgpu: the app did not close' }
