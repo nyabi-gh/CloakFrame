@@ -91,10 +91,25 @@ fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
             .dropped_files
             .push(Arc::new(Dropped(path.clone())));
     }
-    // One frame takes the drop and starts the scan, whose spinner repaints until it ends.
+    // One frame takes the drop and starts the scan, whose spinner repaints until it ends. It also
+    // reads the saved sessions where the folders changed since.
     harness.step();
     harness.state_mut().wait_for_scan();
+    harness.state_mut().wait_for_sessions();
     harness.run();
+}
+
+/// Steps the frame that starts reading the saved sessions again, and settles once they are read.
+fn settle_with_sessions(harness: &mut Harness<'_, AppState>) {
+    harness.step();
+    harness.state_mut().wait_for_sessions();
+    harness.run();
+}
+
+/// Waits for the run in progress to end, which has the window read the saved sessions again.
+fn finish_run(harness: &mut Harness<'_, AppState>) {
+    harness.state_mut().wait_for_run();
+    settle_with_sessions(harness);
 }
 
 #[test]
@@ -253,8 +268,7 @@ fn start_runs_the_engine_and_shows_the_result() {
     harness.get_by_role_and_label(Role::Button, "Start").click();
     // The spinner repaints while the run works, so the harness steps instead of settling.
     harness.step();
-    harness.state_mut().wait_for_run();
-    harness.run();
+    finish_run(&mut harness);
     let board = harness.state().board.as_ref().unwrap();
     assert!(board.failure.is_none(), "{:?}", board.failure);
     let finished = board.finished.as_ref().unwrap();
@@ -461,7 +475,8 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label("photo.jpg, To review");
     harness.get_by_label("clip.mp4, One problem");
     harness.get_by_role_and_label(Role::Button, "Back").click();
-    harness.run();
+    harness.step();
+    settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
     assert!(store.lock(&id).is_ok(), "let go once it is closed");
 
@@ -480,7 +495,8 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness
         .get_by_role_and_label(Role::Button, "Discard")
         .click();
-    harness.run();
+    harness.step();
+    settle_with_sessions(&mut harness);
     assert!(store.list().unwrap().is_empty());
     assert!(harness.state().sessions.list.is_empty());
     assert!(harness.query_by_label("Waiting for review").is_none());
@@ -544,8 +560,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     drop_files(&mut harness, std::slice::from_ref(&input));
     harness.get_by_role_and_label(Role::Button, "Start").click();
     harness.step();
-    harness.state_mut().wait_for_run();
-    harness.run();
+    finish_run(&mut harness);
     let rows = harness.query_all_by_label("Review").count();
     assert_eq!(rows, 2, "one Review button for each item held");
     // The review masks as the run would have, whatever the main screen says by then.
@@ -779,7 +794,8 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     );
     assert!(difference(&original, &plain, face) < 6.0, "nothing masked");
     harness.get_by_role_and_label(Role::Button, "Back").click();
-    harness.run();
+    harness.step();
+    settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
 }
 
@@ -1293,8 +1309,7 @@ fn cancel_stops_an_item_or_the_whole_run() {
         .get_by_role_and_label(Role::Button, "Cancel")
         .click();
     harness.step();
-    harness.state_mut().wait_for_run();
-    harness.run();
+    finish_run(&mut harness);
     let states = outcome_states(&harness);
     assert_eq!(
         states,
@@ -1314,8 +1329,7 @@ fn cancel_stops_an_item_or_the_whole_run() {
         .unwrap()
         .click();
     harness.step();
-    harness.state_mut().wait_for_run();
-    harness.run();
+    finish_run(&mut harness);
     let states = outcome_states(&harness);
     assert!(
         matches!(states[0].1, ItemState::NeedsReview | ItemState::Cancelled),

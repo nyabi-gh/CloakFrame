@@ -32,10 +32,7 @@ impl Loaded {
     }
 }
 
-fn load(folders: &Folders) -> io::Result<Vec<Saved>> {
-    let Some(store) = folders.sessions() else {
-        return Ok(Vec::new());
-    };
+fn load(store: &SessionStore) -> io::Result<Vec<Saved>> {
     let mut saved: Vec<Saved> = store
         .list()?
         .into_iter()
@@ -65,9 +62,14 @@ fn load(folders: &Folders) -> io::Result<Vec<Saved>> {
 /// The list, read on a thread of its own: reading a session stats each of its sources.
 pub struct SavedSessions {
     folders: Folders,
-    loading: Option<mpsc::Receiver<io::Result<Vec<Saved>>>>,
+    loading: Option<Loading>,
     pub list: Vec<Saved>,
     pub error: Option<String>,
+}
+
+struct Loading {
+    result: mpsc::Receiver<io::Result<Vec<Saved>>>,
+    thread: std::thread::JoinHandle<()>,
 }
 
 impl SavedSessions {
@@ -81,23 +83,27 @@ impl SavedSessions {
     }
 
     pub fn reload(&mut self, ctx: &egui::Context) {
-        let (send, loading) = mpsc::channel();
-        let (folders, repaint) = (self.folders.clone(), ctx.clone());
+        let Some(store) = self.folders.sessions() else {
+            self.loaded(Ok(Vec::new()));
+            return;
+        };
+        let (send, result) = mpsc::channel();
+        let repaint = ctx.clone();
         let spawned = std::thread::Builder::new()
             .name("cloakframe-sessions".into())
             .spawn(move || {
-                let _ = send.send(load(&folders));
+                let _ = send.send(load(&store));
                 repaint.request_repaint();
             });
         match spawned {
-            Ok(_) => self.loading = Some(loading),
+            Ok(thread) => self.loading = Some(Loading { result, thread }),
             Err(e) => self.error = Some(e.to_string()),
         }
     }
 
     pub fn take(&mut self) {
         if let Some(loading) = &self.loading
-            && let Ok(result) = loading.try_recv()
+            && let Ok(result) = loading.result.try_recv()
         {
             self.loaded(result);
         }
@@ -105,9 +111,16 @@ impl SavedSessions {
 
     /// Waits for the list being read, for tests.
     pub fn wait(&mut self) {
-        if let Some(loading) = &self.loading
-            && let Ok(result) = loading.recv()
-        {
+        let Some(loading) = self.loading.take() else {
+            return;
+        };
+        let result = loading.result.recv();
+        // The thread asks for a repaint after it sends; arriving in the middle of the test's next
+        // run, that repaint would add passes the run did not cause.
+        if let Err(panic) = loading.thread.join() {
+            std::panic::resume_unwind(panic);
+        }
+        if let Ok(result) = result {
             self.loaded(result);
         }
     }
