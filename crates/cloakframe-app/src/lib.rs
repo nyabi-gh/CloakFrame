@@ -19,6 +19,7 @@ pub mod sample;
 pub mod sessions;
 pub mod settings;
 pub mod shell;
+pub mod style;
 pub mod summary;
 pub mod thumbnails;
 pub mod tiles;
