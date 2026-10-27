@@ -211,7 +211,6 @@ review-badge-problems = { $count ->
 review-badge-nothing = Nothing detected
 review-badge-waiting = To review
 editor-canvas = Photo editor
-editor-to-queue = All Items
 editor-previous = Previous
 editor-next = Next
 editor-position = { $at } of { $count }
@@ -220,11 +219,7 @@ editor-detections = { $count ->
     [one] { $masked } of one detection masked
    *[other] { $masked } of { $count } detections masked
 }
-editor-added = { $count ->
-    [one] One area added
-   *[other] { $count } areas added
-}
-editor-problems = Problems
+editor-problems = To resolve
 editor-no-problems = No problems found.
 editor-problem-open = Not resolved
 editor-problem-covered = Covered by a mask
@@ -234,10 +229,10 @@ editor-dismiss = Nothing to Mask
 editor-reopen = Reopen
 editor-undo = Undo
 editor-redo = Redo
-editor-shortcuts = Shortcuts (?)
+editor-shortcuts = ? Shortcuts
 editor-approve = Approve and Save
-editor-approve-blocked = Resolve every problem first, or export with warnings.
-editor-export-warnings = Export with Warnings…
+editor-approve-blocked = Resolve every problem first, or save with warnings from the More menu.
+editor-export-warnings = Save with Warnings…
 editor-more = More
 editor-export-plain = Export Without Anonymization…
 review-left = { $count ->
@@ -247,35 +242,31 @@ review-left = { $count ->
 }
 review-discard = Discard This Review…
 review-kept = Saved items
+editor-fit = Fit
+editor-solve-first = Resolve the problems to save
+editor-added-title = Areas you added
+editor-added-area = Area { $n }
+editor-remove = Remove
+editor-hint = Click to mask or unmask · Drag to add an area · Hold Space to see the result
+editor-kind-face = Face
+editor-kind-plate = License plate
+editor-kind-drawn = Drawn
+editor-track-weak = Not sure
+editor-video-total = / { $total } · frame { $frame }
 editor-video-loading = Opening the video…
 editor-video-unreadable = The video cannot be shown: { $error }
 editor-video-canvas = Video editor
 editor-video-decoding = Decoding the frame…
 editor-video-frame-failed = The frame cannot be shown: { $error }
-editor-video-frame = Frame { $frame } of 0–{ $last } · { $time }
 editor-video-play = Play
 editor-video-stop = Stop
-editor-video-masked = Play masked
+editor-video-masked = Show masked
 editor-timeline = Timeline
 editor-tracks = { $count ->
     [one] One track, { $masked } masked
    *[other] { $count } tracks, { $masked } masked
 }
-editor-drawn = { $count ->
-    [one] One drawn track
-   *[other] { $count } drawn tracks
-}
-editor-track-face = Face, frames { $first }–{ $last }
-editor-track-plate = License plate, frames { $first }–{ $last }
 editor-track-low = Low confidence: masked, but check it is a face or plate.
-editor-track-masked = Masked
-editor-track-unmasked = Not masked
-editor-track-mask = Mask This Track
-editor-track-unmask = Do Not Mask This Track
-editor-drawn-track = Drawn track, frames { $first }–{ $last }, { $keyframes ->
-    [one] one keyframe
-   *[other] { $keyframes } keyframes
-}
 editor-drawn-start = Start Here
 editor-drawn-end = End Here
 editor-drawn-remove-keyframe = Remove This Keyframe
@@ -462,7 +453,6 @@ advanced-videos = Videos
 done = Done
 session-unreadable-short = Cannot be read
 result-title = Done
-review-title = Review
 cancel-all = Cancel All
 cancel-item = Cancel This Item
 review-all = Start Review

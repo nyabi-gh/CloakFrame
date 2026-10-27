@@ -233,17 +233,27 @@ fn sized(button: egui::Button<'_>) -> egui::Button<'_> {
 /// The screen's one main action: filled with the text colour. When it cannot be pressed it is a
 /// flat grey button, not a faded black one, so it does not read as pressable.
 pub fn primary(ui: &mut egui::Ui, text: &str, enabled: bool) -> egui::Response {
+    primary_sized(ui, text, enabled, egui::vec2(0.0, BUTTON_HEIGHT))
+}
+
+/// [`primary`] at least `size`, as the editor's approve button fills its row.
+pub fn primary_sized(
+    ui: &mut egui::Ui,
+    text: &str,
+    enabled: bool,
+    size: egui::Vec2,
+) -> egui::Response {
     let p = Palette::of(ui);
     let (fill, border, color) = if enabled {
         (p.text, p.text, p.on_primary)
     } else {
         (p.sidebar, p.separator, p.disabled)
     };
-    let button = sized(egui::Button::new(
-        egui::RichText::new(text).font(medium(13.0)).color(color),
-    ))
-    .fill(fill)
-    .stroke(Stroke::new(1.0, border));
+    let button = egui::Button::new(egui::RichText::new(text).font(medium(13.0)).color(color))
+        .min_size(size)
+        .corner_radius(BUTTON_RADIUS)
+        .fill(fill)
+        .stroke(Stroke::new(1.0, border));
     let response = ui
         .scope(|ui| {
             ui.visuals_mut().disabled_alpha = 1.0;
@@ -270,13 +280,13 @@ pub fn small(ui: &mut egui::Ui, text: &str, plain: bool) -> egui::Response {
     let button = egui::Button::new(egui::RichText::new(text).size(12.0))
         .min_size(egui::vec2(0.0, SMALL_BUTTON_HEIGHT))
         .corner_radius(BUTTON_RADIUS)
-        .frame_when_inactive(!plain);
-    let response = ui
-        .scope(|ui| {
-            ui.spacing_mut().button_padding = egui::vec2(8.0, 2.0);
-            ui.add(button)
-        })
-        .inner;
+        .frame_when_inactive(!plain)
+        .wrap_mode(egui::TextWrapMode::Extend);
+    // Not `ui.scope`: a child ui is placed before its size is known, so a wrapped row could not
+    // move the button onto the next line.
+    let padding = std::mem::replace(&mut ui.spacing_mut().button_padding, egui::vec2(8.0, 2.0));
+    let response = ui.add(button);
+    ui.spacing_mut().button_padding = padding;
     focus_ring(ui, &response);
     response
 }
@@ -312,6 +322,31 @@ pub fn icon_button(
         ui.painter().rect_filled(rect, 4, p.selected);
     }
     draw(ui.painter(), rect.shrink(6.0), p.secondary);
+    focus_ring(ui, &response);
+    response.on_hover_text(label)
+}
+
+/// An icon button of the toolbar's height, which shows itself greyed out while it cannot be
+/// pressed.
+pub fn toolbar_icon(
+    ui: &mut egui::Ui,
+    label: &str,
+    enabled: bool,
+    draw: fn(&egui::Painter, egui::Rect, Color32),
+) -> egui::Response {
+    let p = Palette::of(ui);
+    let sense = if enabled {
+        egui::Sense::click()
+    } else {
+        egui::Sense::hover()
+    };
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(BUTTON_HEIGHT, BUTTON_HEIGHT), sense);
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
+    if enabled && response.hovered() {
+        ui.painter().rect_filled(rect, BUTTON_RADIUS, p.selected);
+    }
+    let color = if enabled { p.body } else { p.disabled };
+    draw(ui.painter(), rect.shrink(6.0), color);
     focus_ring(ui, &response);
     response.on_hover_text(label)
 }
@@ -503,12 +538,40 @@ pub mod icon {
         arrow(painter, rect, color, true);
     }
 
+    fn chevron(painter: &Painter, rect: Rect, color: Color32, mirror: bool) {
+        let x = |x: f32| if mirror { 1.0 - x } else { x };
+        painter.add(Shape::line(
+            vec![
+                at(rect, x(0.62), 0.25),
+                at(rect, x(0.38), 0.5),
+                at(rect, x(0.62), 0.75),
+            ],
+            Stroke::new(1.5, color),
+        ));
+    }
+
+    pub fn previous(painter: &Painter, rect: Rect, color: Color32) {
+        chevron(painter, rect, color, false);
+    }
+
+    pub fn next(painter: &Painter, rect: Rect, color: Color32) {
+        chevron(painter, rect, color, true);
+    }
+
     pub fn play(painter: &Painter, rect: Rect, color: Color32) {
         painter.add(Shape::convex_polygon(
             vec![at(rect, 0.3, 0.2), at(rect, 0.8, 0.5), at(rect, 0.3, 0.8)],
             color,
             Stroke::NONE,
         ));
+    }
+
+    pub fn stop(painter: &Painter, rect: Rect, color: Color32) {
+        painter.rect_filled(
+            Rect::from_min_max(at(rect, 0.25, 0.25), at(rect, 0.75, 0.75)),
+            1.0,
+            color,
+        );
     }
 
     pub fn close(painter: &Painter, rect: Rect, color: Color32) {

@@ -491,9 +491,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.run();
     harness.get_by_label("The original changed or is gone; run it again");
     harness.get_by_label("3 of 3");
-    harness
-        .get_by_role_and_label(Role::Button, "All Items")
-        .click();
+    harness.get_by_role_and_label(Role::Button, "‹ out").click();
     harness.run();
     harness.get_by_label("gone.jpg, Original changed");
     harness.get_by_label("photo.jpg, To review");
@@ -1024,8 +1022,8 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     harness.step();
     wait(&mut harness);
     harness.run();
-    harness.get_by_label("Frame 0 of 0–119 · 0:00.0");
-    harness.get_by_label("2 tracks, 2 masked");
+    harness.get_by_label("0:00.0 / 0:04.0 · frame 0");
+    harness.get_by_role_and_label(Role::List, "2 tracks, 2 masked");
     harness.get_by_label("Timeline");
 
     let item = ItemId(0);
@@ -1051,8 +1049,14 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
         "Enter leaves it unmasked"
     );
     harness.run();
-    harness.get_by_label("2 tracks, 1 masked");
-    harness.get_by_role_and_label(Role::Button, "Mask This Track");
+    harness.get_by_role_and_label(Role::List, "2 tracks, 1 masked");
+    assert_eq!(
+        harness
+            .get_by_role_and_label(Role::CheckBox, "Face, 0:00–0:01")
+            .accesskit_node()
+            .toggled(),
+        Some(egui::accesskit::Toggled::False)
+    );
 
     harness.event(egui::Event::Text("]".to_owned()));
     step(&mut harness);

@@ -5,6 +5,7 @@ use cloakframe_core::coverage::{Problem, Resolution};
 use cloakframe_core::detection::{DetectionKind, FrameIndex};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::review::{ManualTrack, VideoEdits};
+use cloakframe_engine::video::preview::Preview;
 use cloakframe_engine::video::record::TrackRegion;
 use cloakframe_engine::video::tracking::TrackSummary;
 use eframe::egui;
@@ -14,6 +15,7 @@ use crate::draft::{Draft, Pick};
 use crate::editor::{Go, View};
 use crate::i18n::Translator;
 use crate::lanes;
+use crate::style::{self, Palette};
 use crate::video::Clip;
 
 const MASKED: egui::Color32 = egui::Color32::from_rgb(230, 70, 70);
@@ -21,6 +23,7 @@ const ADDED: egui::Color32 = egui::Color32::from_rgb(60, 150, 240);
 const WEAK: egui::Color32 = egui::Color32::from_rgb(240, 170, 40);
 const UNMASKED: egui::Color32 = egui::Color32::from_gray(160);
 const TIMELINE_HEIGHT: f32 = 150.0;
+const PLAY_ROW_HEIGHT: f32 = 48.0;
 
 enum Drag {
     Adding { from: egui::Pos2, to: egui::Pos2 },
@@ -205,7 +208,6 @@ pub(crate) fn ui(
         });
         return None;
     };
-    let frames = preview.frames();
     let (w, h) = preview.size();
     let size = egui::vec2(w as f32, h as f32);
     if editor.clip.playing
@@ -213,7 +215,7 @@ pub(crate) fn ui(
     {
         editor.at = shown.frame;
     }
-    let canvas_height = (ui.available_height() - TIMELINE_HEIGHT - 8.0).max(120.0);
+    let canvas_height = (ui.available_height() - TIMELINE_HEIGHT - PLAY_ROW_HEIGHT).max(120.0);
     let (rect, response) = ui.allocate_exact_size(
         egui::vec2(ui.available_width(), canvas_height),
         egui::Sense::click_and_drag(),
@@ -405,7 +407,7 @@ pub(crate) fn ui(
         .collect();
 
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
+    painter.rect_filled(rect, 0.0, Palette::of(ui).canvas);
     let view = *view;
     editor.view = Some(view);
     let frame_rect = to_screen(
@@ -517,8 +519,8 @@ pub(crate) fn ui(
         }
     }
 
-    ui.add_space(4.0);
-    timeline(ui, tr, editor, draft, tracks, frames);
+    play_row(ui, tr, editor, draft, &preview, help);
+    timeline(ui, tr, editor, draft, tracks, preview.frames());
     go
 }
 
@@ -693,6 +695,73 @@ fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {
         rect.left_top(),
     ];
     painter.extend(egui::Shape::dashed_line(&corners, stroke, 6.0, 4.0));
+}
+
+/// Play or stop, where playback is, whether it shows the masked result, and the way to every
+/// shortcut.
+fn play_row(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    editor: &mut VideoEditor,
+    draft: &Draft,
+    preview: &Preview,
+    help: &mut bool,
+) {
+    let p = *Palette::of(ui);
+    let frames = preview.frames();
+    egui::Frame::NONE
+        .inner_margin(egui::Margin::symmetric(20, 10))
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                ui.spacing_mut().item_spacing.x = 12.0;
+                let (label, draw): (String, fn(&egui::Painter, egui::Rect, egui::Color32)) =
+                    if editor.clip.playing {
+                        (tr.get("editor-video-stop"), style::icon::stop)
+                    } else {
+                        (tr.get("editor-video-play"), style::icon::play)
+                    };
+                if style::toolbar_icon(ui, &label, true, draw).clicked() {
+                    editor.toggle_playback(draft);
+                }
+                let mut job = egui::text::LayoutJob::default();
+                let font = egui::FontId::proportional(13.0);
+                job.append(
+                    &time(preview.seconds(editor.at)),
+                    0.0,
+                    egui::TextFormat::simple(font.clone(), p.text),
+                );
+                let total = tr.with(
+                    "editor-video-total",
+                    &[
+                        (
+                            "total",
+                            FluentValue::from(time(preview.seconds(frames.saturating_sub(1)))),
+                        ),
+                        ("frame", FluentValue::from(editor.at)),
+                    ],
+                );
+                job.append(
+                    &format!(" {total}"),
+                    0.0,
+                    egui::TextFormat::simple(font, p.secondary),
+                );
+                ui.label(job);
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let shortcuts = tr.get("editor-shortcuts");
+                    let link = ui.add(
+                        egui::Button::new(
+                            egui::RichText::new(shortcuts).size(12.0).color(p.secondary),
+                        )
+                        .frame(false),
+                    );
+                    if link.clicked() {
+                        *help = !*help;
+                    }
+                    ui.label(egui::RichText::new("M").color(p.secondary));
+                    ui.checkbox(&mut editor.masked_playback, tr.get("editor-video-masked"));
+                });
+            });
+        });
 }
 
 /// What a click on the timeline lands on.

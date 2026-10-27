@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem, Resolution};
+use cloakframe_core::detection::DetectionKind;
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::ItemId;
 use cloakframe_engine::media_processor::MediaProcessor;
@@ -156,7 +157,9 @@ impl ReviewScreen {
         act
     }
 
-    /// The queue's folder, what is left to review and its discard.
+    /// The queue's folder, what is left to review and its discard, or the editor's way back,
+    /// place, history, fit and steps. Laid out left to right so that Tab reaches them in that
+    /// order.
     pub fn toolbar(
         &mut self,
         ui: &mut egui::Ui,
@@ -166,6 +169,10 @@ impl ReviewScreen {
     ) -> Option<ScreenAct> {
         let p = *Palette::of(ui);
         let folder = folder_name(&self.review.session.output);
+        if self.editor.is_some() {
+            self.editor_toolbar(ui, bar, title_left, &folder, tr);
+            return None;
+        }
         let left = self
             .review
             .order
@@ -200,6 +207,95 @@ impl ReviewScreen {
             },
         );
         act
+    }
+
+    fn editor_toolbar(
+        &mut self,
+        ui: &mut egui::Ui,
+        bar: egui::Rect,
+        title_left: f32,
+        folder: &str,
+        tr: &Translator,
+    ) {
+        let p = *Palette::of(ui);
+        let ctx = ui.ctx().clone();
+        let Some(editor) = &mut self.editor else {
+            return;
+        };
+        let item = editor.item;
+        let name = self
+            .review
+            .order
+            .iter()
+            .find(|i| i.item == item)
+            .map(file_name)
+            .unwrap_or_default();
+        let place = place(&self.review, item, tr);
+        let mut go = None;
+        row(
+            ui,
+            egui::Rect::from_x_y_ranges(title_left + 14.0..=bar.right(), bar.y_range()),
+            |ui| {
+                if style::plain(ui, format!("‹ {folder}")).clicked() {
+                    go = Some(Go::Queue);
+                }
+                ui.add_space(4.0);
+                ui.label(
+                    egui::RichText::new(name)
+                        .font(style::medium(14.0))
+                        .color(p.text),
+                );
+                ui.add_space(4.0);
+                ui.label(egui::RichText::new(place).color(p.secondary));
+            },
+        );
+        let photo = editor.video.is_none();
+        let fit = tr.get("editor-fit");
+        let spacing = ui.spacing().item_spacing.x;
+        let mut width = 4.0 * style::BUTTON_HEIGHT + 1.0 + 4.0 * spacing;
+        if photo {
+            width += style::button_width(ui, &fit, false) + spacing;
+        }
+        let right = bar.right() - 14.0;
+        let mut draft = self.review.drafts.get_mut(&item);
+        row(
+            ui,
+            egui::Rect::from_x_y_ranges(right - width..=right, bar.y_range()),
+            |ui| {
+                let can_undo = draft.as_ref().is_some_and(|d| d.can_undo());
+                let can_redo = draft.as_ref().is_some_and(|d| d.can_redo());
+                if style::toolbar_icon(ui, &tr.get("editor-undo"), can_undo, style::icon::undo)
+                    .clicked()
+                    && let Some(d) = draft.as_mut()
+                {
+                    d.undo();
+                }
+                if style::toolbar_icon(ui, &tr.get("editor-redo"), can_redo, style::icon::redo)
+                    .clicked()
+                    && let Some(d) = draft.as_mut()
+                {
+                    d.redo();
+                }
+                let (line, _) = ui.allocate_exact_size(egui::vec2(1.0, 18.0), egui::Sense::hover());
+                ui.painter().vline(
+                    line.center().x,
+                    line.y_range(),
+                    egui::Stroke::new(1.0, p.separator),
+                );
+                if photo && style::plain(ui, fit).clicked() {
+                    editor.view = None;
+                }
+                let previous = tr.get("editor-previous");
+                if style::toolbar_icon(ui, &previous, true, style::icon::previous).clicked() {
+                    go = Some(Go::Step(-1));
+                }
+                let next = tr.get("editor-next");
+                if style::toolbar_icon(ui, &next, true, style::icon::next).clicked() {
+                    go = Some(Go::Step(1));
+                }
+            },
+        );
+        self.go(go, item, &ctx);
     }
 
     /// The items still to review, then those saved or saving, faded, under the folder they are
@@ -310,41 +406,50 @@ impl ReviewScreen {
         }
         let mut asked = Asked::default();
         let open = self.review.is_open(item);
+        let p = *Palette::of(ui);
         egui::Panel::right("review-side")
             .resizable(false)
-            .exact_size(320.0)
+            .exact_size(style::INSPECTOR_WIDTH)
+            .frame(egui::Frame::NONE.fill(p.window))
             .show(ui, |ui| {
-                egui::ScrollArea::vertical().show(ui, |ui| {
-                    side_panel(ui, tr, &mut self.review, editor, &stored, open, &mut asked);
-                });
+                inspector(ui, tr, &mut self.review, editor, &stored, open, &mut asked);
             });
-        egui::CentralPanel::default().show(ui, |ui| match &stored.media {
-            StoredMedia::Photo { detections, .. } => {
-                if let Some(draft) = self.review.drafts.get_mut(&item) {
-                    let keys = canvas(
-                        ui,
-                        tr,
-                        editor,
-                        draft,
-                        detections,
-                        &self.review.options,
-                        open,
-                    );
-                    if let Some(step) = keys {
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE.fill(p.window))
+            .show(ui, |ui| match &stored.media {
+                StoredMedia::Photo { detections, .. } => {
+                    if let Some(draft) = self.review.drafts.get_mut(&item) {
+                        let hint_height = 34.0;
+                        let size = ui.available_size() - egui::vec2(0.0, hint_height);
+                        let keys = ui
+                            .allocate_ui(size, |ui| {
+                                canvas(
+                                    ui,
+                                    tr,
+                                    editor,
+                                    draft,
+                                    detections,
+                                    &self.review.options,
+                                    open,
+                                )
+                            })
+                            .inner;
+                        if let Some(step) = keys {
+                            asked.go = Some(step);
+                        }
+                        hint(ui, tr, &mut editor.help);
+                    }
+                }
+                StoredMedia::Video { tracks, .. } => {
+                    if let (Some(draft), Some(video)) =
+                        (self.review.drafts.get_mut(&item), editor.video.as_mut())
+                        && let Some(step) =
+                            video_editor::ui(ui, tr, video, draft, tracks, open, &mut editor.help)
+                    {
                         asked.go = Some(step);
                     }
                 }
-            }
-            StoredMedia::Video { tracks, .. } => {
-                if let (Some(draft), Some(video)) =
-                    (self.review.drafts.get_mut(&item), editor.video.as_mut())
-                    && let Some(step) =
-                        video_editor::ui(ui, tr, video, draft, tracks, open, &mut editor.help)
-                {
-                    asked.go = Some(step);
-                }
-            }
-        });
+            });
         if editor.help {
             let video = editor.video.is_some();
             shortcuts(&ctx, tr, &mut editor.help, video);
@@ -704,7 +809,9 @@ struct Asked {
     act: Option<ScreenAct>,
 }
 
-fn side_panel(
+/// The editor's right panel: what is left to resolve and what is masked, over the item's state
+/// and the buttons that decide it. The buttons keep to the bottom; the groups above scroll.
+fn inspector(
     ui: &mut egui::Ui,
     tr: &Translator,
     review: &mut Review,
@@ -713,132 +820,183 @@ fn side_panel(
     open: bool,
     asked: &mut Asked,
 ) {
-    let item = stored.item;
-    ui.horizontal(|ui| {
-        if ui.button(tr.get("editor-to-queue")).clicked() {
-            asked.go = Some(Go::Queue);
-        }
-        if ui.button(tr.get("editor-previous")).clicked() {
-            asked.go = Some(Go::Step(-1));
-        }
-        if ui.button(tr.get("editor-next")).clicked() {
-            asked.go = Some(Go::Step(1));
-        }
+    let p = *Palette::of(ui);
+    let whole = ui.max_rect();
+    let measured = ui.scope_id().with("footer height");
+    let footer_height = ui.data(|d| d.get_temp::<f32>(measured)).unwrap_or(96.0);
+    let (top, bottom) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
+    ui.scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
+        egui::ScrollArea::vertical()
+            .id_salt("inspector")
+            .auto_shrink(false)
+            .show(ui, |ui| groups(ui, tr, review, editor, stored, open));
     });
-    ui.heading(file_name(stored));
-    ui.label(place(review, item, tr));
-    match review.status(item).clone() {
-        Status::Waiting => {}
-        Status::Changed => {
-            ui.colored_label(ui.visuals().warn_fg_color, tr.get("session-item-changed"));
-        }
-        Status::Rendering => {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.label(tr.get("review-badge-saving"));
-            });
-        }
-        Status::Saved(path) => {
-            ui.label(tr.get("state-published"));
-            ui.horizontal(|ui| {
-                if ui.button(tr.get("item-reveal")).clicked() {
-                    asked.act = Some(ScreenAct::Show(path.clone(), false));
-                }
-                if ui.button(tr.get("item-open")).clicked() {
-                    asked.act = Some(ScreenAct::Show(path.clone(), true));
-                }
-            });
-        }
-        Status::Refused(rejection) => {
-            ui.colored_label(
-                ui.visuals().error_fg_color,
-                wording::refusal(&rejection, tr),
-            );
-            if let Rejection::NameTaken { suggestion } = &rejection
-                && let Some(name) = suggestion.file_name()
-            {
-                let name = name.to_string_lossy().into_owned();
-                let label = tr.with(
-                    "refused-rename",
-                    &[("name", FluentValue::from(name.as_str()))],
-                );
-                if ui.button(label).clicked() {
-                    asked.go = Some(Go::Rename(name));
-                }
-            }
-        }
-        Status::Failed(failure) => {
-            let why = wording::failure(&failure, tr);
-            ui.colored_label(
-                ui.visuals().error_fg_color,
-                tr.with("editor-failed", &[("error", FluentValue::from(why))]),
-            );
-            ui.weak(failure.reason);
-        }
-        Status::Cancelled => {
-            ui.colored_label(ui.visuals().error_fg_color, tr.get("editor-cancelled"));
-        }
+    let footer = ui.scope_builder(egui::UiBuilder::new().max_rect(bottom), |ui| {
+        egui::Frame::NONE
+            .inner_margin(egui::Margin::symmetric(20, 16))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.spacing_mut().item_spacing.y = 10.0;
+                footer(ui, tr, review, stored, open, asked);
+            })
+            .response
+            .rect
+            .height()
+    });
+    ui.painter().hline(
+        whole.x_range(),
+        bottom.top(),
+        egui::Stroke::new(1.0, p.faint_line),
+    );
+    // The footer's height is known once it is drawn; the next frame gives it that room.
+    if (footer.inner - footer_height).abs() > 0.5 {
+        ui.data_mut(|d| d.insert_temp(measured, footer.inner));
+        ui.ctx().request_repaint();
     }
-    let Some(draft) = review.drafts.get_mut(&item) else {
+}
+
+fn groups(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    review: &mut Review,
+    editor: &mut Editor,
+    stored: &SessionItem,
+    open: bool,
+) {
+    let Some(draft) = review.drafts.get_mut(&stored.item) else {
         return;
     };
-    ui.separator();
-    if let StoredMedia::Photo { detections, .. } = &stored.media {
-        let masked = (0..detections.len())
-            .filter(|&i| !draft.is_excluded(i))
-            .count();
-        ui.label(tr.with(
-            "editor-detections",
-            &[
-                ("count", FluentValue::from(detections.len())),
-                ("masked", FluentValue::from(masked)),
-            ],
-        ));
-        ui.label(tr.with(
-            "editor-added",
-            &[("count", FluentValue::from(draft.doc.edits.added.len()))],
-        ));
+    style::group(ui, |ui| problems(ui, tr, editor, draft, stored, open));
+    match &stored.media {
+        StoredMedia::Photo { detections, .. } => {
+            style::group(ui, |ui| detection_list(ui, tr, draft, detections, open));
+            if !draft.doc.edits.added.is_empty() {
+                style::group(ui, |ui| added_list(ui, tr, draft, open));
+            }
+        }
+        StoredMedia::Video { tracks, .. } => {
+            if let Some(video) = &mut editor.video {
+                style::group(ui, |ui| track_list(ui, tr, video, draft, tracks, open));
+            }
+        }
     }
-    if let (StoredMedia::Video { tracks, .. }, Some(video)) = (&stored.media, &mut editor.video) {
-        video_panel(ui, tr, video, draft, tracks, open);
+}
+
+/// A row of the panel's lists that selects what it stands for, with a checkbox for whether it
+/// is masked and grey text at the right.
+fn masked_row(
+    ui: &mut egui::Ui,
+    selected: bool,
+    masked: &mut bool,
+    enabled: bool,
+    name: &str,
+    detail: &str,
+) -> (egui::Response, egui::Response) {
+    let p = *Palette::of(ui);
+    let (rect, row) = ui.allocate_exact_size(
+        egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+        egui::Sense::click(),
+    );
+    if selected {
+        ui.painter()
+            .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.sidebar);
     }
-    ui.add_space(6.0);
-    ui.strong(tr.get("editor-problems"));
+    let check = ui
+        .scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(rect)
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| {
+                let check = ui.add_enabled(enabled, egui::Checkbox::new(masked, name));
+                check.widget_info(|| {
+                    egui::WidgetInfo::selected(
+                        egui::Role::CheckBox,
+                        enabled,
+                        *masked,
+                        format!("{name}, {detail}"),
+                    )
+                });
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    ui.label(egui::RichText::new(detail).size(12.0).color(p.secondary));
+                });
+                check
+            },
+        )
+        .inner;
+    (row, check)
+}
+
+fn problems(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    editor: &mut Editor,
+    draft: &mut Draft,
+    stored: &SessionItem,
+    open: bool,
+) {
+    let p = *Palette::of(ui);
+    let title = tr.get("editor-problems");
+    style::group_title(ui, &title);
     if draft.problems().is_empty() {
-        ui.label(tr.get("editor-no-problems"));
+        ui.label(egui::RichText::new(tr.get("editor-no-problems")).color(p.body));
+        return;
     }
     let video = video_length(&stored.media);
     let mut resolve = None;
     let problems = draft.problems().to_vec();
-    a11y::list(ui, &tr.get("editor-problems"), |ui| {
+    a11y::list(ui, &title, |ui| {
         for (i, problem) in problems.iter().enumerate() {
             let resolution = draft.doc.resolutions[i];
             let evidence = CoverageEvidence {
                 problem: problem.clone(),
                 resolution,
             };
-            let selected = draft.selected == Some(Pick::Problem(i));
-            ui.group(|ui| {
-                let text = summary::problem(&evidence, video, tr);
-                let state = tr.get(resolution_id(resolution));
+            let text = summary::problem(&evidence, video, tr);
+            let state = tr.get(resolution_id(resolution));
+            let unresolved = resolution == Resolution::Unresolved;
+            ui.vertical(|ui| {
+                ui.spacing_mut().item_spacing.y = 6.0;
                 a11y::mark_item(ui, &format!("{text}, {state}"));
-                if ui.selectable_label(selected, text).clicked() {
+                let selected = draft.selected == Some(Pick::Problem(i));
+                let picked = ui
+                    .horizontal(|ui| {
+                        if unresolved {
+                            style::status_dot(ui, p.needs_review);
+                        } else {
+                            ui.add_space(7.0 + ui.spacing().item_spacing.x);
+                        }
+                        let color = if unresolved { p.text } else { p.secondary };
+                        ui.add(
+                            egui::Button::selectable(
+                                selected,
+                                egui::RichText::new(text).color(color),
+                            )
+                            .wrap_mode(egui::TextWrapMode::Wrap),
+                        )
+                    })
+                    .inner;
+                if picked.clicked() {
                     draft.selected = Some(Pick::Problem(i));
                     if let (Some(v), Some(k)) = (editor.video.as_mut(), problem_frame(problem)) {
                         v.seek(k, draft.frames());
                     }
                 }
-                if resolution == Resolution::Unresolved {
-                    ui.colored_label(ui.visuals().warn_fg_color, state);
-                } else {
-                    ui.weak(state);
-                }
-                ui.add_enabled_ui(open, |ui| {
-                    ui.horizontal(|ui| {
-                        if resolution == Resolution::Unresolved {
+                ui.horizontal(|ui| {
+                    ui.add_space(15.0);
+                    ui.horizontal_wrapped(|ui| {
+                        if !open {
+                            ui.disable();
+                        }
+                        if !unresolved {
+                            ui.label(egui::RichText::new(&state).size(12.0).color(p.secondary));
+                            if style::small(ui, &tr.get("editor-reopen"), true).clicked() {
+                                resolve = Some((i, Resolution::Unresolved));
+                            }
+                        } else {
+                            ui.label(egui::RichText::new(&state).size(12.0).color(p.needs_review));
                             if matches!(problem, Problem::WeakCandidate { .. })
                                 && matches!(stored.media, StoredMedia::Photo { .. })
-                                && ui.button(tr.get("editor-cover")).clicked()
+                                && style::small(ui, &tr.get("editor-cover"), false).clicked()
                             {
                                 resolve = Some((i, Resolution::CoveredByManualMask));
                             }
@@ -847,15 +1005,13 @@ fn side_panel(
                                     .video
                                     .as_ref()
                                     .is_some_and(|v| v.clip.preview.is_some())
-                                && ui.button(tr.get("editor-cover-gap")).clicked()
+                                && style::small(ui, &tr.get("editor-cover-gap"), false).clicked()
                             {
                                 resolve = Some((i, Resolution::CoveredByManualMask));
                             }
-                            if ui.button(tr.get("editor-dismiss")).clicked() {
+                            if style::small(ui, &tr.get("editor-dismiss"), false).clicked() {
                                 resolve = Some((i, Resolution::Dismissed));
                             }
-                        } else if ui.button(tr.get("editor-reopen")).clicked() {
-                            resolve = Some((i, Resolution::Unresolved));
                         }
                     });
                 });
@@ -874,48 +1030,371 @@ fn side_panel(
         Some((i, resolution)) => draft.resolve(i, resolution),
         None => {}
     }
-    ui.separator();
-    let unresolved = draft.unresolved();
-    ui.horizontal(|ui| {
-        if ui
-            .add_enabled(draft.can_undo(), egui::Button::new(tr.get("editor-undo")))
-            .clicked()
-        {
-            draft.undo();
-        }
-        if ui
-            .add_enabled(draft.can_redo(), egui::Button::new(tr.get("editor-redo")))
-            .clicked()
-        {
-            draft.redo();
-        }
-        if ui.button(tr.get("editor-shortcuts")).clicked() {
-            editor.help = !editor.help;
+}
+
+pub(crate) fn kind_name(kind: DetectionKind, tr: &Translator) -> String {
+    tr.get(match kind {
+        DetectionKind::Face => "editor-kind-face",
+        DetectionKind::Plate => "editor-kind-plate",
+    })
+}
+
+fn detection_list(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    draft: &mut Draft,
+    detections: &[cloakframe_core::detection::Detection],
+    open: bool,
+) {
+    let masked = (0..detections.len())
+        .filter(|&i| !draft.is_excluded(i))
+        .count();
+    let title = tr.with(
+        "editor-detections",
+        &[
+            ("count", FluentValue::from(detections.len())),
+            ("masked", FluentValue::from(masked)),
+        ],
+    );
+    style::group_title(ui, &title);
+    a11y::list(ui, &title, |ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        for (i, d) in detections.iter().enumerate() {
+            let mut on = !draft.is_excluded(i);
+            let selected = draft.selected == Some(Pick::Detection(i));
+            let score = format!("{:.2}", d.score());
+            let (row, check) = masked_row(
+                ui,
+                selected,
+                &mut on,
+                open,
+                &kind_name(d.kind(), tr),
+                &score,
+            );
+            if check.changed() {
+                draft.toggle(i);
+            }
+            if row.clicked() || check.changed() {
+                draft.selected = Some(Pick::Detection(i));
+            }
         }
     });
-    let approve = ui.add_enabled(
-        open && unresolved == 0,
-        egui::Button::new(tr.get("editor-approve")),
-    );
-    if approve.clicked() {
-        asked.decide = Some(Action::Approve);
-    }
-    if unresolved > 0 {
-        approve.on_disabled_hover_text(tr.get("editor-approve-blocked"));
-        if ui
-            .add_enabled(open, egui::Button::new(tr.get("editor-export-warnings")))
-            .clicked()
-        {
-            asked.decide = Some(Action::ExportWithWarnings);
+}
+
+fn added_list(ui: &mut egui::Ui, tr: &Translator, draft: &mut Draft, open: bool) {
+    let p = *Palette::of(ui);
+    let title = tr.get("editor-added-title");
+    style::group_title(ui, &title);
+    let mut remove = None;
+    a11y::list(ui, &title, |ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        for i in 0..draft.doc.edits.added.len() {
+            let name = tr.with("editor-added-area", &[("n", FluentValue::from(i + 1))]);
+            let selected = draft.selected == Some(Pick::Added(i));
+            let (rect, row) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                egui::Sense::click(),
+            );
+            row.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ListItem, true, &name));
+            if selected {
+                ui.painter()
+                    .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.sidebar);
+            }
+            if row.clicked() {
+                draft.selected = Some(Pick::Added(i));
+            }
+            ui.scope_builder(
+                egui::UiBuilder::new()
+                    .max_rect(rect)
+                    .layout(egui::Layout::left_to_right(egui::Align::Center)),
+                |ui| {
+                    ui.label(&name);
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.add_enabled_ui(open, |ui| {
+                            if style::small(ui, &tr.get("editor-remove"), true).clicked() {
+                                remove = Some(i);
+                            }
+                        });
+                    });
+                },
+            );
         }
+    });
+    if let Some(i) = remove {
+        draft.remove(i);
     }
-    ui.add_enabled_ui(open, |ui| {
-        ui.menu_button(tr.get("editor-more"), |ui| {
+}
+
+/// The item's state over the button that saves it and the menu of other exports.
+fn footer(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    review: &Review,
+    stored: &SessionItem,
+    open: bool,
+    asked: &mut Asked,
+) {
+    let p = *Palette::of(ui);
+    let item = stored.item;
+    let unresolved = review.drafts.get(&item).map_or(0, Draft::unresolved);
+    let line = |ui: &mut egui::Ui, text: String, color| {
+        ui.label(egui::RichText::new(text).size(12.0).color(color));
+    };
+    match review.status(item).clone() {
+        Status::Waiting if unresolved > 0 => line(ui, tr.get("editor-solve-first"), p.secondary),
+        Status::Waiting => {}
+        Status::Changed => line(ui, tr.get("session-item-changed"), p.needs_review),
+        Status::Rendering => {
+            ui.horizontal(|ui| {
+                ui.spinner();
+                ui.label(tr.get("review-badge-saving"));
+            });
+            return;
+        }
+        Status::Saved(path) => {
+            ui.horizontal(|ui| {
+                style::status_dot(ui, p.saved);
+                ui.label(tr.get("state-published"));
+            });
+            ui.horizontal(|ui| {
+                if style::outlined(ui, tr.get("item-reveal")).clicked() {
+                    asked.act = Some(ScreenAct::Show(path.clone(), false));
+                }
+                if style::outlined(ui, tr.get("item-open")).clicked() {
+                    asked.act = Some(ScreenAct::Show(path, true));
+                }
+            });
+            return;
+        }
+        Status::Refused(rejection) => {
+            line(ui, wording::refusal(&rejection, tr), p.failed);
+            if let Rejection::NameTaken { suggestion } = &rejection
+                && let Some(name) = suggestion.file_name()
+            {
+                let name = name.to_string_lossy().into_owned();
+                let label = tr.with(
+                    "refused-rename",
+                    &[("name", FluentValue::from(name.as_str()))],
+                );
+                if style::outlined(ui, label).clicked() {
+                    asked.go = Some(Go::Rename(name));
+                }
+            }
+        }
+        Status::Failed(failure) => {
+            let why = wording::failure(&failure, tr);
+            line(
+                ui,
+                tr.with("editor-failed", &[("error", FluentValue::from(why))]),
+                p.failed,
+            );
+            line(ui, failure.reason, p.secondary);
+        }
+        Status::Cancelled => line(ui, tr.get("editor-cancelled"), p.failed),
+    }
+    ui.horizontal(|ui| {
+        let more = 32.0;
+        let width = ui.available_width() - more - ui.spacing().item_spacing.x;
+        let approve = style::primary_sized(
+            ui,
+            &tr.get("editor-approve"),
+            open && unresolved == 0,
+            egui::vec2(width, 32.0),
+        );
+        if approve.clicked() {
+            asked.decide = Some(Action::Approve);
+        }
+        if unresolved > 0 {
+            approve.on_disabled_hover_text(tr.get("editor-approve-blocked"));
+        }
+        let sense = if open {
+            egui::Sense::click()
+        } else {
+            egui::Sense::hover()
+        };
+        let (rect, menu) = ui.allocate_exact_size(egui::vec2(more, 32.0), sense);
+        let label = tr.get("editor-more");
+        menu.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, open, &label));
+        let border = if open && menu.hovered() {
+            p.secondary
+        } else {
+            p.border
+        };
+        ui.painter().rect_stroke(
+            rect,
+            style::BUTTON_RADIUS,
+            egui::Stroke::new(1.0, border),
+            egui::StrokeKind::Inside,
+        );
+        let dots = if open { p.text } else { p.disabled };
+        for dx in [-5.0, 0.0, 5.0] {
+            ui.painter()
+                .circle_filled(rect.center() + egui::vec2(dx, 0.0), 1.5, dots);
+        }
+        if !open {
+            return;
+        }
+        egui::Popup::menu(&menu).show(|ui| {
+            if unresolved > 0 && ui.button(tr.get("editor-export-warnings")).clicked() {
+                asked.decide = Some(Action::ExportWithWarnings);
+            }
             if ui.button(tr.get("editor-export-plain")).clicked() {
                 asked.decide = Some(Action::ExportWithoutAnonymization);
             }
         });
     });
+}
+
+/// Minutes and whole seconds, as the track list shows where a track is.
+fn short_time(seconds: f64) -> String {
+    let whole = seconds.max(0.0).floor() as u64;
+    format!("{}:{:02}", whole / 60, whole % 60)
+}
+
+/// The tracks found and the ones drawn, each selecting itself and going to its frames; under
+/// them, what the selected drawn track can do.
+fn track_list(
+    ui: &mut egui::Ui,
+    tr: &Translator,
+    video: &mut VideoEditor,
+    draft: &mut Draft,
+    tracks: &[cloakframe_engine::video::tracking::TrackSummary],
+    open: bool,
+) {
+    let p = *Palette::of(ui);
+    let masked = tracks
+        .iter()
+        .filter(|t| !draft.is_track_excluded(t.id))
+        .count();
+    let title = tr.with(
+        "editor-tracks",
+        &[
+            ("count", FluentValue::from(tracks.len())),
+            ("masked", FluentValue::from(masked)),
+        ],
+    );
+    style::group_title(ui, &title);
+    let seconds = |k: u64| video.clip.preview.as_ref().map_or(0.0, |p| p.seconds(k));
+    let span = |first: u64, last: u64| {
+        format!(
+            "{}–{}",
+            short_time(seconds(first)),
+            short_time(seconds(last))
+        )
+    };
+    let mut go_to = None;
+    a11y::list(ui, &title, |ui| {
+        ui.spacing_mut().item_spacing.y = 0.0;
+        for t in tracks {
+            let mut on = !draft.is_track_excluded(t.id);
+            let kind = kind_name(t.kind, tr);
+            let name = if t.low_confidence {
+                format!("{kind} · {}", tr.get("editor-track-weak"))
+            } else {
+                kind
+            };
+            let selected = draft.selected == Some(Pick::Track(t.id));
+            let (row, check) =
+                masked_row(ui, selected, &mut on, open, &name, &span(t.first, t.last));
+            if check.changed() {
+                draft.toggle_track(t.id);
+            }
+            let row = if t.low_confidence {
+                row.on_hover_text(tr.get("editor-track-low"))
+            } else {
+                row
+            };
+            if row.clicked() || check.changed() {
+                draft.selected = Some(Pick::Track(t.id));
+                go_to = Some((t.first, t.last));
+            }
+        }
+        let drawn = tr.get("editor-kind-drawn");
+        let spans: Vec<(u64, u64)> = draft
+            .doc
+            .video
+            .added_tracks
+            .iter()
+            .map(|t| (t.first, t.last))
+            .collect();
+        for (i, (first, last)) in spans.into_iter().enumerate() {
+            let selected = draft.selected == Some(Pick::Manual(i));
+            let detail = span(first, last);
+            let (rect, row) = ui.allocate_exact_size(
+                egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                egui::Sense::click(),
+            );
+            row.widget_info(|| {
+                egui::WidgetInfo::labeled(egui::Role::ListItem, true, format!("{drawn}, {detail}"))
+            });
+            if selected {
+                ui.painter()
+                    .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.sidebar);
+            }
+            let painter = ui.painter();
+            painter.text(
+                rect.left_center(),
+                egui::Align2::LEFT_CENTER,
+                &drawn,
+                egui::FontId::proportional(13.0),
+                p.text,
+            );
+            painter.text(
+                rect.right_center(),
+                egui::Align2::RIGHT_CENTER,
+                &detail,
+                egui::FontId::proportional(12.0),
+                p.secondary,
+            );
+            if row.clicked() {
+                draft.selected = Some(Pick::Manual(i));
+                go_to = Some((first, last));
+            }
+        }
+    });
+    if let Some((first, last)) = go_to {
+        video.seek(video.at.clamp(first, last), draft.frames());
+    }
+    let Some(Pick::Manual(i)) = draft.selected else {
+        return;
+    };
+    let Some(track) = draft.doc.video.added_tracks.get(i) else {
+        return;
+    };
+    let at = video.at;
+    let keyframes = track.keyframes.len();
+    let on_keyframe = track.keyframes.iter().any(|k| k.frame == at);
+    let mut action = None;
+    ui.add_enabled_ui(open, |ui| {
+        ui.horizontal_wrapped(|ui| {
+            if style::small(ui, &tr.get("editor-drawn-start"), false).clicked() {
+                action = Some(Drawn::Start);
+            }
+            if style::small(ui, &tr.get("editor-drawn-end"), false).clicked() {
+                action = Some(Drawn::End);
+            }
+            let remove_keyframe = tr.get("editor-drawn-remove-keyframe");
+            if ui
+                .add_enabled_ui(on_keyframe && keyframes > 1, |ui| {
+                    style::small(ui, &remove_keyframe, false)
+                })
+                .inner
+                .clicked()
+            {
+                action = Some(Drawn::RemoveKeyframe);
+            }
+            if style::small(ui, &tr.get("editor-drawn-remove"), false).clicked() {
+                action = Some(Drawn::Remove);
+            }
+        });
+    });
+    match action {
+        Some(Drawn::Start) => draft.trim(i, at, true),
+        Some(Drawn::End) => draft.trim(i, at, false),
+        Some(Drawn::RemoveKeyframe) => draft.remove_keyframe(i, at),
+        Some(Drawn::Remove) => draft.remove_track(i),
+        None => {}
+    }
 }
 
 /// Where in a video a problem is.
@@ -932,145 +1411,6 @@ enum Drawn {
     End,
     RemoveKeyframe,
     Remove,
-}
-
-/// The frame under review, playback, and what the selected track or drawn track can do.
-fn video_panel(
-    ui: &mut egui::Ui,
-    tr: &Translator,
-    video: &mut VideoEditor,
-    draft: &mut Draft,
-    tracks: &[cloakframe_engine::video::tracking::TrackSummary],
-    open: bool,
-) {
-    let at = video.at;
-    let seconds = video.clip.preview.as_ref().map_or(0.0, |p| p.seconds(at));
-    ui.label(tr.with(
-        "editor-video-frame",
-        &[
-            ("frame", FluentValue::from(at)),
-            ("last", FluentValue::from(draft.frames().saturating_sub(1))),
-            ("time", FluentValue::from(video_editor::time(seconds))),
-        ],
-    ));
-    ui.horizontal(|ui| {
-        let play = if video.clip.playing {
-            tr.get("editor-video-stop")
-        } else {
-            tr.get("editor-video-play")
-        };
-        if ui
-            .add_enabled(video.clip.preview.is_some(), egui::Button::new(play))
-            .clicked()
-        {
-            video.toggle_playback(draft);
-        }
-        ui.checkbox(&mut video.masked_playback, tr.get("editor-video-masked"));
-    });
-    let masked = tracks
-        .iter()
-        .filter(|t| !draft.is_track_excluded(t.id))
-        .count();
-    ui.label(tr.with(
-        "editor-tracks",
-        &[
-            ("count", FluentValue::from(tracks.len())),
-            ("masked", FluentValue::from(masked)),
-        ],
-    ));
-    ui.label(tr.with(
-        "editor-drawn",
-        &[(
-            "count",
-            FluentValue::from(draft.doc.video.added_tracks.len()),
-        )],
-    ));
-    match draft.selected {
-        Some(Pick::Track(id)) => {
-            let Some(track) = tracks.iter().find(|t| t.id == id) else {
-                return;
-            };
-            ui.group(|ui| {
-                let kind = match track.kind {
-                    cloakframe_core::detection::DetectionKind::Face => "editor-track-face",
-                    cloakframe_core::detection::DetectionKind::Plate => "editor-track-plate",
-                };
-                ui.strong(tr.with(
-                    kind,
-                    &[
-                        ("first", FluentValue::from(track.first)),
-                        ("last", FluentValue::from(track.last)),
-                    ],
-                ));
-                if track.low_confidence {
-                    ui.weak(tr.get("editor-track-low"));
-                }
-                let excluded = draft.is_track_excluded(id);
-                ui.weak(tr.get(if excluded {
-                    "editor-track-unmasked"
-                } else {
-                    "editor-track-masked"
-                }));
-                let toggle = if excluded {
-                    tr.get("editor-track-mask")
-                } else {
-                    tr.get("editor-track-unmask")
-                };
-                if ui.add_enabled(open, egui::Button::new(toggle)).clicked() {
-                    draft.toggle_track(id);
-                }
-            });
-        }
-        Some(Pick::Manual(i)) => {
-            let Some(track) = draft.doc.video.added_tracks.get(i) else {
-                return;
-            };
-            let (first, last) = (track.first, track.last);
-            let keyframes = track.keyframes.len();
-            let on_keyframe = track.keyframes.iter().any(|k| k.frame == at);
-            let mut action = None;
-            ui.group(|ui| {
-                ui.strong(tr.with(
-                    "editor-drawn-track",
-                    &[
-                        ("first", FluentValue::from(first)),
-                        ("last", FluentValue::from(last)),
-                        ("keyframes", FluentValue::from(keyframes)),
-                    ],
-                ));
-                ui.add_enabled_ui(open, |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        if ui.button(tr.get("editor-drawn-start")).clicked() {
-                            action = Some(Drawn::Start);
-                        }
-                        if ui.button(tr.get("editor-drawn-end")).clicked() {
-                            action = Some(Drawn::End);
-                        }
-                        if ui
-                            .add_enabled(
-                                on_keyframe && keyframes > 1,
-                                egui::Button::new(tr.get("editor-drawn-remove-keyframe")),
-                            )
-                            .clicked()
-                        {
-                            action = Some(Drawn::RemoveKeyframe);
-                        }
-                        if ui.button(tr.get("editor-drawn-remove")).clicked() {
-                            action = Some(Drawn::Remove);
-                        }
-                    });
-                });
-            });
-            match action {
-                Some(Drawn::Start) => draft.trim(i, at, true),
-                Some(Drawn::End) => draft.trim(i, at, false),
-                Some(Drawn::RemoveKeyframe) => draft.remove_keyframe(i, at),
-                Some(Drawn::Remove) => draft.remove_track(i),
-                None => {}
-            }
-        }
-        _ => {}
-    }
 }
 
 /// The photo with its boxes; returns a step through the queue the keys asked for.
@@ -1351,7 +1691,7 @@ fn canvas(
     };
 
     let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 0.0, ui.visuals().extreme_bg_color);
+    painter.rect_filled(rect, 0.0, Palette::of(ui).canvas);
     let view = *view;
     picture.paint(&painter, origin(&view), view.scale, masked);
     if editor.previewing {
@@ -1461,6 +1801,28 @@ fn cycle(draft: &Draft, detections: usize, forward: bool) -> Option<Pick> {
         (Some(i), false) => (i + n - 1) % n,
     };
     Some(picks[next])
+}
+
+/// The line under the photo: what the pointer does, and the way to every shortcut.
+fn hint(ui: &mut egui::Ui, tr: &Translator, help: &mut bool) {
+    let p = *Palette::of(ui);
+    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+        let text = tr.get("editor-hint");
+        let shortcuts = tr.get("editor-shortcuts");
+        let width = style::text_width(ui, &text) * 12.0 / 13.0
+            + style::text_width(ui, &shortcuts) * 12.0 / 13.0
+            + 3.0 * ui.spacing().item_spacing.x;
+        ui.add_space(((ui.available_width() - width) / 2.0).max(20.0));
+        ui.label(egui::RichText::new(text).size(12.0).color(p.secondary));
+        ui.label(egui::RichText::new("·").size(12.0).color(p.secondary));
+        let link = ui.add(
+            egui::Button::new(egui::RichText::new(shortcuts).size(12.0).color(p.secondary))
+                .frame(false),
+        );
+        if link.clicked() {
+            *help = !*help;
+        }
+    });
 }
 
 fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {

@@ -409,9 +409,7 @@ impl AppState {
     fn toolbar(&mut self, ui: &mut egui::Ui, title_left: f32) {
         let p = *Palette::of(ui);
         let tr = Rc::clone(&self.tr);
-        if let Some(screen) = &mut self.review
-            && !screen.in_editor()
-        {
+        if let Some(screen) = &mut self.review {
             let act = screen.toolbar(ui, ui.max_rect(), title_left, &tr);
             self.screen_act(act);
             return;
@@ -435,7 +433,7 @@ impl AppState {
                 (tr.get("new-task"), detail)
             }
             Screen::Run => self.run_heading(),
-            Screen::Review => (tr.get("review-title"), None),
+            Screen::Review => unreachable!("the review draws its own toolbar"),
         };
         let rect = ui.max_rect();
         let title_rect =
