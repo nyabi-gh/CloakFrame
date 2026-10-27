@@ -92,10 +92,14 @@ fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
             .push(Arc::new(Dropped(path.clone())));
     }
     // One frame takes the drop and starts the scan, whose spinner repaints until it ends. It also
-    // reads the saved sessions where the folders changed since.
+    // reads the saved sessions where the folders changed since. The next frame lays out what was
+    // found and asks for its thumbnails.
     harness.step();
     harness.state_mut().wait_for_scan();
     harness.state_mut().wait_for_sessions();
+    harness.step();
+    let ctx = harness.ctx.clone();
+    harness.state_mut().wait_for_thumbnails(&ctx);
     harness.run();
 }
 

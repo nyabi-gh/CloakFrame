@@ -225,6 +225,13 @@ impl AppState {
         }
     }
 
+    /// Waits for the thumbnails the file grid asked for, for tests.
+    pub fn wait_for_thumbnails(&mut self, ctx: &egui::Context) {
+        if let Some(thumbnails) = &mut self.thumbnails {
+            thumbnails.wait(ctx);
+        }
+    }
+
     pub fn save_settings(&mut self) {
         if let Some(file) = &mut self.file
             && let Err(e) = file.save(&self.settings)
