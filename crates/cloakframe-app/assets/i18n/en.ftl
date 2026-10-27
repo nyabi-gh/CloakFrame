@@ -28,6 +28,9 @@ method-fill = Fill
 method-mosaic = Mosaic
 method-blur = Blur
 strength = Strength
+shape = Shape
+shape-rectangle = Rectangle
+shape-ellipse = Ellipse
 models-need-one = Choose faces, license plates, or both.
 
 output-folder = Output folder

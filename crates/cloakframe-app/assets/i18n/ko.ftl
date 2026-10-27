@@ -17,6 +17,9 @@ method-fill = 채우기
 method-mosaic = 모자이크
 method-blur = 블러
 strength = 강도
+shape = 모양
+shape-rectangle = 사각형
+shape-ellipse = 타원
 models-need-one = 얼굴이나 번호판 중 하나 이상을 고르세요.
 
 output-folder = 저장 위치

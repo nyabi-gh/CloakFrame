@@ -23,6 +23,9 @@ method-fill = 塗りつぶし
 method-mosaic = モザイク
 method-blur = ぼかし
 strength = 強さ
+shape = 形
+shape-rectangle = 四角形
+shape-ellipse = 楕円
 models-need-one = 顔とナンバープレートのどちらか、または両方を選んでください。
 
 output-folder = 保存先

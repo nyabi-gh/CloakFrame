@@ -8,7 +8,7 @@ use std::time::{Duration, Instant, SystemTime};
 
 use cloakframe_core::detection::{KindThresholds, Thresholds};
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
-use cloakframe_core::mask::{MaskStyle, Method as MaskMethod, MosaicStrength};
+use cloakframe_core::mask::{MaskStyle, Method as MaskMethod, MosaicStrength, Shape as MaskShape};
 use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stale_outputs};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::Acceleration;
@@ -30,7 +30,7 @@ use eframe::egui;
 use serde::{Deserialize, Serialize};
 
 use crate::progress::{self, Overall, Pace};
-use crate::settings::{Advanced, FaceModel, Method, Settings, VideoCodec, VideoQuality};
+use crate::settings::{Advanced, FaceModel, Method, Settings, Shape, VideoCodec, VideoQuality};
 use crate::tools::Tools;
 use crate::wording::RunNote;
 
@@ -175,6 +175,9 @@ pub struct RunOptions {
     pub faces: bool,
     pub plates: bool,
     pub method: Method,
+    /// Missing from sessions saved before the shape could be chosen, which ran with rectangles.
+    #[serde(default)]
+    pub shape: Shape,
     pub mosaic_strength: u8,
     /// Missing from sessions saved before there were advanced settings, which ran with the
     /// defaults.
@@ -188,6 +191,7 @@ impl RunOptions {
             faces: settings.faces,
             plates: settings.plates,
             method: settings.method,
+            shape: settings.shape,
             mosaic_strength: settings.mosaic_strength,
             advanced: settings.advanced,
         }
@@ -199,6 +203,10 @@ impl RunOptions {
                 Method::Fill => MaskMethod::Fill,
                 Method::Mosaic => MaskMethod::Mosaic,
                 Method::Blur => MaskMethod::Blur,
+            },
+            shape: match self.shape {
+                Shape::Rectangle => MaskShape::Rectangle,
+                Shape::Ellipse => MaskShape::Ellipse,
             },
             ..MaskStyle::default()
         };
@@ -761,11 +769,48 @@ mod tests {
         );
     }
 
+    /// The shape reaches the photo and the video processor for every method, so a review made
+    /// with the other shape is refused.
+    #[test]
+    fn the_shape_changes_what_the_engine_processes_with() {
+        let tools = Tools {
+            ffmpeg: Some(PathBuf::from("ffmpeg")),
+            ffprobe: Some(PathBuf::from("ffprobe")),
+            ..Tools::default()
+        };
+        for method in [Method::Fill, Method::Mosaic, Method::Blur] {
+            let fingerprints = |shape: Shape| {
+                let options = RunOptions {
+                    method,
+                    shape,
+                    ..RunOptions::of(&Settings::default())
+                };
+                assert_eq!(
+                    options.style().shape,
+                    match shape {
+                        Shape::Rectangle => MaskShape::Rectangle,
+                        Shape::Ellipse => MaskShape::Ellipse,
+                    }
+                );
+                let processor = processor(&options, &tools, PathBuf::from("records")).unwrap();
+                (
+                    processor.fingerprint(Path::new("a.jpg")),
+                    processor.fingerprint(Path::new("a.mp4")),
+                )
+            };
+            let (photo, video) = fingerprints(Shape::Rectangle);
+            let (photo_ellipse, video_ellipse) = fingerprints(Shape::Ellipse);
+            assert_ne!(photo, photo_ellipse, "{method:?}");
+            assert_ne!(video, video_ellipse, "{method:?}");
+        }
+    }
+
     /// A session keeps its run's advanced settings, and one saved before there were any reads
     /// as the defaults those runs used.
     #[test]
     fn sessions_keep_the_advanced_settings() {
         let options = RunOptions {
+            shape: Shape::Ellipse,
             advanced: Advanced {
                 face_model: FaceModel::Fast,
                 sensitivity: 2,
@@ -782,11 +827,10 @@ mod tests {
         let before = serde_json::json!({
             "faces": true, "plates": false, "method": "mosaic", "mosaic_strength": 8
         });
+        let before = serde_json::from_value::<RunOptions>(before).unwrap();
         assert_eq!(
-            serde_json::from_value::<RunOptions>(before)
-                .unwrap()
-                .advanced,
-            Advanced::default()
+            (before.shape, before.advanced),
+            (Shape::Rectangle, Advanced::default())
         );
     }
 }

@@ -26,7 +26,7 @@ use crate::run::{self, Board, Failure, Logged, Running};
 use crate::sample::Sample;
 use crate::sessions::{Saved, SavedSessions};
 use crate::settings::{
-    FaceModel, Method, Notice, Settings, SettingsFile, Theme, VideoCodec, VideoQuality,
+    FaceModel, Method, Notice, Settings, SettingsFile, Shape, Theme, VideoCodec, VideoQuality,
 };
 use crate::shell;
 use crate::style::{self, Palette};
@@ -1029,6 +1029,7 @@ impl AppState {
                         ui.push_id("method", |ui| {
                             style::segmented(ui, &mut self.settings.method, &methods);
                         });
+                        self.shape(ui, &tr);
                         if self.settings.method == Method::Mosaic {
                             self.strength(ui, &tr);
                         }
@@ -1059,6 +1060,23 @@ impl AppState {
         if self.settings != before {
             self.save_settings();
         }
+    }
+
+    fn shape(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        let p = *Palette::of(ui);
+        ui.horizontal(|ui| {
+            ui.add_sized(
+                egui::vec2(34.0, style::BUTTON_HEIGHT),
+                egui::Label::new(egui::RichText::new(tr.get("shape")).color(p.secondary)),
+            );
+            let shapes = [
+                (Shape::Rectangle, tr.get("shape-rectangle")),
+                (Shape::Ellipse, tr.get("shape-ellipse")),
+            ];
+            ui.push_id("shape", |ui| {
+                style::segmented(ui, &mut self.settings.shape, &shapes);
+            });
+        });
     }
 
     fn strength(&mut self, ui: &mut egui::Ui, tr: &Translator) {

@@ -6,7 +6,7 @@ use cloakframe_app::draft::Pick;
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
 use cloakframe_app::run::{Folders, RunOptions, processor};
-use cloakframe_app::settings::{Method, Settings};
+use cloakframe_app::settings::{Method, Settings, Shape};
 use cloakframe_app::tools::Tools;
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, ModelId};
@@ -26,7 +26,7 @@ use cloakframe_engine::video::process::item_records_dir;
 use cloakframe_engine::video::record::{Order, RecordWriter, TrackRegion};
 use cloakframe_engine::video::tracking::TrackSummary;
 use eframe::egui;
-use egui::accesskit::Role;
+use egui::accesskit::{Role, Toggled};
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
@@ -227,6 +227,39 @@ fn the_theme_menu_changes_the_colours() {
         harness.run_traced();
         assert_eq!(harness.state().settings.theme, theme);
         assert_eq!(harness.ctx.theme(), colours);
+    }
+}
+
+/// The shape is chosen next to the method, for every method, and runs take it.
+#[test]
+fn the_shape_is_chosen_under_how() {
+    for method in [Method::Fill, Method::Mosaic, Method::Blur] {
+        let mut harness = harness(
+            Language::En,
+            Settings {
+                method,
+                ..Settings::default()
+            },
+        );
+        harness.run_traced();
+        let chosen = |harness: &Harness<'_, AppState>, label: &str| {
+            harness
+                .get_by_role_and_label(Role::RadioButton, label)
+                .accesskit_node()
+                .toggled()
+                == Some(Toggled::True)
+        };
+        assert!(chosen(&harness, "Rectangle") && !chosen(&harness, "Ellipse"));
+        harness
+            .get_by_role_and_label(Role::RadioButton, "Ellipse")
+            .click();
+        harness.run_traced();
+        assert!(chosen(&harness, "Ellipse") && !chosen(&harness, "Rectangle"));
+        assert_eq!(harness.state().settings.shape, Shape::Ellipse);
+        assert_eq!(
+            RunOptions::of(&harness.state().settings).style().shape,
+            cloakframe_core::mask::Shape::Ellipse
+        );
     }
 }
 

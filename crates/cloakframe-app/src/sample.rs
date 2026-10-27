@@ -47,6 +47,7 @@ impl Sample {
         let looks_the_same = |shown: &RunOptions| {
             shown.faces == options.faces
                 && shown.method == options.method
+                && shown.shape == options.shape
                 && shown.mosaic_strength == options.mosaic_strength
         };
         if !self.shown.as_ref().is_some_and(|(o, _)| looks_the_same(o)) {
@@ -69,7 +70,7 @@ impl Default for Sample {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::{Method, Settings};
+    use crate::settings::{Method, Settings, Shape};
 
     fn options(faces: bool, method: Method, strength: u8) -> RunOptions {
         RunOptions {
@@ -116,6 +117,38 @@ mod tests {
                 "{method:?} {strength} looks like another"
             );
             seen.push(masked);
+        }
+    }
+
+    /// An ellipse leaves some of what a rectangle masks around the face, for every method.
+    #[test]
+    fn an_ellipse_masks_less_than_a_rectangle() {
+        let sample = Sample::new();
+        for method in [Method::Fill, Method::Mosaic, Method::Blur] {
+            let masked = |shape| {
+                sample.masked(&RunOptions {
+                    shape,
+                    ..options(true, method, 8)
+                })
+            };
+            let changed = |image: &RgbImage| {
+                image
+                    .pixels()
+                    .zip(sample.photo.pixels())
+                    .filter(|(a, b)| a != b)
+                    .count()
+            };
+            let (rectangle, ellipse) = (masked(Shape::Rectangle), masked(Shape::Ellipse));
+            assert!(changed(&ellipse) > 2000, "{method:?}");
+            assert!(changed(&ellipse) < changed(&rectangle), "{method:?}");
+            let original = &sample.photo;
+            assert!(
+                rectangle
+                    .enumerate_pixels()
+                    .any(|(x, y, p)| p != original.get_pixel(x, y)
+                        && ellipse.get_pixel(x, y) == original.get_pixel(x, y)),
+                "{method:?}"
+            );
         }
     }
 }
