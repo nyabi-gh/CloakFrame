@@ -12,7 +12,7 @@ use eframe::egui;
 use fluent_bundle::FluentValue;
 
 use crate::draft::{Draft, Pick};
-use crate::editor::{Go, View};
+use crate::editor::{Go, View, kind_name};
 use crate::i18n::Translator;
 use crate::lanes;
 use crate::style::{self, Palette};
@@ -20,7 +20,6 @@ use crate::video::Clip;
 
 const MASKED: egui::Color32 = egui::Color32::from_rgb(230, 70, 70);
 const ADDED: egui::Color32 = egui::Color32::from_rgb(60, 150, 240);
-const WEAK: egui::Color32 = egui::Color32::from_rgb(240, 170, 40);
 const UNMASKED: egui::Color32 = egui::Color32::from_gray(160);
 const TIMELINE_HEIGHT: f32 = 150.0;
 const PLAY_ROW_HEIGHT: f32 = 48.0;
@@ -520,7 +519,7 @@ pub(crate) fn ui(
     }
 
     play_row(ui, tr, editor, draft, &preview, help);
-    timeline(ui, tr, editor, draft, tracks, preview.frames());
+    timeline(ui, tr, editor, draft, tracks, &preview);
     go
 }
 
@@ -771,27 +770,44 @@ enum Hit {
     Track(usize),
 }
 
-/// The ruler with the frame under review, the gaps, the manual tracks and each kind's tracks
-/// in rows. A click moves to its frame and selects what is under it.
+/// The ruler, each kind's tracks in rows, the drawn tracks with their keyframes, the gaps across
+/// them and the frame under review. A click moves to its frame and selects what is under it.
 fn timeline(
     ui: &mut egui::Ui,
     tr: &Translator,
     editor: &mut VideoEditor,
     draft: &mut Draft,
     tracks: &[TrackSummary],
-    frames: u64,
+    preview: &Preview,
 ) {
-    let (rect, response) = ui.allocate_exact_size(
-        egui::vec2(ui.available_width(), TIMELINE_HEIGHT),
+    let p = *Palette::of(ui);
+    let frames = preview.frames();
+    let whole = ui.available_rect_before_wrap();
+    ui.painter().hline(
+        whole.x_range(),
+        whole.top(),
+        egui::Stroke::new(1.0, p.faint_line),
+    );
+    let outer = egui::Rect::from_min_size(
+        whole.min + egui::vec2(20.0, 6.0),
+        egui::vec2(whole.width() - 40.0, TIMELINE_HEIGHT - 20.0),
+    );
+    ui.allocate_rect(
+        egui::Rect::from_min_size(whole.min, egui::vec2(whole.width(), TIMELINE_HEIGHT)),
+        egui::Sense::hover(),
+    );
+    let rect = egui::Rect::from_x_y_ranges(outer.left() + GUTTER..=outer.right(), outer.y_range());
+    let response = ui.interact(
+        rect,
+        ui.make_persistent_id("timeline"),
         egui::Sense::click_and_drag(),
     );
     response.widget_info(|| {
         egui::WidgetInfo::labeled(egui::Role::Slider, true, tr.get("editor-timeline"))
     });
-    let painter = ui.painter_at(rect);
-    painter.rect_filled(rect, 2.0, ui.visuals().faint_bg_color);
+    let painter = ui.painter_at(outer.expand(2.0));
     let frames_f = frames.max(1) as f32;
-    let x_of = |k: u64| rect.left() + (k as f32 / frames_f) * rect.width();
+    let x_of = |k: f32| rect.left() + (k / frames_f) * rect.width();
     let frame_at = |x: f32| {
         (((x - rect.left()) / rect.width() * frames_f)
             .floor()
@@ -800,16 +816,15 @@ fn timeline(
     };
     let span = |first: u64, last: u64, top: f32, height: f32| {
         egui::Rect::from_min_max(
-            egui::pos2(x_of(first), top),
-            egui::pos2(x_of(last + 1).max(x_of(first) + 2.0), top + height),
+            egui::pos2(x_of(first as f32), top),
+            egui::pos2(
+                x_of((last + 1) as f32).max(x_of(first as f32) + 2.0),
+                top + height,
+            ),
         )
     };
 
-    let ruler = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), 16.0));
-    let gap_row = egui::Rect::from_min_size(
-        egui::pos2(rect.left(), ruler.bottom() + 2.0),
-        egui::vec2(rect.width(), 10.0),
-    );
+    let ruler = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), 18.0));
     let manual_spans: Vec<(u64, u64)> = draft
         .doc
         .video
@@ -818,66 +833,75 @@ fn timeline(
         .map(|t| (t.first, t.last))
         .collect();
     let manual_rows = lanes::pack(&manual_spans);
-    let manual_count = manual_rows.iter().max().map_or(1, |r| r + 1);
-    let track_rows: usize = editor.lanes.kinds.iter().map(|(_, n)| n).sum();
-    let rows_top = gap_row.bottom() + 4.0;
-    let kind_gaps = editor.lanes.kinds.len() as f32 * 4.0;
-    let row_height = ((rect.bottom() - rows_top - kind_gaps) / (manual_count + track_rows) as f32)
-        .clamp(2.0, 10.0);
-    let manual_top = rows_top;
-    let mut kind_tops = Vec::new();
-    let mut top = manual_top + manual_count as f32 * row_height + 4.0;
-    for (_, n) in &editor.lanes.kinds {
-        kind_tops.push(top);
-        top += *n as f32 * row_height + 4.0;
+    let manual_count = manual_rows.iter().max().map_or(0, |r| r + 1);
+    let mut groups: Vec<(String, usize)> = editor
+        .lanes
+        .kinds
+        .iter()
+        .map(|&(kind, n)| (kind_name(kind, tr), n))
+        .collect();
+    if manual_count > 0 {
+        groups.push((tr.get("editor-kind-drawn"), manual_count));
     }
+    let rows: usize = groups.iter().map(|(_, n)| n).sum();
+    let rows_top = ruler.bottom();
+    let group_gap = 8.0;
+    let lane_gap = 3.0;
+    let room = rect.bottom() - rows_top - group_gap * groups.len().saturating_sub(1) as f32;
+    let row_height = (room / rows.max(1) as f32 - lane_gap).clamp(4.0, 18.0);
+    let row_step = row_height + lane_gap;
+    let mut group_tops = Vec::new();
+    let mut top = rows_top + lane_gap;
+    for (_, n) in &groups {
+        group_tops.push(top);
+        top += *n as f32 * row_step + group_gap;
+    }
+    let lanes_bottom = (top - group_gap).max(rows_top + row_step);
+    let track_tops: Vec<f32> = editor
+        .lanes
+        .rows
+        .iter()
+        .map(|&(kind, row)| group_tops[kind] + row as f32 * row_step)
+        .collect();
+    let track_top = |i: usize| track_tops[i];
+    let manual_top = |i: usize| group_tops[groups.len() - 1] + manual_rows[i] as f32 * row_step;
+    let band = |first: u64, last: u64| span(first, last, rows_top, lanes_bottom - rows_top);
 
     let hit = |p: egui::Pos2| -> Option<Hit> {
-        let near = |r: egui::Rect| r.expand2(egui::vec2(3.0, 0.0)).contains(p);
-        if gap_row.expand2(egui::vec2(0.0, 2.0)).contains(p) {
-            return draft
-                .problems()
-                .iter()
-                .enumerate()
-                .find_map(|(i, pr)| match pr {
-                    Problem::UnresolvedGap { first, last, .. }
-                        if near(span(*first, *last, gap_row.top(), gap_row.height())) =>
-                    {
-                        Some(Hit::Gap(i))
-                    }
-                    _ => None,
-                });
-        }
-        if let Some(i) = manual_spans.iter().enumerate().position(|(i, &(f, l))| {
-            near(span(
-                f,
-                l,
-                manual_top + manual_rows[i] as f32 * row_height,
-                row_height,
-            ))
+        let near = |r: egui::Rect| r.expand2(egui::vec2(3.0, 1.0)).contains(p);
+        if let Some(i) = (0..manual_spans.len()).find(|&i| {
+            let (f, l) = manual_spans[i];
+            near(span(f, l, manual_top(i), row_height))
         }) {
             return Some(Hit::Manual(i));
         }
-        tracks
+        if let Some(i) = (0..tracks.len()).find(|&i| {
+            near(span(
+                tracks[i].first,
+                tracks[i].last,
+                track_top(i),
+                row_height,
+            ))
+        }) {
+            return Some(Hit::Track(i));
+        }
+        draft
+            .problems()
             .iter()
             .enumerate()
-            .position(|(i, t)| {
-                let (kind, row) = editor.lanes.rows[i];
-                near(span(
-                    t.first,
-                    t.last,
-                    kind_tops[kind] + row as f32 * row_height,
-                    row_height,
-                ))
+            .find_map(|(i, pr)| match pr {
+                Problem::UnresolvedGap { first, last, .. } if near(band(*first, *last)) => {
+                    Some(Hit::Gap(i))
+                }
+                _ => None,
             })
-            .map(Hit::Track)
     };
 
-    if let Some(p) = response.interact_pointer_pos()
+    if let Some(at) = response.interact_pointer_pos()
         && (response.clicked() || response.dragged())
     {
-        let k = frame_at(p.x);
-        let picked = if response.clicked() { hit(p) } else { None };
+        let k = frame_at(at.x);
+        let picked = if response.clicked() { hit(at) } else { None };
         match picked {
             Some(Hit::Gap(i)) => {
                 draft.selected = Some(Pick::Problem(i));
@@ -911,88 +935,147 @@ fn timeline(
         }
     }
 
+    let total = preview.seconds(frames.saturating_sub(1));
+    let step = ruler_step(total, rect.width());
+    let mut s = 0.0;
+    while s <= total {
+        let x = x_of((s / total.max(f64::EPSILON) * frames.saturating_sub(1) as f64) as f32);
+        painter.text(
+            egui::pos2(x + 4.0, ruler.center().y),
+            egui::Align2::LEFT_CENTER,
+            ruler_label(s),
+            egui::FontId::proportional(10.0),
+            p.secondary,
+        );
+        s += step;
+    }
+    for ((label, _), &top) in groups.iter().zip(&group_tops) {
+        painter.text(
+            egui::pos2(outer.left(), top + row_height / 2.0),
+            egui::Align2::LEFT_CENTER,
+            label,
+            egui::FontId::proportional(11.0),
+            p.secondary,
+        );
+    }
     for (i, problem) in draft.problems().iter().enumerate() {
         if let Problem::UnresolvedGap { first, last, .. } = problem {
             let open = draft.doc.resolutions[i] == Resolution::Unresolved;
-            let color = if open {
-                ui.visuals().warn_fg_color
+            let color = if open { p.needs_review } else { p.border };
+            let r = band(*first, *last);
+            hatch(&painter, r, color);
+            let width = if draft.selected == Some(Pick::Problem(i)) {
+                2.0
             } else {
-                UNMASKED
+                1.0
             };
-            let r = span(*first, *last, gap_row.top(), gap_row.height());
-            painter.rect_filled(r, 1.0, color);
-            if draft.selected == Some(Pick::Problem(i)) {
-                painter.rect_stroke(
-                    r.expand(1.0),
-                    1.0,
-                    egui::Stroke::new(1.5, ui.visuals().strong_text_color()),
-                    egui::StrokeKind::Outside,
-                );
-            }
-        }
-    }
-    for (i, t) in draft.doc.video.added_tracks.iter().enumerate() {
-        let r = span(
-            t.first,
-            t.last,
-            manual_top + manual_rows[i] as f32 * row_height,
-            row_height - 1.0,
-        );
-        painter.rect_filled(r, 1.0, ADDED);
-        for k in &t.keyframes {
-            let x = x_of(k.frame) + 0.5;
-            painter.line_segment(
-                [
-                    egui::pos2(x, r.top() - 1.0),
-                    egui::pos2(x, r.bottom() + 1.0),
-                ],
-                egui::Stroke::new(1.5, ui.visuals().strong_text_color()),
-            );
-        }
-        if draft.selected == Some(Pick::Manual(i)) {
-            painter.rect_stroke(
-                r.expand(1.0),
-                1.0,
-                egui::Stroke::new(1.5, ui.visuals().strong_text_color()),
-                egui::StrokeKind::Outside,
-            );
+            let edge = egui::Stroke::new(width, color);
+            painter.vline(r.left(), r.y_range(), edge);
+            painter.vline(r.right(), r.y_range(), edge);
         }
     }
     for (i, t) in tracks.iter().enumerate() {
-        let (kind, row) = editor.lanes.rows[i];
-        let r = span(
-            t.first,
-            t.last,
-            kind_tops[kind] + row as f32 * row_height,
-            row_height - 1.0,
-        );
-        let color = if draft.is_track_excluded(t.id) {
-            UNMASKED
+        let r = span(t.first, t.last, track_top(i), row_height);
+        let selected = draft.selected == Some(Pick::Track(t.id));
+        if draft.is_track_excluded(t.id) {
+            painter.rect(
+                r,
+                3,
+                p.window,
+                egui::Stroke::new(1.0, p.border),
+                egui::StrokeKind::Inside,
+            );
         } else if t.low_confidence {
-            WEAK
+            painter.rect_filled(r, 3, p.separator);
+            dashed(
+                &painter,
+                r.shrink(0.75),
+                egui::Stroke::new(1.5, p.secondary),
+            );
         } else {
-            MASKED
-        };
-        painter.rect_filled(r, 1.0, color);
-        if draft.selected == Some(Pick::Track(t.id)) {
+            painter.rect_filled(r, 3, if selected { p.text } else { p.secondary });
+        }
+        if selected && (draft.is_track_excluded(t.id) || t.low_confidence) {
             painter.rect_stroke(
-                r.expand(1.0),
-                1.0,
-                egui::Stroke::new(1.5, ui.visuals().strong_text_color()),
+                r,
+                3,
+                egui::Stroke::new(1.5, p.text),
                 egui::StrokeKind::Outside,
             );
         }
     }
-    let x = x_of(editor.at) + 0.5;
-    painter.line_segment(
-        [egui::pos2(x, rect.top()), egui::pos2(x, rect.bottom())],
-        egui::Stroke::new(1.5, ui.visuals().strong_text_color()),
+    for (i, t) in draft.doc.video.added_tracks.iter().enumerate() {
+        let r = span(t.first, t.last, manual_top(i), row_height);
+        let selected = draft.selected == Some(Pick::Manual(i));
+        painter.rect_filled(r, 3, if selected { p.text } else { p.secondary });
+        for k in &t.keyframes {
+            let c = egui::pos2(x_of(k.frame as f32 + 0.5), r.center().y);
+            let d = (row_height / 2.0).min(5.0);
+            painter.add(egui::Shape::convex_polygon(
+                vec![
+                    c + egui::vec2(0.0, -d),
+                    c + egui::vec2(d, 0.0),
+                    c + egui::vec2(0.0, d),
+                    c + egui::vec2(-d, 0.0),
+                ],
+                p.window,
+                egui::Stroke::new(1.5, p.text),
+            ));
+        }
+    }
+    let x = x_of(editor.at as f32 + 0.5);
+    painter.vline(
+        x,
+        ruler.top()..=lanes_bottom,
+        egui::Stroke::new(2.0, p.text),
     );
-    painter.text(
-        ruler.left_center() + egui::vec2(4.0, 0.0),
-        egui::Align2::LEFT_CENTER,
-        tr.get("editor-timeline"),
-        egui::FontId::proportional(11.0),
-        ui.visuals().weak_text_color(),
-    );
+    if response.has_focus() {
+        painter.rect_stroke(
+            outer.expand(1.0),
+            style::BUTTON_RADIUS,
+            egui::Stroke::new(1.5, p.text),
+            egui::StrokeKind::Outside,
+        );
+    }
+}
+
+/// Room at the timeline's left for each row group's name.
+const GUTTER: f32 = 70.0;
+
+/// Seconds between the ruler's marks: the shortest of a few round steps that leaves room for
+/// the labels.
+fn ruler_step(total: f64, width: f32) -> f64 {
+    const STEPS: [f64; 10] = [1.0, 2.0, 5.0, 10.0, 15.0, 30.0, 60.0, 120.0, 300.0, 600.0];
+    let per_second = width as f64 / total.max(1.0);
+    STEPS
+        .into_iter()
+        .find(|s| s * per_second >= 60.0)
+        .unwrap_or(STEPS[STEPS.len() - 1])
+}
+
+fn ruler_label(seconds: f64) -> String {
+    let whole = seconds.round() as u64;
+    if whole < 60 {
+        format!("{whole}s")
+    } else {
+        format!("{}:{:02}", whole / 60, whole % 60)
+    }
+}
+
+/// Diagonal stripes over a light wash of `color`, as a gap no track covers is marked.
+fn hatch(painter: &egui::Painter, rect: egui::Rect, color: egui::Color32) {
+    painter.rect_filled(rect, 0.0, color.gamma_multiply(0.12));
+    let stroke = egui::Stroke::new(1.0, color.gamma_multiply(0.45));
+    let painter = painter.with_clip_rect(rect.intersect(painter.clip_rect()));
+    let mut x = rect.left() - rect.height();
+    while x < rect.right() {
+        painter.line_segment(
+            [
+                egui::pos2(x, rect.bottom()),
+                egui::pos2(x + rect.height(), rect.top()),
+            ],
+            stroke,
+        );
+        x += 6.0;
+    }
 }
