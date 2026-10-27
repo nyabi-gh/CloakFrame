@@ -16,6 +16,7 @@ use eframe::egui;
 use fluent_bundle::FluentValue;
 
 use crate::i18n::Translator;
+use crate::style::{self, Palette};
 
 pub type SharedFetch = Arc<dyn Fetch + Send + Sync>;
 
@@ -32,7 +33,6 @@ impl Drop for Download {
 }
 
 pub struct Models {
-    pub open: bool,
     folder: Option<PathBuf>,
     /// The folder is the app's own, which first takes the models 1.12.1 downloaded.
     app_folder: bool,
@@ -51,7 +51,6 @@ impl Models {
 
     pub fn with_fetch(folder: Option<PathBuf>, app_folder: bool, fetch: SharedFetch) -> Self {
         Self {
-            open: false,
             folder,
             app_folder,
             fetch,
@@ -63,13 +62,8 @@ impl Models {
         }
     }
 
-    /// Opens the window and looks again at what the folder holds.
-    pub fn show(&mut self, ctx: &egui::Context) {
-        self.open = true;
-        self.check(ctx);
-    }
-
-    fn check(&mut self, ctx: &egui::Context) {
+    /// Looks again at what the folder holds.
+    pub fn check(&mut self, ctx: &egui::Context) {
         let Some(folder) = self.folder.clone() else {
             return;
         };
@@ -185,92 +179,98 @@ impl Models {
         }
     }
 
-    pub fn window(&mut self, ctx: &egui::Context, tr: &Translator) {
-        let mut open = self.open;
-        egui::Window::new(tr.get("models-title"))
-            .open(&mut open)
-            .default_width(560.0)
-            .show(ctx, |ui| self.contents(ui, tr));
-        self.open = open;
-    }
-
-    fn contents(&mut self, ui: &mut egui::Ui, tr: &Translator) {
-        if let Some(folder) = &self.folder {
-            let path = folder.display().to_string();
-            ui.label(tr.with("models-folder", &[("path", FluentValue::from(path))]));
-        }
-        if self.checking.is_some() {
-            ui.spinner();
-        }
+    /// One row per model, for the advanced options sheet: its name and size, whether it is here,
+    /// and its terms, which are accepted before a model they limit can be downloaded.
+    pub fn rows(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        let p = Palette::of(ui);
+        let small = |text: String| egui::RichText::new(text).size(12.0).color(p.secondary);
         let ctx = ui.ctx().clone();
         let mut start = None;
         let mut stop = None;
         for file in &MODEL_FILES {
             let model = file.model;
-            ui.separator();
+            let size = tr.with(
+                "model-size",
+                &[(
+                    "size",
+                    FluentValue::from(format!("{:.1}", file.size as f64 / 1_048_576.0)),
+                )],
+            );
+            let status = self.statuses.get(&model);
+            let present = matches!(status, Some(Ok(Status::Present)));
             ui.horizontal(|ui| {
-                ui.strong(tr.get(name_id(model)));
-                ui.label(tr.with(
-                    "model-size",
-                    &[(
-                        "size",
-                        FluentValue::from(format!("{:.1}", file.size as f64 / 1_048_576.0)),
-                    )],
+                ui.label(tr.get(name_id(model))).on_hover_text(tr.with(
+                    "model-license",
+                    &[("license", FluentValue::from(file.terms.license))],
                 ));
-            });
-            ui.label(tr.get(terms_id(model)));
-            ui.label(tr.with(
-                "model-license",
-                &[("license", FluentValue::from(file.terms.license))],
-            ));
-            let status = match self.statuses.get(&model) {
-                Some(Ok(Status::Present)) => tr.get("model-present"),
-                Some(Ok(Status::Missing)) => tr.get("model-not-downloaded"),
-                Some(Ok(Status::Different)) => tr.get("model-different"),
-                Some(Err(e)) => e.clone(),
-                None => String::new(),
-            };
-            ui.label(status);
-            if let Some(download) = self.downloads.get(&model) {
-                ui.horizontal(|ui| {
-                    let received = download.received.load(Ordering::Relaxed);
-                    ui.add(egui::ProgressBar::new(received as f32 / file.size as f32));
-                    if ui.button(tr.get("cancel")).clicked() {
-                        stop = Some(model);
-                    }
-                });
-            } else if !matches!(self.statuses.get(&model), Some(Ok(Status::Present))) {
-                if file.terms.non_commercial_only {
-                    let mut accepted = self.accepted.contains(&model);
-                    if ui
-                        .checkbox(&mut accepted, tr.get("model-accept-terms"))
-                        .changed()
-                    {
-                        if accepted {
-                            self.accepted.insert(model);
-                        } else {
-                            self.accepted.remove(&model);
+                ui.label(small(size));
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if let Some(download) = self.downloads.get(&model) {
+                        if style::plain(ui, tr.get("cancel")).clicked() {
+                            stop = Some(model);
+                        }
+                        let received = download.received.load(Ordering::Relaxed);
+                        ui.add(
+                            egui::ProgressBar::new(received as f32 / file.size as f32)
+                                .desired_width(120.0),
+                        );
+                    } else if present {
+                        ui.label(small(tr.get("model-present")));
+                    } else {
+                        let allowed =
+                            !file.terms.non_commercial_only || self.accepted.contains(&model);
+                        let ready = allowed && self.checking.is_none() && self.folder.is_some();
+                        let button = egui::Button::new(tr.get("model-download"))
+                            .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
+                            .corner_radius(style::BUTTON_RADIUS);
+                        if ui.add_enabled(ready, button).clicked() {
+                            start = Some(model);
+                        }
+                        if status.is_some() {
+                            ui.label(small(tr.get("model-not-downloaded")));
                         }
                     }
-                }
-                let allowed = !file.terms.non_commercial_only || self.accepted.contains(&model);
-                let ready = allowed && self.checking.is_none() && self.folder.is_some();
+                });
+            });
+            ui.label(small(tr.get(terms_id(model))));
+            if !present && file.terms.non_commercial_only && !self.downloads.contains_key(&model) {
+                let mut accepted = self.accepted.contains(&model);
                 if ui
-                    .add_enabled(ready, egui::Button::new(tr.get("model-download")))
-                    .clicked()
+                    .checkbox(&mut accepted, tr.get("model-accept-terms"))
+                    .changed()
                 {
-                    start = Some(model);
+                    if accepted {
+                        self.accepted.insert(model);
+                    } else {
+                        self.accepted.remove(&model);
+                    }
                 }
+            }
+            match status {
+                Some(Ok(Status::Different)) => {
+                    ui.colored_label(p.needs_review, tr.get("model-different"));
+                }
+                Some(Err(e)) => {
+                    ui.colored_label(p.failed, e);
+                }
+                _ => {}
             }
             if let Some(error) = self.errors.get(&model) {
                 ui.colored_label(
-                    ui.visuals().error_fg_color,
+                    p.failed,
                     tr.with(
                         "model-download-failed",
                         &[("error", FluentValue::from(error.as_str()))],
                     ),
                 );
             }
+            ui.add_space(6.0);
+        }
+        if let Some(folder) = &self.folder {
+            let path = folder.display().to_string();
+            ui.label(small(
+                tr.with("models-folder", &[("path", FluentValue::from(path))]),
+            ));
         }
         if let Some(model) = start {
             self.start_download(model, &ctx);

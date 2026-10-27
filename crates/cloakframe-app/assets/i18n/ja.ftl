@@ -8,13 +8,9 @@ drop-hint = 画像、動画、またはフォルダーをここにドロップ
 drop-release = 離すと { $count } 件を追加
 add-files = ファイルを追加…
 add-folder = フォルダーを追加…
-## 1.12.1
-clear-list = クリア
-## needs review
+clear-list = すべて外す
 scanning = 写真と動画を探しています…
 found-summary = 写真 { $photos } 件、動画 { $videos } 件
-skipped-type = { $extension } 形式のファイル { $count } 件は処理できません
-skipped-no-extension = 拡張子のないファイル { $count } 件は処理できません
 unreadable = { $path } を読み込めません
 
 ## 1.12.1
@@ -395,3 +391,25 @@ graphics-failed =
     このコンピューターのグラフィックスでは CloakFrame のウィンドウを描画できませんでした。グラフィックスドライバーを更新すると解決する場合があります。
 
     { $errors }
+
+## needs review
+new-task = 新しい作業
+add = 追加…
+add-menu-files = ファイル…
+add-menu-folder = フォルダー…
+drop-or = または
+choose-files = ファイルを選択…
+found-counts = 写真 { $photos } · 動画 { $videos }
+skipped-summary = 処理しないファイル { $count } 件 — { $parts }
+skipped-part-type = { $extension } { $count } 件（対応していない形式）
+skipped-part-no-extension = 拡張子のないファイル { $count } 件
+skipped-part-unreadable = 読み込めないファイル { $count } 件
+change-folder = 変更…
+advanced-open = 詳細オプション…
+advanced-detection = 検出
+advanced-photos = 写真
+advanced-videos = 動画
+done = 完了
+session-unreadable-short = 読み込めません
+result-title = 結果
+review-title = レビュー

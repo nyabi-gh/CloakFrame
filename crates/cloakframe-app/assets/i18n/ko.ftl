@@ -1,14 +1,12 @@
 app-name = CloakFrame
 
-drop-hint = 이미지, 동영상, 폴더를 여기로 드래그하세요
+drop-hint = 사진, 동영상, 폴더를 여기로 끌어다 놓으세요
 drop-release = 놓으면 { $count }개 추가
 add-files = 파일 추가…
 add-folder = 폴더 추가…
-clear-list = 비우기
+clear-list = 모두 빼기
 scanning = 사진과 동영상을 찾는 중…
 found-summary = 사진 { $photos }개, 동영상 { $videos }개
-skipped-type = { $extension } 형식 파일 { $count }개는 처리할 수 없습니다
-skipped-no-extension = 확장자가 없는 파일 { $count }개는 처리할 수 없습니다
 unreadable = { $path }을(를) 읽을 수 없습니다
 
 what = 가릴 대상
@@ -108,7 +106,7 @@ quit-confirm = 취소하고 끝내기
 quit-keep = 계속하기
 quit-waiting = 멈추는 중입니다. 작업이 멈추면 창이 닫힙니다.
 
-sessions-title = 검토를 기다리는 작업
+sessions-title = 검토 대기
 session-age = { $days ->
     [0] 오늘
     [1] 어제
@@ -346,3 +344,24 @@ graphics-failed =
     이 컴퓨터의 그래픽으로 CloakFrame 창을 그릴 수 없습니다. 그래픽 드라이버를 업데이트하면 해결될 수 있습니다.
 
     { $errors }
+
+new-task = 새 작업
+add = 추가…
+add-menu-files = 파일…
+add-menu-folder = 폴더…
+drop-or = 또는
+choose-files = 파일 선택…
+found-counts = 사진 { $photos } · 동영상 { $videos }
+skipped-summary = 처리하지 않는 파일 { $count }개 — { $parts }
+skipped-part-type = { $extension } { $count }개(지원하지 않는 형식)
+skipped-part-no-extension = 확장자 없는 파일 { $count }개
+skipped-part-unreadable = 읽을 수 없는 파일 { $count }개
+change-folder = 변경…
+advanced-open = 고급 옵션…
+advanced-detection = 감지
+advanced-photos = 사진
+advanced-videos = 동영상
+done = 완료
+session-unreadable-short = 읽을 수 없음
+result-title = 결과
+review-title = 검토

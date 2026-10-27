@@ -36,6 +36,14 @@ pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
                 state.command(Command::Quit);
             }
         });
+        let (view, theme, language) = {
+            let tr = state.tr();
+            (tr.get("menu-view"), tr.get("theme"), tr.get("language"))
+        };
+        ui.menu_button(view, |ui| {
+            ui.menu_button(theme, |ui| state.theme_choice(ui));
+            ui.menu_button(language, |ui| state.language_choice(ui));
+        });
         ui.menu_button(help, |ui| {
             if ui.button(about).clicked() {
                 state.command(Command::About);
@@ -52,14 +60,29 @@ pub mod native {
 
     use eframe::egui;
     use muda::accelerator::{Accelerator, CMD_OR_CTRL, Code, Modifiers};
-    use muda::{Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
+    use muda::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem, Submenu};
 
     use crate::app::Command;
-    use crate::i18n::Translator;
+    use crate::i18n::{Language, Translator};
+    use crate::settings::Theme;
 
     pub struct NativeMenu {
         pub menu: Menu,
         events: mpsc::Receiver<MenuEvent>,
+        /// The language its words are in; another language needs a new menu.
+        pub language: Language,
+        themes: Vec<(Theme, CheckMenuItem)>,
+        languages: Vec<(Option<Language>, CheckMenuItem)>,
+    }
+
+    const THEMES: [(Theme, &str, &str); 3] = [
+        (Theme::System, "theme:system", "theme-system"),
+        (Theme::Light, "theme:light", "theme-light"),
+        (Theme::Dark, "theme:dark", "theme-dark"),
+    ];
+
+    fn language_id(language: Option<Language>) -> String {
+        format!("language:{language:?}")
     }
 
     fn item(id: &str, text: String, key: Option<(Modifiers, Code)>) -> MenuItem {
@@ -145,6 +168,30 @@ pub mod native {
             ),
         ])?;
         menu.append(&edit)?;
+
+        let check = |id: &str, text: String| CheckMenuItem::with_id(id, text, true, false, None);
+        let themes: Vec<(Theme, CheckMenuItem)> = THEMES
+            .iter()
+            .map(|&(theme, id, text)| (theme, check(id, tr.get(text))))
+            .collect();
+        let languages: Vec<(Option<Language>, CheckMenuItem)> = std::iter::once(None)
+            .chain(Language::ALL.map(Some))
+            .map(|language| {
+                let text = language.map_or_else(|| tr.get("language-system"), |l| l.name().into());
+                (language, check(&language_id(language), text))
+            })
+            .collect();
+        let theme = Submenu::new(tr.get("theme"), true);
+        for (_, item) in &themes {
+            theme.append(item)?;
+        }
+        let language = Submenu::new(tr.get("language"), true);
+        for (_, item) in &languages {
+            language.append(item)?;
+        }
+        let view = Submenu::new(tr.get("menu-view"), true);
+        view.append_items(&[&theme, &language])?;
+        menu.append(&view)?;
         #[cfg(target_os = "windows")]
         {
             let help = Submenu::new(tr.get("menu-help"), true);
@@ -158,7 +205,13 @@ pub mod native {
             let _ = send.send(event);
             repaint.request_repaint();
         }));
-        Ok(NativeMenu { menu, events })
+        Ok(NativeMenu {
+            menu,
+            events,
+            language: tr.language(),
+            themes,
+            languages,
+        })
     }
 
     fn key(key: egui::Key, modifiers: egui::Modifiers) -> egui::Event {
@@ -172,6 +225,21 @@ pub mod native {
     }
 
     impl NativeMenu {
+        /// Ticks the theme and the language in use. The menu ticks an item when it is chosen,
+        /// so the others are unticked here.
+        pub fn sync(&self, theme: Theme, language: Option<Language>) {
+            for (t, item) in &self.themes {
+                if item.is_checked() != (*t == theme) {
+                    item.set_checked(*t == theme);
+                }
+            }
+            for (l, item) in &self.languages {
+                if item.is_checked() != (*l == language) {
+                    item.set_checked(*l == language);
+                }
+            }
+        }
+
         /// The commands chosen since the last call; edit choices go into `events`.
         pub fn take(&self, events: &mut Vec<egui::Event>) -> Vec<Command> {
             let mut commands = Vec::new();
@@ -195,7 +263,15 @@ pub mod native {
                         egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
                     )),
                     "select_all" => events.push(key(egui::Key::A, egui::Modifiers::COMMAND)),
-                    _ => {}
+                    id => {
+                        if let Some((theme, _)) = self.themes.iter().find(|(_, i)| i.id() == id) {
+                            commands.push(Command::Theme(*theme));
+                        } else if let Some((language, _)) =
+                            self.languages.iter().find(|(_, i)| i.id() == id)
+                        {
+                            commands.push(Command::Language(*language));
+                        }
+                    }
                 }
             }
             commands

@@ -133,6 +133,11 @@ impl ReviewScreen {
         }
     }
 
+    /// An item is open in the editor, which takes the sidebar's room.
+    pub fn in_editor(&self) -> bool {
+        self.editor.is_some()
+    }
+
     pub fn ui(
         &mut self,
         ui: &mut egui::Ui,

@@ -62,7 +62,7 @@ fn harness(folder: &Dir) -> Harness<'static, AppState> {
         Arc::new(FromAssets(assets())),
     );
     Harness::builder()
-        .with_size(egui::vec2(1100.0, 900.0))
+        .with_size(egui::vec2(1100.0, 1400.0))
         .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
         .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state)
 }

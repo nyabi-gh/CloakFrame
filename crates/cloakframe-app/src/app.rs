@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::{Duration, Instant, SystemTime};
 
@@ -19,18 +20,22 @@ use crate::progress::Left;
 use crate::review::{OpenError, Review};
 use crate::run::{self, Board, Failure, Logged, Running};
 use crate::sample::Sample;
-use crate::sessions::{self, SavedSessions};
+use crate::sessions::{self, Saved, SavedSessions};
 use crate::settings::{
     FaceModel, Method, Notice, Settings, SettingsFile, Theme, VideoCodec, VideoQuality,
 };
 use crate::shell;
+use crate::style::{self, Palette};
 use crate::summary;
 use crate::thumbnails::Thumbnails;
 use crate::tools::Tools;
 use crate::wording;
 
-/// The sample photo's side, in points.
-const SAMPLE_SIDE: f32 = 144.0;
+/// The sample photo's height over its width in the settings panel.
+const SAMPLE_ASPECT: f32 = 146.0 / 260.0;
+/// The narrowest a cell of the file grid gets before a column is dropped.
+const GRID_MIN_CELL: f32 = 120.0;
+const SHEET_WIDTH: f32 = 600.0;
 
 /// The words of the sensitivity slider's steps, least sensitive first.
 const SENSITIVITY_LEVELS: [&str; 5] = [
@@ -49,6 +54,9 @@ pub enum Command {
     Models,
     About,
     Quit,
+    Theme(Theme),
+    /// None follows the system's language.
+    Language(Option<Language>),
 }
 
 /// Closing the window while a run works: the run is cancelled first, so the items it holds for
@@ -74,7 +82,8 @@ impl Drop for Scanning {
 }
 
 pub struct AppState {
-    tr: Translator,
+    /// Shared so that drawing can hold the words while it changes the rest of the state.
+    tr: Rc<Translator>,
     pub settings: Settings,
     file: Option<SettingsFile>,
     notices: Vec<String>,
@@ -102,13 +111,17 @@ pub struct AppState {
     pub discarding: Option<SessionId>,
     pub quit: Quit,
     sample: Sample,
+    /// The advanced options sheet, where the detection models are too, is open.
+    pub sheet_open: bool,
+    /// Where the middle of the window was last drawn, which the sheet hangs below.
+    middle_rect: egui::Rect,
 }
 
 impl AppState {
     /// `file` is None where nothing is saved, as in tests.
     pub fn new(settings: Settings, file: Option<SettingsFile>, notices: Vec<Notice>) -> Self {
         let language = settings.language.unwrap_or_else(Language::of_system);
-        let tr = Translator::new(language);
+        let tr = Rc::new(Translator::new(language));
         let notices = notices.iter().map(|n| describe(&tr, n)).collect();
         Self {
             tr,
@@ -134,6 +147,8 @@ impl AppState {
             discarding: None,
             quit: Quit::No,
             sample: Sample::new(),
+            sheet_open: false,
+            middle_rect: egui::Rect::NOTHING,
         }
     }
 
@@ -220,7 +235,7 @@ impl AppState {
 
     fn set_language(&mut self, choice: Option<Language>) {
         self.settings.language = choice;
-        self.tr = Translator::new(choice.unwrap_or_else(Language::of_system));
+        self.tr = Rc::new(Translator::new(choice.unwrap_or_else(Language::of_system)));
         self.save_settings();
     }
 
@@ -228,6 +243,7 @@ impl AppState {
     /// installs them before its first.
     pub fn install_fonts(&mut self, ctx: &egui::Context) {
         ctx.set_fonts(fonts::definitions(self.tr.language()));
+        style::install(ctx);
         self.fonts_for = Some(self.tr.language());
     }
 
@@ -272,40 +288,308 @@ impl AppState {
 
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
         egui::Panel::top("menu").show(ui, |ui| crate::menu::bar(ui, self));
-        egui::CentralPanel::default().show(ui, |ui| {
-            // The start row is laid out last so that Tab reaches it after the screen above it:
-            // egui moves focus in the order widgets are made, and a bottom panel is made first.
-            let spacing = ui.spacing();
-            let row = spacing.interact_size.y + 3.0 * spacing.item_spacing.y + 1.0;
-            let whole = ui.available_rect_before_wrap();
-            let (above, start) = whole.split_top_bottom_at_y(whole.max.y - row);
-            ui.scope_builder(egui::UiBuilder::new().max_rect(above), |ui| {
-                ui.set_clip_rect(above.intersect(ui.clip_rect()));
-                for notice in &self.notices {
-                    ui.colored_label(ui.visuals().warn_fg_color, notice);
-                }
-                if self.review.is_some() {
-                    self.review_view(ui);
-                } else if self.board.is_some() {
-                    self.run_view(ui);
-                } else {
-                    egui::ScrollArea::vertical().id_salt("main").show(ui, |ui| {
-                        self.saved_sessions(ui);
-                        self.drop_area(ui, &ctx);
-                        ui.separator();
-                        self.what_and_how(ui);
-                    });
-                }
-            });
-            ui.scope_builder(egui::UiBuilder::new().max_rect(start), |ui| {
-                ui.separator();
-                self.start_row(ui);
-            });
-        });
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE)
+            .show(ui, |ui| self.window(ui));
         crate::about::window(&ctx, self);
-        self.models.window(&ctx, &self.tr);
+        self.advanced_sheet(&ctx);
         self.discard_dialog(&ctx);
         self.quit_dialog(&ctx);
+    }
+
+    fn screen(&self) -> Screen {
+        if self.review.is_some() {
+            Screen::Review
+        } else if self.board.is_some() {
+            Screen::Run
+        } else {
+            Screen::Main
+        }
+    }
+
+    /// The toolbar, the sidebar, the middle and the settings panel. They are laid out by hand
+    /// rather than as egui panels so that Tab goes through them as they read: egui moves focus in
+    /// the order widgets are made, and side panels have to be made before the middle.
+    fn window(&mut self, ui: &mut egui::Ui) {
+        let p = *Palette::of(ui);
+        let whole = ui.max_rect();
+        let screen = self.screen();
+        let sidebar = !self.review.as_ref().is_some_and(ReviewScreen::in_editor);
+        let settings = screen == Screen::Main;
+        let below_bar = whole.top() + style::TOOLBAR_HEIGHT;
+        let sidebar_right = whole.left() + if sidebar { style::SIDEBAR_WIDTH } else { 0.0 };
+        let settings_left = whole.right()
+            - if settings {
+                style::INSPECTOR_WIDTH
+            } else {
+                0.0
+            };
+        let bar = egui::Rect::from_x_y_ranges(whole.x_range(), whole.top()..=below_bar);
+        let side =
+            egui::Rect::from_x_y_ranges(whole.left()..=sidebar_right, below_bar..=whole.bottom());
+        let middle =
+            egui::Rect::from_x_y_ranges(sidebar_right..=settings_left, below_bar..=whole.bottom());
+        let panel =
+            egui::Rect::from_x_y_ranges(settings_left..=whole.right(), below_bar..=whole.bottom());
+        self.middle_rect = middle;
+
+        let painter = ui.painter();
+        painter.rect_filled(whole, 0.0, p.window);
+        if sidebar {
+            let column = egui::Rect::from_x_y_ranges(whole.left()..=sidebar_right, whole.y_range());
+            painter.rect_filled(column, 0.0, p.sidebar);
+        }
+        let empty =
+            screen == Screen::Main && self.found.as_ref().is_none_or(|f| f.files.is_empty());
+        if empty {
+            painter.rect_filled(middle, 0.0, p.empty);
+        }
+
+        region(ui, bar, |ui| {
+            self.toolbar(ui, if sidebar { sidebar_right } else { whole.left() })
+        });
+        if sidebar {
+            region(ui, side, |ui| self.sidebar(ui));
+        }
+        region(ui, middle, |ui| match screen {
+            Screen::Main => self.main_middle(ui),
+            Screen::Run => {
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(24, 20))
+                    .show(ui, |ui| self.run_view(ui));
+            }
+            Screen::Review => {
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(24, 20))
+                    .show(ui, |ui| self.review_view(ui));
+            }
+        });
+        if settings {
+            region(ui, panel, |ui| self.settings_panel(ui));
+        }
+
+        let painter = ui.painter();
+        let line = egui::Stroke::new(1.0, p.separator);
+        painter.hline(whole.x_range(), below_bar - 0.5, line);
+        if sidebar {
+            painter.vline(sidebar_right - 0.5, whole.y_range(), line);
+        }
+        if settings {
+            painter.vline(settings_left + 0.5, below_bar..=whole.bottom(), line);
+        }
+    }
+
+    /// The screen's title, what it holds, and its actions at the right.
+    fn toolbar(&mut self, ui: &mut egui::Ui, title_left: f32) {
+        let p = *Palette::of(ui);
+        let tr = &self.tr;
+        let (title, detail) = match self.screen() {
+            Screen::Main => {
+                let detail = self
+                    .found
+                    .as_ref()
+                    .filter(|f| !f.files.is_empty())
+                    .map(|found| {
+                        let count = |kind| found.files.iter().filter(|f| f.kind == kind).count();
+                        tr.with(
+                            "found-counts",
+                            &[
+                                ("photos", FluentValue::from(count(MediaKind::Image))),
+                                ("videos", FluentValue::from(count(MediaKind::Video))),
+                            ],
+                        )
+                    });
+                (tr.get("new-task"), detail)
+            }
+            Screen::Run if self.board.as_ref().is_some_and(Board::is_over) => {
+                (tr.get("result-title"), None)
+            }
+            Screen::Run => (tr.get("running"), None),
+            Screen::Review => (tr.get("review-title"), None),
+        };
+        let rect = ui.max_rect();
+        let title_rect =
+            egui::Rect::from_x_y_ranges(title_left + 20.0..=rect.right(), rect.y_range());
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(title_rect)
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| {
+                ui.label(
+                    egui::RichText::new(title)
+                        .font(style::medium(14.0))
+                        .color(p.text),
+                );
+                if let Some(detail) = detail {
+                    ui.add_space(6.0);
+                    ui.label(egui::RichText::new(detail).color(p.secondary));
+                }
+            },
+        );
+        if self.screen() == Screen::Main {
+            self.main_actions(ui, rect);
+        }
+    }
+
+    /// Add…, Remove All and Start, laid out left to right so that Tab reaches them in that order.
+    fn main_actions(&mut self, ui: &mut egui::Ui, bar: egui::Rect) {
+        let (add, clear, start) = (
+            self.tr.get("add"),
+            self.tr.get("clear-list"),
+            self.tr.get("start"),
+        );
+        let has_inputs = !self.inputs.is_empty();
+        let mut widths = vec![style::button_width(ui, &add, false)];
+        if has_inputs {
+            widths.push(style::button_width(ui, &clear, false));
+        }
+        widths.push(style::button_width(ui, &start, true));
+        let spacing = ui.spacing().item_spacing.x;
+        let width = widths.iter().sum::<f32>() + spacing * (widths.len() - 1) as f32;
+        let right = bar.right() - 14.0;
+        let actions = egui::Rect::from_x_y_ranges(right - width..=right, bar.y_range());
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(actions)
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| {
+                let (files, folder) = (
+                    self.tr.get("add-menu-files"),
+                    self.tr.get("add-menu-folder"),
+                );
+                let button = egui::Button::new(add)
+                    .frame_when_inactive(false)
+                    .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
+                    .corner_radius(style::BUTTON_RADIUS);
+                egui::containers::menu::MenuButton::from_button(button).ui(ui, |ui| {
+                    if ui.button(files).clicked() {
+                        self.command(Command::AddFiles);
+                    }
+                    if ui.button(folder).clicked() {
+                        self.command(Command::AddFolder);
+                    }
+                });
+                if has_inputs && style::plain(ui, clear).clicked() {
+                    self.clear_inputs();
+                }
+                let blocker = self.start_blocker();
+                let response = style::primary(ui, &start, blocker.is_none());
+                if response.clicked() {
+                    self.start_run(ui.ctx());
+                }
+                if let Some(why) = blocker {
+                    response.on_disabled_hover_text(self.tr.get(why));
+                }
+            },
+        );
+    }
+
+    /// The new task or the run, then the reviews earlier runs left (plan 6, M6 scope ②).
+    fn sidebar(&mut self, ui: &mut egui::Ui) {
+        let p = *Palette::of(ui);
+        let tr = &self.tr;
+        let mut act = None;
+        egui::Frame::NONE
+            .inner_margin(egui::Margin::symmetric(10, 8))
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 1.0;
+                let label = match &self.board {
+                    Some(board) if board.is_over() => tr.get("result-title"),
+                    Some(_) => tr.get("running"),
+                    None => tr.get("new-task"),
+                };
+                let count = (self.board.is_none())
+                    .then(|| self.found.as_ref().map(|f| f.files.len()))
+                    .flatten()
+                    .filter(|&n| n > 0);
+                let selected = self.review.is_none();
+                let item = style::sidebar_item(ui, selected, &label, 30.0, |ui, p| {
+                    ui.label(sidebar_text(&label, selected, p));
+                    if let Some(count) = count {
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            ui.label(
+                                egui::RichText::new(count.to_string())
+                                    .size(12.0)
+                                    .color(p.secondary),
+                            );
+                        });
+                    }
+                });
+                if item.clicked() && self.review.is_some() {
+                    act = Some(SidebarAct::Close);
+                }
+                if let Some(e) = &self.sessions.error {
+                    ui.label(egui::RichText::new(e).size(12.0).color(p.needs_review));
+                }
+                if self.sessions.list.is_empty() {
+                    return;
+                }
+                let title = tr.get("sessions-title");
+                ui.add_space(14.0);
+                ui.horizontal(|ui| {
+                    ui.add_space(8.0);
+                    ui.label(
+                        egui::RichText::new(&title)
+                            .font(style::medium(11.0))
+                            .color(p.secondary),
+                    );
+                });
+                ui.add_space(4.0);
+                let now = SystemTime::now();
+                let open_id = self.review.as_ref().map(|r| r.review.id.clone());
+                a11y::list(ui, &title, |ui| {
+                    for saved in &self.sessions.list {
+                        let row = SessionRow::of(saved, now, tr);
+                        let selected = open_id.as_ref() == Some(&saved.id);
+                        let response = a11y::item(ui, &row.described, |ui| {
+                            style::sidebar_item(ui, selected, &row.described, 40.0, |ui, p| {
+                                ui.vertical(|ui| {
+                                    ui.spacing_mut().item_spacing.y = 0.0;
+                                    ui.label(sidebar_text(&row.name, selected, p));
+                                    if let Some(age) = &row.age {
+                                        ui.label(
+                                            egui::RichText::new(age).size(11.0).color(p.secondary),
+                                        );
+                                    }
+                                });
+                                if let Some(count) = row.count {
+                                    ui.with_layout(
+                                        egui::Layout::right_to_left(egui::Align::Center),
+                                        |ui| {
+                                            ui.label(
+                                                egui::RichText::new(count.to_string())
+                                                    .size(12.0)
+                                                    .color(p.secondary),
+                                            );
+                                        },
+                                    );
+                                }
+                            })
+                        });
+                        let response = response.on_hover_text(&row.detail);
+                        if response.clicked() && row.readable && !selected {
+                            act = Some(SidebarAct::Open(saved.id.clone()));
+                        }
+                        response.context_menu(|ui| {
+                            if ui.button(tr.get("session-discard")).clicked() {
+                                act = Some(SidebarAct::Discard(saved.id.clone()));
+                            }
+                        });
+                    }
+                });
+            });
+        match act {
+            None => {}
+            Some(SidebarAct::Close) => {
+                self.review = None;
+                self.sessions_read = false;
+            }
+            Some(SidebarAct::Open(id)) => {
+                let ctx = ui.ctx().clone();
+                self.open_review(id, None, &ctx);
+            }
+            Some(SidebarAct::Discard(id)) => self.discarding = Some(id),
+        }
     }
 
     /// A run, or a review's renders, still working.
@@ -383,13 +667,134 @@ impl AppState {
                     self.add_inputs(folders, ctx);
                 }
             }
-            Command::Models => self.models.show(ctx),
+            Command::Models => {
+                self.sheet_open = true;
+                self.models.check(ctx);
+            }
             Command::About => self.about_open = true,
             Command::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
+            Command::Theme(theme) => {
+                self.settings.theme = theme;
+                self.save_settings();
+            }
+            Command::Language(choice) => self.set_language(choice),
         }
     }
 
-    fn drop_area(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+    /// The files to process, or where to drop them; under them, what is left out and why Start
+    /// waits.
+    fn main_middle(&mut self, ui: &mut egui::Ui) {
+        let p = *Palette::of(ui);
+        let ctx = ui.ctx().clone();
+        let lines = self.middle_lines(&p);
+        if !lines.is_empty() {
+            egui::Panel::bottom("middle-lines")
+                .frame(egui::Frame::NONE.inner_margin(egui::Margin {
+                    left: 24,
+                    right: 24,
+                    top: 12,
+                    bottom: 16,
+                }))
+                .show_separator_line(false)
+                .show(ui, |ui| {
+                    let top = ui.max_rect().top() - 12.0;
+                    ui.painter().hline(
+                        ui.max_rect().x_range(),
+                        top,
+                        egui::Stroke::new(1.0, p.faint_line),
+                    );
+                    for (text, hover) in lines {
+                        let response = ui.label(text);
+                        if let Some(hover) = hover {
+                            response.on_hover_text(hover);
+                        }
+                    }
+                });
+        }
+        egui::CentralPanel::default()
+            .frame(egui::Frame::NONE)
+            .show(ui, |ui| {
+                for notice in &self.notices {
+                    ui.colored_label(p.needs_review, notice);
+                }
+                if self.found.as_ref().is_some_and(|f| !f.files.is_empty()) {
+                    self.file_grid(ui, &ctx);
+                } else {
+                    self.drop_here(ui, &ctx);
+                }
+            });
+    }
+
+    /// The lines under the files, each with the details its hover shows.
+    fn middle_lines(&self, p: &Palette) -> Vec<(egui::RichText, Option<String>)> {
+        let tr = &self.tr;
+        let mut lines = Vec::new();
+        if let Some(found) = &self.found {
+            let mut parts = Vec::new();
+            let mut count = 0;
+            for (extension, n) in &found.skipped {
+                count += n;
+                let n = FluentValue::from(*n);
+                parts.push(if extension.is_empty() {
+                    tr.with("skipped-part-no-extension", &[("count", n)])
+                } else {
+                    tr.with(
+                        "skipped-part-type",
+                        &[
+                            ("count", n),
+                            ("extension", FluentValue::from(extension.as_str())),
+                        ],
+                    )
+                });
+            }
+            if !found.issues.is_empty() {
+                count += found.issues.len();
+                parts.push(tr.with(
+                    "skipped-part-unreadable",
+                    &[("count", FluentValue::from(found.issues.len()))],
+                ));
+            }
+            if count > 0 {
+                let text = tr.with(
+                    "skipped-summary",
+                    &[
+                        ("count", FluentValue::from(count)),
+                        (
+                            "parts",
+                            FluentValue::from(parts.join(&tr.get("list-separator"))),
+                        ),
+                    ],
+                );
+                let unreadable: Vec<String> = found
+                    .issues
+                    .iter()
+                    .map(|issue| {
+                        let path = issue.path.display().to_string();
+                        tr.with("unreadable", &[("path", FluentValue::from(path))])
+                    })
+                    .collect();
+                let hover = (!unreadable.is_empty()).then(|| unreadable.join("\n"));
+                lines.push((egui::RichText::new(text).color(p.secondary), hover));
+            }
+        }
+        if !self.tools.videos() {
+            let text = tr.get("videos-need-ffmpeg");
+            lines.push((egui::RichText::new(text).color(p.secondary), None));
+        }
+        let has_files = self.found.as_ref().is_some_and(|f| !f.files.is_empty());
+        // Without faces or plates the panel says so beside the boxes.
+        let shown_beside = |why: &&str| *why == "models-need-one";
+        if let Some(why) = self
+            .start_blocker()
+            .filter(|why| has_files && !shown_beside(why))
+        {
+            lines.push((egui::RichText::new(tr.get(why)).color(p.text), None));
+        }
+        lines
+    }
+
+    fn drop_here(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let p = *Palette::of(ui);
         let hovering = ctx.input(|i| i.raw.hovered_files.len());
         let hint = if hovering > 0 {
             self.tr
@@ -397,70 +802,47 @@ impl AppState {
         } else {
             self.tr.get("drop-hint")
         };
-        egui::Frame::group(ui.style()).show(ui, |ui| {
-            ui.set_min_height(120.0);
-            ui.vertical_centered(|ui| {
-                ui.add_space(24.0);
-                ui.heading(hint);
+        let rect = ui.max_rect();
+        if hovering > 0 {
+            ui.painter().rect_stroke(
+                rect.shrink(12.0),
+                style::BUTTON_RADIUS,
+                egui::Stroke::new(1.5, p.border),
+                egui::StrokeKind::Inside,
+            );
+        }
+        let lines = if self.scanning.is_some() { 3.0 } else { 2.0 };
+        let height = lines * 26.0;
+        let block = egui::Rect::from_center_size(rect.center(), egui::vec2(rect.width(), height));
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(block)
+                .layout(egui::Layout::top_down(egui::Align::Center)),
+            |ui| {
+                ui.spacing_mut().item_spacing.y = 10.0;
+                ui.label(egui::RichText::new(hint).size(15.0).color(p.body));
                 ui.horizontal(|ui| {
-                    if ui.button(self.tr.get("add-files")).clicked() {
+                    let (or, choose) = (self.tr.get("drop-or"), self.tr.get("choose-files"));
+                    let width = style::text_width(ui, &or) + style::text_width(ui, &choose) + 4.0;
+                    ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    ui.label(egui::RichText::new(or).color(p.secondary));
+                    if style::link(ui, &choose).clicked() {
                         self.command(Command::AddFiles);
                     }
-                    if ui.button(self.tr.get("add-folder")).clicked() {
-                        self.command(Command::AddFolder);
-                    }
-                    if !self.inputs.is_empty() && ui.button(self.tr.get("clear-list")).clicked() {
-                        self.clear_inputs();
-                    }
                 });
-            });
-        });
-        if self.scanning.is_some() {
-            ui.horizontal(|ui| {
-                ui.spinner();
-                ui.label(self.tr.get("scanning"));
-            });
-        }
-        if !self.tools.videos() {
-            ui.colored_label(
-                ui.visuals().warn_fg_color,
-                self.tr.get("videos-need-ffmpeg"),
-            );
-        }
-        let Some(found) = &self.found else {
-            return;
-        };
-        let count = |kind| found.files.iter().filter(|f| f.kind == kind).count();
-        ui.label(self.tr.with(
-            "found-summary",
-            &[
-                ("photos", FluentValue::from(count(MediaKind::Image))),
-                ("videos", FluentValue::from(count(MediaKind::Video))),
-            ],
-        ));
-        for (extension, count) in &found.skipped {
-            let count = FluentValue::from(*count);
-            let text = if extension.is_empty() {
-                self.tr.with("skipped-no-extension", &[("count", count)])
-            } else {
-                self.tr.with(
-                    "skipped-type",
-                    &[
-                        ("count", count),
-                        ("extension", FluentValue::from(extension.as_str())),
-                    ],
-                )
-            };
-            ui.colored_label(ui.visuals().warn_fg_color, text);
-        }
-        for issue in &found.issues {
-            let path = issue.path.display().to_string();
-            ui.colored_label(
-                ui.visuals().warn_fg_color,
-                self.tr
-                    .with("unreadable", &[("path", FluentValue::from(path))]),
-            );
-        }
+                if self.scanning.is_some() {
+                    ui.horizontal(|ui| {
+                        ui.spinner();
+                        ui.label(egui::RichText::new(self.tr.get("scanning")).color(p.secondary));
+                    });
+                }
+            },
+        );
+    }
+
+    fn file_grid(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let p = *Palette::of(ui);
         if self.thumbnails.is_none() {
             let video = self.tools.ffmpeg.clone().zip(self.tools.ffprobe.clone());
             match Thumbnails::new(ctx, video) {
@@ -471,277 +853,450 @@ impl AppState {
         if let Some(thumbnails) = &mut self.thumbnails {
             thumbnails.take(ctx);
         }
+        let Some(found) = &self.found else {
+            return;
+        };
         let thumbnails = &mut self.thumbnails;
         let tr = &self.tr;
         let list = tr.get("found-list");
         egui::ScrollArea::vertical()
-            .max_height(280.0)
+            .id_salt("files")
+            .auto_shrink(false)
             .show(ui, |ui| {
-                a11y::list(ui, &list, |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        for file in &found.files {
-                            let (cell, response) = ui.allocate_exact_size(
-                                egui::vec2(128.0, 148.0),
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(24, 22))
+                    .show(ui, |ui| {
+                        let (gap_x, gap_y) = (14.0, 18.0);
+                        let width = ui.available_width();
+                        let columns = ((width + gap_x) / (GRID_MIN_CELL + gap_x)).floor().max(1.0);
+                        let cell = (width - gap_x * (columns - 1.0)) / columns;
+                        let picture_height = cell * 3.0 / 4.0;
+                        ui.spacing_mut().item_spacing = egui::vec2(gap_x, gap_y);
+                        let columns_n = columns as usize;
+                        let rows = found.files.len().div_ceil(columns_n);
+                        let cell_height = picture_height + 24.0;
+                        let height =
+                            rows as f32 * cell_height + rows.saturating_sub(1) as f32 * gap_y;
+                        a11y::list(ui, &list, |ui| {
+                            let (grid, _) = ui.allocate_exact_size(
+                                egui::vec2(width, height),
                                 egui::Sense::hover(),
                             );
-                            let name = file.relative.display().to_string();
-                            let kind = match file.kind {
-                                MediaKind::Image => "found-photo",
-                                MediaKind::Video => "found-video",
-                            };
-                            let described =
-                                tr.with(kind, &[("name", FluentValue::from(name.as_str()))]);
-                            response.widget_info(|| {
-                                egui::WidgetInfo::labeled(egui::Role::ListItem, true, &described)
-                            });
-                            if !ui.is_rect_visible(cell) {
-                                continue;
-                            }
-                            let picture =
-                                egui::Rect::from_min_size(cell.min, egui::vec2(128.0, 128.0));
-                            let shown = thumbnails
-                                .as_mut()
-                                .and_then(|t| t.get(&file.path, file.kind).flatten());
-                            match shown {
-                                Some(texture) => {
-                                    let size = texture.size_vec2();
-                                    let fit = size * (128.0 / size.max_elem());
-                                    let at = egui::Rect::from_center_size(picture.center(), fit);
-                                    egui::Image::new(texture).paint_at(ui, at);
+                            for (i, file) in found.files.iter().enumerate() {
+                                let (row, column) = (i / columns_n, i % columns_n);
+                                let rect = egui::Rect::from_min_size(
+                                    grid.min
+                                        + egui::vec2(
+                                            column as f32 * (cell + gap_x),
+                                            row as f32 * (cell_height + gap_y),
+                                        ),
+                                    egui::vec2(cell, cell_height),
+                                );
+                                let name = file.relative.display().to_string();
+                                let kind = match file.kind {
+                                    MediaKind::Image => "found-photo",
+                                    MediaKind::Video => "found-video",
+                                };
+                                let described =
+                                    tr.with(kind, &[("name", FluentValue::from(name.as_str()))]);
+                                let response = ui.interact(
+                                    rect,
+                                    ui.make_persistent_id(("file", i)),
+                                    egui::Sense::hover(),
+                                );
+                                response.widget_info(|| {
+                                    egui::WidgetInfo::labeled(
+                                        egui::Role::ListItem,
+                                        true,
+                                        &described,
+                                    )
+                                });
+                                if !ui.is_rect_visible(rect) {
+                                    continue;
                                 }
-                                None => {
-                                    let mark = match file.kind {
-                                        MediaKind::Image => "▣",
-                                        MediaKind::Video => "▶",
-                                    };
-                                    ui.painter().rect_filled(
-                                        picture,
-                                        4.0,
-                                        ui.visuals().faint_bg_color,
-                                    );
-                                    ui.painter().text(
-                                        picture.center(),
-                                        egui::Align2::CENTER_CENTER,
-                                        mark,
-                                        egui::FontId::proportional(28.0),
-                                        ui.visuals().weak_text_color(),
-                                    );
+                                let picture = egui::Rect::from_min_size(
+                                    rect.min,
+                                    egui::vec2(cell, picture_height),
+                                );
+                                let shown = thumbnails
+                                    .as_mut()
+                                    .and_then(|t| t.get(&file.path, file.kind).flatten());
+                                match shown {
+                                    Some(texture) => {
+                                        egui::Image::new(texture)
+                                            .uv(cover(texture.size_vec2(), picture.size()))
+                                            .corner_radius(style::THUMBNAIL_RADIUS)
+                                            .paint_at(ui, picture);
+                                    }
+                                    None => {
+                                        ui.painter().rect_filled(
+                                            picture,
+                                            style::THUMBNAIL_RADIUS,
+                                            p.separator,
+                                        );
+                                    }
                                 }
+                                if let Some(seconds) =
+                                    thumbnails.as_ref().and_then(|t| t.seconds(&file.path))
+                                {
+                                    duration_badge(ui, picture, seconds);
+                                }
+                                let mut job = egui::text::LayoutJob::simple_singleline(
+                                    name,
+                                    egui::FontId::proportional(12.0),
+                                    p.text,
+                                );
+                                job.wrap = egui::text::TextWrapping::truncate_at_width(cell);
+                                let galley = ui.painter().layout_job(job);
+                                ui.painter().galley(
+                                    egui::pos2(rect.min.x, picture.max.y + 6.0),
+                                    galley,
+                                    p.text,
+                                );
                             }
-                            let label = egui::Rect::from_min_max(
-                                egui::pos2(cell.min.x, picture.max.y + 2.0),
-                                cell.max,
-                            );
-                            ui.put(
-                                label,
-                                egui::Label::new(egui::RichText::new(name).small()).truncate(),
-                            );
-                        }
+                        });
                     });
-                });
             });
     }
 
-    fn what_and_how(&mut self, ui: &mut egui::Ui) {
+    /// What to hide and how, whether to review, where to save, and the way to the advanced
+    /// options.
+    fn settings_panel(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
-        ui.horizontal_top(|ui| {
-            ui.vertical(|ui| {
-                ui.set_max_width((ui.available_width() - SAMPLE_SIDE - 16.0).max(240.0));
-                self.what_and_how_controls(ui);
-                egui::CollapsingHeader::new(self.tr.get("advanced"))
-                    .id_salt("advanced")
-                    .show(ui, |ui| self.advanced(ui));
+        let tr = self.tr.clone();
+        let p = *Palette::of(ui);
+        let whole = ui.max_rect();
+        let footer_height = 48.0;
+        let (top, footer) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
+        region(ui, top, |ui| {
+            egui::ScrollArea::vertical()
+                .id_salt("settings")
+                .auto_shrink(false)
+                .show(ui, |ui| {
+                    style::group(ui, |ui| {
+                        style::group_title(ui, &tr.get("what"));
+                        ui.checkbox(&mut self.settings.faces, tr.get("faces"));
+                        ui.checkbox(&mut self.settings.plates, tr.get("plates"));
+                        if !self.settings.faces && !self.settings.plates {
+                            ui.colored_label(p.needs_review, tr.get("models-need-one"));
+                        }
+                    });
+                    style::group(ui, |ui| {
+                        style::group_title(ui, &tr.get("how"));
+                        let methods = [
+                            (Method::Fill, tr.get("method-fill")),
+                            (Method::Mosaic, tr.get("method-mosaic")),
+                            (Method::Blur, tr.get("method-blur")),
+                        ];
+                        ui.push_id("method", |ui| {
+                            style::segmented(ui, &mut self.settings.method, &methods);
+                        });
+                        if self.settings.method == Method::Mosaic {
+                            self.strength(ui, &tr);
+                        }
+                        self.sample_preview(ui);
+                    });
+                    style::group(ui, |ui| {
+                        ui.checkbox(&mut self.settings.review, tr.get("review-first"));
+                    });
+                    style::group(ui, |ui| {
+                        style::group_title(ui, &tr.get("output-folder"));
+                        self.output_button(ui, &tr);
+                    });
+                });
+        });
+        region(ui, footer, |ui| {
+            ui.painter().hline(
+                footer.x_range(),
+                footer.top(),
+                egui::Stroke::new(1.0, p.faint_line),
+            );
+            ui.horizontal_centered(|ui| {
+                ui.add_space(20.0);
+                if style::link(ui, &tr.get("advanced-open")).clicked() {
+                    self.command(Command::Models);
+                }
             });
-            self.sample_preview(ui);
         });
         if self.settings != before {
             self.save_settings();
         }
     }
 
-    /// What a run with the settings as they are would make of the sample photo.
-    fn sample_preview(&mut self, ui: &mut egui::Ui) {
-        let options = run::RunOptions::of(&self.settings);
-        let texture = self.sample.texture(ui.ctx(), &options);
-        ui.vertical(|ui| {
-            ui.label(self.tr.get("sample-title"));
-            let image = egui::Image::new((texture.id(), egui::vec2(SAMPLE_SIDE, SAMPLE_SIDE)))
-                .alt_text(self.tr.get("sample-alt"));
-            ui.add(image);
+    fn strength(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        use cloakframe_core::mask::MosaicStrength;
+        let p = *Palette::of(ui);
+        ui.horizontal(|ui| {
+            let label = tr.get("strength");
+            ui.add_sized(
+                egui::vec2(34.0, style::BUTTON_HEIGHT),
+                egui::Label::new(egui::RichText::new(&label).color(p.secondary)),
+            );
+            ui.spacing_mut().slider_width =
+                ui.available_width() - 16.0 - ui.spacing().item_spacing.x;
+            let value = &mut self.settings.mosaic_strength;
+            let slider = ui.add(
+                egui::Slider::new(value, MosaicStrength::MIN..=MosaicStrength::MAX)
+                    .show_value(false),
+            );
+            let shown = *value;
+            slider.widget_info(|| egui::WidgetInfo::slider(true, f64::from(shown), &label));
+            ui.label(shown.to_string());
         });
     }
 
-    fn advanced(&mut self, ui: &mut egui::Ui) {
-        let tr = &self.tr;
+    /// What a run with the settings as they are would make of the sample photo, cut to the
+    /// panel's width around the face.
+    fn sample_preview(&mut self, ui: &mut egui::Ui) {
+        let options = run::RunOptions::of(&self.settings);
+        let texture = self.sample.texture(ui.ctx(), &options);
+        let width = ui.available_width();
+        let size = egui::vec2(width, (width * SAMPLE_ASPECT).round());
+        let shown = size.y / size.x;
+        let top = 0.1 * (1.0 - shown);
+        let image = egui::Image::new((texture.id(), size))
+            .uv(egui::Rect::from_min_max(
+                egui::pos2(0.0, top),
+                egui::pos2(1.0, top + shown),
+            ))
+            .corner_radius(style::THUMBNAIL_RADIUS)
+            .alt_text(self.tr.get("sample-alt"));
+        ui.add(image);
+    }
+
+    fn output_button(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        let p = *Palette::of(ui);
+        let (shown, change) = match &self.settings.output {
+            Some(folder) => (
+                folder.file_name().map_or_else(
+                    || folder.display().to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                ),
+                Some(tr.get("change-folder")),
+            ),
+            None => (tr.get("choose-folder"), None),
+        };
+        let mut button = egui::Button::new(shown)
+            .min_size(egui::vec2(ui.available_width(), style::BUTTON_HEIGHT))
+            .corner_radius(style::BUTTON_RADIUS);
+        if let Some(change) = change {
+            button = button.right_text(egui::RichText::new(change).color(p.secondary));
+        }
+        let mut response = ui.add(button);
+        if let Some(folder) = &self.settings.output {
+            response = response.on_hover_text(folder.display().to_string());
+        }
+        if response.clicked()
+            && let Some(folder) = rfd::FileDialog::new().pick_folder()
+        {
+            self.settings.output = Some(folder);
+            if !self.inputs.is_empty() {
+                let ctx = ui.ctx().clone();
+                self.rescan(&ctx);
+            }
+        }
+    }
+
+    /// The advanced options, in a sheet that hangs from the toolbar.
+    fn advanced_sheet(&mut self, ctx: &egui::Context) {
+        if !self.sheet_open {
+            return;
+        }
+        let before = self.settings.clone();
+        let tr = self.tr.clone();
+        let p = if ctx.theme() == egui::Theme::Dark {
+            style::DARK
+        } else {
+            style::LIGHT
+        };
+        let top = self.middle_rect.top();
+        let id = egui::Id::unique("advanced");
+        let area = egui::Modal::default_area(id).anchor(
+            egui::Align2::CENTER_TOP,
+            egui::vec2(0.0, top - ctx.content_rect().top()),
+        );
+        let frame = egui::Frame::NONE
+            .fill(p.window)
+            .stroke(egui::Stroke::new(1.0, p.border))
+            .corner_radius(egui::CornerRadius {
+                nw: 0,
+                ne: 0,
+                sw: 10,
+                se: 10,
+            })
+            .shadow(egui::Shadow {
+                offset: [0, 18],
+                blur: 50,
+                spread: 0,
+                color: egui::Color32::from_black_alpha(46),
+            });
+        let height = (ctx.content_rect().bottom() - top - 40.0).max(200.0);
+        let mut done = false;
+        let modal = egui::Modal::new(id)
+            .area(area)
+            .frame(frame)
+            .backdrop_color(egui::Color32::from_black_alpha(30))
+            .show(ctx, |ui| {
+                ui.set_width(SHEET_WIDTH);
+                let label = tr.get("advanced");
+                ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+                    node.set_role(egui::accesskit::Role::Dialog);
+                    node.set_label(label.as_str());
+                });
+                egui::ScrollArea::vertical()
+                    .id_salt("advanced")
+                    .max_height(height - 64.0)
+                    .show(ui, |ui| {
+                        egui::Frame::NONE
+                            .inner_margin(egui::Margin::symmetric(24, 6))
+                            .show(ui, |ui| self.advanced(ui, &tr));
+                    });
+                ui.painter().hline(
+                    ui.max_rect().x_range(),
+                    ui.cursor().top(),
+                    egui::Stroke::new(1.0, p.faint_line),
+                );
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(24, 16))
+                    .show(ui, |ui| {
+                        ui.horizontal(|ui| {
+                            ui.add(
+                                egui::Label::new(
+                                    egui::RichText::new(tr.get("advanced-next-run"))
+                                        .size(12.0)
+                                        .color(p.secondary),
+                                )
+                                .wrap(),
+                            );
+                        });
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if style::primary(ui, &tr.get("done"), true).clicked() {
+                                done = true;
+                            }
+                        });
+                    });
+            });
+        if done || modal.should_close() {
+            self.sheet_open = false;
+        }
+        if self.settings != before {
+            self.save_settings();
+        }
+    }
+
+    fn advanced(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        let p = *Palette::of(ui);
+        let hint = |text: String| egui::RichText::new(text).size(12.0).color(p.secondary);
+        let faces = self.settings.faces;
         let advanced = &mut self.settings.advanced;
-        ui.add_enabled_ui(self.settings.faces, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.label(tr.get("face-model"));
-                ui.radio_value(
-                    &mut advanced.face_model,
-                    FaceModel::Accurate,
-                    tr.get("face-model-accurate"),
-                );
-                ui.radio_value(
-                    &mut advanced.face_model,
-                    FaceModel::Fast,
-                    tr.get("face-model-fast"),
+        sheet_section(ui, &tr.get("advanced-detection"));
+        sheet_field(ui, &tr.get("face-model"), |ui| {
+            ui.add_enabled_ui(faces, |ui| {
+                let models = [
+                    (FaceModel::Accurate, tr.get("face-model-accurate")),
+                    (FaceModel::Fast, tr.get("face-model-fast")),
+                ];
+                ui.push_id("face-model", |ui| {
+                    style::segmented(ui, &mut advanced.face_model, &models);
+                });
+            });
+        });
+        sheet_field(ui, &tr.get("sensitivity"), |ui| {
+            advanced.sensitivity = advanced.sensitivity.clamp(1, 5);
+            ui.horizontal(|ui| {
+                ui.spacing_mut().slider_width = ui.available_width() - 90.0;
+                let slider = ui
+                    .add(egui::Slider::new(&mut advanced.sensitivity, 1..=5).show_value(false))
+                    .on_hover_text(tr.with(
+                        "sensitivity-hint",
+                        &[(
+                            "score",
+                            FluentValue::from(format!("{:.2}", advanced.score())),
+                        )],
+                    ));
+                let level = tr.get(SENSITIVITY_LEVELS[usize::from(advanced.sensitivity) - 1]);
+                slider.widget_info(|| {
+                    let mut info = egui::WidgetInfo::slider(
+                        true,
+                        f64::from(advanced.sensitivity),
+                        tr.get("sensitivity"),
+                    );
+                    info.current_text_value = Some(level.clone());
+                    info
+                });
+                ui.label(level);
+            });
+        });
+        sheet_field(ui, "", |ui| {
+            ui.checkbox(&mut advanced.tiles, tr.get("tiles"));
+            ui.add(egui::Label::new(hint(tr.get("tiles-hint"))).wrap());
+        });
+        sheet_section(ui, &tr.get("advanced-photos"));
+        sheet_field(ui, "", |ui| {
+            ui.checkbox(&mut advanced.keep_metadata, tr.get("keep-metadata"))
+                .on_hover_text(tr.get("keep-metadata-hint"));
+            ui.horizontal(|ui| {
+                ui.add_space(23.0);
+                ui.add_enabled(
+                    advanced.keep_metadata,
+                    egui::Checkbox::new(&mut advanced.keep_gps, tr.get("keep-gps")),
                 );
             });
         });
-        ui.horizontal(|ui| {
-            let step = advanced.sensitivity.clamp(1, 5);
-            advanced.sensitivity = step;
-            let slider = ui
-                .add(
-                    egui::Slider::new(&mut advanced.sensitivity, 1..=5)
-                        .show_value(false)
-                        .text(tr.get("sensitivity")),
-                )
-                .on_hover_text(tr.with(
-                    "sensitivity-hint",
-                    &[(
-                        "score",
-                        FluentValue::from(format!("{:.2}", advanced.score())),
-                    )],
-                ));
-            let level = tr.get(SENSITIVITY_LEVELS[usize::from(advanced.sensitivity) - 1]);
-            slider.widget_info(|| {
-                let mut info = egui::WidgetInfo::slider(
-                    true,
-                    f64::from(advanced.sensitivity),
-                    tr.get("sensitivity"),
-                );
-                info.current_text_value = Some(level.clone());
-                info
-            });
-            ui.label(level);
-        });
-        ui.checkbox(&mut advanced.tiles, tr.get("tiles"))
-            .on_hover_text(tr.get("tiles-hint"));
-        ui.checkbox(&mut advanced.keep_metadata, tr.get("keep-metadata"))
-            .on_hover_text(tr.get("keep-metadata-hint"));
-        ui.indent("gps", |ui| {
-            ui.add_enabled(
-                advanced.keep_metadata,
-                egui::Checkbox::new(&mut advanced.keep_gps, tr.get("keep-gps")),
-            );
-        });
-        ui.checkbox(&mut advanced.remove_audio, tr.get("remove-audio"))
-            .on_hover_text(tr.get("remove-audio-hint"));
+        sheet_section(ui, &tr.get("advanced-videos"));
         let quality = |q: VideoQuality| match q {
             VideoQuality::High => "video-quality-high",
             VideoQuality::Balanced => "video-quality-balanced",
             VideoQuality::SpaceSaver => "video-quality-space-saver",
         };
-        egui::ComboBox::from_label(tr.get("video-quality"))
-            .selected_text(tr.get(quality(advanced.video_quality)))
-            .show_ui(ui, |ui| {
-                for q in [
-                    VideoQuality::High,
-                    VideoQuality::Balanced,
-                    VideoQuality::SpaceSaver,
-                ] {
-                    ui.selectable_value(&mut advanced.video_quality, q, tr.get(quality(q)));
-                }
-            })
-            .response
-            .on_hover_text(tr.get("video-quality-hint"));
+        sheet_field(ui, &tr.get("video-quality"), |ui| {
+            egui::ComboBox::from_id_salt("video-quality")
+                .width(220.0)
+                .selected_text(tr.get(quality(advanced.video_quality)))
+                .show_ui(ui, |ui| {
+                    for q in [
+                        VideoQuality::High,
+                        VideoQuality::Balanced,
+                        VideoQuality::SpaceSaver,
+                    ] {
+                        ui.selectable_value(&mut advanced.video_quality, q, tr.get(quality(q)));
+                    }
+                })
+                .response
+                .on_hover_text(tr.get("video-quality-hint"))
+                .widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-quality"))
+                });
+        });
         let codec = |c: VideoCodec| match c {
             VideoCodec::H264 => "video-codec-h264",
             VideoCodec::Hevc => "video-codec-hevc",
         };
-        egui::ComboBox::from_label(tr.get("video-codec"))
-            .selected_text(tr.get(codec(advanced.video_codec)))
-            .show_ui(ui, |ui| {
-                for c in [VideoCodec::H264, VideoCodec::Hevc] {
-                    ui.selectable_value(&mut advanced.video_codec, c, tr.get(codec(c)));
-                }
-            })
-            .response
-            .on_hover_text(tr.get("video-codec-hint"));
-        ui.checkbox(&mut advanced.gpu, tr.get("gpu"))
-            .on_hover_text(tr.get("gpu-hint"));
-        ui.weak(tr.get("advanced-next-run"));
-    }
-
-    fn what_and_how_controls(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal_wrapped(|ui| {
-            ui.label(self.tr.get("what"));
-            ui.checkbox(&mut self.settings.faces, self.tr.get("faces"));
-            ui.checkbox(&mut self.settings.plates, self.tr.get("plates"));
-            ui.separator();
-            ui.label(self.tr.get("how"));
-            for (method, id) in [
-                (Method::Fill, "method-fill"),
-                (Method::Mosaic, "method-mosaic"),
-                (Method::Blur, "method-blur"),
-            ] {
-                ui.radio_value(&mut self.settings.method, method, self.tr.get(id));
-            }
-            if self.settings.method == Method::Mosaic {
-                use cloakframe_core::mask::MosaicStrength;
-                ui.add(
-                    egui::Slider::new(
-                        &mut self.settings.mosaic_strength,
-                        MosaicStrength::MIN..=MosaicStrength::MAX,
-                    )
-                    .text(self.tr.get("strength")),
-                );
-            }
+        sheet_field(ui, &tr.get("video-codec"), |ui| {
+            egui::ComboBox::from_id_salt("video-codec")
+                .width(220.0)
+                .selected_text(tr.get(codec(advanced.video_codec)))
+                .show_ui(ui, |ui| {
+                    for c in [VideoCodec::H264, VideoCodec::Hevc] {
+                        ui.selectable_value(&mut advanced.video_codec, c, tr.get(codec(c)));
+                    }
+                })
+                .response
+                .on_hover_text(tr.get("video-codec-hint"))
+                .widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-codec"))
+                });
         });
-        ui.checkbox(&mut self.settings.review, self.tr.get("review-first"));
-        if !self.settings.faces && !self.settings.plates {
-            ui.colored_label(ui.visuals().warn_fg_color, self.tr.get("models-need-one"));
-        }
-    }
-
-    fn start_row(&mut self, ui: &mut egui::Ui) {
-        ui.horizontal(|ui| {
-            let (view, theme, language) = (
-                self.tr.get("menu-view"),
-                self.tr.get("theme"),
-                self.tr.get("language"),
-            );
-            ui.menu_button(view, |ui| {
-                ui.label(theme);
-                self.theme_choice(ui);
-                ui.separator();
-                ui.label(language);
-                self.language_choice(ui);
-            });
-            ui.separator();
-            ui.label(self.tr.get("output-folder"));
-            let shown = match &self.settings.output {
-                Some(folder) => folder.display().to_string(),
-                None => self.tr.get("no-output-folder"),
-            };
-            ui.label(shown);
-            if ui.button(self.tr.get("models-open")).clicked() {
-                self.command(Command::Models);
-            }
-            if ui.button(self.tr.get("choose-folder")).clicked()
-                && let Some(folder) = rfd::FileDialog::new().pick_folder()
-            {
-                self.settings.output = Some(folder);
-                self.save_settings();
-                if !self.inputs.is_empty() {
-                    let ctx = ui.ctx().clone();
-                    self.rescan(&ctx);
-                }
-            }
-            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                let blocker = self.start_blocker();
-                let start =
-                    ui.add_enabled(blocker.is_none(), egui::Button::new(self.tr.get("start")));
-                if start.clicked() {
-                    self.start_run(ui.ctx());
-                }
-                if let Some(why) = blocker {
-                    start.on_disabled_hover_text(self.tr.get(why));
-                }
-            });
+        sheet_field(ui, "", |ui| {
+            ui.checkbox(&mut advanced.remove_audio, tr.get("remove-audio"));
+            ui.add(egui::Label::new(hint(tr.get("remove-audio-hint"))).wrap());
         });
+        sheet_field(ui, "", |ui| {
+            ui.checkbox(&mut advanced.gpu, tr.get("gpu"))
+                .on_hover_text(tr.get("gpu-hint"));
+        });
+        sheet_section(ui, &tr.get("models-title"));
+        self.models.rows(ui, tr);
     }
 
     /// The message saying why the run cannot start yet.
@@ -1077,87 +1632,6 @@ impl AppState {
         }
     }
 
-    /// The sessions earlier runs left for review, above the drop area.
-    fn saved_sessions(&mut self, ui: &mut egui::Ui) {
-        if let Some(e) = &self.sessions.error {
-            ui.colored_label(ui.visuals().warn_fg_color, e);
-        }
-        if self.sessions.list.is_empty() {
-            return;
-        }
-        let tr = &self.tr;
-        let now = SystemTime::now();
-        let mut open = None;
-        let mut discard = None;
-        egui::Frame::group(ui.style()).show(ui, |ui| {
-            let title = tr.get("sessions-title");
-            ui.heading(&title);
-            a11y::list(ui, &title, |ui| {
-                for saved in &self.sessions.list {
-                    let age = saved.created.map(|created| {
-                        let days = sessions::age_days(created, now);
-                        tr.with("session-age", &[("days", FluentValue::from(days))])
-                    });
-                    let row = saved.content.as_ref().ok().map(|loaded| {
-                        let output = loaded.session.output.display().to_string();
-                        tr.with(
-                            "session-row",
-                            &[
-                                ("items", FluentValue::from(loaded.session.items.len())),
-                                ("output", FluentValue::from(output)),
-                            ],
-                        )
-                    });
-                    let name: Vec<&str> = age.iter().chain(&row).map(String::as_str).collect();
-                    a11y::item(ui, &name.join(", "), |ui| {
-                        if let Some(age) = &age {
-                            ui.label(age);
-                        }
-                        match &saved.content {
-                            Ok(loaded) => {
-                                if let Some(row) = &row {
-                                    ui.label(row);
-                                }
-                                let changed = loaded.changed_count();
-                                if changed > 0 {
-                                    ui.colored_label(
-                                        ui.visuals().warn_fg_color,
-                                        tr.with(
-                                            "session-changed",
-                                            &[("count", FluentValue::from(changed))],
-                                        ),
-                                    );
-                                }
-                                if ui.button(tr.get("session-open")).clicked() {
-                                    open = Some(saved.id.clone());
-                                }
-                            }
-                            Err(e) => {
-                                ui.colored_label(
-                                    ui.visuals().warn_fg_color,
-                                    tr.with(
-                                        "session-unreadable",
-                                        &[("error", FluentValue::from(e.as_str()))],
-                                    ),
-                                );
-                            }
-                        }
-                        if ui.button(tr.get("session-discard")).clicked() {
-                            discard = Some(saved.id.clone());
-                        }
-                    });
-                }
-            });
-        });
-        if let Some(id) = open {
-            let ctx = ui.ctx().clone();
-            self.open_review(id, None, &ctx);
-        }
-        if discard.is_some() {
-            self.discarding = discard;
-        }
-    }
-
     fn discard_dialog(&mut self, ctx: &egui::Context) {
         let Some(id) = self.discarding.clone() else {
             return;
@@ -1222,6 +1696,176 @@ impl AppState {
             self.set_language(choice);
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Screen {
+    Main,
+    Run,
+    Review,
+}
+
+enum SidebarAct {
+    Close,
+    Open(SessionId),
+    Discard(SessionId),
+}
+
+/// A review waiting in the sidebar: the folder it saves to, when its run was, and how many
+/// items it holds; the hover and a screen reader get the whole path and what changed.
+struct SessionRow {
+    name: String,
+    age: Option<String>,
+    count: Option<usize>,
+    readable: bool,
+    described: String,
+    detail: String,
+}
+
+impl SessionRow {
+    fn of(saved: &Saved, now: SystemTime, tr: &Translator) -> Self {
+        let age = saved.created.map(|created| {
+            let days = sessions::age_days(created, now);
+            tr.with("session-age", &[("days", FluentValue::from(days))])
+        });
+        match &saved.content {
+            Ok(loaded) => {
+                let output = &loaded.session.output;
+                let name = output.file_name().map_or_else(
+                    || output.display().to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                );
+                let mut detail = vec![tr.with(
+                    "session-row",
+                    &[
+                        ("items", FluentValue::from(loaded.session.items.len())),
+                        ("output", FluentValue::from(output.display().to_string())),
+                    ],
+                )];
+                let changed = loaded.changed_count();
+                if changed > 0 {
+                    detail
+                        .push(tr.with("session-changed", &[("count", FluentValue::from(changed))]));
+                }
+                let detail = detail.join(&tr.get("list-separator"));
+                let described: Vec<&str> = std::iter::once(name.as_str())
+                    .chain(age.as_deref())
+                    .chain([detail.as_str()])
+                    .collect();
+                Self {
+                    described: described.join(&tr.get("list-separator")),
+                    count: Some(loaded.session.items.len()),
+                    readable: true,
+                    name,
+                    age,
+                    detail,
+                }
+            }
+            Err(e) => {
+                let name = tr.get("session-unreadable-short");
+                let detail = tr.with(
+                    "session-unreadable",
+                    &[("error", FluentValue::from(e.as_str()))],
+                );
+                Self {
+                    described: format!("{name}{}{detail}", tr.get("list-separator")),
+                    count: None,
+                    readable: false,
+                    name,
+                    age,
+                    detail,
+                }
+            }
+        }
+    }
+}
+
+/// Draws `add` inside `rect` only.
+fn region<R>(ui: &mut egui::Ui, rect: egui::Rect, add: impl FnOnce(&mut egui::Ui) -> R) -> R {
+    ui.scope_builder(
+        egui::UiBuilder::new()
+            .max_rect(rect)
+            .layout(egui::Layout::top_down(egui::Align::Min)),
+        |ui| {
+            ui.set_clip_rect(rect.intersect(ui.clip_rect()));
+            add(ui)
+        },
+    )
+    .inner
+}
+
+/// The chosen sidebar entry is in the heavier face.
+fn sidebar_text(text: &str, selected: bool, p: &Palette) -> egui::RichText {
+    let text = egui::RichText::new(text).color(p.text);
+    if selected {
+        text.font(style::medium(13.0))
+    } else {
+        text
+    }
+}
+
+/// The part of a picture of `size` that fills `frame` without stretching, cut evenly at its
+/// sides or its top and bottom.
+fn cover(size: egui::Vec2, frame: egui::Vec2) -> egui::Rect {
+    let (picture, wanted) = (size.x / size.y, frame.x / frame.y);
+    if picture > wanted {
+        let shown = wanted / picture;
+        egui::Rect::from_min_max(
+            egui::pos2((1.0 - shown) / 2.0, 0.0),
+            egui::pos2((1.0 + shown) / 2.0, 1.0),
+        )
+    } else {
+        let shown = picture / wanted;
+        egui::Rect::from_min_max(
+            egui::pos2(0.0, (1.0 - shown) / 2.0),
+            egui::pos2(1.0, (1.0 + shown) / 2.0),
+        )
+    }
+}
+
+/// A video's length over the bottom right of its thumbnail, as m:ss.
+fn duration_badge(ui: &egui::Ui, picture: egui::Rect, seconds: f64) {
+    let whole = seconds.round() as u64;
+    let text = format!("{}:{:02}", whole / 60, whole % 60);
+    let galley =
+        ui.painter()
+            .layout_no_wrap(text, egui::FontId::proportional(11.0), egui::Color32::WHITE);
+    let size = galley.size() + egui::vec2(10.0, 2.0);
+    let badge = egui::Rect::from_min_size(picture.max - size - egui::vec2(5.0, 5.0), size);
+    ui.painter()
+        .rect_filled(badge, 3.0, egui::Color32::from_black_alpha(178));
+    ui.painter().galley(
+        badge.min + egui::vec2(5.0, 1.0),
+        galley,
+        egui::Color32::WHITE,
+    );
+}
+
+/// A heading of the advanced options sheet.
+fn sheet_section(ui: &mut egui::Ui, title: &str) {
+    ui.add_space(12.0);
+    style::group_title(ui, title);
+    ui.add_space(2.0);
+}
+
+/// A row of the sheet: its name in a column of its own, the controls beside it.
+fn sheet_field(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui)) {
+    let p = *Palette::of(ui);
+    ui.horizontal_top(|ui| {
+        ui.allocate_ui_with_layout(
+            egui::vec2(150.0, style::BUTTON_HEIGHT),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.set_min_size(egui::vec2(150.0, style::BUTTON_HEIGHT));
+                ui.label(egui::RichText::new(label).color(p.body));
+            },
+        );
+        ui.vertical(|ui| {
+            ui.set_width(ui.available_width());
+            add(ui);
+        });
+    });
+    ui.add_space(4.0);
 }
 
 fn describe(tr: &Translator, notice: &Notice) -> String {

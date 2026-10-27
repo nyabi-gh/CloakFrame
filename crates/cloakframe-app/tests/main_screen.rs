@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use cloakframe_app::app::{AppState, Quit};
+use cloakframe_app::app::{AppState, Command, Quit};
 use cloakframe_app::draft::Pick;
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
@@ -140,8 +140,8 @@ fn dropped_files_are_scanned_and_counted() {
     drop_files(&mut harness, &files);
     let found = harness.state().found.as_ref().unwrap();
     assert_eq!(found.files.len(), 3);
-    harness.get_by_label("写真 2 件、動画 1 件");
-    harness.get_by_label("txt 形式のファイル 1 件は処理できません");
+    harness.get_by_label("写真 2 · 動画 1");
+    harness.get_by_label("処理しないファイル 1 件 — txt 1 件（対応していない形式）");
     // Each file is a named row of the list (egui #8700: no table roles).
     harness.get_by_role_and_label(Role::List, "処理する写真と動画");
     harness.get_by_role_and_label(Role::ListItem, "写真 髙橋.jpg");
@@ -151,7 +151,7 @@ fn dropped_files_are_scanned_and_counted() {
     let mut harness = harness_without_tools(&files);
     let found = harness.state().found.as_ref().unwrap();
     assert_eq!(found.files.len(), 2);
-    harness.get_by_label("mp4 形式のファイル 1 件は処理できません");
+    harness.get_by_label_contains("mp4 1 件（対応していない形式）");
     let why = harness.state().tr().get("videos-need-ffmpeg");
     harness.get_by_label(&why);
     harness.run();
@@ -191,9 +191,10 @@ fn start_waits_for_models_files_and_a_folder() {
 fn the_language_menu_changes_the_text() {
     let mut harness = harness(Language::En, Settings::default());
     harness.run();
-    harness.get_by_label("View").click();
-    harness.run();
-    harness.get_by_label("한국어").click();
+    // The View menu is native on macOS and Windows, outside egui_kittest; it sends this.
+    harness
+        .state_mut()
+        .command(Command::Language(Some(Language::Ko)));
     harness.run();
     assert_eq!(harness.state().settings.language, Some(Language::Ko));
     harness.get_by_role_and_label(Role::Button, "시작");
@@ -205,13 +206,11 @@ fn the_theme_menu_changes_the_colours() {
     use cloakframe_app::settings::Theme;
     let mut harness = harness(Language::En, Settings::default());
     harness.run();
-    for (label, theme, colours) in [
-        ("Dark", Theme::Dark, egui::Theme::Dark),
-        ("Light", Theme::Light, egui::Theme::Light),
+    for (theme, colours) in [
+        (Theme::Dark, egui::Theme::Dark),
+        (Theme::Light, egui::Theme::Light),
     ] {
-        harness.get_by_label("View").click();
-        harness.run();
-        harness.get_by_label(label).click();
+        harness.state_mut().command(Command::Theme(theme));
         harness.run();
         assert_eq!(harness.state().settings.theme, theme);
         assert_eq!(harness.ctx.theme(), colours);
@@ -381,16 +380,18 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.step();
     harness.state_mut().wait_for_sessions();
     harness.run();
+    // The sidebar names the folder and the day; the whole path and what changed are in the
+    // row's name and its hover.
     harness.get_by_role_and_label(Role::List, "Waiting for review");
-    harness.get_by_label("Today");
-    harness.get_by_label(&format!("3 items for {}", output.display()));
-    harness.get_by_role_and_label(
-        Role::ListItem,
-        &format!("Today, 3 items for {}", output.display()),
+    let row = format!(
+        "out, Today, 3 items for {}, one original changed",
+        output.display()
     );
-    harness.get_by_label("one original changed");
+    harness.get_by_role_and_label(Role::ListItem, &row);
+    harness.get_by_label("out");
+    harness.get_by_label("Today");
 
-    harness.get_by_role_and_label(Role::Button, "Open").click();
+    harness.get_by_role_and_label(Role::Button, &row).click();
     // The queue's thumbnails and the editor's photo are made on threads of their own; the
     // harness waits for them before it settles.
     harness.step();
@@ -481,6 +482,10 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     assert!(store.lock(&id).is_ok(), "let go once it is closed");
 
     harness
+        .get_by_role_and_label(Role::Button, &row)
+        .click_secondary();
+    harness.run();
+    harness
         .get_by_role_and_label(Role::Button, "Discard…")
         .click();
     harness.run();
@@ -488,6 +493,10 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_role_and_label(Role::Button, "Keep").click();
     harness.run();
     assert!(store.load(&id).is_ok(), "kept until the user confirms");
+    harness
+        .get_by_role_and_label(Role::Button, &row)
+        .click_secondary();
+    harness.run();
     harness
         .get_by_role_and_label(Role::Button, "Discard…")
         .click();
@@ -500,6 +509,18 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     assert!(store.list().unwrap().is_empty());
     assert!(harness.state().sessions.list.is_empty());
     assert!(harness.query_by_label("Waiting for review").is_none());
+}
+
+/// Opens the one review the sidebar lists.
+fn open_session(harness: &mut Harness<'_, AppState>) {
+    harness
+        .get_by(|node| {
+            node.role() == Role::Button
+                && node
+                    .label()
+                    .is_some_and(|l| l.contains(" items for ") || l.contains(" item for "))
+        })
+        .click();
 }
 
 fn pixels(path: &Path) -> image::RgbImage {
@@ -951,7 +972,7 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     harness.step();
     harness.state_mut().wait_for_sessions();
     harness.run();
-    harness.get_by_role_and_label(Role::Button, "Open").click();
+    open_session(&mut harness);
     harness.step();
     let ctx = harness.ctx.clone();
     let wait = |h: &mut Harness<'_, AppState>| {
@@ -1381,8 +1402,8 @@ fn tab_order(harness: &mut Harness<'_, AppState>) -> Vec<String> {
     order
 }
 
-/// Tab goes through the screen as it reads: the files, what and how, the advanced options, then
-/// the folder and Start at the bottom.
+/// Tab goes through the window as it reads: the toolbar, the sidebar, the middle, then the
+/// settings panel down to the advanced options.
 #[test]
 fn tab_follows_the_screen_from_top_to_bottom() {
     let mut harness = harness(Language::En, Settings::default());
@@ -1394,12 +1415,14 @@ fn tab_follows_the_screen_from_top_to_bottom() {
             .position(|l| l == label)
             .unwrap_or_else(|| panic!("{label} is not in {order:?}"))
     };
-    assert!(at("Add Files…") < at("Faces"), "{order:?}");
-    assert!(at("Faces") < at("Advanced Options"), "{order:?}");
-    assert!(at("Advanced Options") < at("Choose…"), "{order:?}");
+    assert!(at("Add…") < at("New Task"), "{order:?}");
+    assert!(at("New Task") < at("Choose Files…"), "{order:?}");
+    assert!(at("Choose Files…") < at("Faces"), "{order:?}");
+    assert!(at("Faces") < at("Choose…"), "{order:?}");
+    assert!(at("Choose…") < at("Advanced Options…"), "{order:?}");
 }
 
-/// The advanced options are folded away, and what is chosen in them is saved and runs with the
+/// The advanced options are in a sheet, and what is chosen in them is saved and runs with the
 /// next run's options.
 #[test]
 fn advanced_options_are_saved_and_run_with() {
@@ -1423,7 +1446,7 @@ fn advanced_options_are_saved_and_run_with() {
     assert!(harness.query_by_label("Remove audio from videos").is_none());
     harness.get_by_role_and_label(Role::Image, "Anonymization style preview");
 
-    harness.get_by_label("Advanced Options").click();
+    harness.get_by_label("Advanced Options…").click();
     harness.run();
     harness.get_by_label("Fast  ·  YuNet").click();
     harness
@@ -1450,7 +1473,9 @@ fn advanced_options_are_saved_and_run_with() {
     harness.get_by_label("Also keep location (GPS)").click();
     harness.get_by_label("Remove audio from videos").click();
     harness.run();
-    harness.get_by_label("Video codec").click();
+    harness
+        .get_by_role_and_label(Role::ComboBox, "Video codec")
+        .click();
     harness.run();
     harness.get_by_label("HEVC (smaller files)").click();
     harness.run();
@@ -1472,7 +1497,12 @@ fn advanced_options_are_saved_and_run_with() {
     assert_eq!(saved.advanced, chosen);
 
     // With faces off, the face model has nothing to choose.
+    harness.get_by_role_and_label(Role::Button, "Done").click();
+    harness.run();
+    assert!(!harness.state().sheet_open);
     harness.get_by_label("Faces").click();
+    harness.run();
+    harness.get_by_label("Advanced Options…").click();
     harness.run();
     assert!(
         harness

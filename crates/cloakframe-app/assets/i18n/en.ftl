@@ -9,7 +9,7 @@ drop-release = Release to add { $count ->
 }
 add-files = Add Files…
 add-folder = Add Folder…
-clear-list = Clear
+clear-list = Remove All
 scanning = Looking for photos and videos…
 found-summary = { $photos ->
     [one] one photo
@@ -18,14 +18,6 @@ found-summary = { $photos ->
     [one] one video
    *[other] { $videos } videos
 }
-skipped-type = { $count ->
-    [one] one file
-   *[other] { $count } files
-} of type { $extension } cannot be processed
-skipped-no-extension = { $count ->
-    [one] one file
-   *[other] { $count } files
-} without an extension cannot be processed
 unreadable = Cannot read { $path }
 
 what = What to hide
@@ -420,3 +412,33 @@ graphics-failed =
     CloakFrame could not draw its window with the graphics this computer offers. Updating the graphics driver may help.
 
     { $errors }
+
+new-task = New Task
+add = Add…
+add-menu-files = Files…
+add-menu-folder = Folder…
+drop-or = or
+choose-files = Choose Files…
+found-counts = { $photos ->
+    [one] one photo
+   *[other] { $photos } photos
+} · { $videos ->
+    [one] one video
+   *[other] { $videos } videos
+}
+skipped-summary = { $count ->
+    [one] One file is
+   *[other] { $count } files are
+} not processed — { $parts }
+skipped-part-type = { $count } { $extension } (unsupported type)
+skipped-part-no-extension = { $count } without an extension
+skipped-part-unreadable = { $count } unreadable
+change-folder = Change…
+advanced-open = Advanced Options…
+advanced-detection = Detection
+advanced-photos = Photos
+advanced-videos = Videos
+done = Done
+session-unreadable-short = Cannot be read
+result-title = Results
+review-title = Review

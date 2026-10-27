@@ -11,6 +11,11 @@ struct App {
     state: AppState,
     #[cfg(any(target_os = "macos", target_os = "windows"))]
     menu: Option<cloakframe_app::menu::native::NativeMenu>,
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    ctx: egui::Context,
+    /// The window the menu is attached to on Windows.
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    hwnd: Option<isize>,
     /// Where the window was last seen, saved when it closes.
     place: Option<WindowPlace>,
 }
@@ -38,12 +43,38 @@ impl eframe::App for App {
             });
         }
         self.state.ui(ui);
+        #[cfg(any(target_os = "macos", target_os = "windows"))]
+        self.follow_view_choices();
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
         if self.place.is_some() {
             self.state.settings.window = self.place;
             self.state.save_settings();
+        }
+    }
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+impl App {
+    /// Keeps the View menu's ticks on the theme and language in use, and makes the menu again in
+    /// a new language.
+    fn follow_view_choices(&mut self) {
+        let language = self.state.tr().language();
+        if self.menu.as_ref().is_some_and(|m| m.language != language) {
+            #[cfg(target_os = "windows")]
+            if let (Some(old), Some(hwnd)) = (&self.menu, self.hwnd) {
+                #[allow(unsafe_code)]
+                // SAFETY: the window the old menu was attached to is still this app's.
+                let removed = unsafe { old.menu.remove_for_hwnd(hwnd) };
+                if let Err(e) = removed {
+                    eprintln!("cannot remove the menu: {e}");
+                }
+            }
+            self.menu = attach_menu(&self.ctx, &self.state, self.hwnd);
+        }
+        if let Some(menu) = &self.menu {
+            menu.sync(self.state.settings.theme, self.state.settings.language);
         }
     }
 }
@@ -122,11 +153,17 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
             }
             state.install_fonts(&cc.egui_ctx);
             #[cfg(any(target_os = "macos", target_os = "windows"))]
-            let menu = native_menu(cc, &state);
+            let hwnd = window_handle(cc);
+            #[cfg(any(target_os = "macos", target_os = "windows"))]
+            let menu = attach_menu(&cc.egui_ctx, &state, hwnd);
             Ok(Box::new(App {
                 state,
                 #[cfg(any(target_os = "macos", target_os = "windows"))]
                 menu,
+                #[cfg(any(target_os = "macos", target_os = "windows"))]
+                ctx: cc.egui_ctx.clone(),
+                #[cfg(any(target_os = "macos", target_os = "windows"))]
+                hwnd,
                 place: None,
             }))
         }),
@@ -134,11 +171,27 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-fn native_menu(
-    cc: &eframe::CreationContext<'_>,
+fn window_handle(cc: &eframe::CreationContext<'_>) -> Option<isize> {
+    #[cfg(target_os = "windows")]
+    {
+        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
+        if let Ok(handle) = cc.window_handle()
+            && let RawWindowHandle::Win32(win) = handle.as_raw()
+        {
+            return Some(win.hwnd.get());
+        }
+    }
+    let _ = cc;
+    None
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+fn attach_menu(
+    ctx: &egui::Context,
     state: &AppState,
+    hwnd: Option<isize>,
 ) -> Option<cloakframe_app::menu::native::NativeMenu> {
-    let menu = match cloakframe_app::menu::native::build(&cc.egui_ctx, state.tr()) {
+    let menu = match cloakframe_app::menu::native::build(ctx, state.tr()) {
         Ok(menu) => menu,
         Err(e) => {
             eprintln!("cannot make the menu: {e}");
@@ -146,21 +199,20 @@ fn native_menu(
         }
     };
     #[cfg(target_os = "macos")]
-    menu.menu.init_for_nsapp();
-    #[cfg(target_os = "windows")]
     {
-        use raw_window_handle::{HasWindowHandle, RawWindowHandle};
-        if let Ok(handle) = cc.window_handle()
-            && let RawWindowHandle::Win32(win) = handle.as_raw()
-        {
-            #[allow(unsafe_code)]
-            // SAFETY: the handle is this app's window, which outlives the menu.
-            let attached = unsafe { menu.menu.init_for_hwnd(win.hwnd.get()) };
-            match attached {
-                Ok(()) => accelerators::TABLE
-                    .store(menu.menu.haccel(), std::sync::atomic::Ordering::Relaxed),
-                Err(e) => eprintln!("cannot attach the menu: {e}"),
+        let _ = hwnd;
+        menu.menu.init_for_nsapp();
+    }
+    #[cfg(target_os = "windows")]
+    if let Some(hwnd) = hwnd {
+        #[allow(unsafe_code)]
+        // SAFETY: the handle is this app's window, which outlives the menu.
+        let attached = unsafe { menu.menu.init_for_hwnd(hwnd) };
+        match attached {
+            Ok(()) => {
+                accelerators::TABLE.store(menu.menu.haccel(), std::sync::atomic::Ordering::Relaxed)
             }
+            Err(e) => eprintln!("cannot attach the menu: {e}"),
         }
     }
     Some(menu)
