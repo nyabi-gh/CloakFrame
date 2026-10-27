@@ -169,7 +169,6 @@ session-changed = { $count ->
 session-unreadable = Cannot read it: { $error }
 session-open = Open
 session-discard = Discard…
-session-back = Back
 session-item-changed = The original changed or is gone; run it again
 discard-title = Discard this review?
 discard-body = The detections kept for the review are deleted. The originals and the saved files stay as they are.
@@ -241,6 +240,13 @@ editor-approve-blocked = Resolve every problem first, or export with warnings.
 editor-export-warnings = Export with Warnings…
 editor-more = More
 editor-export-plain = Export Without Anonymization…
+review-left = { $count ->
+    [0] Nothing left to review
+    [one] 1 left to review
+   *[other] { $count } left to review
+}
+review-discard = Discard This Review…
+review-kept = Saved items
 editor-video-loading = Opening the video…
 editor-video-unreadable = The video cannot be shown: { $error }
 editor-video-canvas = Video editor

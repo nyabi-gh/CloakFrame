@@ -426,9 +426,8 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .unwrap()
         .wait_for_thumbnails(&ctx);
     harness.run();
-    harness.get_by_label(
-        "3 to review — faces missed for 1.2 s in one video, the detection limit reached in one item",
-    );
+    harness.get_by_label("3 left to review");
+    harness.get_by_role_and_label(Role::List, "Items to review");
     let order: Vec<u64> = harness
         .state()
         .review
@@ -491,6 +490,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .wait_for_picture(&ctx);
     harness.run();
     harness.get_by_label("The original changed or is gone; run it again");
+    harness.get_by_label("3 of 3");
     harness
         .get_by_role_and_label(Role::Button, "All Items")
         .click();
@@ -499,7 +499,9 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label("photo.jpg, To review");
     harness.get_by_label("clip.mp4, One problem");
     // Going back redoes the frame for the main screen, which starts reading the sessions.
-    harness.get_by_role_and_label(Role::Button, "Back").click();
+    harness
+        .get_by_role_and_label(Role::Button, "New Task")
+        .click();
     settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
     assert!(store.lock(&id).is_ok(), "let go once it is closed");
@@ -784,6 +786,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         Some(ItemId(1)),
         "on to the next item"
     );
+    harness.get_by_label("1 of 1");
 
     harness.get_by_role_and_label(Role::Button, "More").click();
     harness.run();
@@ -820,6 +823,9 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     harness.state_mut().wait_for_review();
     harness.run();
     harness.get_by_label("Every item of this review is saved.");
+    harness.get_by_label("Nothing left to review");
+    harness.get_by_role_and_label(Role::List, "Saved items");
+    harness.get_by_label("b.jpg, Saved");
     assert!(
         folders.sessions().unwrap().list().unwrap().is_empty(),
         "the finished session is removed"
@@ -838,7 +844,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     );
     assert!(difference(&original, &plain, face) < 6.0, "nothing masked");
     // Going back redoes the frame for the main screen, which starts reading the sessions.
-    harness.get_by_role_and_label(Role::Button, "Back").click();
+    harness.get_by_role_and_label(Role::Button, "Done").click();
     settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
 }

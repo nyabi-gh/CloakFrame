@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use cloakframe_core::coverage::{CoverageEvidence, Problem, Resolution};
 use cloakframe_core::geometry::Rect;
-use cloakframe_core::item::{ItemId, ItemState};
+use cloakframe_core::item::ItemId;
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::review::{Action, Rejection};
 use cloakframe_engine::scan::MediaKind;
@@ -20,6 +20,7 @@ use crate::draft::{Doc, Draft, Pick};
 use crate::i18n::Translator;
 use crate::queue::{self, Group};
 use crate::review::{Review, Status};
+use crate::style::{self, Palette};
 use crate::summary;
 use crate::thumbnails::{Thumbnails, VideoTools};
 use crate::tiles::Picture;
@@ -29,7 +30,6 @@ use crate::wording;
 
 /// What the screen asks of the window.
 pub enum ScreenAct {
-    Back,
     Discard,
     /// Show in the file manager, or open with `true`.
     Show(PathBuf, bool),
@@ -149,132 +149,147 @@ impl ReviewScreen {
         let act = if self.editor.is_some() {
             self.editor_ui(ui, tr)
         } else {
-            self.queue_ui(ui, tr, video)
+            self.queue_ui(ui, tr, video);
+            None
         };
         self.confirm_dialog(&ctx, tr);
         act
     }
 
-    fn queue_ui(
+    /// The queue's folder, what is left to review and its discard.
+    pub fn toolbar(
         &mut self,
         ui: &mut egui::Ui,
+        bar: egui::Rect,
+        title_left: f32,
         tr: &Translator,
-        video: Option<VideoTools>,
     ) -> Option<ScreenAct> {
-        let ctx = ui.ctx().clone();
+        let p = *Palette::of(ui);
+        let folder = folder_name(&self.review.session.output);
+        let left = self
+            .review
+            .order
+            .iter()
+            .filter(|i| to_review(&self.review, i))
+            .count();
+        let detail = tr.with("review-left", &[("count", FluentValue::from(left))]);
+        row(
+            ui,
+            egui::Rect::from_x_y_ranges(title_left + 20.0..=bar.right(), bar.y_range()),
+            |ui| {
+                ui.label(
+                    egui::RichText::new(folder)
+                        .font(style::medium(14.0))
+                        .color(p.text),
+                );
+                ui.add_space(6.0);
+                ui.label(egui::RichText::new(detail).color(p.secondary));
+            },
+        );
+        let discard = tr.get("review-discard");
+        let right = bar.right() - 14.0;
+        let width = style::button_width(ui, &discard, false);
         let mut act = None;
-        let review = &self.review;
-        ui.horizontal(|ui| {
-            if ui.button(tr.get("session-back")).clicked() {
-                act = Some(ScreenAct::Back);
-            }
-            if review.is_done() {
-                ui.heading(tr.get("review-done"));
-            } else {
-                let summary =
-                    summary::summarize(review.session.items.iter().map(|i| summary::Item {
-                        state: ItemState::NeedsReview,
-                        evidence: &i.evidence,
-                        video: video_length(&i.media),
-                    }));
-                ui.heading(summary::sentence(&summary, tr));
-            }
-        });
-        ui.horizontal(|ui| {
-            ui.label(tr.get("output-folder"));
-            ui.label(review.session.output.display().to_string());
-        });
-        if review.options_guessed {
-            ui.colored_label(ui.visuals().warn_fg_color, tr.get("review-options-guessed"));
-        }
-        for problem in &review.problems {
-            let text = wording::run_note(problem, |_| String::new(), tr);
-            ui.colored_label(ui.visuals().warn_fg_color, text);
-        }
+        row(
+            ui,
+            egui::Rect::from_x_y_ranges(right - width..=right, bar.y_range()),
+            |ui| {
+                if style::plain(ui, discard).clicked() {
+                    act = Some(ScreenAct::Discard);
+                }
+            },
+        );
+        act
+    }
+
+    /// The items still to review, then those saved or saving, faded, under the folder they are
+    /// saved to and what the session noted.
+    fn queue_ui(&mut self, ui: &mut egui::Ui, tr: &Translator, video: Option<VideoTools>) {
+        let ctx = ui.ctx().clone();
+        let p = *Palette::of(ui);
         if self.thumbnails.is_none() {
             self.thumbnails = Thumbnails::new(&ctx, video).ok();
         }
         if let Some(thumbnails) = &mut self.thumbnails {
             thumbnails.take(&ctx);
         }
-        let mut open = None;
+        let review = &self.review;
         let thumbnails = &mut self.thumbnails;
+        let mut open = None;
         egui::ScrollArea::vertical()
-            .max_height((ui.available_height() - 40.0).max(120.0))
+            .id_salt("review-queue")
+            .auto_shrink(false)
             .show(ui, |ui| {
-                a11y::list(ui, &tr.get("review-queue"), |ui| {
-                    ui.horizontal_wrapped(|ui| {
-                        for item in &review.order {
-                            let name = file_name(item);
-                            let (cell, response) = ui.allocate_exact_size(
-                                egui::vec2(148.0, 176.0),
-                                egui::Sense::click(),
-                            );
-                            let (badge, warn) = badge(review, item, tr);
-                            response.widget_info(|| {
-                                egui::WidgetInfo::labeled(
-                                    egui::Role::Button,
-                                    true,
-                                    format!("{name}, {badge}"),
-                                )
-                            });
-                            if response.clicked() {
-                                open = Some(item.item);
-                            }
-                            if !ui.is_rect_visible(cell) {
-                                continue;
-                            }
-                            let painter = ui.painter();
-                            if response.hovered() || response.has_focus() {
-                                painter.rect_filled(cell, 4.0, ui.visuals().faint_bg_color);
-                            }
-                            let picture = egui::Rect::from_min_size(
-                                cell.min + egui::vec2(10.0, 4.0),
-                                egui::vec2(128.0, 128.0),
-                            );
-                            let kind = match item.media {
-                                StoredMedia::Photo { .. } => MediaKind::Image,
-                                StoredMedia::Video { .. } => MediaKind::Video,
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(24, 22))
+                    .show(ui, |ui| {
+                        ui.set_width(ui.available_width());
+                        ui.spacing_mut().item_spacing.y = 6.0;
+                        let folder = format!(
+                            "{} · {}",
+                            tr.get("output-folder"),
+                            review.session.output.display()
+                        );
+                        ui.label(egui::RichText::new(folder).size(12.0).color(p.secondary));
+                        if review.options_guessed {
+                            note(ui, &tr.get("review-options-guessed"));
+                        }
+                        for problem in &review.problems {
+                            note(ui, &wording::run_note(problem, |_| String::new(), tr));
+                        }
+                        ui.add_space(22.0);
+                        let (waiting, kept): (Vec<&SessionItem>, Vec<&SessionItem>) =
+                            review.order.iter().partition(|i| to_review(review, i));
+                        let title = tr.get("review-queue");
+                        style::group_title(ui, &title);
+                        ui.add_space(6.0);
+                        if waiting.is_empty() {
+                            ui.label(egui::RichText::new(tr.get("review-done")).color(p.body));
+                        } else {
+                            let tiles = Tiles {
+                                list: &title,
+                                review,
+                                tr,
+                                kept: false,
                             };
-                            let shown = thumbnails
-                                .as_mut()
-                                .and_then(|t| t.get(&item.input, kind).flatten());
-                            if let Some(texture) = shown {
-                                let size = texture.size_vec2();
-                                let fit = size * (128.0 / size.max_elem());
-                                let at = egui::Rect::from_center_size(picture.center(), fit);
-                                egui::Image::new(texture).paint_at(ui, at);
-                            } else {
-                                painter.rect_filled(picture, 4.0, ui.visuals().extreme_bg_color);
-                            }
-                            let color = if warn {
-                                ui.visuals().warn_fg_color
-                            } else {
-                                ui.visuals().weak_text_color()
+                            tiles.show(ui, &waiting, thumbnails, &mut open);
+                        }
+                        if !kept.is_empty() {
+                            ui.add_space(28.0);
+                            let title = tr.get("review-kept");
+                            style::group_title(ui, &title);
+                            ui.add_space(6.0);
+                            let tiles = Tiles {
+                                list: &title,
+                                review,
+                                tr,
+                                kept: true,
                             };
-                            let text = ui.visuals().text_color();
-                            let font = egui::FontId::proportional(12.0);
-                            let name_at = egui::pos2(cell.min.x + 10.0, picture.max.y + 4.0);
-                            let galley = painter.layout(name, font.clone(), text, 128.0);
-                            painter.galley(name_at, galley.clone(), text);
-                            painter.text(
-                                name_at + egui::vec2(0.0, galley.size().y.min(16.0) + 2.0),
-                                egui::Align2::LEFT_TOP,
-                                badge,
-                                font,
-                                color,
-                            );
+                            tiles.show(ui, &kept, thumbnails, &mut open);
                         }
                     });
-                });
             });
-        if ui.button(tr.get("session-discard")).clicked() {
-            act = Some(ScreenAct::Discard);
-        }
         if let Some(item) = open {
             self.open_item(item, &ctx);
         }
-        act
+    }
+
+    /// Back to the queue, or on to another item to review.
+    fn go(&mut self, go: Option<Go>, item: ItemId, ctx: &egui::Context) {
+        match go {
+            Some(Go::Queue) => self.editor = None,
+            Some(Go::Step(step)) => {
+                if let Some(next) = step_from(&self.review, item, step) {
+                    self.open_item(next, ctx);
+                }
+            }
+            Some(Go::Rename(name)) => {
+                if let Some(action) = self.review.last_action(item) {
+                    self.decide(item, action, Some(name), ctx);
+                }
+            }
+            None => {}
+        }
     }
 
     fn editor_ui(&mut self, ui: &mut egui::Ui, tr: &Translator) -> Option<ScreenAct> {
@@ -340,23 +355,7 @@ impl ReviewScreen {
                 _ => self.confirm = Some(Confirm { item, action }),
             }
         }
-        match asked.go {
-            Some(Go::Queue) => self.editor = None,
-            Some(Go::Step(step)) => {
-                if let Some(at) = self.review.position(item) {
-                    let n = self.review.order.len() as isize;
-                    let next = (at as isize + step).rem_euclid(n) as usize;
-                    let next = self.review.order[next].item;
-                    self.open_item(next, &ctx);
-                }
-            }
-            Some(Go::Rename(name)) => {
-                if let Some(action) = self.review.last_action(item) {
-                    self.decide(item, action, Some(name), &ctx);
-                }
-            }
-            None => {}
-        }
+        self.go(asked.go, item, &ctx);
         asked.act
     }
 
@@ -453,27 +452,237 @@ fn video_length(media: &StoredMedia) -> Option<(u64, f64)> {
     }
 }
 
-/// The line under a queue cell, and whether it warns.
-fn badge(review: &Review, item: &SessionItem, tr: &Translator) -> (String, bool) {
+/// The narrowest a queue tile gets before a column is dropped.
+const TILE_MIN_WIDTH: f32 = 150.0;
+
+/// A row of widgets in `rect`, centred on its height.
+fn row(ui: &mut egui::Ui, rect: egui::Rect, add: impl FnOnce(&mut egui::Ui)) {
+    ui.scope_builder(
+        egui::UiBuilder::new()
+            .max_rect(rect)
+            .layout(egui::Layout::left_to_right(egui::Align::Center)),
+        add,
+    );
+}
+
+fn folder_name(output: &std::path::Path) -> String {
+    output.file_name().map_or_else(
+        || output.display().to_string(),
+        |n| n.to_string_lossy().into_owned(),
+    )
+}
+
+/// Whether `item` is still to be decided, or decided again: everything but what is saved or
+/// saving.
+fn to_review(review: &Review, item: &SessionItem) -> bool {
+    !matches!(
+        review.status(item.item),
+        Status::Saved(_) | Status::Rendering
+    )
+}
+
+/// Where `item` stands among those to review, or what became of it.
+fn place(review: &Review, item: ItemId, tr: &Translator) -> String {
+    let waiting: Vec<ItemId> = review
+        .order
+        .iter()
+        .filter(|i| to_review(review, i))
+        .map(|i| i.item)
+        .collect();
+    match waiting.iter().position(|&i| i == item) {
+        Some(at) => tr.with(
+            "editor-position",
+            &[
+                ("at", FluentValue::from(at + 1)),
+                ("count", FluentValue::from(waiting.len())),
+            ],
+        ),
+        None if *review.status(item) == Status::Rendering => tr.get("review-badge-saving"),
+        None => tr.get("state-published"),
+    }
+}
+
+/// The item `step` places before or after `item` among those to review, going round; from an
+/// item that is saved, the nearest one that way.
+fn step_from(review: &Review, item: ItemId, step: isize) -> Option<ItemId> {
+    let at = review.position(item)?;
+    let waiting: Vec<usize> = (0..review.order.len())
+        .filter(|&i| to_review(review, &review.order[i]))
+        .collect();
+    if waiting.is_empty() {
+        return None;
+    }
+    let n = waiting.len();
+    let next = match waiting.iter().position(|&i| i == at) {
+        Some(i) => (i as isize + step).rem_euclid(n as isize) as usize,
+        None if step > 0 => waiting.iter().position(|&i| i > at).unwrap_or(0),
+        None => waiting.iter().rposition(|&i| i < at).unwrap_or(n - 1),
+    };
+    Some(review.order[waiting[next]].item)
+}
+
+/// A line of what the session noted, marked as needing a look.
+fn note(ui: &mut egui::Ui, text: &str) {
+    let p = *Palette::of(ui);
+    ui.horizontal(|ui| {
+        style::status_dot(ui, p.needs_review);
+        ui.label(egui::RichText::new(text).size(12.0).color(p.body));
+    });
+}
+
+/// One group of the queue: a tile for each item, its thumbnail, name and state.
+struct Tiles<'a> {
+    list: &'a str,
+    review: &'a Review,
+    tr: &'a Translator,
+    /// Saved or saving: faded, and its state not marked.
+    kept: bool,
+}
+
+impl Tiles<'_> {
+    fn show(
+        &self,
+        ui: &mut egui::Ui,
+        items: &[&SessionItem],
+        thumbnails: &mut Option<Thumbnails>,
+        open: &mut Option<ItemId>,
+    ) {
+        let p = *Palette::of(ui);
+        let (gap_x, gap_y) = (14.0, 18.0);
+        let width = ui.available_width();
+        let columns = ((width + gap_x) / (TILE_MIN_WIDTH + gap_x))
+            .floor()
+            .max(1.0);
+        let cell = (width - gap_x * (columns - 1.0)) / columns;
+        let picture_height = cell * 3.0 / 4.0;
+        let cell_height = picture_height + 42.0;
+        let per_row = columns as usize;
+        let rows = items.len().div_ceil(per_row);
+        let height = rows as f32 * cell_height + rows.saturating_sub(1) as f32 * gap_y;
+        a11y::list(ui, self.list, |ui| {
+            let (grid, _) = ui.allocate_exact_size(egui::vec2(width, height), egui::Sense::hover());
+            for (i, item) in items.iter().enumerate() {
+                let (row, column) = (i / per_row, i % per_row);
+                let rect = egui::Rect::from_min_size(
+                    grid.min
+                        + egui::vec2(
+                            column as f32 * (cell + gap_x),
+                            row as f32 * (cell_height + gap_y),
+                        ),
+                    egui::vec2(cell, cell_height),
+                );
+                let name = file_name(item);
+                let state = badge(self.review, item, self.tr);
+                let response = ui.interact(
+                    rect,
+                    ui.make_persistent_id(("review-item", item.item.0)),
+                    egui::Sense::click(),
+                );
+                response.widget_info(|| {
+                    egui::WidgetInfo::labeled(egui::Role::Button, true, format!("{name}, {state}"))
+                });
+                if response.clicked() {
+                    *open = Some(item.item);
+                }
+                if !ui.is_rect_visible(rect) {
+                    continue;
+                }
+                let picture = egui::Rect::from_min_size(rect.min, egui::vec2(cell, picture_height));
+                let kind = match item.media {
+                    StoredMedia::Photo { .. } => MediaKind::Image,
+                    StoredMedia::Video { .. } => MediaKind::Video,
+                };
+                let tint = if self.kept {
+                    egui::Color32::WHITE.gamma_multiply(0.55)
+                } else {
+                    egui::Color32::WHITE
+                };
+                match thumbnails
+                    .as_mut()
+                    .and_then(|t| t.get(&item.input, kind).flatten())
+                {
+                    Some(texture) => {
+                        egui::Image::new(texture)
+                            .uv(style::cover(texture.size_vec2(), picture.size()))
+                            .corner_radius(style::THUMBNAIL_RADIUS)
+                            .tint(tint)
+                            .paint_at(ui, picture);
+                    }
+                    None => {
+                        ui.painter()
+                            .rect_filled(picture, style::THUMBNAIL_RADIUS, p.separator);
+                    }
+                }
+                let ring = if response.has_focus() {
+                    Some(egui::Stroke::new(1.5, p.text))
+                } else if response.hovered() {
+                    Some(egui::Stroke::new(1.0, p.border))
+                } else {
+                    None
+                };
+                if let Some(stroke) = ring {
+                    ui.painter().rect_stroke(
+                        picture.expand(2.0),
+                        style::THUMBNAIL_RADIUS + 2,
+                        stroke,
+                        egui::StrokeKind::Outside,
+                    );
+                }
+                let painter = ui.painter();
+                let mut job = egui::text::LayoutJob::simple_singleline(
+                    name,
+                    egui::FontId::proportional(12.0),
+                    p.text,
+                );
+                job.wrap = egui::text::TextWrapping::truncate_at_width(cell);
+                let name_top = picture.max.y + 5.0;
+                painter.galley(
+                    egui::pos2(rect.min.x, name_top),
+                    painter.layout_job(job),
+                    p.text,
+                );
+                let state_middle = name_top + 26.0;
+                let mut x = rect.min.x;
+                let color = if self.kept {
+                    p.secondary
+                } else {
+                    painter.circle_filled(egui::pos2(x + 3.5, state_middle), 3.5, p.needs_review);
+                    x += 13.0;
+                    p.text
+                };
+                let mut job = egui::text::LayoutJob::simple_singleline(
+                    state,
+                    egui::FontId::proportional(12.0),
+                    color,
+                );
+                job.wrap = egui::text::TextWrapping::truncate_at_width(rect.max.x - x);
+                let galley = painter.layout_job(job);
+                painter.galley(
+                    egui::pos2(x, state_middle - galley.size().y / 2.0),
+                    galley,
+                    color,
+                );
+            }
+        });
+    }
+}
+
+/// The state under a queue tile.
+fn badge(review: &Review, item: &SessionItem, tr: &Translator) -> String {
     match review.status(item.item) {
-        Status::Changed => (tr.get("review-badge-changed"), true),
-        Status::Rendering => (tr.get("review-badge-saving"), false),
-        Status::Saved(_) => (tr.get("state-published"), false),
-        Status::Refused(_) | Status::Failed(_) | Status::Cancelled => {
-            (tr.get("review-badge-again"), true)
-        }
+        Status::Changed => tr.get("review-badge-changed"),
+        Status::Rendering => tr.get("review-badge-saving"),
+        Status::Saved(_) => tr.get("state-published"),
+        Status::Refused(_) | Status::Failed(_) | Status::Cancelled => tr.get("review-badge-again"),
         Status::Waiting => {
             let unresolved = review.drafts.get(&item.item).map_or(0, Draft::unresolved);
             match queue::group(item) {
-                _ if unresolved > 0 => (
-                    tr.with(
-                        "review-badge-problems",
-                        &[("count", FluentValue::from(unresolved))],
-                    ),
-                    true,
+                _ if unresolved > 0 => tr.with(
+                    "review-badge-problems",
+                    &[("count", FluentValue::from(unresolved))],
                 ),
-                Group::NothingDetected => (tr.get("review-badge-nothing"), false),
-                _ => (tr.get("review-badge-waiting"), false),
+                Group::NothingDetected => tr.get("review-badge-nothing"),
+                _ => tr.get("review-badge-waiting"),
             }
         }
     }
@@ -517,15 +726,7 @@ fn side_panel(
         }
     });
     ui.heading(file_name(stored));
-    if let Some(at) = review.position(item) {
-        ui.label(tr.with(
-            "editor-position",
-            &[
-                ("at", FluentValue::from(at + 1)),
-                ("count", FluentValue::from(review.order.len())),
-            ],
-        ));
-    }
+    ui.label(place(review, item, tr));
     match review.status(item).clone() {
         Status::Waiting => {}
         Status::Changed => {

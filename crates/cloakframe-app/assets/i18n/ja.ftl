@@ -144,7 +144,6 @@ session-changed = 元のファイルが変わった項目 { $count } 件
 session-unreadable = 読み込めません: { $error }
 session-open = 開く
 session-discard = 破棄…
-session-back = 戻る
 session-item-changed = 元のファイルが変わったか、見つかりません。もう一度実行してください
 discard-title = この確認を破棄しますか？
 discard-body = 確認のために残した検出結果を削除します。元のファイルと保存したファイルはそのままです。
@@ -210,6 +209,12 @@ editor-approve-blocked = 先にすべての問題を解決するか、警告付�
 editor-export-warnings = 警告付きで書き出す…
 editor-more = その他
 editor-export-plain = 匿名化せずに書き出す…
+review-left = { $count ->
+    [0] 残りの確認はありません
+   *[other] 確認 残り { $count } 件
+}
+review-discard = この確認を破棄…
+review-kept = 保存した項目
 editor-video-loading = 動画を開いています…
 editor-video-unreadable = 動画を表示できません: { $error }
 editor-video-canvas = 動画エディター

@@ -122,7 +122,6 @@ session-changed = 원본이 바뀐 항목 { $count }개
 session-unreadable = 읽을 수 없습니다: { $error }
 session-open = 열기
 session-discard = 버리기…
-session-back = 돌아가기
 session-item-changed = 원본이 바뀌었거나 없습니다. 다시 실행하세요
 discard-title = 이 검토를 버릴까요?
 discard-body = 검토를 위해 남긴 감지 결과를 지웁니다. 원본과 저장한 파일은 그대로입니다.
@@ -185,6 +184,12 @@ editor-approve-blocked = 모든 문제를 먼저 해결하거나, 경고를 포�
 editor-export-warnings = 경고 포함 내보내기…
 editor-more = 더 보기
 editor-export-plain = 익명화 없이 내보내기…
+review-left = { $count ->
+    [0] 남은 검토 없음
+   *[other] 검토 { $count }개 남음
+}
+review-discard = 이 검토 버리기…
+review-kept = 저장한 항목
 editor-video-loading = 영상을 여는 중…
 editor-video-unreadable = 영상을 보여 줄 수 없습니다: { $error }
 editor-video-canvas = 영상 편집기

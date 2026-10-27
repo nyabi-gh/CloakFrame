@@ -37,8 +37,6 @@ use crate::wording;
 
 /// The sample photo's height over its width in the settings panel.
 const SAMPLE_ASPECT: f32 = 146.0 / 260.0;
-/// The narrowest a cell of the file grid gets before a column is dropped.
-const GRID_MIN_CELL: f32 = 120.0;
 const SHEET_WIDTH: f32 = 600.0;
 
 /// The words of the sensitivity slider's steps, least sensitive first.
@@ -370,11 +368,7 @@ impl AppState {
         region(ui, middle, |ui| match screen {
             Screen::Main => self.main_middle(ui),
             Screen::Run => self.run_view(ui),
-            Screen::Review => {
-                egui::Frame::NONE
-                    .inner_margin(egui::Margin::symmetric(24, 20))
-                    .show(ui, |ui| self.review_view(ui));
-            }
+            Screen::Review => self.review_view(ui),
         });
         if settings {
             region(ui, panel, |ui| self.settings_panel(ui));
@@ -415,6 +409,13 @@ impl AppState {
     fn toolbar(&mut self, ui: &mut egui::Ui, title_left: f32) {
         let p = *Palette::of(ui);
         let tr = Rc::clone(&self.tr);
+        if let Some(screen) = &mut self.review
+            && !screen.in_editor()
+        {
+            let act = screen.toolbar(ui, ui.max_rect(), title_left, &tr);
+            self.screen_act(act);
+            return;
+        }
         let (title, detail) = match self.screen() {
             Screen::Main => {
                 let detail = self
@@ -905,7 +906,9 @@ impl AppState {
                     .show(ui, |ui| {
                         let (gap_x, gap_y) = (14.0, 18.0);
                         let width = ui.available_width();
-                        let columns = ((width + gap_x) / (GRID_MIN_CELL + gap_x)).floor().max(1.0);
+                        let columns = ((width + gap_x) / (style::GRID_MIN_CELL + gap_x))
+                            .floor()
+                            .max(1.0);
                         let cell = (width - gap_x * (columns - 1.0)) / columns;
                         let picture_height = cell * 3.0 / 4.0;
                         ui.spacing_mut().item_spacing = egui::vec2(gap_x, gap_y);
@@ -961,7 +964,7 @@ impl AppState {
                                 match shown {
                                     Some(texture) => {
                                         egui::Image::new(texture)
-                                            .uv(cover(texture.size_vec2(), picture.size()))
+                                            .uv(style::cover(texture.size_vec2(), picture.size()))
                                             .corner_radius(style::THUMBNAIL_RADIUS)
                                             .paint_at(ui, picture);
                                     }
@@ -1405,12 +1408,15 @@ impl AppState {
             return;
         };
         let video = self.tools.ffmpeg.clone().zip(self.tools.ffprobe.clone());
-        match screen.ui(ui, &self.tr, video) {
-            Some(ScreenAct::Back) => {
-                self.review = None;
-                self.sessions_read = false;
+        let act = screen.ui(ui, &self.tr, video);
+        self.screen_act(act);
+    }
+
+    fn screen_act(&mut self, act: Option<ScreenAct>) {
+        match act {
+            Some(ScreenAct::Discard) => {
+                self.discarding = self.review.as_ref().map(|s| s.review.id.clone());
             }
-            Some(ScreenAct::Discard) => self.discarding = Some(screen.review.id.clone()),
             Some(ScreenAct::Show(path, open)) => self.show(&path, open),
             None => {}
         }
@@ -1844,25 +1850,6 @@ fn sidebar_text(text: &str, selected: bool, p: &Palette) -> egui::RichText {
     }
 }
 
-/// The part of a picture of `size` that fills `frame` without stretching, cut evenly at its
-/// sides or its top and bottom.
-fn cover(size: egui::Vec2, frame: egui::Vec2) -> egui::Rect {
-    let (picture, wanted) = (size.x / size.y, frame.x / frame.y);
-    if picture > wanted {
-        let shown = wanted / picture;
-        egui::Rect::from_min_max(
-            egui::pos2((1.0 - shown) / 2.0, 0.0),
-            egui::pos2((1.0 + shown) / 2.0, 1.0),
-        )
-    } else {
-        let shown = picture / wanted;
-        egui::Rect::from_min_max(
-            egui::pos2(0.0, (1.0 - shown) / 2.0),
-            egui::pos2(1.0, (1.0 + shown) / 2.0),
-        )
-    }
-}
-
 /// A video's length over the bottom right of its thumbnail, as m:ss.
 fn duration_badge(ui: &egui::Ui, picture: egui::Rect, seconds: f64) {
     let whole = seconds.round() as u64;
@@ -2218,7 +2205,7 @@ fn run_row(
     match thumbnail {
         Some(texture) => {
             egui::Image::new(texture)
-                .uv(cover(texture.size_vec2(), picture.size()))
+                .uv(style::cover(texture.size_vec2(), picture.size()))
                 .corner_radius(3)
                 .paint_at(ui, picture);
         }

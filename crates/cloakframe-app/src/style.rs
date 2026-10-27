@@ -13,6 +13,8 @@ pub const BUTTON_HEIGHT: f32 = 28.0;
 pub const SMALL_BUTTON_HEIGHT: f32 = 24.0;
 pub const BUTTON_RADIUS: u8 = 6;
 pub const THUMBNAIL_RADIUS: u8 = 4;
+/// The narrowest a cell of a thumbnail grid gets before a column is dropped.
+pub const GRID_MIN_CELL: f32 = 120.0;
 
 /// The colours of one theme, by role.
 #[derive(Debug, Clone, Copy)]
@@ -312,6 +314,25 @@ pub fn icon_button(
     draw(ui.painter(), rect.shrink(6.0), p.secondary);
     focus_ring(ui, &response);
     response.on_hover_text(label)
+}
+
+/// The part of a picture of `size` that fills `frame` without stretching, cut evenly at its
+/// sides or its top and bottom.
+pub fn cover(size: egui::Vec2, frame: egui::Vec2) -> egui::Rect {
+    let (picture, wanted) = (size.x / size.y, frame.x / frame.y);
+    if picture > wanted {
+        let shown = wanted / picture;
+        egui::Rect::from_min_max(
+            egui::pos2((1.0 - shown) / 2.0, 0.0),
+            egui::pos2((1.0 + shown) / 2.0, 1.0),
+        )
+    } else {
+        let shown = picture / wanted;
+        egui::Rect::from_min_max(
+            egui::pos2(0.0, (1.0 - shown) / 2.0),
+            egui::pos2(1.0, (1.0 + shown) / 2.0),
+        )
+    }
 }
 
 /// Text that reads as a link and acts as a button.
