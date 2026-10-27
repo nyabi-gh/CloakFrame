@@ -74,6 +74,7 @@ review-first = Review before saving
 running = Processing
 cancel = Cancel
 state-queued = Waiting
+state-analyzing = Analyzing
 state-analyzed = Analyzed
 state-needs-review = Needs review
 state-rendering = Saving

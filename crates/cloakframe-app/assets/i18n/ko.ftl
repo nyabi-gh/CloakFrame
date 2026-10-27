@@ -63,6 +63,7 @@ review-first = 저장하기 전에 검토
 running = 처리 중
 cancel = 취소
 state-queued = 대기
+state-analyzing = 분석 중
 state-analyzed = 분석함
 state-needs-review = 검토 필요
 state-rendering = 저장 중

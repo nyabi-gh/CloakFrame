@@ -2044,8 +2044,12 @@ impl RunRow {
             .as_ref()
             .and_then(|f| f.report.items.iter().find(|o| o.item == item));
         let working = !state.is_terminal() && state != ItemState::NeedsReview && !board.is_over();
+        // The engine has no state for an item it is analyzing: it stays queued until analyzed.
+        let analyzing = state == ItemState::Queued
+            && working
+            && progress.get(&item).is_some_and(|p| p.done > 0);
         let look = match state {
-            ItemState::Queued if !board.is_over() => Look::Waiting,
+            ItemState::Queued if !board.is_over() && !analyzing => Look::Waiting,
             ItemState::NeedsReview => Look::NeedsReview,
             ItemState::Published(_) => Look::Saved,
             ItemState::Failed => Look::Failed,
@@ -2136,6 +2140,8 @@ impl RunRow {
         let name = board.name(item);
         let state_text = tr.get(if cancelling {
             "state-cancelling"
+        } else if analyzing {
+            "state-analyzing"
         } else {
             state_id(state)
         });
@@ -2481,5 +2487,39 @@ fn state_id(state: ItemState) -> &'static str {
         ItemState::Published(_) => "state-published",
         ItemState::Failed => "state-failed",
         ItemState::Cancelled => "state-cancelled",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A queued item the engine has begun reads as analyzing; one it has not reads as waiting.
+    #[test]
+    fn a_queued_item_with_progress_is_analyzing() {
+        let tr = Translator::new(Language::En);
+        let mut board = Board::new(std::time::Instant::now(), PathBuf::from("out"));
+        let (started, waiting) = (ItemId(1), ItemId(2));
+        board.take(run::Message::Started {
+            items: vec![
+                (started, PathBuf::from("clip.mp4")),
+                (waiting, PathBuf::from("next.mp4")),
+            ],
+            progress: Default::default(),
+            cancels: BTreeMap::new(),
+        });
+        let progress = BTreeMap::from([
+            (started, Progress { done: 3, total: 10 }),
+            (waiting, Progress { done: 0, total: 10 }),
+        ]);
+        let row = |item, input| RunRow::of(&board, item, Path::new(input), &progress, false, &tr);
+
+        let analyzing = row(started, "clip.mp4");
+        assert_eq!(analyzing.state, "Analyzing");
+        assert!(matches!(analyzing.look, Look::Working));
+        assert_eq!(analyzing.progress, Some(0.3));
+        let queued = row(waiting, "next.mp4");
+        assert_eq!(queued.state, "Waiting");
+        assert!(matches!(queued.look, Look::Waiting));
     }
 }

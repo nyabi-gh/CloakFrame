@@ -82,6 +82,7 @@ review-first = 保存前に確認
 cancel = キャンセル
 ## needs review
 state-queued = 待機中
+state-analyzing = 分析中
 state-analyzed = 分析済み
 state-needs-review = 確認が必要
 ## 1.12.1
