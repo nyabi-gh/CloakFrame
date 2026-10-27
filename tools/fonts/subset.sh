@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Makes the app's bundled Noto Sans KR/JP subsets (SIL OFL 1.1) from a fixed noto-cjk tag.
+# Makes the app's bundled Noto Sans KR/JP Regular and Medium subsets (SIL OFL 1.1) from a fixed noto-cjk tag.
 # Needs pyftsubset (fonttools). Output: crates/cloakframe-app/assets/fonts/, which is committed.
 set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd)
@@ -17,6 +17,8 @@ fetch() {
 }
 fetch Sans/SubsetOTF/KR/NotoSansKR-Regular.otf kr.otf 69975a0ac8472717870aefeab0a4d52739308d90856b9955313b2ad5e0148d68
 fetch Sans/SubsetOTF/JP/NotoSansJP-Regular.otf jp.otf dff723ba59d57d136764a04b9b2d03205544f7cd785a711442d6d2d085ac5073
+fetch Sans/SubsetOTF/KR/NotoSansKR-Medium.otf kr-medium.otf b46988ef13e8bac08f3933af686eaf770972994f9b6d335be0184d60169b5431
+fetch Sans/SubsetOTF/JP/NotoSansJP-Medium.otf jp-medium.otf f396a3b57256e4515be9cb41f7aac54766d654890082a9f1b5c2451b5c093d8a
 fetch LICENSE OFL.txt 6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2
 cp "$work/OFL.txt" "$out/OFL.txt"
 
@@ -48,12 +50,24 @@ sys.stdout.write("".join(sorted(chars)))
 # Hangul syllables and both jamo blocks (an IME's preedit shows lone jamo), and the KS X 1001
 # hanja that Korean names use.
 charset euc_kr > "$work/ksx1001.txt"
-pyftsubset "$work/kr.otf" --unicodes="$common,U+1100-11FF,U+3130-318F,U+AC00-D7A3" \
-    --text-file="$work/ksx1001.txt" --layout-features='*' --output-file="$out/NotoSansKR-Subset.otf"
+for weight in Regular Medium; do
+    from=$work/kr.otf
+    [ "$weight" = Medium ] && from=$work/kr-medium.otf
+    to=$out/NotoSansKR-Subset.otf
+    [ "$weight" = Medium ] && to=$out/NotoSansKR-Medium-Subset.otf
+    pyftsubset "$from" --unicodes="$common,U+1100-11FF,U+3130-318F,U+AC00-D7A3" \
+        --text-file="$work/ksx1001.txt" --layout-features='*' --output-file="$to"
+done
 # Kana, all of JIS X 0213 and the NEC and IBM extensions of Windows' cp932: names use variants
 # JIS X 0208 lacks (﨑 and 德 are in JIS X 0213, 髙 only in the IBM extension).
 { charset euc_jis_2004; charset cp932; } > "$work/jisx0213.txt"
-pyftsubset "$work/jp.otf" --unicodes="$common,U+3040-30FF,U+31F0-31FF" \
-    --text-file="$work/jisx0213.txt" --layout-features='*' --output-file="$out/NotoSansJP-Subset.otf"
-(cd "$out" && sha256sum NotoSansKR-Subset.otf NotoSansJP-Subset.otf OFL.txt)
+for weight in Regular Medium; do
+    from=$work/jp.otf
+    [ "$weight" = Medium ] && from=$work/jp-medium.otf
+    to=$out/NotoSansJP-Subset.otf
+    [ "$weight" = Medium ] && to=$out/NotoSansJP-Medium-Subset.otf
+    pyftsubset "$from" --unicodes="$common,U+3040-30FF,U+31F0-31FF" \
+        --text-file="$work/jisx0213.txt" --layout-features='*' --output-file="$to"
+done
+(cd "$out" && sha256sum NotoSans*-Subset.otf OFL.txt)
 ls -l "$out"
