@@ -8,6 +8,7 @@ use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, ModelId};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
+use cloakframe_core::mask::{MaskStyle, Shape};
 use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stale_outputs};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::{Acceleration, ModelBackend};
@@ -31,15 +32,16 @@ const USAGE: &str = "\
 usage:
   cloakframe-cli run --output DIR --ort-library FILE [--models DIR]
                      [--faces yolo5face-n|yunet|off] [--plates on|off] [--tiles on|off]
-                     [--gpu on|off] [--review required|off] [--keep-metadata [--keep-gps]]
-                     [--recursive] [--workers N] [--sessions DIR]
+                     [--gpu on|off] [--shape rectangle|ellipse] [--review required|off]
+                     [--keep-metadata [--keep-gps]] [--recursive] [--workers N] [--sessions DIR]
                      [--videos --ffmpeg FILE --ffprobe FILE [--mask X,Y,W,H...]
                       [--video-codec h264|hevc] [--video-quality high|balanced|space-saver]
                       [--hardware-encode on|off]] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
-                        [--plates on|off] [--tiles on|off] [--keep-metadata [--keep-gps]]
-                        [--workers N] [--sessions DIR] [--videos --ffmpeg FILE --ffprobe FILE
-                        [--mask X,Y,W,H...] [--video-codec h264|hevc]
+                        [--plates on|off] [--tiles on|off] [--shape rectangle|ellipse]
+                        [--keep-metadata [--keep-gps]] [--workers N] [--sessions DIR]
+                        [--videos --ffmpeg FILE --ffprobe FILE [--mask X,Y,W,H...]
+                        [--video-codec h264|hevc]
                         [--video-quality high|balanced|space-saver] [--hardware-encode on|off]]
   cloakframe-cli models [--models DIR]
   cloakframe-cli models fetch [--accept-terms] [--models DIR] yolo5face-n|yunet|plates...
@@ -54,9 +56,10 @@ is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts
 --faces picks the face model (default yolo5face-n) and --plates turns license plates on or off
 (default off). --tiles off detects each photo in one whole view only; by default overlapping
 tiles are detected as well, which finds small faces in large photos at more cost. --gpu off keeps every model on the CPU; by default each runs on the GPU where this
-build can, and a model the GPU fails moves to the CPU for the rest of the run. review takes the
-settings run was given, the video ones too; decisions on items analyzed with other settings are
-refused. A decision may carry its item's key from the session (the revision's key); one made
+build can, and a model the GPU fails moves to the CPU for the rest of the run. --shape ellipse
+masks an ellipse in the padded box, which still covers all of the detected box; by default the
+whole padded box is masked. review takes the settings run was given, the video ones too;
+decisions on items analyzed with other settings are refused. A decision may carry its item's key from the session (the revision's key); one made
 for another input, models, settings or timeline is refused.
 --videos processes MP4, MOV, M4V and WebM files as well, with the given FFmpeg and ffprobe.
 Every frame of a video is detected with the same models and settings as photos, and what is
@@ -127,6 +130,7 @@ struct Options {
     faces: Option<Option<FaceModel>>,
     plates: Option<bool>,
     tiles: Option<bool>,
+    shape: Option<Shape>,
     gpu: Option<Acceleration>,
     keep_metadata: bool,
     keep_gps: bool,
@@ -206,6 +210,13 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
                     "on" => true,
                     "off" => false,
                     other => return Err(format!("--tiles is on or off, not {other}")),
+                })
+            }
+            "--shape" => {
+                o.shape = Some(match args.value(&arg)?.as_str() {
+                    "rectangle" => Shape::Rectangle,
+                    "ellipse" => Shape::Ellipse,
+                    other => return Err(format!("--shape is rectangle or ellipse, not {other}")),
                 })
             }
             "--gpu" => {
@@ -294,6 +305,10 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
         models,
         thresholds: models.default_thresholds(),
         tiles: o.tiles.unwrap_or(PhotoSettings::default().tiles),
+        style: MaskStyle {
+            shape: o.shape.unwrap_or(MaskStyle::default().shape),
+            ..MaskStyle::default()
+        },
         metadata,
         ..PhotoSettings::default()
     })
@@ -332,6 +347,7 @@ fn media_processor(o: &Options, records: PathBuf) -> Result<MediaProcessor, CliE
         quality: o.video_quality.unwrap_or(default.quality),
         hardware_encode: o.hardware_encode.unwrap_or(default.hardware_encode),
         masks: o.masks.clone(),
+        style: photo_settings.style,
         analysis: AnalysisSettings {
             models: photo_settings.models,
             thresholds: photo_settings.thresholds,

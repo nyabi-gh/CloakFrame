@@ -350,6 +350,12 @@ fn usage_errors_exit_with_two() {
     assert_eq!(f.cli(&["run"]).0, 2);
     assert_eq!(f.cli(&["frobnicate"]).0, 2);
     assert_eq!(f.cli(&["review", "--session", "../x"]).0, 2);
+    let (code, stderr) = f.cli_stderr(&["run", "--shape", "circle", "x"]);
+    assert_eq!(code, 2);
+    assert!(
+        stderr.contains("--shape is rectangle or ellipse, not circle"),
+        "{stderr}"
+    );
 }
 
 /// A terminal that went away (or a reader that stopped reading) must not cost the run its review

@@ -204,6 +204,55 @@ fn a_video_and_a_photo_are_exported_in_one_run_with_the_video_masked() {
     }
 }
 
+/// `--shape ellipse` masks photos and videos with the ellipse through the padded box: its
+/// corners are left, the box and the padding between are masked.
+#[test]
+fn the_ellipse_shape_masks_photos_and_videos() {
+    let f = Fixture::new();
+    let source = f.input(
+        "odd.mp4",
+        &fixtures().join("defects/P-5/odd-641x361-audio-longer.mp4"),
+    );
+    let photo = f.input(
+        "astronaut.png",
+        &required_env("CLOAKFRAME_TEST_ASSETS").join("astronaut.png"),
+    );
+    let run = f.run_finding(
+        "100,50,200,100",
+        &["--review", "off", "--videos", "--shape", "ellipse"],
+    );
+    assert_eq!(run.code, 0, "{}\n{}", run.stdout, run.stderr);
+    // The box is 100..300 × 50..150 and padded to 64..336 × 32..168.
+    let (masked, left) = ([(100, 50), (299, 149), (200, 40)], [(66, 34), (333, 165)]);
+    let photo_in = image::open(&photo).unwrap().into_rgb8();
+    let photo_out = image::open(f.out().join("astronaut.png"))
+        .unwrap()
+        .into_rgb8();
+    for (x, y) in masked {
+        assert_eq!(photo_out.get_pixel(x, y).0, [0, 0, 0], "({x}, {y})");
+    }
+    for (x, y) in left {
+        assert_eq!(
+            photo_out.get_pixel(x, y),
+            photo_in.get_pixel(x, y),
+            "({x}, {y})"
+        );
+    }
+    let (_, source_frames) = frames(&source);
+    let (_, output_frames) = frames(&f.out().join("odd.mp4"));
+    for (source, output) in source_frames.iter().zip(&output_frames) {
+        for (x, y) in masked {
+            assert!(close(pixel(output, x, y), [0, 0, 0], 6), "({x}, {y})");
+        }
+        for (x, y) in left {
+            assert!(
+                close(pixel(output, x, y), pixel(source, x, y), 24),
+                "({x}, {y})"
+            );
+        }
+    }
+}
+
 /// `--videos` detects with the models: the astronaut's face in a video of the photo is found in
 /// every frame, tracked and masked.
 #[test]
