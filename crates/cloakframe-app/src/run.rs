@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use cloakframe_core::detection::{KindThresholds, Thresholds};
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
@@ -463,6 +463,9 @@ pub enum Logged {
 #[derive(Debug)]
 pub struct Board {
     pub started: Instant,
+    /// When the run ended, for the result's title.
+    pub ended: Option<SystemTime>,
+    pub output: PathBuf,
     pub items: Vec<(ItemId, PathBuf)>,
     pub states: BTreeMap<ItemId, ItemState>,
     pub progress: Option<ProgressBoard>,
@@ -480,9 +483,11 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(started: Instant) -> Self {
+    pub fn new(started: Instant, output: PathBuf) -> Self {
         Self {
             started,
+            ended: None,
+            output,
             items: Vec::new(),
             states: BTreeMap::new(),
             progress: None,
@@ -540,8 +545,12 @@ impl Board {
                 }
                 self.cancelling.clear();
                 self.finished = Some(finished);
+                self.ended = Some(SystemTime::now());
             }
-            Message::Failed(failure) => self.failure = Some(failure),
+            Message::Failed(failure) => {
+                self.failure = Some(failure);
+                self.ended = Some(SystemTime::now());
+            }
         }
     }
 
@@ -596,7 +605,7 @@ mod tests {
     fn an_item_is_cancelled_alone_until_the_engine_stops_it() {
         let run = CancelToken::new();
         let (a, b) = (run.child(), run.child());
-        let mut board = Board::new(Instant::now());
+        let mut board = Board::new(Instant::now(), PathBuf::new());
         board.take(Message::Started {
             items: vec![
                 (ItemId(0), PathBuf::from("a.jpg")),

@@ -1,9 +1,11 @@
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc;
 use std::time::{Duration, Instant, SystemTime};
 
 use cloakframe_engine::cancel::CancelToken;
+use cloakframe_engine::events::Progress;
 use cloakframe_engine::scan::{MediaKind, ScanRequest, ScanResult, scan};
 use cloakframe_engine::session::{SessionError, SessionId};
 use eframe::egui;
@@ -114,6 +116,8 @@ pub struct AppState {
     sample: Sample,
     /// The advanced options sheet, where the detection models are too, is open.
     pub sheet_open: bool,
+    /// How much of the run is done, drawn as a line under the toolbar.
+    progress_line: Option<f32>,
     /// Where the middle of the window was last drawn, which the sheet hangs below.
     middle_rect: egui::Rect,
 }
@@ -149,6 +153,7 @@ impl AppState {
             quit: Quit::No,
             sample: Sample::new(),
             sheet_open: false,
+            progress_line: None,
             middle_rect: egui::Rect::NOTHING,
         }
     }
@@ -361,11 +366,7 @@ impl AppState {
         }
         region(ui, middle, |ui| match screen {
             Screen::Main => self.main_middle(ui),
-            Screen::Run => {
-                egui::Frame::NONE
-                    .inner_margin(egui::Margin::symmetric(24, 20))
-                    .show(ui, |ui| self.run_view(ui));
-            }
+            Screen::Run => self.run_view(ui),
             Screen::Review => {
                 egui::Frame::NONE
                     .inner_margin(egui::Margin::symmetric(24, 20))
@@ -385,6 +386,14 @@ impl AppState {
         if settings {
             painter.vline(settings_left + 0.5, below_bar..=whole.bottom(), line);
         }
+        if let (Screen::Run, Some(fraction)) = (screen, self.progress_line) {
+            let left = if sidebar { sidebar_right } else { whole.left() };
+            let done = egui::Rect::from_x_y_ranges(
+                left..=left + (whole.right() - left) * fraction,
+                below_bar - 2.0..=below_bar,
+            );
+            painter.rect_filled(done, 0.0, p.text);
+        }
 
         // A click can open or close a review after the toolbar and the columns were laid out for
         // the screen before it. Redoing the pass keeps any frame from mixing the two, and has what
@@ -402,7 +411,7 @@ impl AppState {
     /// The screen's title, what it holds, and its actions at the right.
     fn toolbar(&mut self, ui: &mut egui::Ui, title_left: f32) {
         let p = *Palette::of(ui);
-        let tr = &self.tr;
+        let tr = Rc::clone(&self.tr);
         let (title, detail) = match self.screen() {
             Screen::Main => {
                 let detail = self
@@ -421,10 +430,7 @@ impl AppState {
                     });
                 (tr.get("new-task"), detail)
             }
-            Screen::Run if self.board.as_ref().is_some_and(Board::is_over) => {
-                (tr.get("result-title"), None)
-            }
-            Screen::Run => (tr.get("running"), None),
+            Screen::Run => self.run_heading(),
             Screen::Review => (tr.get("review-title"), None),
         };
         let rect = ui.max_rect();
@@ -446,8 +452,10 @@ impl AppState {
                 }
             },
         );
-        if self.screen() == Screen::Main {
-            self.main_actions(ui, rect);
+        match self.screen() {
+            Screen::Main => self.main_actions(ui, rect),
+            Screen::Run => self.run_actions(ui, rect),
+            Screen::Review => {}
         }
     }
 
@@ -518,10 +526,11 @@ impl AppState {
                     Some(_) => tr.get("running"),
                     None => tr.get("new-task"),
                 };
-                let count = (self.board.is_none())
-                    .then(|| self.found.as_ref().map(|f| f.files.len()))
-                    .flatten()
-                    .filter(|&n| n > 0);
+                let count = match &self.board {
+                    Some(board) => Some(board.items.len()),
+                    None => self.found.as_ref().map(|f| f.files.len()),
+                }
+                .filter(|&n| n > 0);
                 let selected = self.review.is_none();
                 let item = style::sidebar_item(ui, selected, &label, 30.0, |ui, p| {
                     ui.label(sidebar_text(&label, selected, p));
@@ -861,8 +870,8 @@ impl AppState {
         );
     }
 
-    fn file_grid(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
-        let p = *Palette::of(ui);
+    /// The thumbnails of what was found, which the grid and the run's rows share.
+    fn open_thumbnails(&mut self, ctx: &egui::Context) {
         if self.thumbnails.is_none() {
             let video = self.tools.ffmpeg.clone().zip(self.tools.ffprobe.clone());
             match Thumbnails::new(ctx, video) {
@@ -873,6 +882,11 @@ impl AppState {
         if let Some(thumbnails) = &mut self.thumbnails {
             thumbnails.take(ctx);
         }
+    }
+
+    fn file_grid(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
+        let p = *Palette::of(ui);
+        self.open_thumbnails(ctx);
         let Some(found) = &self.found else {
             return;
         };
@@ -1352,7 +1366,7 @@ impl AppState {
         match run::start(request, ctx) {
             Ok(running) => {
                 self.running = Some(running);
-                self.board = Some(Board::new(Instant::now()));
+                self.board = Some(Board::new(Instant::now(), output.clone()));
             }
             Err(e) => self.notices.push(e.to_string()),
         }
@@ -1463,173 +1477,74 @@ impl AppState {
         }
     }
 
+    /// The run's items as they are worked on, then what became of each (plan 6, M6 scope ③).
     fn run_view(&mut self, ui: &mut egui::Ui) {
-        let Some(board) = &mut self.board else {
+        let ctx = ui.ctx().clone();
+        self.open_thumbnails(&ctx);
+        let Self {
+            board: Some(board),
+            thumbnails,
+            found,
+            tr,
+            ..
+        } = self
+        else {
             return;
         };
-        let (fraction, left) = board.measure(Instant::now());
-        let board = &*board;
-        let tr = &self.tr;
-        let mut act = Act::None;
-        ui.horizontal(|ui| {
-            if let Some(finished) = &board.finished {
-                let summary =
-                    summary::summarize(finished.report.items.iter().map(|o| summary::Item {
-                        state: o.state,
-                        evidence: &o.analysis.evidence,
-                        video: o.analysis.video.as_ref().map(|v| (v.frames, v.seconds)),
-                    }));
-                ui.heading(summary::sentence(&summary, tr));
-            } else if board.failure.is_none() {
-                ui.spinner();
-                ui.heading(tr.get("running"));
-            }
-            if board.is_over() {
-                if ui.button(tr.get("run-new")).clicked() {
-                    act = Act::NewRun;
-                }
-            } else if self.quit == Quit::AfterRun {
-                ui.label(tr.get("quit-waiting"));
-            } else if ui.button(tr.get("cancel")).clicked() {
-                act = Act::CancelRun;
-            }
-        });
-        if !board.is_over() && board.progress.is_some() {
-            let percent = FluentValue::from((fraction * 100.0).floor() as u64);
-            let text = format!(
-                "{} · {}",
-                tr.with("progress-percent", &[("percent", percent)]),
-                time_left(tr, left)
-            );
-            ui.add(egui::ProgressBar::new(fraction).text(text));
-        }
-        if let Some(failure) = &board.failure {
-            let text = match failure {
-                Failure::NoRuntime => tr.get("start-needs-runtime"),
-                Failure::MissingModel(name) => {
-                    tr.with("model-missing", &[("name", FluentValue::from(*name))])
-                }
-                Failure::NoDataFolder => tr.get("run-failed-no-data-folder"),
-                Failure::Other(e) => {
-                    tr.with("run-failed", &[("error", FluentValue::from(e.as_str()))])
-                }
-            };
-            ui.colored_label(ui.visuals().error_fg_color, text);
-            if matches!(failure, Failure::MissingModel(_))
-                && ui.button(tr.get("models-open")).clicked()
-            {
-                act = Act::Models;
-            }
-        }
-        if let Some(session) = board.finished.as_ref().and_then(|f| f.session.as_ref()) {
-            ui.horizontal(|ui| {
-                ui.label(tr.get("run-session-kept"));
-                if ui.button(tr.get("run-review")).clicked() {
-                    act = Act::Review(session.clone(), None);
-                }
-            });
-        }
-        let session = board.finished.as_ref().and_then(|f| f.session.clone());
-        for note in board
-            .notes
-            .iter()
-            .chain(board.finished.iter().flat_map(|f| f.problems.iter()))
-        {
-            let text = wording::run_note(note, |item| board.name(item), tr);
-            ui.colored_label(ui.visuals().warn_fg_color, text);
-        }
+        let mut act = run_summary(ui, board, tr);
+        let details = egui::Id::unique("run-details");
+        let open =
+            egui::collapsing_header::CollapsingState::load_with_default_open(&ctx, details, false)
+                .is_open();
+        let reserve = if open {
+            DETAILS_OPEN_HEIGHT
+        } else {
+            DETAILS_HEIGHT
+        };
         let progress = board
             .progress
             .as_ref()
             .map(|p| p.snapshot())
             .unwrap_or_default();
-        let outcomes = board.finished.as_ref().map(|f| &f.report.items);
+        let session = board.finished.as_ref().and_then(|f| f.session.clone());
         egui::ScrollArea::vertical()
-            .max_height((ui.available_height() - 40.0).max(120.0))
+            .id_salt("run-items")
+            .auto_shrink([false, false])
+            .max_height((ui.available_height() - reserve).max(ROW_HEIGHT))
             .show(ui, |ui| {
                 a11y::list(ui, &tr.get("run-list"), |ui| {
+                    ui.spacing_mut().item_spacing.y = 0.0;
                     for (item, input) in &board.items {
-                        let state = board.states.get(item).copied().unwrap_or(ItemState::Queued);
-                        let outcome = outcomes.and_then(|o| o.iter().find(|o| o.item == *item));
-                        let cancelling = board.cancelling.contains(item);
-                        let shown = tr.get(if cancelling {
-                            "state-cancelling"
-                        } else {
-                            state_id(state)
+                        let row = RunRow::of(board, *item, input, &progress, session.is_some(), tr);
+                        let kind = found
+                            .as_ref()
+                            .and_then(|f| f.files.iter().find(|f| &f.path == input))
+                            .map_or(MediaKind::Image, |f| f.kind);
+                        let thumbnail = thumbnails
+                            .as_mut()
+                            .and_then(|t| t.get(input, kind).flatten());
+                        let chosen = ui.scope(|ui| {
+                            a11y::mark_item(ui, &row.described);
+                            run_row(ui, &row, thumbnail, board.is_over())
                         });
-                        let name = board.name(*item);
-                        a11y::item_vertical(ui, &format!("{name}, {shown}"), |ui| {
-                            ui.horizontal(|ui| {
-                                ui.label(&shown);
-                                ui.label(&name);
-                                let working =
-                                    !state.is_terminal() && state != ItemState::NeedsReview;
-                                if working
-                                    && let Some(p) = progress.get(item).filter(|p| p.total > 0)
-                                {
-                                    ui.add(
-                                        egui::ProgressBar::new(p.done as f32 / p.total as f32)
-                                            .desired_width(160.0),
-                                    );
+                        match chosen.inner {
+                            None => {}
+                            Some(RowAct::Cancel) => act = Act::CancelItem(*item),
+                            Some(RowAct::Show(path, open)) => act = Act::Show(path, open),
+                            Some(RowAct::Review) => {
+                                if let Some(session) = &session {
+                                    act = Act::Review(session.clone(), Some(*item));
                                 }
-                                if working
-                                    && !cancelling
-                                    && !board.is_over()
-                                    && ui.button(tr.get("cancel")).clicked()
-                                {
-                                    act = Act::CancelItem(*item);
-                                }
-                                if let Some(o) = outcome {
-                                    if matches!(o.state, ItemState::Published(_)) {
-                                        if ui.button(tr.get("item-reveal")).clicked() {
-                                            act = Act::Show(o.destination.clone(), false);
-                                        }
-                                        if ui.button(tr.get("item-open")).clicked() {
-                                            act = Act::Show(o.destination.clone(), true);
-                                        }
-                                    } else if o.state == ItemState::NeedsReview {
-                                        if let Some(session) = &session
-                                            && ui.button(tr.get("item-review")).clicked()
-                                        {
-                                            act = Act::Review(session.clone(), Some(*item));
-                                        }
-                                        if ui.button(tr.get("item-reveal-source")).clicked() {
-                                            act = Act::Show(input.clone(), false);
-                                        }
-                                    }
-                                }
-                            });
-                            if let Some(o) = outcome {
-                                ui.indent(("why", item.0), |ui| {
-                                    if let Some(failure) = &o.failure {
-                                        ui.colored_label(
-                                            ui.visuals().error_fg_color,
-                                            wording::failure(failure, tr),
-                                        );
-                                        ui.weak(&failure.reason);
-                                    }
-                                    for note in &o.notes {
-                                        ui.weak(wording::note(note, tr));
-                                    }
-                                    if o.state == ItemState::NeedsReview {
-                                        let video = o
-                                            .analysis
-                                            .video
-                                            .as_ref()
-                                            .map(|v| (v.frames, v.seconds));
-                                        for e in
-                                            o.analysis.evidence.iter().filter(|e| !e.is_resolved())
-                                        {
-                                            ui.weak(summary::problem(e, video, tr));
-                                        }
-                                    }
-                                });
                             }
-                        });
+                        }
                     }
                 });
             });
-        log_panel(ui, board, tr);
+        run_details(ui, board, tr, details);
+        self.run_act(act, &ctx);
+    }
+
+    fn run_act(&mut self, act: Act, ctx: &egui::Context) {
         match act {
             Act::None => {}
             Act::CancelRun => {
@@ -1645,11 +1560,114 @@ impl AppState {
             Act::NewRun => self.board = None,
             Act::Models => self.command(Command::Models),
             Act::Show(path, open) => self.show(&path, open),
-            Act::Review(id, item) => {
-                let ctx = ui.ctx().clone();
-                self.open_review(id, item, &ctx);
-            }
+            Act::Review(id, item) => self.open_review(id, item, ctx),
         }
+    }
+
+    /// The run's title with how far it is, or once it is over, when it ended and where it saved.
+    fn run_heading(&mut self) -> (String, Option<String>) {
+        self.progress_line = None;
+        let tr = &self.tr;
+        let Some(board) = &mut self.board else {
+            return (tr.get("running"), None);
+        };
+        if board.is_over() {
+            let folder = board.output.file_name().map_or_else(
+                || board.output.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            );
+            let detail = board.ended.map(|at| {
+                tr.with(
+                    "run-ended",
+                    &[
+                        (
+                            "when",
+                            FluentValue::from(clock::when(at, SystemTime::now(), tr)),
+                        ),
+                        ("folder", FluentValue::from(folder)),
+                    ],
+                )
+            });
+            return (tr.get("result-title"), detail);
+        }
+        if board.progress.is_none() {
+            return (tr.get("running"), None);
+        }
+        let (fraction, left) = board.measure(Instant::now());
+        self.progress_line = Some(fraction);
+        let percent = FluentValue::from((fraction * 100.0).floor() as u64);
+        let detail = format!(
+            "{} · {}",
+            tr.with("progress-percent", &[("percent", percent)]),
+            time_left(tr, left)
+        );
+        (tr.get("running"), Some(detail))
+    }
+
+    /// Cancel All while the run works; New Task and Review once it is over.
+    fn run_actions(&mut self, ui: &mut egui::Ui, bar: egui::Rect) {
+        let Some(board) = &self.board else {
+            return;
+        };
+        let tr = &self.tr;
+        let buttons = if board.is_over() {
+            match board.finished.as_ref().and_then(|f| f.session.clone()) {
+                Some(session) => vec![
+                    (tr.get("new-task"), ToolbarButton::Plain, Act::NewRun),
+                    (
+                        tr.get("review-all"),
+                        ToolbarButton::Primary,
+                        Act::Review(session, None),
+                    ),
+                ],
+                None => vec![(tr.get("new-task"), ToolbarButton::Primary, Act::NewRun)],
+            }
+        } else if self.quit == Quit::AfterRun {
+            vec![(tr.get("quit-waiting"), ToolbarButton::Text, Act::None)]
+        } else {
+            vec![(
+                tr.get("cancel-all"),
+                ToolbarButton::Outlined,
+                Act::CancelRun,
+            )]
+        };
+        let widths: Vec<f32> = buttons
+            .iter()
+            .map(|(text, kind, _)| match kind {
+                ToolbarButton::Text => style::text_width(ui, text),
+                kind => style::button_width(ui, text, *kind == ToolbarButton::Primary),
+            })
+            .collect();
+        let spacing = ui.spacing().item_spacing.x;
+        let width = widths.iter().sum::<f32>() + spacing * (widths.len() - 1) as f32;
+        let right = bar.right() - 14.0;
+        let mut act = Act::None;
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(egui::Rect::from_x_y_ranges(
+                    right - width..=right,
+                    bar.y_range(),
+                ))
+                .layout(egui::Layout::left_to_right(egui::Align::Center)),
+            |ui| {
+                for (text, kind, chosen) in buttons {
+                    let clicked = match kind {
+                        ToolbarButton::Primary => style::primary(ui, &text, true).clicked(),
+                        ToolbarButton::Outlined => style::outlined(ui, text).clicked(),
+                        ToolbarButton::Plain => style::plain(ui, text).clicked(),
+                        ToolbarButton::Text => {
+                            ui.label(egui::RichText::new(text).color(Palette::of(ui).secondary));
+                            false
+                        }
+                    };
+                    if clicked {
+                        act = chosen;
+                    }
+                }
+            },
+        );
+        let ctx = ui.ctx().clone();
+        self.run_act(act, &ctx);
     }
 
     fn discard_dialog(&mut self, ctx: &egui::Context) {
@@ -1744,7 +1762,9 @@ struct SessionRow {
 
 impl SessionRow {
     fn of(saved: &Saved, now: SystemTime, tr: &Translator) -> Self {
-        let age = saved.created.map(|created| clock::when(created, now, tr));
+        let age = saved
+            .created
+            .map(|created| crate::clock::when(created, now, tr));
         match &saved.content {
             Ok(loaded) => {
                 let output = &loaded.session.output;
@@ -1950,30 +1970,487 @@ pub fn log_line(board: &Board, at: Duration, logged: &Logged, tr: &Translator) -
 }
 
 /// The run's log, folded away under the list (plan 6).
-fn log_panel(ui: &mut egui::Ui, board: &Board, tr: &Translator) {
-    egui::CollapsingHeader::new(tr.get("log-title"))
-        .id_salt("log")
-        .show(ui, |ui| {
-            let lines: Vec<String> = board
-                .log
-                .iter()
-                .map(|(at, logged)| log_line(board, *at, logged, tr))
-                .collect();
-            if ui.button(tr.get("log-copy")).clicked() {
-                ui.ctx().copy_text(lines.join("\n"));
+const ROW_HEIGHT: f32 = 52.0;
+/// The room the run's folded details take below its list, and the room they take unfolded.
+const DETAILS_HEIGHT: f32 = 40.0;
+const DETAILS_OPEN_HEIGHT: f32 = 300.0;
+
+#[derive(Clone, Copy, PartialEq)]
+enum ToolbarButton {
+    Primary,
+    Outlined,
+    Plain,
+    Text,
+}
+
+enum RowAct {
+    Cancel,
+    Review,
+    /// Show in the file manager, or open with `true`.
+    Show(PathBuf, bool),
+}
+
+#[derive(Clone, Copy, PartialEq)]
+enum Look {
+    Waiting,
+    Working,
+    NeedsReview,
+    Saved,
+    Failed,
+    Stopped,
+}
+
+struct RowButton {
+    label: String,
+    act: RowAct,
+    icon: bool,
+    plain: bool,
+}
+
+/// One item of the run as its row shows it.
+struct RunRow {
+    id: u64,
+    name: String,
+    state: String,
+    look: Look,
+    progress: Option<f32>,
+    /// A few words beside the state; `full` has everything, for the pointer and screen readers.
+    short: Option<String>,
+    full: Vec<String>,
+    described: String,
+    buttons: Vec<RowButton>,
+}
+
+impl RunRow {
+    fn of(
+        board: &Board,
+        item: ItemId,
+        input: &Path,
+        progress: &BTreeMap<ItemId, Progress>,
+        has_session: bool,
+        tr: &Translator,
+    ) -> Self {
+        let state = board
+            .states
+            .get(&item)
+            .copied()
+            .unwrap_or(ItemState::Queued);
+        let cancelling = board.cancelling.contains(&item);
+        let outcome = board
+            .finished
+            .as_ref()
+            .and_then(|f| f.report.items.iter().find(|o| o.item == item));
+        let working = !state.is_terminal() && state != ItemState::NeedsReview && !board.is_over();
+        let look = match state {
+            ItemState::Queued if !board.is_over() => Look::Waiting,
+            ItemState::NeedsReview => Look::NeedsReview,
+            ItemState::Published(_) => Look::Saved,
+            ItemState::Failed => Look::Failed,
+            ItemState::Cancelled => Look::Stopped,
+            _ if working => Look::Working,
+            _ => Look::Stopped,
+        };
+        let mut problems = Vec::new();
+        let mut full = Vec::new();
+        let mut short = None;
+        if let Some(o) = outcome {
+            if let Some(failure) = &o.failure {
+                short = Some(wording::failure(failure, tr));
+                full.push(wording::failure_with_detail(failure, tr));
             }
-            egui::ScrollArea::vertical()
-                .id_salt("log-lines")
-                .max_height(200.0)
-                .stick_to_bottom(true)
-                .show(ui, |ui| {
-                    a11y::list(ui, &tr.get("log-title"), |ui| {
-                        for line in &lines {
-                            ui.monospace(line);
-                        }
+            if o.state == ItemState::NeedsReview {
+                let video = o.analysis.video.as_ref().map(|v| (v.frames, v.seconds));
+                problems = o
+                    .analysis
+                    .evidence
+                    .iter()
+                    .filter(|e| !e.is_resolved())
+                    .map(|e| summary::problem(e, video, tr))
+                    .collect();
+            }
+            let notes: Vec<String> = o.notes.iter().map(|n| wording::note(n, tr)).collect();
+            short = short
+                .or_else(|| problems.first().cloned())
+                .or_else(|| notes.first().cloned());
+            full.extend(problems);
+            full.extend(notes);
+        }
+        let mut buttons = Vec::new();
+        if working && !cancelling {
+            buttons.push(RowButton {
+                label: tr.get("cancel-item"),
+                act: RowAct::Cancel,
+                icon: true,
+                plain: true,
+            });
+        }
+        if let Some(o) = outcome {
+            match o.state {
+                ItemState::Published(_) => {
+                    buttons.push(RowButton {
+                        label: tr.get("item-reveal"),
+                        act: RowAct::Show(o.destination.clone(), false),
+                        icon: false,
+                        plain: true,
                     });
-                });
+                    buttons.push(RowButton {
+                        label: tr.get("item-open"),
+                        act: RowAct::Show(o.destination.clone(), true),
+                        icon: false,
+                        plain: true,
+                    });
+                }
+                ItemState::NeedsReview if has_session => buttons.push(RowButton {
+                    label: tr.get("item-review"),
+                    act: RowAct::Review,
+                    icon: false,
+                    plain: false,
+                }),
+                ItemState::Failed => buttons.push(RowButton {
+                    label: tr.get("item-reveal-source"),
+                    act: RowAct::Show(input.to_path_buf(), false),
+                    icon: false,
+                    plain: true,
+                }),
+                _ => {}
+            }
+        }
+        let name = board.name(item);
+        let state_text = tr.get(if cancelling {
+            "state-cancelling"
+        } else {
+            state_id(state)
         });
+        let described = [name.as_str(), state_text.as_str()]
+            .into_iter()
+            .chain(full.iter().map(String::as_str))
+            .collect::<Vec<_>>()
+            .join(&tr.get("list-separator"));
+        Self {
+            id: item.0,
+            name,
+            state: state_text,
+            described,
+            look,
+            progress: working
+                .then(|| progress.get(&item).filter(|p| p.total > 0))
+                .flatten()
+                .map(|p| p.done as f32 / p.total as f32),
+            short,
+            full,
+            buttons,
+        }
+    }
+}
+
+/// A row of the run: thumbnail, name, state, a few words or the progress, and its buttons.
+fn run_row(
+    ui: &mut egui::Ui,
+    row: &RunRow,
+    thumbnail: Option<&egui::TextureHandle>,
+    over: bool,
+) -> Option<RowAct> {
+    let p = *Palette::of(ui);
+    let width = ui.available_width();
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, ROW_HEIGHT), egui::Sense::hover());
+    let response = ui.interact(
+        rect,
+        ui.make_persistent_id(("run-item", row.id)),
+        egui::Sense::hover(),
+    );
+    if row.progress.is_some() {
+        ui.painter().rect_filled(rect, 0.0, p.empty);
+    }
+    ui.painter().hline(
+        rect.x_range(),
+        rect.bottom() - 0.5,
+        egui::Stroke::new(1.0, p.faint_line),
+    );
+
+    let gap = 14.0;
+    let (detail_width, buttons_width) = if over { (200.0, 200.0) } else { (140.0, 28.0) };
+    let mut x = rect.left() + 24.0;
+    let mut column = |w: f32| {
+        let column = egui::Rect::from_x_y_ranges(x..=x + w, rect.y_range());
+        x += w + gap;
+        column
+    };
+    let thumb = column(48.0);
+    let name_width = (rect.right()
+        - 24.0
+        - (thumb.right() + gap)
+        - 160.0
+        - detail_width
+        - buttons_width
+        - gap * 3.0)
+        .max(40.0);
+    let name = column(name_width);
+    let state = column(160.0);
+    let detail = column(detail_width);
+    let buttons =
+        egui::Rect::from_x_y_ranges(detail.right() + gap..=rect.right() - 24.0, rect.y_range());
+
+    let picture = egui::Rect::from_center_size(thumb.center(), egui::vec2(48.0, 36.0));
+    match thumbnail {
+        Some(texture) => {
+            egui::Image::new(texture)
+                .uv(cover(texture.size_vec2(), picture.size()))
+                .corner_radius(3)
+                .paint_at(ui, picture);
+        }
+        None => {
+            ui.painter().rect_filled(picture, 3, p.separator);
+        }
+    }
+    let font = if row.progress.is_some() {
+        style::medium(13.0)
+    } else {
+        egui::FontId::proportional(13.0)
+    };
+    paint_line(ui, &row.name, font, p.text, name);
+
+    let color = match row.look {
+        Look::Waiting | Look::Stopped => p.secondary,
+        Look::Working => p.text,
+        Look::NeedsReview => p.needs_review,
+        Look::Saved => p.saved,
+        Look::Failed => p.failed,
+    };
+    let mark = egui::Rect::from_center_size(
+        egui::pos2(state.left() + 3.5, state.center().y),
+        egui::vec2(7.0, 7.0),
+    );
+    if row.look == Look::Waiting || row.look == Look::Stopped {
+        ui.painter()
+            .circle_stroke(mark.center(), 2.75, egui::Stroke::new(1.5, color));
+    } else {
+        ui.painter().circle_filled(mark.center(), 3.5, color);
+    }
+    let words = if row.look == Look::Waiting {
+        p.secondary
+    } else {
+        p.text
+    };
+    paint_line(
+        ui,
+        &row.state,
+        egui::FontId::proportional(13.0),
+        words,
+        egui::Rect::from_x_y_ranges(state.left() + 14.0..=state.right(), state.y_range()),
+    );
+
+    if let Some(fraction) = row.progress {
+        let rail = egui::Rect::from_x_y_ranges(
+            detail.left()..=detail.right() - 38.0,
+            detail.center().y - 1.5..=detail.center().y + 1.5,
+        );
+        ui.painter().rect_filled(rail, 2, p.separator);
+        let done = egui::Rect::from_x_y_ranges(
+            rail.left()..=rail.left() + rail.width() * fraction.clamp(0.0, 1.0),
+            rail.y_range(),
+        );
+        ui.painter().rect_filled(done, 2, p.text);
+        ui.painter().text(
+            egui::pos2(detail.right(), detail.center().y),
+            egui::Align2::RIGHT_CENTER,
+            format!("{}%", (fraction * 100.0).floor()),
+            egui::FontId::proportional(12.0),
+            p.secondary,
+        );
+    } else if let Some(short) = &row.short {
+        paint_line(
+            ui,
+            short,
+            egui::FontId::proportional(13.0),
+            p.secondary,
+            detail,
+        );
+    }
+
+    let mut chosen = None;
+    let spacing = 4.0;
+    let widths: Vec<f32> = row
+        .buttons
+        .iter()
+        .map(|b| {
+            if b.icon {
+                style::SMALL_BUTTON_HEIGHT
+            } else {
+                style::small_width(ui, &b.label)
+            }
+        })
+        .collect();
+    let total = widths.iter().sum::<f32>() + spacing * widths.len().saturating_sub(1) as f32;
+    ui.scope_builder(
+        egui::UiBuilder::new()
+            .max_rect(egui::Rect::from_x_y_ranges(
+                (buttons.right() - total).max(buttons.left())..=buttons.right(),
+                rect.y_range(),
+            ))
+            .layout(egui::Layout::left_to_right(egui::Align::Center)),
+        |ui| {
+            ui.spacing_mut().item_spacing.x = spacing;
+            for (i, button) in row.buttons.iter().enumerate() {
+                let response = ui.push_id(i, |ui| {
+                    if button.icon {
+                        style::icon_button(ui, &button.label, style::icon::close)
+                    } else {
+                        style::small(ui, &button.label, button.plain)
+                    }
+                });
+                if response.inner.clicked() {
+                    chosen = Some(i);
+                }
+            }
+        },
+    );
+    if !row.full.is_empty() {
+        response.on_hover_text(row.full.join("\n"));
+    }
+    chosen.map(|i| match &row.buttons[i].act {
+        RowAct::Cancel => RowAct::Cancel,
+        RowAct::Review => RowAct::Review,
+        RowAct::Show(path, open) => RowAct::Show(path.clone(), *open),
+    })
+}
+
+/// What the run came to in a sentence, the notes on it, or why it could not start.
+fn run_summary(ui: &mut egui::Ui, board: &Board, tr: &Translator) -> Act {
+    let notes: Vec<String> = board
+        .notes
+        .iter()
+        .chain(board.finished.iter().flat_map(|f| f.problems.iter()))
+        .map(|note| wording::run_note(note, |item| board.name(item), tr))
+        .collect();
+    if !board.is_over() && notes.is_empty() {
+        return Act::None;
+    }
+    let p = *Palette::of(ui);
+    let mut act = Act::None;
+    let shown = egui::Frame::NONE
+        .inner_margin(egui::Margin {
+            left: 24,
+            right: 24,
+            top: 22,
+            bottom: 18,
+        })
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            ui.spacing_mut().item_spacing.y = 6.0;
+            let headline = match (&board.finished, &board.failure) {
+                (Some(finished), _) => Some(summary::sentence(
+                    &summary::summarize(finished.report.items.iter().map(|o| summary::Item {
+                        state: o.state,
+                        evidence: &o.analysis.evidence,
+                        video: o.analysis.video.as_ref().map(|v| (v.frames, v.seconds)),
+                    })),
+                    tr,
+                )),
+                (None, Some(failure)) => Some(run_failure(failure, tr)),
+                (None, None) => None,
+            };
+            if let Some(headline) = headline {
+                ui.label(
+                    egui::RichText::new(headline)
+                        .font(style::medium(17.0))
+                        .color(p.text),
+                );
+            }
+            if board.finished.as_ref().is_some_and(|f| f.session.is_some()) {
+                ui.label(egui::RichText::new(tr.get("run-session-kept")).color(p.secondary));
+            }
+            for note in &notes {
+                ui.label(egui::RichText::new(note).color(p.secondary));
+            }
+            if matches!(board.failure, Some(Failure::MissingModel(_)))
+                && style::outlined(ui, tr.get("models-open")).clicked()
+            {
+                act = Act::Models;
+            }
+        });
+    let rect = shown.response.rect;
+    ui.painter().hline(
+        rect.x_range(),
+        rect.bottom() - 0.5,
+        egui::Stroke::new(1.0, p.separator),
+    );
+    act
+}
+
+fn run_failure(failure: &Failure, tr: &Translator) -> String {
+    match failure {
+        Failure::NoRuntime => tr.get("start-needs-runtime"),
+        Failure::MissingModel(name) => {
+            tr.with("model-missing", &[("name", FluentValue::from(*name))])
+        }
+        Failure::NoDataFolder => tr.get("run-failed-no-data-folder"),
+        Failure::Other(e) => tr.with("run-failed", &[("error", FluentValue::from(e.as_str()))]),
+    }
+}
+
+/// The run's log, folded under its list.
+fn run_details(ui: &mut egui::Ui, board: &Board, tr: &Translator, id: egui::Id) {
+    let p = *Palette::of(ui);
+    let top = ui.cursor().top();
+    ui.painter().hline(
+        ui.max_rect().x_range(),
+        top + 0.5,
+        egui::Stroke::new(1.0, p.separator),
+    );
+    egui::Frame::NONE
+        .inner_margin(egui::Margin::symmetric(24, 10))
+        .show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            let mut state = egui::collapsing_header::CollapsingState::load_with_default_open(
+                ui.ctx(),
+                id,
+                false,
+            );
+            let title = tr.get("log-title");
+            let header = ui.add(
+                egui::Button::new(egui::RichText::new(&title).color(p.secondary)).frame(false),
+            );
+            if header.clicked() {
+                state.toggle(ui);
+                state.store(ui.ctx());
+            }
+            state.show_body_unindented(ui, |ui| {
+                let lines: Vec<String> = board
+                    .log
+                    .iter()
+                    .map(|(at, logged)| log_line(board, *at, logged, tr))
+                    .collect();
+                if style::small(ui, &tr.get("log-copy"), false).clicked() {
+                    ui.ctx().copy_text(lines.join("\n"));
+                }
+                egui::ScrollArea::vertical()
+                    .id_salt("log-lines")
+                    .max_height(200.0)
+                    .stick_to_bottom(true)
+                    .show(ui, |ui| {
+                        a11y::list(ui, &title, |ui| {
+                            for line in &lines {
+                                ui.label(egui::RichText::new(line).monospace().color(p.body));
+                            }
+                        });
+                    });
+            });
+        });
+}
+
+/// `text` on one line in `rect`, cut short with an ellipsis if it does not fit.
+fn paint_line(
+    ui: &egui::Ui,
+    text: &str,
+    font: egui::FontId,
+    color: egui::Color32,
+    rect: egui::Rect,
+) {
+    let mut job = egui::text::LayoutJob::simple_singleline(text.to_owned(), font, color);
+    job.wrap = egui::text::TextWrapping::truncate_at_width(rect.width());
+    let galley = ui.painter().layout_job(job);
+    let at = egui::pos2(rect.left(), rect.center().y - galley.size().y / 2.0);
+    ui.painter().galley(at, galley, color);
 }
 
 fn state_id(state: ItemState) -> &'static str {

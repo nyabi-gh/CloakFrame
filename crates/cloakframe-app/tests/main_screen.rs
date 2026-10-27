@@ -283,14 +283,19 @@ fn start_runs_the_engine_and_shows_the_result() {
     );
     assert!(output.join("lena.jpg").is_file());
     harness.get_by_label("1 saved");
-    harness.get_by_label("Saved");
-    harness.get_by_role_and_label(Role::Button, "Show in Folder");
+    // The title says when the run ended and where it saved.
+    harness.get_by(|node| {
+        shown_text(node).is_some_and(|l| l.starts_with("Today ") && l.ends_with(" · out"))
+    });
+    harness
+        .get_by_role_and_label(Role::ListItem, "lena.jpg, Saved")
+        .get_by_role_and_label(Role::Button, "Show in Folder");
     harness.get_by_label("Details").click();
     harness.run();
     let log = harness.get_by_role_and_label(Role::List, "Details");
     log.get_by_label_contains("lena.jpg  Saved");
     harness
-        .get_by_role_and_label(Role::Button, "New run")
+        .get_by_role_and_label(Role::Button, "New Task")
         .click();
     harness.run();
     assert!(harness.state().board.is_none());
@@ -604,7 +609,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     // The review masks as the run would have, whatever the main screen says by then.
     harness.state_mut().settings.method = Method::Blur;
     harness
-        .get_by_role_and_label(Role::Button, "Review Now")
+        .get_by_role_and_label(Role::Button, "Start Review")
         .click();
     harness.step();
     let ctx = harness.ctx.clone();
@@ -1331,8 +1336,8 @@ fn outcome_states(harness: &Harness<'_, AppState>) -> Vec<(String, ItemState)> {
         .collect()
 }
 
-/// An item's Cancel stops that item alone, and the others run on; the run's Cancel stops all of
-/// it. Needs the ONNX Runtime, the models and FFmpeg (CONTRIBUTING.md).
+/// An item's own cancel button stops that item alone, and the others run on; Cancel All stops
+/// the whole run. Needs the ONNX Runtime, the models and FFmpeg (CONTRIBUTING.md).
 #[test]
 fn cancel_stops_an_item_or_the_whole_run() {
     let dir = Dir::new("cancel-item");
@@ -1344,7 +1349,7 @@ fn cancel_stops_an_item_or_the_whole_run() {
                     .label()
                     .is_some_and(|label| label.starts_with("long.mp4, "))
         })
-        .get_by_role_and_label(Role::Button, "Cancel")
+        .get_by_role_and_label(Role::Button, "Cancel This Item")
         .click();
     harness.step();
     finish_run(&mut harness);
@@ -1360,11 +1365,8 @@ fn cancel_stops_an_item_or_the_whole_run() {
 
     let dir = Dir::new("cancel-run");
     let mut harness = started_run(&dir);
-    // The run's Cancel is above the list of items, each of which has its own.
     harness
-        .get_all_by_role_and_label(Role::Button, "Cancel")
-        .next()
-        .unwrap()
+        .get_by_role_and_label(Role::Button, "Cancel All")
         .click();
     harness.step();
     finish_run(&mut harness);
@@ -1374,8 +1376,9 @@ fn cancel_stops_an_item_or_the_whole_run() {
         "{states:?}"
     );
     assert_eq!(states[1], ("long.mp4".to_owned(), ItemState::Cancelled));
-    assert!(harness.query_by_label("Cancel").is_none());
-    harness.get_by_role_and_label(Role::Button, "New run");
+    assert!(harness.query_by_label("Cancel All").is_none());
+    assert!(harness.query_by_label("Cancel This Item").is_none());
+    harness.get_by_role_and_label(Role::Button, "New Task");
 }
 
 /// Every message of every language, the new screens' included, in the fonts the window uses for

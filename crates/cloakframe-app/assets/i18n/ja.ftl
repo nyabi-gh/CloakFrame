@@ -78,7 +78,6 @@ settings-newer = 新しいバージョンの CloakFrame が書いた設定です
 ## 1.12.1
 review-first = 保存前に確認
 ## needs review
-running = 処理しています…
 ## 1.12.1
 cancel = キャンセル
 ## needs review
@@ -146,7 +145,6 @@ discard-title = この確認を破棄しますか？
 discard-body = 確認のために残した検出結果を削除します。元のファイルと保存したファイルはそのままです。
 discard-confirm = 破棄
 discard-keep = 残す
-run-new = 新しく始める
 start-needs-runtime = アプリの隣に ONNX Runtime が見つかりません。
 model-missing = 検出モデル { $name } はまだダウンロードされていません。
 videos-need-ffmpeg = アプリの隣に FFmpeg が見つからないため、動画は除外しました。
@@ -170,7 +168,6 @@ model-accept-terms = この条件に同意します
 model-download = ダウンロード
 ## needs review
 model-download-failed = ダウンロードできませんでした: { $error }
-run-review = 今すぐ確認
 item-review = 確認
 start-during-review = 先に確認画面を閉じてください。
 review-in-use = 別の処理か確認がこの作業を開いています。
@@ -411,5 +408,10 @@ advanced-photos = 写真
 advanced-videos = 動画
 done = 完了
 session-unreadable-short = 読み込めません
-result-title = 結果
 review-title = レビュー
+running = 処理中
+result-title = 完了
+cancel-all = すべてキャンセル
+cancel-item = この項目をキャンセル
+review-all = 確認する
+run-ended = { $when } · { $folder }

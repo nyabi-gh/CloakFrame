@@ -10,6 +10,7 @@ pub const TOOLBAR_HEIGHT: f32 = 52.0;
 pub const SIDEBAR_WIDTH: f32 = 220.0;
 pub const INSPECTOR_WIDTH: f32 = 300.0;
 pub const BUTTON_HEIGHT: f32 = 28.0;
+pub const SMALL_BUTTON_HEIGHT: f32 = 24.0;
 pub const BUTTON_RADIUS: u8 = 6;
 pub const THUMBNAIL_RADIUS: u8 = 4;
 
@@ -261,6 +262,58 @@ pub fn plain(ui: &mut egui::Ui, text: impl Into<egui::WidgetText>) -> egui::Resp
     ui.add(sized(egui::Button::new(text).frame_when_inactive(false)))
 }
 
+/// A row's own action, smaller than the toolbar's: bordered, or `plain` until the pointer is on
+/// it.
+pub fn small(ui: &mut egui::Ui, text: &str, plain: bool) -> egui::Response {
+    let button = egui::Button::new(egui::RichText::new(text).size(12.0))
+        .min_size(egui::vec2(0.0, SMALL_BUTTON_HEIGHT))
+        .corner_radius(BUTTON_RADIUS)
+        .frame_when_inactive(!plain);
+    let response = ui
+        .scope(|ui| {
+            ui.spacing_mut().button_padding = egui::vec2(8.0, 2.0);
+            ui.add(button)
+        })
+        .inner;
+    focus_ring(ui, &response);
+    response
+}
+
+/// How wide [`small`] makes a button with `text`.
+pub fn small_width(ui: &egui::Ui, text: &str) -> f32 {
+    let width = ui.fonts_mut(|f| {
+        f.layout_no_wrap(
+            text.to_owned(),
+            FontId::proportional(12.0),
+            Color32::PLACEHOLDER,
+        )
+        .size()
+        .x
+    });
+    width + 2.0 * 8.0
+}
+
+/// A square button that shows only `draw`'s icon; `label` is what a screen reader says and what
+/// the pointer shows.
+pub fn icon_button(
+    ui: &mut egui::Ui,
+    label: &str,
+    draw: fn(&egui::Painter, egui::Rect, Color32),
+) -> egui::Response {
+    let p = Palette::of(ui);
+    let (rect, response) = ui.allocate_exact_size(
+        egui::vec2(SMALL_BUTTON_HEIGHT, SMALL_BUTTON_HEIGHT),
+        egui::Sense::click(),
+    );
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
+    if response.hovered() {
+        ui.painter().rect_filled(rect, 4, p.selected);
+    }
+    draw(ui.painter(), rect.shrink(6.0), p.secondary);
+    focus_ring(ui, &response);
+    response.on_hover_text(label)
+}
+
 /// Text that reads as a link and acts as a button.
 pub fn link(ui: &mut egui::Ui, text: &str) -> egui::Response {
     let p = Palette::of(ui);
@@ -370,6 +423,13 @@ pub fn sidebar_item(
 pub fn status_dot(ui: &mut egui::Ui, color: Color32) {
     let (rect, _) = ui.allocate_exact_size(egui::vec2(7.0, 7.0), egui::Sense::hover());
     ui.painter().circle_filled(rect.center(), 3.5, color);
+}
+
+/// The hollow mark of a state that has not begun, such as waiting.
+pub fn status_ring(ui: &mut egui::Ui, color: Color32) {
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(7.0, 7.0), egui::Sense::hover());
+    ui.painter()
+        .circle_stroke(rect.center(), 2.75, Stroke::new(1.5, color));
 }
 
 fn focus_ring(ui: &egui::Ui, response: &egui::Response) {
