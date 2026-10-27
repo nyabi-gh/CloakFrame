@@ -137,8 +137,8 @@ quit-waiting = Stopping; the window closes once the run has stopped.
 
 sessions-title = Waiting for review
 session-age = { $days ->
-    [0] Today
-    [1] Yesterday
+    [0] Today { $time }
+    [1] Yesterday { $time }
    *[other] { $days } days ago
 }
 session-row = { $items ->

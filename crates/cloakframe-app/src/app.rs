@@ -12,6 +12,7 @@ use fluent_bundle::FluentValue;
 use cloakframe_core::item::{ItemId, ItemState};
 
 use crate::a11y;
+use crate::clock;
 use crate::editor::{ReviewScreen, ScreenAct};
 use crate::fonts;
 use crate::i18n::{Language, Translator};
@@ -20,7 +21,7 @@ use crate::progress::Left;
 use crate::review::{OpenError, Review};
 use crate::run::{self, Board, Failure, Logged, Running};
 use crate::sample::Sample;
-use crate::sessions::{self, Saved, SavedSessions};
+use crate::sessions::{Saved, SavedSessions};
 use crate::settings::{
     FaceModel, Method, Notice, Settings, SettingsFile, Theme, VideoCodec, VideoQuality,
 };
@@ -1743,10 +1744,7 @@ struct SessionRow {
 
 impl SessionRow {
     fn of(saved: &Saved, now: SystemTime, tr: &Translator) -> Self {
-        let age = saved.created.map(|created| {
-            let days = sessions::age_days(created, now);
-            tr.with("session-age", &[("days", FluentValue::from(days))])
-        });
+        let age = saved.created.map(|created| clock::when(created, now, tr));
         match &saved.content {
             Ok(loaded) => {
                 let output = &loaded.session.output;

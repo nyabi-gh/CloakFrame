@@ -3,6 +3,7 @@
 pub mod a11y;
 pub mod about;
 pub mod app;
+pub mod clock;
 pub mod draft;
 pub mod editor;
 pub mod fonts;

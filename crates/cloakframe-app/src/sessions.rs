@@ -157,9 +157,3 @@ impl SavedSessions {
         Ok(())
     }
 }
-
-/// Whole days from `created` to `now`, for "today", "yesterday" and "N days ago".
-pub fn age_days(created: SystemTime, now: SystemTime) -> u64 {
-    now.duration_since(created)
-        .map_or(0, |d| d.as_secs() / (24 * 60 * 60))
-}

@@ -131,8 +131,8 @@ quit-keep = 続ける
 quit-waiting = 停止しています。処理が止まるとウィンドウが閉じます。
 sessions-title = 確認待ちの作業
 session-age = { $days ->
-    [0] 今日
-    [1] 昨日
+    [0] 今日 { $time }
+    [1] 昨日 { $time }
    *[other] { $days } 日前
 }
 session-row = { $output } に保存する項目 { $items } 件

@@ -108,8 +108,8 @@ quit-waiting = 멈추는 중입니다. 작업이 멈추면 창이 닫힙니다.
 
 sessions-title = 검토 대기
 session-age = { $days ->
-    [0] 오늘
-    [1] 어제
+    [0] 오늘 { $time }
+    [1] 어제 { $time }
    *[other] { $days }일 전
 }
 session-row = { $output }에 저장할 항목 { $items }개

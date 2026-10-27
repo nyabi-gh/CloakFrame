@@ -296,6 +296,11 @@ fn start_runs_the_engine_and_shows_the_result() {
     assert!(harness.state().board.is_none());
 }
 
+/// The words of a label, which are its value.
+fn shown_text(node: &egui_kittest::kittest::AccessKitNode<'_>) -> Option<String> {
+    (node.role() == Role::Label).then(|| node.value()).flatten()
+}
+
 fn session_item(
     item: u64,
     input: PathBuf,
@@ -387,13 +392,21 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     // The sidebar names the folder and the day; the whole path and what changed are in the
     // row's name and its hover.
     harness.get_by_role_and_label(Role::List, "Waiting for review");
-    let row = format!(
-        "out, Today, 3 items for {}, one original changed",
-        output.display()
-    );
-    harness.get_by_role_and_label(Role::ListItem, &row);
+    let rest = format!(", 3 items for {}, one original changed", output.display());
+    let row = harness
+        .get_by(|node| {
+            node.role() == Role::ListItem
+                && node
+                    .label()
+                    .is_some_and(|l| l.starts_with("out, Today ") && l.ends_with(&rest))
+        })
+        .accesskit_node()
+        .label()
+        .unwrap();
     harness.get_by_label("out");
-    harness.get_by_label("Today");
+    harness.get_by(|node| {
+        shown_text(node).is_some_and(|l| l.starts_with("Today ") && !l.contains(','))
+    });
 
     harness.get_by_role_and_label(Role::Button, &row).click();
     // The queue's thumbnails and the editor's photo are made on threads of their own; the
