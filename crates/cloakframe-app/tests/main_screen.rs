@@ -475,8 +475,8 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label("gone.jpg, Original changed");
     harness.get_by_label("photo.jpg, To review");
     harness.get_by_label("clip.mp4, One problem");
+    // Going back redoes the frame for the main screen, which starts reading the sessions.
     harness.get_by_role_and_label(Role::Button, "Back").click();
-    harness.step();
     settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
     assert!(store.lock(&id).is_ok(), "let go once it is closed");
@@ -814,8 +814,8 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         "the added area is filled"
     );
     assert!(difference(&original, &plain, face) < 6.0, "nothing masked");
+    // Going back redoes the frame for the main screen, which starts reading the sessions.
     harness.get_by_role_and_label(Role::Button, "Back").click();
-    harness.step();
     settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
 }

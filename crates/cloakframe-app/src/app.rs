@@ -314,7 +314,7 @@ impl AppState {
         let p = *Palette::of(ui);
         let whole = ui.max_rect();
         let screen = self.screen();
-        let sidebar = !self.review.as_ref().is_some_and(ReviewScreen::in_editor);
+        let sidebar = self.sidebar_shown();
         let settings = screen == Screen::Main;
         let below_bar = whole.top() + style::TOOLBAR_HEIGHT;
         let sidebar_right = whole.left() + if sidebar { style::SIDEBAR_WIDTH } else { 0.0 };
@@ -377,6 +377,18 @@ impl AppState {
         if settings {
             painter.vline(settings_left + 0.5, below_bar..=whole.bottom(), line);
         }
+
+        // A click can open or close a review after the toolbar and the columns were laid out for
+        // the screen before it. Redoing the pass keeps any frame from mixing the two, and has what
+        // the new screen asks of its threads asked in the frame that made the change.
+        if self.screen() != screen || self.sidebar_shown() != sidebar {
+            ui.ctx()
+                .request_discard("the screen changed while it was laid out");
+        }
+    }
+
+    fn sidebar_shown(&self) -> bool {
+        !self.review.as_ref().is_some_and(ReviewScreen::in_editor)
     }
 
     /// The screen's title, what it holds, and its actions at the right.
