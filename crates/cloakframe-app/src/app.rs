@@ -6,12 +6,13 @@ use std::time::{Duration, Instant, SystemTime};
 
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::events::Progress;
+use cloakframe_engine::run::Note;
 use cloakframe_engine::scan::{MediaKind, ScanRequest, ScanResult, scan};
 use cloakframe_engine::session::{SessionError, SessionId};
 use eframe::egui;
 use fluent_bundle::FluentValue;
 
-use cloakframe_core::item::{ItemId, ItemState};
+use cloakframe_core::item::{ItemId, ItemState, PublishBasis};
 
 use crate::a11y;
 use crate::clock;
@@ -2070,7 +2071,22 @@ impl RunRow {
                     .map(|e| summary::problem(e, video, tr))
                     .collect();
             }
-            let notes: Vec<String> = o.notes.iter().map(|n| wording::note(n, tr)).collect();
+            let masked = matches!(o.state, ItemState::Published(b)
+                    if b != PublishBasis::ExportedWithoutAnonymization)
+            .then(|| wording::masked(&o.analysis, tr));
+            // The count says what these notes would.
+            let notes: Vec<String> = o
+                .notes
+                .iter()
+                .filter(|n| {
+                    masked.is_none() || !matches!(n, Note::Tracked { .. } | Note::NothingDetected)
+                })
+                .map(|n| wording::note(n, tr))
+                .collect();
+            if let Some(masked) = masked {
+                short = short.or_else(|| Some(masked.clone()));
+                full.push(masked);
+            }
             short = short
                 .or_else(|| problems.first().cloned())
                 .or_else(|| notes.first().cloned());

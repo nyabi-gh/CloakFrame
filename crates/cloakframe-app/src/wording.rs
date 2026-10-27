@@ -3,10 +3,11 @@
 
 use std::path::PathBuf;
 
+use cloakframe_core::detection::DetectionKind;
 use cloakframe_core::item::ItemId;
 use cloakframe_engine::batch::LeftOut;
 use cloakframe_engine::review::Rejection;
-use cloakframe_engine::run::{Failure, FailureKind, Note};
+use cloakframe_engine::run::{Analysis, Failure, FailureKind, Note};
 use cloakframe_engine::startup::StartNote;
 use fluent_bundle::FluentValue;
 
@@ -141,6 +142,27 @@ pub fn note(note: &Note, tr: &Translator) -> String {
     }
 }
 
+/// What a saved item has masked by kind: a photo's detections, or a video's tracks so that a face
+/// seen over many frames counts once.
+pub fn masked(analysis: &Analysis, tr: &Translator) -> String {
+    let count = |kind| match &analysis.video {
+        Some(video) => video.tracks.iter().filter(|t| t.kind == kind).count(),
+        None => analysis
+            .detections
+            .iter()
+            .filter(|d| d.kind() == kind)
+            .count(),
+    };
+    let (faces, plates) = (count(DetectionKind::Face), count(DetectionKind::Plate));
+    let id = match (faces, plates) {
+        (0, 0) => "masked-nothing",
+        (_, 0) => "masked-faces",
+        (0, _) => "masked-plates",
+        _ => "masked-both",
+    };
+    tr.with(id, &[("faces", arg(faces)), ("plates", arg(plates))])
+}
+
 /// Why the engine refused a decision. The refusals the app's own decisions should never meet
 /// keep the engine's English as their detail.
 pub fn refusal(rejection: &Rejection, tr: &Translator) -> String {
@@ -250,5 +272,53 @@ mod tests {
             ),
             "Tracked one license plate"
         );
+    }
+    /// A photo counts its boxes and a video its tracks, each by kind.
+    #[test]
+    fn saved_items_count_what_they_masked() {
+        use cloakframe_core::detection::{Detection, ModelId};
+        use cloakframe_core::geometry::Rect;
+        use cloakframe_core::review::Digest;
+        use cloakframe_engine::video::process::VideoAnalysis;
+        use cloakframe_engine::video::tracking::TrackSummary;
+
+        let en = Translator::new(Language::En);
+        let bbox = Rect::new(0.0, 0.0, 10.0, 10.0).unwrap();
+        let found = |model| Detection::new(model, 0.9, bbox, None, None).unwrap();
+        let photo = Analysis {
+            detections: vec![
+                found(ModelId::Yolo5FaceN),
+                found(ModelId::Yolo5FaceN),
+                found(ModelId::PlateYolov9T),
+            ],
+            ..Analysis::default()
+        };
+        assert_eq!(masked(&photo, &en), "2 faces · 1 license plate");
+        assert_eq!(masked(&Analysis::default(), &en), "Nothing masked");
+
+        let track = |id, kind| TrackSummary {
+            id,
+            kind,
+            first: 0,
+            last: 99,
+            detections: 100,
+            strong: 100,
+            low_confidence: false,
+        };
+        let video = Analysis {
+            // Detections in a video are per frame; the tracks are what was masked.
+            detections: vec![found(ModelId::Yolo5FaceN); 100],
+            video: Some(VideoAnalysis {
+                timeline: Digest([0; 32]),
+                frames: 100,
+                size: (640, 360),
+                seconds: 4.0,
+                tracks: vec![track(1, DetectionKind::Face)],
+            }),
+            ..Analysis::default()
+        };
+        assert_eq!(masked(&video, &en), "1 face");
+        let ko = Translator::new(Language::Ko);
+        assert_eq!(masked(&photo, &ko), "얼굴 2 · 번호판 1");
     }
 }

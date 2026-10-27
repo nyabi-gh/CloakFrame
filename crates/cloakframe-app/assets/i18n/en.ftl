@@ -125,6 +125,22 @@ progress-left-hours = about { $hours } h { $minutes } min left
 run-session-kept = The items to review are kept, and stay listed after the app restarts.
 item-reveal = Show in Folder
 item-open = Open
+masked-nothing = Nothing masked
+masked-faces = { $faces ->
+    [one] 1 face
+   *[other] { $faces } faces
+}
+masked-plates = { $plates ->
+    [one] 1 license plate
+   *[other] { $plates } license plates
+}
+masked-both = { $faces ->
+    [one] 1 face
+   *[other] { $faces } faces
+} · { $plates ->
+    [one] 1 license plate
+   *[other] { $plates } license plates
+}
 item-reveal-source = Show Original
 shell-failed = Cannot show { $path }: { $error }
 log-title = Details

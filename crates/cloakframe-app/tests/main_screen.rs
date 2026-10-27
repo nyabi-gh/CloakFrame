@@ -287,8 +287,9 @@ fn start_runs_the_engine_and_shows_the_result() {
     harness.get_by(|node| {
         shown_text(node).is_some_and(|l| l.starts_with("Today ") && l.ends_with(" · out"))
     });
+    // The row counts what was masked.
     harness
-        .get_by_role_and_label(Role::ListItem, "lena.jpg, Saved")
+        .get_by_role_and_label(Role::ListItem, "lena.jpg, Saved, 1 face")
         .get_by_role_and_label(Role::Button, "Show in Folder");
     harness.get_by_label("Details").click();
     harness.run();
