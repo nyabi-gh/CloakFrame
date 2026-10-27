@@ -18,7 +18,11 @@ use eframe::egui;
 const SIDE: u32 = 256;
 const KEPT: usize = 200;
 
-type Made = (PathBuf, Option<(u32, u32, Vec<u8>)>);
+/// Width, height and RGBA rows.
+type Picture = (u32, u32, Vec<u8>);
+
+/// The picture, and a video's length in seconds.
+type Made = (PathBuf, Option<Picture>, Option<f64>);
 
 /// FFmpeg and ffprobe, for the first frame of a video.
 pub type VideoTools = (PathBuf, PathBuf);
@@ -29,6 +33,7 @@ pub struct Thumbnails {
     cancel: CancelToken,
     asked: HashSet<PathBuf>,
     textures: HashMap<PathBuf, Option<egui::TextureHandle>>,
+    seconds: HashMap<PathBuf, f64>,
     order: VecDeque<PathBuf>,
 }
 
@@ -46,13 +51,14 @@ impl Thumbnails {
                     if token.is_cancelled() {
                         return;
                     }
-                    let picture = match kind {
-                        MediaKind::Image => thumbnail(&path, SIDE, &budget, &token).ok(),
+                    let (picture, seconds) = match kind {
+                        MediaKind::Image => (thumbnail(&path, SIDE, &budget, &token).ok(), None),
                         MediaKind::Video => video
                             .as_ref()
-                            .and_then(|tools| first_frame(tools, &path, &token)),
+                            .and_then(|tools| first_frame(tools, &path, &token))
+                            .map_or((None, None), |(picture, seconds)| (Some(picture), seconds)),
                     };
-                    if send.send((path, picture)).is_err() {
+                    if send.send((path, picture, seconds)).is_err() {
                         return;
                     }
                     repaint.request_repaint();
@@ -64,6 +70,7 @@ impl Thumbnails {
             cancel,
             asked: HashSet::new(),
             textures: HashMap::new(),
+            seconds: HashMap::new(),
             order: VecDeque::new(),
         })
     }
@@ -75,17 +82,21 @@ impl Thumbnails {
         }
     }
 
-    fn made_now(&mut self, (path, picture): Made, ctx: &egui::Context) {
+    fn made_now(&mut self, (path, picture, seconds): Made, ctx: &egui::Context) {
         let texture = picture.map(|(width, height, rgba)| {
             let image =
                 egui::ColorImage::from_rgba_unmultiplied([width as usize, height as usize], &rgba);
             ctx.load_texture(path.to_string_lossy(), image, egui::TextureOptions::LINEAR)
         });
         self.textures.insert(path.clone(), texture);
+        if let Some(seconds) = seconds {
+            self.seconds.insert(path.clone(), seconds);
+        }
         self.order.push_back(path);
         while self.order.len() > KEPT {
             if let Some(old) = self.order.pop_front() {
                 self.textures.remove(&old);
+                self.seconds.remove(&old);
                 self.asked.remove(&old);
             }
         }
@@ -112,14 +123,20 @@ impl Thumbnails {
         }
         None
     }
+
+    /// A video's length, once its thumbnail is made.
+    pub fn seconds(&self, path: &Path) -> Option<f64> {
+        self.seconds.get(path).copied()
+    }
 }
 
-/// The video's first frame as the passes see it, in display orientation, as RGBA rows.
+/// The video's first frame as the passes see it, in display orientation, as RGBA rows, and its
+/// length where the container gives one.
 fn first_frame(
     (ffmpeg, ffprobe): &VideoTools,
     path: &Path,
     cancel: &CancelToken,
-) -> Option<(u32, u32, Vec<u8>)> {
+) -> Option<(Picture, Option<f64>)> {
     let opened = source::open(ffprobe, path, cancel).ok()?;
     let size = frame_size(&opened.spec, Some(SIDE));
     let frame = source_frame(ffmpeg, path, &opened.spec, &opened.frames, 0, size, cancel).ok()?;
@@ -130,7 +147,10 @@ fn first_frame(
         .iter()
         .flat_map(|&[r, g, b]| [r, g, b, 255])
         .collect();
-    Some((frame.width, frame.height, rgba))
+    Some((
+        (frame.width, frame.height, rgba),
+        opened.spec.duration_seconds,
+    ))
 }
 
 impl Drop for Thumbnails {
@@ -197,6 +217,7 @@ mod tests {
                 .recv_timeout(Duration::from_secs(60))
                 .unwrap();
             thumbnails.made_now(made, &ctx);
+            assert_eq!(thumbnails.seconds(&video).is_some(), expected);
             let texture = thumbnails.get(&video, MediaKind::Video).unwrap();
             assert_eq!(texture.is_some(), expected);
             if let Some(texture) = texture {
