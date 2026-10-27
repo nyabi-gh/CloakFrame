@@ -14,6 +14,9 @@ use eframe::egui;
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
 
+mod support;
+use support::RunTraced;
+
 /// Serves each pinned model from the test assets, where the engine tests keep them.
 struct FromAssets(PathBuf);
 
@@ -64,7 +67,13 @@ fn harness(folder: &Dir) -> Harness<'static, AppState> {
     Harness::builder()
         .with_size(egui::vec2(1100.0, 1400.0))
         .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
-        .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state)
+        .build_ui_state(
+            |ui, state: &mut AppState| {
+                state.ui(ui);
+                support::record(ui.ctx());
+            },
+            state,
+        )
 }
 
 /// Steps while the threads work, then lets the window settle.
@@ -72,7 +81,7 @@ fn settle(harness: &mut Harness<'_, AppState>) {
     harness.step();
     let ctx = harness.ctx.clone();
     harness.state_mut().models.wait(&ctx);
-    harness.run();
+    harness.run_traced();
 }
 
 fn status(harness: &Harness<'_, AppState>, model: ModelId) -> Status {
@@ -98,7 +107,7 @@ fn models_are_downloaded_only_after_their_terms_are_accepted() {
     settle(&mut harness);
     assert_eq!(status(&harness, ModelId::Yolo5FaceN), Status::Missing);
     harness.get_by_label("I accept these terms").click();
-    harness.run();
+    harness.run_traced();
     harness.get_all_by_label("Download").next().unwrap().click();
     settle(&mut harness);
     assert_eq!(status(&harness, ModelId::Yolo5FaceN), Status::Present);

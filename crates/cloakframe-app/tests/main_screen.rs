@@ -30,6 +30,9 @@ use egui::accesskit::Role;
 use egui_kittest::Harness;
 use egui_kittest::kittest::{NodeT, Queryable};
 
+mod support;
+use support::RunTraced;
+
 struct Dir(PathBuf);
 
 impl Dir {
@@ -81,7 +84,13 @@ fn harness(language: Language, settings: Settings) -> Harness<'static, AppState>
     Harness::builder()
         .with_size(egui::vec2(1100.0, 760.0))
         .with_context_setup(move |ctx| ctx.set_fonts(fonts::definitions(language)))
-        .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state)
+        .build_ui_state(
+            |ui, state: &mut AppState| {
+                state.ui(ui);
+                support::record(ui.ctx());
+            },
+            state,
+        )
 }
 
 fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
@@ -100,14 +109,14 @@ fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
     harness.step();
     let ctx = harness.ctx.clone();
     harness.state_mut().wait_for_thumbnails(&ctx);
-    harness.run();
+    harness.run_traced();
 }
 
 /// Steps the frame that starts reading the saved sessions again, and settles once they are read.
 fn settle_with_sessions(harness: &mut Harness<'_, AppState>) {
     harness.step();
     harness.state_mut().wait_for_sessions();
-    harness.run();
+    harness.run_traced();
 }
 
 /// Waits for the run in progress to end, which has the window read the saved sessions again.
@@ -120,7 +129,7 @@ fn finish_run(harness: &mut Harness<'_, AppState>) {
 fn every_language_draws_the_main_screen() {
     for language in Language::ALL {
         let mut harness = harness(language, Settings::default());
-        harness.run();
+        harness.run_traced();
         let start = harness.state().tr().get("start");
         harness.get_by_role_and_label(Role::Button, &start);
     }
@@ -158,7 +167,7 @@ fn dropped_files_are_scanned_and_counted() {
     harness.get_by_label_contains("mp4 1 件（対応していない形式）");
     let why = harness.state().tr().get("videos-need-ffmpeg");
     harness.get_by_label(&why);
-    harness.run();
+    harness.run_traced();
 }
 
 fn harness_without_tools(files: &[PathBuf]) -> Harness<'static, AppState> {
@@ -172,20 +181,20 @@ fn start_waits_for_models_files_and_a_folder() {
     let dir = Dir::new("start");
     let output = dir.0.join("out");
     let mut harness = harness(Language::En, Settings::default());
-    harness.run();
+    harness.run_traced();
     assert_eq!(harness.state().start_blocker(), Some("start-needs-files"));
     drop_files(&mut harness, &[dir.file("a.jpg")]);
     assert_eq!(harness.state().start_blocker(), Some("start-needs-output"));
     harness.state_mut().settings.output = Some(output);
-    harness.run();
+    harness.run_traced();
     assert_eq!(harness.state().start_blocker(), Some("start-needs-runtime"));
     harness.state_mut().tools.ort_library = Some(dir.file("libonnxruntime"));
-    harness.run();
+    harness.run_traced();
     assert_eq!(harness.state().start_blocker(), None);
     harness
         .get_by_role_and_label(Role::CheckBox, "Faces")
         .click();
-    harness.run();
+    harness.run_traced();
     assert!(!harness.state().settings.faces);
     assert_eq!(harness.state().start_blocker(), Some("models-need-one"));
     harness.get_by_label("Choose faces, license plates, or both.");
@@ -194,12 +203,12 @@ fn start_waits_for_models_files_and_a_folder() {
 #[test]
 fn the_language_menu_changes_the_text() {
     let mut harness = harness(Language::En, Settings::default());
-    harness.run();
+    harness.run_traced();
     // The View menu is native on macOS and Windows, outside egui_kittest; it sends this.
     harness
         .state_mut()
         .command(Command::Language(Some(Language::Ko)));
-    harness.run();
+    harness.run_traced();
     assert_eq!(harness.state().settings.language, Some(Language::Ko));
     harness.get_by_role_and_label(Role::Button, "시작");
 }
@@ -209,13 +218,13 @@ fn the_language_menu_changes_the_text() {
 fn the_theme_menu_changes_the_colours() {
     use cloakframe_app::settings::Theme;
     let mut harness = harness(Language::En, Settings::default());
-    harness.run();
+    harness.run_traced();
     for (theme, colours) in [
         (Theme::Dark, egui::Theme::Dark),
         (Theme::Light, egui::Theme::Light),
     ] {
         harness.state_mut().command(Command::Theme(theme));
-        harness.run();
+        harness.run_traced();
         assert_eq!(harness.state().settings.theme, theme);
         assert_eq!(harness.ctx.theme(), colours);
     }
@@ -229,7 +238,7 @@ fn the_about_window_draws_in_every_language() {
         let mut harness = harness(language, Settings::default());
         harness.state_mut().about_open = true;
         harness.state_mut().graphics = Some("wgpu, metal, Apple M4".to_owned());
-        harness.run();
+        harness.run_traced();
         let title = harness.state().tr().get("about-title");
         harness.get_by_label(&title);
         harness.get_by_label_contains("wgpu, metal, Apple M4");
@@ -292,13 +301,13 @@ fn start_runs_the_engine_and_shows_the_result() {
         .get_by_role_and_label(Role::ListItem, "lena.jpg, Saved, 1 face")
         .get_by_role_and_label(Role::Button, "Show in Folder");
     harness.get_by_label("Details").click();
-    harness.run();
+    harness.run_traced();
     let log = harness.get_by_role_and_label(Role::List, "Details");
     log.get_by_label_contains("lena.jpg  Saved");
     harness
         .get_by_role_and_label(Role::Button, "New Task")
         .click();
-    harness.run();
+    harness.run_traced();
     assert!(harness.state().board.is_none());
 }
 
@@ -394,7 +403,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.state_mut().set_folders(folders);
     harness.step();
     harness.state_mut().wait_for_sessions();
-    harness.run();
+    harness.run_traced();
     // The sidebar names the folder and the day; the whole path and what changed are in the
     // row's name and its hover.
     harness.get_by_role_and_label(Role::List, "Waiting for review");
@@ -425,7 +434,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .as_mut()
         .unwrap()
         .wait_for_thumbnails(&ctx);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("3 left to review");
     harness.get_by_role_and_label(Role::List, "Items to review");
     let order: Vec<u64> = harness
@@ -449,7 +458,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Detection limit reached: 100 of 259 kept");
     harness.get_by_label("Not resolved");
     assert!(
@@ -461,7 +470,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness
         .get_by_role_and_label(Role::Button, "Nothing to Mask")
         .click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Nothing to mask");
     assert!(
         !harness
@@ -477,7 +486,7 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Face lost in frames 30–65 (1.2 s)");
     harness.get_by_label("The video cannot be shown: this run does not process videos");
     harness.get_by_role_and_label(Role::Button, "Next").click();
@@ -488,11 +497,11 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("The original changed or is gone; run it again");
     harness.get_by_label("3 of 3");
     harness.get_by_role_and_label(Role::Button, "‹ out").click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("gone.jpg, Original changed");
     harness.get_by_label("photo.jpg, To review");
     harness.get_by_label("clip.mp4, One problem");
@@ -507,23 +516,23 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness
         .get_by_role_and_label(Role::Button, &row)
         .click_secondary();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Discard…")
         .click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Discard this review?");
     harness.get_by_role_and_label(Role::Button, "Keep").click();
-    harness.run();
+    harness.run_traced();
     assert!(store.load(&id).is_ok(), "kept until the user confirms");
     harness
         .get_by_role_and_label(Role::Button, &row)
         .click_secondary();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Discard…")
         .click();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Discard")
         .click();
@@ -620,7 +629,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         .as_mut()
         .unwrap()
         .wait_for_thumbnails(&ctx);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label_contains("a.jpg").click();
     harness.step();
     harness
@@ -629,14 +638,14 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
-    harness.run();
+    harness.run_traced();
     harness
         .state_mut()
         .review
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
-    harness.run();
+    harness.run_traced();
 
     let (face, view) = {
         let screen = harness.state().review.as_ref().unwrap();
@@ -742,11 +751,11 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
 
     harness.event(egui::Event::Text("?".to_owned()));
     harness.step();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Shortcuts");
     harness.get_by_label("Preview the masking");
     harness.get_by_role_and_label(Role::Button, "Close").click();
-    harness.run();
+    harness.run_traced();
     assert!(harness.query_by_label("Preview the masking").is_none());
     harness.key_press(egui::Key::Escape);
     harness.step();
@@ -777,7 +786,7 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         .unwrap()
         .wait_for_picture(&ctx);
     harness.state_mut().wait_for_review();
-    harness.run();
+    harness.run_traced();
     let screen = harness.state().review.as_ref().unwrap();
     assert_eq!(
         screen.editor.as_ref().map(|e| e.item),
@@ -787,16 +796,16 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     harness.get_by_label("1 of 1");
 
     harness.get_by_role_and_label(Role::Button, "More").click();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Export Without Anonymization…")
         .click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Export without anonymization?");
     harness
         .get_by_role_and_label(Role::Button, "Cancel")
         .click();
-    harness.run();
+    harness.run_traced();
     assert!(harness.state().review.as_ref().unwrap().confirm.is_none());
     assert!(
         harness
@@ -809,17 +818,17 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         "not decided"
     );
     harness.get_by_role_and_label(Role::Button, "More").click();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Export Without Anonymization…")
         .click();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Export Without Anonymization")
         .click();
     harness.step();
     harness.state_mut().wait_for_review();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Every item of this review is saved.");
     harness.get_by_label("Nothing left to review");
     harness.get_by_role_and_label(Role::List, "Saved items");
@@ -998,7 +1007,7 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     harness.state_mut().set_folders(folders.clone());
     harness.step();
     harness.state_mut().wait_for_sessions();
-    harness.run();
+    harness.run_traced();
     open_session(&mut harness);
     harness.step();
     let ctx = harness.ctx.clone();
@@ -1015,13 +1024,13 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
         .as_mut()
         .unwrap()
         .wait_for_thumbnails(&ctx);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label_contains("clip.mp4").click();
     harness.step();
     wait(&mut harness);
     harness.step();
     wait(&mut harness);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("0:00.0 / 0:04.0 · frame 0");
     harness.get_by_role_and_label(Role::List, "2 tracks, 2 masked");
     harness.get_by_label("Timeline");
@@ -1048,7 +1057,7 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
         draft(&harness).is_track_excluded(1),
         "Enter leaves it unmasked"
     );
-    harness.run();
+    harness.run_traced();
     harness.get_by_role_and_label(Role::List, "2 tracks, 1 masked");
     assert_eq!(
         harness
@@ -1062,12 +1071,12 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     step(&mut harness);
     assert_eq!(at(&harness), 40, "] goes to the gap");
     assert_eq!(draft(&harness).selected, Some(Pick::Problem(0)));
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::Button, "Draw a Track Over It")
         .click();
     step(&mut harness);
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Covered by a mask");
     let drawn = draft(&harness).doc.video.added_tracks[0].clone();
     assert_eq!((drawn.first, drawn.last), (40, 79));
@@ -1174,23 +1183,23 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     }
     harness.key_press(egui::Key::Space);
     step(&mut harness);
-    harness.run();
+    harness.run_traced();
     assert!(at(&harness) > 60, "playback moved on");
     harness.get_by_role_and_label(Role::Button, "Play");
 
     harness.event(egui::Event::Text("?".to_owned()));
     harness.step();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Play or stop");
     harness.get_by_role_and_label(Role::Button, "Close").click();
-    harness.run();
+    harness.run_traced();
 
     harness
         .get_by_role_and_label(Role::Button, "Approve and Save")
         .click();
     harness.step();
     harness.state_mut().wait_for_review();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Every item of this review is saved.");
 
     let out = video_frames(&output.join("clip.mp4"), &ffmpeg, &ffprobe);
@@ -1410,8 +1419,9 @@ fn every_message_of_every_language_can_be_drawn() {
                         ui.label(line);
                     }
                 });
+                support::record(ui.ctx());
             });
-        harness.run();
+        harness.run_traced();
     }
 }
 
@@ -1420,7 +1430,7 @@ fn tab_order(harness: &mut Harness<'_, AppState>) -> Vec<String> {
     let mut order: Vec<String> = Vec::new();
     for _ in 0..80 {
         harness.key_press(egui::Key::Tab);
-        harness.run();
+        harness.run_traced();
         let focused = harness
             .query_by(|node| node.is_focused())
             .map(|node| node.accesskit_node().label().unwrap_or_default());
@@ -1438,7 +1448,7 @@ fn tab_order(harness: &mut Harness<'_, AppState>) -> Vec<String> {
 #[test]
 fn tab_follows_the_screen_from_top_to_bottom() {
     let mut harness = harness(Language::En, Settings::default());
-    harness.run();
+    harness.run_traced();
     let order = tab_order(&mut harness);
     let at = |label: &str| {
         order
@@ -1472,24 +1482,30 @@ fn advanced_options_are_saved_and_run_with() {
     let mut harness = Harness::builder()
         .with_size(egui::vec2(1100.0, 760.0))
         .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
-        .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state);
-    harness.run();
+        .build_ui_state(
+            |ui, state: &mut AppState| {
+                state.ui(ui);
+                support::record(ui.ctx());
+            },
+            state,
+        );
+    harness.run_traced();
     assert!(harness.query_by_label("Remove audio from videos").is_none());
     harness.get_by_role_and_label(Role::Image, "Anonymization style preview");
 
     harness.get_by_label("Advanced Options…").click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Fast  ·  YuNet").click();
     harness
         .get_by_role_and_label(Role::Slider, "Sensitivity")
         .set_value_accesskit(5.0);
-    harness.run();
+    harness.run_traced();
     let slider = harness.get_by_role_and_label(Role::Slider, "Sensitivity");
     assert_eq!(slider.value().as_deref(), Some("Highest"));
     harness
         .get_by_label("Look for small faces in tiles")
         .click();
-    harness.run();
+    harness.run_traced();
     // The location is kept only with the rest of the metadata.
     assert!(
         harness
@@ -1500,16 +1516,16 @@ fn advanced_options_are_saved_and_run_with() {
     harness
         .get_by_label("Preserve selected EXIF metadata")
         .click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Also keep location (GPS)").click();
     harness.get_by_label("Remove audio from videos").click();
-    harness.run();
+    harness.run_traced();
     harness
         .get_by_role_and_label(Role::ComboBox, "Video codec")
         .click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("HEVC (smaller files)").click();
-    harness.run();
+    harness.run_traced();
 
     let chosen = Advanced {
         face_model: FaceModel::Fast,
@@ -1529,12 +1545,12 @@ fn advanced_options_are_saved_and_run_with() {
 
     // With faces off, the face model has nothing to choose.
     harness.get_by_role_and_label(Role::Button, "Done").click();
-    harness.run();
+    harness.run_traced();
     assert!(!harness.state().sheet_open);
     harness.get_by_label("Faces").click();
-    harness.run();
+    harness.run_traced();
     harness.get_by_label("Advanced Options…").click();
-    harness.run();
+    harness.run_traced();
     assert!(
         harness
             .get_by_label("Accurate  ·  YOLO5Face-n")
