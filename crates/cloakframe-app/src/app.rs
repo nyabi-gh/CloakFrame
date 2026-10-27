@@ -271,12 +271,17 @@ impl AppState {
             Theme::Light => egui::ThemePreference::Light,
             Theme::Dark => egui::ThemePreference::Dark,
         });
+        // What the threads finished comes in before anything below starts a thread, so a result is
+        // never taken in the pass that asked for it. Tests wait for a thread between frames.
         if let Some(scanning) = &self.scanning
             && let Ok(found) = scanning.result.try_recv()
         {
             self.found = Some(found);
             self.scanning = None;
         }
+        self.take_run_messages();
+        self.models.take(&ctx);
+        self.sessions.take();
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
                 .dropped_files
@@ -290,13 +295,10 @@ impl AppState {
         for command in std::mem::take(&mut self.commands) {
             self.run(command, &ctx);
         }
-        self.take_run_messages();
-        self.models.take(&ctx);
         if !self.sessions_read {
             self.sessions_read = true;
             self.sessions.reload(&ctx);
         }
-        self.sessions.take();
         self.watch_close(&ctx);
 
         #[cfg(not(any(target_os = "macos", target_os = "windows")))]
