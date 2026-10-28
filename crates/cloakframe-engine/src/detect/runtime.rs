@@ -11,6 +11,8 @@ use ort::ep;
 use ort::session::Session;
 use ort::session::builder::{AutoDevicePolicy, GraphOptimizationLevel, SessionBuilder};
 use ort::value::DynValue;
+#[cfg(target_os = "macos")]
+use sha2::{Digest as _, Sha256};
 
 /// Microsoft's ORT builds send telemetry unless this is `1` when the library creates its
 /// environment; `DisableTelemetryEvents` alone does not stop the upload (docs/M0_ORT_SPIKE.md).
@@ -142,7 +144,7 @@ impl OrtRuntime {
         let build = coreml_build_dir(root);
         let pinned: Vec<PathBuf> = crate::model_files::MODEL_FILES
             .iter()
-            .map(|f| build.join(f.sha256))
+            .map(|f| build.join(coreml_cache_name(f.sha256)))
             .collect();
         let mut removed = 0;
         for entry in entries(root)? {
@@ -165,7 +167,7 @@ impl OrtRuntime {
     /// optimized. The options are 1.12.1's but for spinning: on the CPU every graph optimization
     /// and one intra-op thread per logical core; on an accelerator the extended level, whose layout steps beyond
     /// it help only CPU nodes and can turn nodes into forms the accelerator no longer takes, and
-    /// one thread.
+    /// one thread. On CoreML a model's [`coreml_fixed_dimensions`] are fixed.
     pub(crate) fn session(
         &self,
         model: &[u8],
@@ -206,11 +208,15 @@ impl OrtRuntime {
             Backend::Cpu => ep::CPU::default().build(),
             #[cfg(target_os = "macos")]
             Backend::CoreMl => {
+                let model_sha256 = hex(&Sha256::digest(model));
+                for &(name, size) in coreml_fixed_dimensions(&model_sha256) {
+                    builder = option(builder.with_dimension_override(name, size))?;
+                }
                 let mut coreml = ep::CoreML::default()
                     .with_model_format(ep::coreml::ModelFormat::MLProgram)
                     .with_compute_units(ep::coreml::ComputeUnits::All);
                 if let Some(dir) = cache {
-                    let dir = coreml_cache_dir(dir, model);
+                    let dir = coreml_build_dir(dir).join(coreml_cache_name(&model_sha256));
                     std::fs::create_dir_all(&dir)
                         .map_err(|e| ort::Error::new(format!("{}: {e}", dir.display())))?;
                     coreml = coreml.with_model_cache_dir(dir.display());
@@ -230,17 +236,32 @@ impl OrtRuntime {
     }
 }
 
-/// One folder per ORT build and model. CoreML reuses a compiled model while the graph's structure
-/// is unchanged, even when its weights or the runtime that partitioned it changed.
+/// The free dimensions fixed in the CoreML sessions of the model with this SHA-256. Only there: on
+/// the CPU a fixed shape gains nothing and moves scores in the sixth decimal, which changes
+/// recorded detections.
 #[cfg(target_os = "macos")]
-fn coreml_cache_dir(root: &Path, model: &[u8]) -> PathBuf {
-    use sha2::{Digest as _, Sha256};
-    coreml_build_dir(root).join(hex(&Sha256::digest(model)))
+fn coreml_fixed_dimensions(model_sha256: &str) -> &'static [(&'static str, i64)] {
+    if model_sha256 == super::yolo5face::MODEL_SHA256 {
+        super::yolo5face::FIXED_DIMENSIONS
+    } else {
+        &[]
+    }
+}
+
+/// One folder per ORT build and model. CoreML reuses a compiled model while the graph's structure
+/// is unchanged, even when its weights or the runtime that partitioned it changed. Fixed
+/// dimensions change the partitions but not the graph, so they are part of the name.
+#[cfg(target_os = "macos")]
+fn coreml_cache_name(model_sha256: &str) -> String {
+    coreml_fixed_dimensions(model_sha256)
+        .iter()
+        .fold(model_sha256.to_owned(), |name, (dimension, size)| {
+            format!("{name}-{dimension}{size}")
+        })
 }
 
 #[cfg(target_os = "macos")]
 fn coreml_build_dir(root: &Path) -> PathBuf {
-    use sha2::{Digest as _, Sha256};
     root.join(&hex(&Sha256::digest(ort::info().as_bytes()))[..16])
 }
 

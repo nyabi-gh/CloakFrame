@@ -29,6 +29,12 @@ pub fn model_digest() -> Digest {
     MODEL_SHA256.parse().expect("a valid SHA-256")
 }
 
+/// The input's batch is free, so the CoreML EP does not take the graph's first `Reshape` and runs
+/// the rest as two partitions with a CPU node between them: a video's analysis took 28% longer
+/// (docs/M6_COREML_SPEED.md). Views run one at a time, and the graph's reshape constants hold
+/// batch 1 anyway.
+pub(crate) const FIXED_DIMENSIONS: &[(&str, i64)] = &[("batch", 1)];
+
 pub struct Yolo5Face {
     session: Session,
 }

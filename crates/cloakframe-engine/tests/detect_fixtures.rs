@@ -241,18 +241,53 @@ fn coreml_caches_compiled_models_per_runtime_build_and_model() {
             .is_some()
     );
 
-    // What an earlier build or model left is removed; this build's compiled models stay.
+    // What an earlier build or model left is removed, as is YOLO5Face-n's folder from before its
+    // batch was fixed; this build's compiled models stay.
     let other_build = dir.write("0123456789abcdef/model/coremldata.bin");
     let other_model = builds[0].join("f".repeat(64));
     std::fs::create_dir(&other_model).unwrap();
+    let free_batch = builds[0].join(yolo5face::MODEL_SHA256);
+    std::fs::create_dir(&free_batch).unwrap();
     let stray = dir.write("stray");
-    assert_eq!(cached.remove_unused_coreml_caches().unwrap(), 3);
+    assert_eq!(cached.remove_unused_coreml_caches().unwrap(), 4);
     assert!(!other_build.parent().unwrap().parent().unwrap().exists());
-    assert!(!other_model.exists() && !stray.exists());
+    assert!(!other_model.exists() && !free_batch.exists() && !stray.exists());
     assert!(builds[0].join(yunet::MODEL_SHA256).is_dir());
     assert_eq!(cached.remove_unused_coreml_caches().unwrap(), 0);
     let none = runtime().clone();
     assert_eq!(none.remove_unused_coreml_caches().unwrap(), 0);
+}
+
+/// With YOLO5Face-n's batch fixed, CoreML takes the whole graph: its cache holds one compiled
+/// partition, `0_dynamic_mlprogram`, where a free batch leaves `0_…` and `1_…`. The folder name
+/// keeps the two apart, since a fixed batch would load the free one's partial `0_…`.
+#[cfg(target_os = "macos")]
+#[test]
+fn yolo5face_runs_as_one_coreml_partition() {
+    let dir = common::TestDir::new();
+    let cached = runtime()
+        .clone()
+        .with_coreml_cache(dir.path().to_path_buf());
+    Yolo5Face::new(&cached, &model_bytes(ModelId::Yolo5FaceN), Backend::CoreMl).unwrap();
+    let mut partitions = Vec::new();
+    for build in std::fs::read_dir(dir.path()).unwrap() {
+        for model in std::fs::read_dir(build.unwrap().path()).unwrap() {
+            let model = model.unwrap();
+            assert_eq!(
+                model.file_name().into_string().unwrap(),
+                format!("{}-batch1", yolo5face::MODEL_SHA256)
+            );
+            for graph in std::fs::read_dir(model.path()).unwrap() {
+                for entry in std::fs::read_dir(graph.unwrap().path()).unwrap() {
+                    let name = entry.unwrap().file_name().into_string().unwrap();
+                    if name.ends_with("_mlprogram") {
+                        partitions.push(name);
+                    }
+                }
+            }
+        }
+    }
+    assert_eq!(partitions.len(), 1, "{partitions:?}");
 }
 
 /// The plate graph returns at most 100 boxes and suppresses at IoU 0.45. With NMS off here, the
