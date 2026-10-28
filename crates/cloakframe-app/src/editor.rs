@@ -1704,60 +1704,38 @@ fn canvas(
         );
         return go;
     }
-    let masked_color = egui::Color32::from_rgb(230, 70, 70);
-    let added_color = egui::Color32::from_rgb(60, 150, 240);
-    let weak_color = egui::Color32::from_rgb(240, 170, 40);
-    let unmasked_color = egui::Color32::from_gray(160);
-    let selected_stroke = |color| egui::Stroke::new(3.0, color);
+    let p = *Palette::of(ui);
     let problems = draft.problems().to_vec();
     for (i, problem) in problems.iter().enumerate() {
         if let Problem::WeakCandidate { bbox, .. } = problem {
             let open = draft.doc.resolutions[i] == Resolution::Unresolved;
-            let color = if open { weak_color } else { unmasked_color };
-            let width = if draft.selected == Some(Pick::Problem(i)) {
-                3.0
+            let at = to_screen(&view, *bbox);
+            let selected = draft.selected == Some(Pick::Problem(i));
+            if open {
+                paint_mark(&painter, at, Mark::Uncertain, selected, &p);
+                uncertain_tag(&painter, at, &tr.get("editor-track-weak"), &p);
             } else {
-                1.5
-            };
-            dashed(
-                &painter,
-                to_screen(&view, *bbox),
-                egui::Stroke::new(width, color),
-            );
+                paint_mark(&painter, at, Mark::Unmasked, selected, &p);
+            }
         }
     }
     for (i, d) in detections.iter().enumerate() {
-        let at = to_screen(&view, d.bbox());
-        let (color, fill) = if draft.is_excluded(i) {
-            (unmasked_color, egui::Color32::TRANSPARENT)
+        let mark = if draft.is_excluded(i) {
+            Mark::Unmasked
         } else {
-            (masked_color, masked_color.gamma_multiply(0.25))
+            Mark::Masked
         };
-        let stroke = if draft.selected == Some(Pick::Detection(i)) {
-            selected_stroke(color)
-        } else {
-            egui::Stroke::new(1.5, color)
-        };
-        painter.rect(at, 0.0, fill, stroke, egui::StrokeKind::Outside);
-        if draft.is_excluded(i) {
-            painter.line_segment(
-                [at.left_top(), at.right_bottom()],
-                egui::Stroke::new(1.0, color),
-            );
-        }
+        let selected = draft.selected == Some(Pick::Detection(i));
+        paint_mark(&painter, to_screen(&view, d.bbox()), mark, selected, &p);
     }
     for (i, area) in draft.doc.edits.added.iter().enumerate() {
-        let stroke = if draft.selected == Some(Pick::Added(i)) {
-            selected_stroke(added_color)
-        } else {
-            egui::Stroke::new(1.5, added_color)
-        };
-        painter.rect(
+        let selected = draft.selected == Some(Pick::Added(i));
+        paint_mark(
+            &painter,
             to_screen(&view, *area),
-            0.0,
-            added_color.gamma_multiply(0.25),
-            stroke,
-            egui::StrokeKind::Outside,
+            Mark::Masked,
+            selected,
+            &p,
         );
     }
     if let Some(Drag::Adding { from, to }) = &editor.drag {
@@ -1765,12 +1743,7 @@ fn canvas(
             origin(&view) + from.to_vec2() * view.scale,
             origin(&view) + to.to_vec2() * view.scale,
         );
-        painter.rect_stroke(
-            screen,
-            0.0,
-            egui::Stroke::new(1.5, added_color),
-            egui::StrokeKind::Outside,
-        );
+        paint_mark(&painter, screen, Mark::Masked, false, &p);
     }
     go
 }
@@ -1825,7 +1798,7 @@ fn hint(ui: &mut egui::Ui, tr: &Translator, help: &mut bool) {
     });
 }
 
-fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {
+pub(crate) fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {
     let corners = [
         rect.left_top(),
         rect.right_top(),
@@ -1834,6 +1807,73 @@ fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {
         rect.left_top(),
     ];
     painter.extend(egui::Shape::dashed_line(&corners, stroke, 6.0, 4.0));
+}
+
+/// What a box on the canvas stands for.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Mark {
+    /// Masked when saved: a dark area in a white frame. The area lets the picture through, so
+    /// what is masked can still be judged without the preview.
+    Masked,
+    /// A frame between keyframes of a drawn track: masked, its frame dashed.
+    Between,
+    /// Left as it is: a dashed white frame.
+    Unmasked,
+    /// An uncertain detection still to decide: dashed in the review colour.
+    Uncertain,
+}
+
+const MASK_FILL: egui::Color32 = egui::Color32::from_rgba_premultiplied(0x26, 0x26, 0x2A, 0x99);
+/// Keeps a white frame visible on a light picture.
+const FRAME_SHADOW: egui::Color32 = egui::Color32::from_black_alpha(0x80);
+
+/// A box as the design draws it; a selected box gets a ring in the text colour.
+pub(crate) fn paint_mark(
+    painter: &egui::Painter,
+    rect: egui::Rect,
+    mark: Mark,
+    selected: bool,
+    p: &Palette,
+) {
+    if matches!(mark, Mark::Masked | Mark::Between) {
+        painter.rect_filled(rect, 0.0, MASK_FILL);
+    }
+    let ring = if selected {
+        egui::Stroke::new(2.0, p.text)
+    } else if mark == Mark::Uncertain {
+        egui::Stroke::NONE
+    } else {
+        egui::Stroke::new(1.0, FRAME_SHADOW)
+    };
+    painter.rect_stroke(rect, 0.0, ring, egui::StrokeKind::Outside);
+    let frame = rect.shrink(1.0);
+    match mark {
+        Mark::Masked => {
+            painter.rect_stroke(
+                rect,
+                0.0,
+                egui::Stroke::new(2.0, egui::Color32::WHITE),
+                egui::StrokeKind::Inside,
+            );
+        }
+        Mark::Between | Mark::Unmasked => {
+            dashed(painter, frame, egui::Stroke::new(2.0, egui::Color32::WHITE));
+        }
+        Mark::Uncertain => dashed(painter, frame, egui::Stroke::new(2.0, p.uncertain)),
+    }
+}
+
+/// The small label over an uncertain detection's frame.
+pub(crate) fn uncertain_tag(painter: &egui::Painter, rect: egui::Rect, text: &str, p: &Palette) {
+    let galley = painter.layout_no_wrap(
+        text.to_owned(),
+        egui::FontId::proportional(11.0),
+        egui::Color32::WHITE,
+    );
+    let size = galley.size() + egui::vec2(10.0, 2.0);
+    let tag = egui::Rect::from_min_size(rect.left_top() - egui::vec2(0.0, size.y + 2.0), size);
+    painter.rect_filled(tag, 3, p.uncertain);
+    painter.galley(tag.min + egui::vec2(5.0, 1.0), galley, egui::Color32::WHITE);
 }
 
 /// The `?` overlay, of the photo or the video editor.

@@ -12,15 +12,12 @@ use eframe::egui;
 use fluent_bundle::FluentValue;
 
 use crate::draft::{Draft, Pick};
-use crate::editor::{Go, View, kind_name};
+use crate::editor::{Go, Mark, View, dashed, kind_name, paint_mark};
 use crate::i18n::Translator;
 use crate::lanes;
 use crate::style::{self, Palette};
 use crate::video::Clip;
 
-const MASKED: egui::Color32 = egui::Color32::from_rgb(230, 70, 70);
-const ADDED: egui::Color32 = egui::Color32::from_rgb(60, 150, 240);
-const UNMASKED: egui::Color32 = egui::Color32::from_gray(160);
 const TIMELINE_HEIGHT: f32 = 150.0;
 const PLAY_ROW_HEIGHT: f32 = 48.0;
 
@@ -453,68 +450,35 @@ pub(crate) fn ui(
             );
         }
     } else {
+        let p = *Palette::of(ui);
         for r in &tracked {
-            let excluded = draft.is_track_excluded(r.track);
-            let (color, fill) = if excluded {
-                (UNMASKED, egui::Color32::TRANSPARENT)
+            let mark = if draft.is_track_excluded(r.track) {
+                Mark::Unmasked
             } else {
-                (MASKED, MASKED.gamma_multiply(0.25))
+                Mark::Masked
             };
-            let width = if draft.selected == Some(Pick::Track(r.track)) {
-                3.0
-            } else {
-                1.5
-            };
-            let at = to_screen(&view, r.bbox);
-            painter.rect(
-                at,
-                0.0,
-                fill,
-                egui::Stroke::new(width, color),
-                egui::StrokeKind::Outside,
-            );
-            if excluded {
-                painter.line_segment(
-                    [at.left_top(), at.right_bottom()],
-                    egui::Stroke::new(1.0, color),
-                );
-            }
+            let selected = draft.selected == Some(Pick::Track(r.track));
+            paint_mark(&painter, to_screen(&view, r.bbox), mark, selected, &p);
         }
         for (i, b) in &manual {
             let keyframe = draft.doc.video.added_tracks[*i]
                 .keyframes
                 .iter()
                 .any(|k| k.frame == at);
-            let width = if draft.selected == Some(Pick::Manual(*i)) {
-                3.0
+            let mark = if keyframe {
+                Mark::Masked
             } else {
-                1.5
+                Mark::Between
             };
-            let screen = to_screen(&view, *b);
-            if keyframe {
-                painter.rect(
-                    screen,
-                    0.0,
-                    ADDED.gamma_multiply(0.25),
-                    egui::Stroke::new(width, ADDED),
-                    egui::StrokeKind::Outside,
-                );
-            } else {
-                painter.rect_filled(screen, 0.0, ADDED.gamma_multiply(0.15));
-                dashed(&painter, screen, egui::Stroke::new(width, ADDED));
-            }
+            let selected = draft.selected == Some(Pick::Manual(*i));
+            paint_mark(&painter, to_screen(&view, *b), mark, selected, &p);
         }
         if let Some(Drag::Adding { from, to }) = &editor.drag {
             let screen = egui::Rect::from_two_pos(
                 origin(&view) + from.to_vec2() * view.scale,
                 origin(&view) + to.to_vec2() * view.scale,
             );
-            painter.rect_stroke(
-                screen,
-                0.0,
-                egui::Stroke::new(1.5, ADDED),
-                egui::StrokeKind::Outside,
-            );
+            paint_mark(&painter, screen, Mark::Masked, false, &p);
         }
     }
 
@@ -683,17 +647,6 @@ fn cycle(
         (Some(i), false) => (i + n - 1) % n,
     };
     Some(picks[next])
-}
-
-fn dashed(painter: &egui::Painter, rect: egui::Rect, stroke: egui::Stroke) {
-    let corners = [
-        rect.left_top(),
-        rect.right_top(),
-        rect.right_bottom(),
-        rect.left_bottom(),
-        rect.left_top(),
-    ];
-    painter.extend(egui::Shape::dashed_line(&corners, stroke, 6.0, 4.0));
 }
 
 /// Play or stop, where playback is, whether it shows the masked result, and the way to every

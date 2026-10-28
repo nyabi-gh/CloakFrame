@@ -33,6 +33,9 @@ pub struct Palette {
     pub disabled: Color32,
     pub selected: Color32,
     pub needs_review: Color32,
+    /// An uncertain detection's dashed frame on the canvas, brighter than the status dot so
+    /// it shows on a photo.
+    pub uncertain: Color32,
     pub saved: Color32,
     pub failed: Color32,
     /// The primary button's text, on `text`.
@@ -57,6 +60,7 @@ pub const LIGHT: Palette = Palette {
     disabled: rgb(0x8E8E96),
     selected: rgb(0xE4E4E7),
     needs_review: rgb(0xC2410C),
+    uncertain: rgb(0xEA580C),
     saved: rgb(0x15803D),
     failed: rgb(0xB91C1C),
     on_primary: rgb(0xFFFFFF),
@@ -76,6 +80,7 @@ pub const DARK: Palette = Palette {
     disabled: rgb(0x71717A),
     selected: rgb(0x2E2E33),
     needs_review: rgb(0xFB923C),
+    uncertain: rgb(0xFB923C),
     saved: rgb(0x4ADE80),
     failed: rgb(0xF87171),
     on_primary: rgb(0x18181B),
