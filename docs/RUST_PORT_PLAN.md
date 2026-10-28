@@ -6,7 +6,7 @@
 
 - **레거시 정책:** 1.12.1이 C++ 구현의 마지막 릴리스다. 기존 코드는 수정·릴리스하지 않고, 새 구현이 대체할 동작의 근거로만 쓴다. 기존 코드 참조는 `v1.12.1` 태그 기준이다.
 - **스택:** Rust stable, UI는 egui/eframe, 추론은 ort + ONNX Runtime, 이미지는 `image` + `moxcms` + 자체 EXIF writer, 영상은 번들 FFmpeg/ffprobe 외부 프로세스, 업데이트는 Velopack(Windows·Linux)과 Sparkle(macOS).
-- **순서:** headless engine과 CLI를 먼저 완성하고(M1–M5), 새 UX의 desktop 앱을 붙이고(M6), 배포·이전(M7), 검증·전환(M8)을 거쳐 stable 직후 HEIC·HDR 입력(M9)을 추가한다.
+- **순서:** headless engine과 CLI를 먼저 완성하고(M1–M5), 새 UX의 desktop 앱을 붙이고(M6), 배포(M7), 검증·전환(M8)을 거쳐 stable 직후 HEIC·HDR 입력(M9)을 추가한다.
 - **라이선스:** Apache-2.0(2026-10-16 결정, 10.1).
 - **원칙:** 제품 계약(원본 불변, 덮어쓰기 금지, 미해결 결과 비공개, 메타데이터 최소화)은 지킨다. 방어 장치는 위협 모델에 맞춰 줄이고, 1인 유지보수 규모를 넘는 장치는 측정된 필요가 생겼을 때 추가한다.
 
@@ -24,6 +24,7 @@
 | HEIC·HDR 입력 | 대체 범위 밖 | stable 직후 첫 기능(M9) | 아이폰 기본 촬영물을 처리하지 못하는 것이 가장 큰 제품 공백 |
 | 원본 복사 | 원본 바이트 복사와 메타데이터 제거 복사를 별도 경로로 유지 | 메타데이터를 제거한 재인코딩 "익명화 없이 내보내기"만 제공 | 바이트 복사는 GPS·시리얼까지 남긴다(D9). 원본 파일 복사는 OS 파일 관리자로 충분 |
 | 라이선스 | GPL-3.0-or-later | Apache-2.0 | Windows ML·DirectML 재배포 약관과 GPL의 충돌을 없앤다(10.1) |
+| 1.x에서 넘어오기 | 기존 업데이트 feed와 package ID를 이어 써서 자동 업데이트로 넘어오고, 설정(QSettings)을 TOML로 옮김 | 2.0.0은 새로 시작한다. 1.x 업데이트 경로와 설정 이전이 없고, 1.x 사용자는 새로 설치한다. 업데이트 feed는 이 저장소의 고정 태그 `updates` 릴리스. M3에서 구현한 모델 폴더 복사와 1.12.1 CoreML 캐시 정리는 그대로 | 업데이트 전용 저장소와 1.12.1 feed 호환은 1인 유지보수에 과하다([평가](REWRITE_ASSESSMENT.ko.md) 12장). 메인테이너 결정(2026-10-28), `CloakFrame-updates` 저장소는 삭제 |
 | 시험 게이트 | Miri·sanitizer·fuzz·통계 신뢰구간이 필수 | 단위·property·골든 출력·소규모 탐지 벤치마크가 필수, fuzz는 parser 두 곳만 | 범위 팽창 방지 |
 
 ## 1. 범위
@@ -92,7 +93,7 @@
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
 | 네트워크·무결성 | `ureq`(동기) + rustls(ring) + `rustls-platform-verifier`(OS 인증서 저장소), `sha2`, `ed25519-dalek` | 모델·업데이트 URL allowlist. reqwest 대신 ureq(2026-10-19 결정: 의존성 114개 → 33개, Tokio 없음, [기록](M3_MODELS.md#http-crate)) |
 | 파일시스템 | `rustix`(Unix), `windows` crate | no-replace rename과 identity 조회에만 사용 |
-| 업데이트·패키징 | Velopack Rust SDK(Windows·Linux), Sparkle(macOS, `objc2` 어댑터) | 기존 feed와 package ID를 이어 써야 1.12.1 사용자가 자동 업데이트로 넘어온다 |
+| 업데이트·패키징 | Velopack Rust SDK(Windows·Linux), Sparkle(macOS, `objc2` 어댑터) | feed는 이 저장소의 고정 태그 `updates` 릴리스(1.x에서 넘어오는 경로 없음, 0.1) |
 
 **추론 EP 정책**
 
@@ -405,10 +406,10 @@ crates/
 - **결정(2026-10-27, [기록](M6_VERIFY.md#macos-사람-점검메인테이너)):** macOS 사람 점검 10항목은 모두 동작했지만, 메인테이너가 화면이 투박하고 무엇이 무엇인지 구분되지 않아 쓰기 어렵다고 봤다. M6 완료 기준(모든 흐름을 UI로 수행)은 기능만 보았으므로 6단계 UX 다듬기를 더한다(메인테이너가 추천대로). 설계안(HTML)을 먼저 확인받은 뒤 egui로 옮기고, M6 완료 표시와 preview 게시는 그 뒤로 미룬다
 - **결정(2026-10-25, [기록](M6_PLAN.md)):** 위 단계, 범위 조정 ①②는 미루지 않음, 재검토 7·10번은 M8 품질 비교 전 별도 브랜치. egui·egui_kittest·eframe은 0.37.x(0단계 첫 커밋에서 M0 자동 시험을 다시 돌림), muda·rfd도 그때의 최신 판(같은 날 2주 규칙을 없애 0단계를 바로 시작할 수 있음, 3장). 글꼴은 JIS X 0213 전체와 KS X 1001 한자를 번들, 메뉴는 muda "custom"(Linux는 egui 메뉴 막대), 번역은 영어 `.ftl` 기준으로 1.12.1 `.ts`에서 쓰는 문장만 옮김(새 일본어는 기계 초안 + 검토 필요 표시), 설정은 앱 데이터 폴더의 `settings.toml`, 렌더러는 wgpu 기본·실패 시 glow. **완료(2026-10-25, PR #56, main `87e0e22`):** CI 4개(형식·린트·라이선스, 3개 OS 시험) 통과
 
-### M7 — 배포·업데이트·이전
+### M7 — 배포·업데이트
 
-- **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 기존 feed로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, CloakFrame 설정(QSettings 읽기 어댑터 → TOML) 이전(모델 폴더와 CoreML 캐시는 M3 4단계에서 넘어옴), 모델 미러(4.6)
-- **완료 기준:** 깨끗한 최소 지원 OS(Windows 10 1903 VM 포함, M0에서 옮김)에서 설치·오프라인 실행·업데이트·제거, 1.12.1 → Rust 업데이트 경로 확인, 이전 실패 시 기존 데이터 불변. P-7 통과
+- **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 이 저장소의 `updates` 릴리스로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, 모델 미러(4.6). 1.x 설정 이전은 하지 않는다(0.1, 2026-10-28)
+- **완료 기준:** 깨끗한 최소 지원 OS(Windows 10 1903 VM 포함, M0에서 옮김)에서 설치·오프라인 실행·업데이트·제거, 1.12.1이 설치된 컴퓨터에 새로 설치해도 1.12.1의 설정·모델이 그대로 남음. P-7 통과
 
 ### M8 — 검증과 stable 전환
 
@@ -463,8 +464,8 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받고, `cargo-deny`로 의존�
 | Linux | AppImage(Ubuntu 24.04에서 빌드) + Velopack | CPU ORT, FFmpeg |
 
 - 네이티브 manifest 하나에 플랫폼별 버전·URL·아카이브 해시·라이선스·소스 위치를 적는다. 빌드가 임의 최신 ORT·FFmpeg를 내려받지 않게 한다.
-- 릴리스 흐름: 빌드 → 패키지 실행 시험 → 보호된 release 환경에서 서명(서명 비밀은 environment secret으로) → 게시. 기존 `CloakFrame-updates` 저장소의 feed를 이어 쓴다.
-- 1.11.3 이하처럼 옛 feed에 묶인 사용자는 수동 설치 안내를 유지한다(ROADMAP의 수용 위험).
+- 릴리스 흐름: 빌드 → 패키지 실행 시험 → 보호된 release 환경에서 서명(서명 비밀은 environment secret으로) → 게시. 업데이트 패키지와 목록은 이 저장소의 고정 태그 `updates` prerelease에, 버전 릴리스에는 설치 파일만 둔다(0.1).
+- 1.x 사용자는 자동 업데이트로 넘어오지 않으므로 README와 릴리스 설명에 새로 설치하라는 안내를 둔다.
 
 ### 10.1 라이선스: Apache-2.0 (2026-10-16 결정)
 
@@ -504,7 +505,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 - [ ] Windows DML·macOS CoreML 가속과 세 플랫폼 CPU 경로가 실제 장치에서 동작한다.
 - [ ] 9.2 품질 기준과 9.3 성능 목표를 측정 원자료와 함께 충족한다.
 - [ ] 한국어·영어·일본어, 키보드, 스크린리더, HiDPI, 파일 대화상자가 실제 OS에서 통과한다.
-- [ ] 세 OS 패키지가 깨끗한 최소 지원 OS에서 설치·오프라인 실행·업데이트·제거를 통과하고, 1.12.1에서 업데이트로 넘어오는 경로와 설정·모델 이전이 확인됐다.
+- [ ] 세 OS 패키지가 깨끗한 최소 지원 OS에서 설치·오프라인 실행·업데이트·제거를 통과한다.
 - [ ] 패키지와 정보 창에 Apache-2.0 LICENSE, 새 의존성 기준의 THIRD_PARTY_NOTICES, Microsoft 약관 전문이 들어 있고, `cargo-deny` 라이선스 검사가 통과한다.
 - [ ] 세 OS에서 앱이 모델 다운로드와 업데이트 외에 네트워크 요청을 하지 않음을(ORT 텔레메트리 포함) 네트워크 감시로 확인했다.
 - [ ] 필수 시험의 건너뜀, 미해결 핵심 결함, 미구현 핵심 기능을 예외로 남기지 않는다.
