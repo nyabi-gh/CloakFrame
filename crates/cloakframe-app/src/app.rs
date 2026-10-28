@@ -265,11 +265,7 @@ impl AppState {
         if self.fonts_for != Some(self.tr.language()) {
             self.install_fonts(&ctx);
         }
-        ctx.set_theme(match self.settings.theme {
-            Theme::System => egui::ThemePreference::System,
-            Theme::Light => egui::ThemePreference::Light,
-            Theme::Dark => egui::ThemePreference::Dark,
-        });
+        ctx.set_theme(theme_preference(self.settings.theme));
         // What the threads finished comes in before anything below starts a thread, so a result is
         // never taken in the pass that asked for it. Tests wait for a thread between frames.
         if let Some(scanning) = &self.scanning
@@ -707,6 +703,9 @@ impl AppState {
             Command::Theme(theme) => {
                 self.settings.theme = theme;
                 self.save_settings();
+                // This pass began in the old colours, and a menu choice repaints nothing else.
+                ctx.set_theme(theme_preference(theme));
+                ctx.request_repaint();
             }
             Command::Language(choice) => self.set_language(choice),
         }
@@ -1839,6 +1838,14 @@ impl SessionRow {
                 }
             }
         }
+    }
+}
+
+fn theme_preference(theme: Theme) -> egui::ThemePreference {
+    match theme {
+        Theme::System => egui::ThemePreference::System,
+        Theme::Light => egui::ThemePreference::Light,
+        Theme::Dark => egui::ThemePreference::Dark,
     }
 }
 

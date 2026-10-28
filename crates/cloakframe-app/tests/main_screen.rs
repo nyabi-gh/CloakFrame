@@ -217,16 +217,23 @@ fn the_language_menu_changes_the_text() {
 #[test]
 fn the_theme_menu_changes_the_colours() {
     use cloakframe_app::settings::Theme;
+    use cloakframe_app::style;
     let mut harness = harness(Language::En, Settings::default());
     harness.run_traced();
-    for (theme, colours) in [
-        (Theme::Dark, egui::Theme::Dark),
-        (Theme::Light, egui::Theme::Light),
+    for (theme, colours, palette) in [
+        (Theme::Dark, egui::Theme::Dark, style::DARK),
+        (Theme::Light, egui::Theme::Light, style::LIGHT),
+        (Theme::Dark, egui::Theme::Dark, style::DARK),
     ] {
         harness.state_mut().command(Command::Theme(theme));
         harness.run_traced();
         assert_eq!(harness.state().settings.theme, theme);
         assert_eq!(harness.ctx.theme(), colours);
+        // The window is drawn again in them without waiting for other input.
+        let painted = harness.output().shapes.iter().any(|clipped| {
+            matches!(&clipped.shape, egui::Shape::Rect(rect) if rect.fill == palette.window)
+        });
+        assert!(painted, "the last frame is in the {theme:?} colours");
     }
 }
 
