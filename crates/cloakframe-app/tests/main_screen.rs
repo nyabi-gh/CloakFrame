@@ -237,6 +237,91 @@ fn the_theme_menu_changes_the_colours() {
     }
 }
 
+/// Every text the last frame drew, with the rectangle it is laid out in.
+fn drawn_texts(harness: &Harness<'_, AppState>) -> Vec<(String, egui::Rect)> {
+    fn walk(shape: &egui::Shape, texts: &mut Vec<(String, egui::Rect)>) {
+        match shape {
+            egui::Shape::Text(text) => {
+                let laid_out = text.galley.rect.translate(text.pos.to_vec2());
+                texts.push((text.galley.text().to_owned(), laid_out));
+            }
+            egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| walk(s, texts)),
+            _ => {}
+        }
+    }
+    let mut texts = Vec::new();
+    for clipped in &harness.output().shapes {
+        walk(&clipped.shape, &mut texts);
+    }
+    texts
+}
+
+/// The settings panel is 300 points wide in every language: no text runs past its margins or
+/// into another text, with every row it can show. English and Japanese are longer than Korean.
+#[test]
+fn every_language_fits_the_settings_panel() {
+    use cloakframe_app::style;
+    for language in Language::ALL {
+        let settings = Settings {
+            faces: false,
+            plates: false,
+            method: Method::Mosaic,
+            ..Settings::default()
+        };
+        let mut harness = harness(language, settings);
+        harness.run_traced();
+        // egui_kittest draws a ui closure 8 points in from the window's edges.
+        let window = harness.ctx.content_rect().shrink(8.0);
+        let panel = egui::Rect::from_x_y_ranges(
+            window.right() - style::INSPECTOR_WIDTH..=window.right(),
+            window.top() + style::TOOLBAR_HEIGHT..=window.bottom(),
+        );
+        let margins = panel.shrink2(egui::vec2(20.0, 0.0));
+        let texts: Vec<_> = drawn_texts(&harness)
+            .into_iter()
+            .filter(|(text, rect)| !text.trim().is_empty() && panel.contains(rect.center()))
+            .collect();
+        assert!(texts.len() > 10, "{language:?}: {texts:?}");
+        for (text, rect) in &texts {
+            assert!(
+                margins.expand(0.5).x_range().contains(rect.left())
+                    && margins.expand(0.5).x_range().contains(rect.right()),
+                "{language:?}: {text:?} at {rect:?} runs past the panel's margins {margins:?}"
+            );
+        }
+        // A control's words stay inside it, such as a segment of the method's buttons.
+        let controls: Vec<egui::Rect> = harness
+            .query_all_by(|node| {
+                matches!(
+                    node.role(),
+                    Role::Button | Role::RadioButton | Role::CheckBox | Role::Link
+                )
+            })
+            .map(|node| node.rect())
+            .collect();
+        for (text, rect) in &texts {
+            let around = controls
+                .iter()
+                .filter(|control| control.contains(rect.center()))
+                .min_by(|a, b| a.area().total_cmp(&b.area()));
+            if let Some(control) = around {
+                assert!(
+                    control.expand(0.5).contains_rect(*rect),
+                    "{language:?}: {text:?} at {rect:?} runs out of its control at {control:?}"
+                );
+            }
+        }
+        for (i, (a, a_rect)) in texts.iter().enumerate() {
+            for (b, b_rect) in &texts[i + 1..] {
+                assert!(
+                    !a_rect.shrink(0.5).intersects(b_rect.shrink(0.5)),
+                    "{language:?}: {a:?} at {a_rect:?} runs into {b:?} at {b_rect:?}"
+                );
+            }
+        }
+    }
+}
+
 /// The shape is chosen next to the method, for every method, and runs take it.
 #[test]
 fn the_shape_is_chosen_under_how() {

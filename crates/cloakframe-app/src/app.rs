@@ -1065,7 +1065,7 @@ impl AppState {
         let p = *Palette::of(ui);
         ui.horizontal(|ui| {
             ui.add_sized(
-                egui::vec2(34.0, style::BUTTON_HEIGHT),
+                egui::vec2(how_label_width(ui, tr), style::BUTTON_HEIGHT),
                 egui::Label::new(egui::RichText::new(tr.get("shape")).color(p.secondary)),
             );
             let shapes = [
@@ -1084,7 +1084,7 @@ impl AppState {
         ui.horizontal(|ui| {
             let label = tr.get("strength");
             ui.add_sized(
-                egui::vec2(34.0, style::BUTTON_HEIGHT),
+                egui::vec2(how_label_width(ui, tr), style::BUTTON_HEIGHT),
                 egui::Label::new(egui::RichText::new(&label).color(p.secondary)),
             );
             ui.spacing_mut().slider_width =
@@ -1839,6 +1839,14 @@ impl SessionRow {
             }
         }
     }
+}
+
+/// The names of the rows under How share one column, so their controls start together.
+fn how_label_width(ui: &egui::Ui, tr: &Translator) -> f32 {
+    ["shape", "strength"]
+        .into_iter()
+        .map(|id| style::text_width(ui, &tr.get(id)))
+        .fold(34.0, f32::max)
 }
 
 fn theme_preference(theme: Theme) -> egui::ThemePreference {
