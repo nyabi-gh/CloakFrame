@@ -796,7 +796,26 @@ fn timeline(
         egui::Rect::from_min_size(whole.min, egui::vec2(whole.width(), TIMELINE_HEIGHT)),
         egui::Sense::hover(),
     );
-    let rect = egui::Rect::from_x_y_ranges(outer.left() + GUTTER..=outer.right(), outer.y_range());
+    let names = [
+        kind_name(DetectionKind::Face, tr),
+        kind_name(DetectionKind::Plate, tr),
+        tr.get("editor-kind-drawn"),
+    ];
+    let gutter = names
+        .into_iter()
+        .map(|name| {
+            ui.painter()
+                .layout_no_wrap(
+                    name,
+                    egui::FontId::proportional(LANE_NAME_SIZE),
+                    p.secondary,
+                )
+                .size()
+                .x
+                + 8.0
+        })
+        .fold(GUTTER, f32::max);
+    let rect = egui::Rect::from_x_y_ranges(outer.left() + gutter..=outer.right(), outer.y_range());
     let response = ui.interact(
         rect,
         ui.make_persistent_id("timeline"),
@@ -954,7 +973,7 @@ fn timeline(
             egui::pos2(outer.left(), top + row_height / 2.0),
             egui::Align2::LEFT_CENTER,
             label,
-            egui::FontId::proportional(11.0),
+            egui::FontId::proportional(LANE_NAME_SIZE),
             p.secondary,
         );
     }
@@ -1039,8 +1058,9 @@ fn timeline(
     }
 }
 
-/// Room at the timeline's left for each row group's name.
+/// Room at the timeline's left for each row group's name, unless a name needs more.
 const GUTTER: f32 = 70.0;
+const LANE_NAME_SIZE: f32 = 11.0;
 
 /// Seconds between the ruler's marks: the shortest of a few round steps that leaves room for
 /// the labels.
