@@ -100,7 +100,7 @@
 | 플랫폼 | 가속 → 폴백 | 조건 |
 | --- | --- | --- |
 | Windows x64 | Windows ML self-contained 런타임의 DirectML → CPU | ORT를 따로 번들하지 않고 `Microsoft.Windows.AI.MachineLearning` 2.4.89의 `onnxruntime.dll`(ORT 1.27.1)·`DirectML.dll`을 넣는다. 이 패키지의 최소 OS가 Windows 10 1903(18362)이다(1809는 `Microsoft.WindowsAppSDK.ML`이 필요하므로 지원하지 않음). M0에서 `ort::init_from`으로 이 DLL을 `api-27`로 불러 DML EP가 붙는 것과, 네트워크 없는 Windows 11 Sandbox에서 실행되는 것을 확인했다([기록](M0_ORT_SPIKE.md#windows-ml--directml)). 세션 순차 실행, memory pattern 비활성화. 재배포 약관은 10.1 |
-| macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시하고, 이 빌드가 쓰지 않는 ORT 빌드·모델의 폴더와 1.12.1의 cache는 지운다(M3 4단계). 번호판 end2end 모델은 감지 0건일 때 CoreML이 빈 동적 텐서를 거부하므로 CPU로 돌린다(M0, ORT 1.30·1.31) |
+| macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시하고, 이 빌드가 쓰지 않는 ORT 빌드·모델의 폴더와 1.12.1의 cache는 지운다(M3 4단계). 번호판 end2end 모델은 감지 0건일 때 CoreML이 빈 동적 텐서를 거부하므로 CPU로 돌린다(M0, ORT 1.30·1.31). YOLO5Face-n의 CoreML 세션은 입력 batch를 1로 고정해(free dimension override) 그래프 전체가 CoreML 조각 하나에 들어가고, 그 compiled cache 폴더 이름에 고정한 차원을 붙인다(M6, [기록](M6_COREML_SPEED.md)). CPU에서는 얻는 것이 없고 점수가 소수 여섯째 자리에서 바뀌어 고정하지 않는다. 번호판 출력의 `batch`는 감지 개수라 고정하지 않는다 |
 | Linux x86_64 | CPU | CUDA는 1.3의 후보 |
 
 Windows ML의 **EP 카탈로그**(NVIDIA TensorRT-RTX, Intel OpenVINO, AMD MIGraphX·VitisAI, Qualcomm QNN)는 첫 stable에서 쓰지 않는다. Windows 11 24H2 이상이 필요하고, 첫 실행에 네트워크로 받고 Windows Update로 자동 갱신되어 오프라인 실행·고정 manifest 원칙과 맞지 않는다. 이 앱의 모델은 작아 DML로 충분하다. 필요가 측정되면 사용자가 켜는 opt-in 기능으로 따로 설계한다.

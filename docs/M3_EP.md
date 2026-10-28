@@ -11,7 +11,7 @@
 - **CPU 폴백(계획 3장):** 가속기에서 세션을 만들지 못한 모델은 처음부터 CPU를 쓴다. 요청 하나(사진의 보기·타일 하나, 영상 프레임 하나, 조합 안에서는 그 모델)가 가속기에서 실패하면(ORT 실행 오류, `DetectError::Failed`) 그 요청을 CPU 세션으로 다시 분석하고(앞서 끝낸 타일은 가속기 결과를 씀), 그 실행의 나머지는 그 모델을 CPU로 돌린다. 모델·shape 오류(`UnexpectedModel`)와 CPU 실패는 다시 하지 않는다. CPU 세션은 처음 필요할 때 만들고, 모델 바이트는 그때까지 메모리에 둔다(파일을 다시 열지 않음).
 - **표시:** 다시 분석한 항목에는 note "the GPU failed; analyzed again on the CPU"(`Note::AnalyzedAgainOnCpu`)가 붙는다. CLI는 시작할 때 모델마다 어디서 도는지("YOLO5Face-n runs on CoreML", 시작하지 못하면 "… runs on the CPU: it could not start on CoreML (이유)")를, 실행 중 옮겨 갔으면 끝에 "… moved to the CPU for the rest of the run: CoreML failed (이유)"를 stderr에 쓴다.
 - **어디서 돌았는지는 review key에 들어가지 않는다.** 결과가 허용오차 안에서 같기 때문이다(fixture 시험이 실행 위치마다 확인). `--gpu off`로 분석한 세션도 기본값으로 `review`할 수 있다.
-- **CoreML 컴파일 캐시:** `<캐시 폴더>/coreml/<ORT 빌드 정보 SHA-256 앞 16자>/<모델 SHA-256>`에 둔다. 캐시 폴더는 macOS `~/Library/Caches/CloakFrame`(`app_dirs::cache_dir`)이다. CoreML은 그래프 구조가 같으면 가중치나 분할한 런타임이 바뀌어도 컴파일된 모델을 다시 쓰므로 런타임 빌드와 모델마다 폴더를 나눈다. initializer를 바꾼 그래프(번호판)는 구조가 같아 원래 그래프의 컴파일 결과를 잘못 쓸 수 있으므로 캐시하지 않는다. 이전 폴더 정리는 4단계(모델 캐시)에서 정한다.
+- **CoreML 컴파일 캐시:** `<캐시 폴더>/coreml/<ORT 빌드 정보 SHA-256 앞 16자>/<모델 SHA-256>`에 둔다. 캐시 폴더는 macOS `~/Library/Caches/CloakFrame`(`app_dirs::cache_dir`)이다. CoreML은 그래프 구조가 같으면 가중치나 분할한 런타임이 바뀌어도 컴파일된 모델을 다시 쓰므로 런타임 빌드와 모델마다 폴더를 나눈다. initializer를 바꾼 그래프(번호판)는 구조가 같아 원래 그래프의 컴파일 결과를 잘못 쓸 수 있으므로 캐시하지 않는다. 이전 폴더 정리는 4단계(모델 캐시)에서 정한다. M6에서 YOLO5Face-n CoreML 세션의 입력 batch를 1로 고정한 뒤로는 그 모델의 폴더가 `<모델 SHA-256>-batch1`이다. 고정하면 CoreML 조각이 두 개에서 하나로 바뀌지만 조각 이름(`0_dynamic_mlprogram`)은 같아서, 폴더를 나누지 않으면 batch가 열린 그래프의 첫 조각을 불러온다([기록](M6_COREML_SPEED.md)).
 - **CI(PR #35):** 3개 OS 모두 통과했다. macOS runner(가상 머신)에서도 얼굴 모델이 CoreML에 남고 fixture와 같았다(시험이 그렇게 요구한다).
 - **확인하지 못한 것:** Windows DirectML은 GitHub runner에 GPU가 없어, 그곳에서는 시작할 때 CPU로 가도 시험이 통과한다(macOS만 가속기에 남는지 확인한다). runner가 실제로 어느 쪽이었는지는 시험이 출력을 잡아 로그에 남지 않아 모른다. 번호판을 DirectML에서 후보 0개 입력으로 돌리는 확인(M0에서 남김)과 실기기 GPU 리셋은 Windows GPU 장치가 생기면 한다.
 
@@ -43,6 +43,7 @@ CoreML 세션의 첫 실행은 캐시와 관계없이 약 30–60 ms 더 걸린�
 | `detect_fixtures.rs` `the_models_match_the_fixtures_where_a_run_puts_them` | 실행이 정하는 위치에서 세 모델 54건이 1.12.1과 같음. macOS는 얼굴 모델이 CoreML에 남아야 함 |
 | `detect_fixtures.rs` `an_image_that_fails_on_coreml_is_analyzed_again_on_the_cpu`(macOS) | 실제 가속기 오류: 번호판을 CoreML에 강제로 두고 후보 없는 사진에서 CPU로 다시 분석, 결과가 CPU와 같고 이후 CPU에 남음 |
 | `detect_fixtures.rs` `coreml_caches_compiled_models_per_runtime_build_and_model`(macOS) | 캐시 폴더 구조, initializer를 바꾼 그래프는 캐시하지 않음 |
+| `detect_fixtures.rs` `yolo5face_runs_as_one_coreml_partition`(macOS, M6) | YOLO5Face-n은 batch를 고정한 폴더 이름(`-batch1`)에 CoreML 조각 하나로 캐시됨 |
 | `photo_pipeline.rs` `a_photo_analyzed_again_on_the_cpu_says_so` | note, 정상 게시 |
 | `cli_photo.rs` `the_models_run_where_the_gpu_setting_says` | `--gpu on|off`, 실행 위치 출력, macOS CoreML 캐시가 앱 캐시 폴더에 생김, 실행 위치가 review를 막지 않음 |
 
