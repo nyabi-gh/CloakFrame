@@ -1012,8 +1012,11 @@ impl AppState {
                 .show(ui, |ui| {
                     style::group(ui, |ui| {
                         style::group_title(ui, &tr.get("what"));
-                        ui.checkbox(&mut self.settings.faces, tr.get("faces"));
-                        ui.checkbox(&mut self.settings.plates, tr.get("plates"));
+                        ui.add(style::Check::new(&mut self.settings.faces, tr.get("faces")));
+                        ui.add(style::Check::new(
+                            &mut self.settings.plates,
+                            tr.get("plates"),
+                        ));
                         if !self.settings.faces && !self.settings.plates {
                             ui.colored_label(p.needs_review, tr.get("models-need-one"));
                         }
@@ -1035,7 +1038,10 @@ impl AppState {
                         self.sample_preview(ui);
                     });
                     style::group(ui, |ui| {
-                        ui.checkbox(&mut self.settings.review, tr.get("review-first"));
+                        ui.add(style::Check::new(
+                            &mut self.settings.review,
+                            tr.get("review-first"),
+                        ));
                     });
                     style::group(ui, |ui| {
                         style::group_title(ui, &tr.get("output-folder"));
@@ -1283,18 +1289,21 @@ impl AppState {
             });
         });
         sheet_field(ui, "", |ui| {
-            ui.checkbox(&mut advanced.tiles, tr.get("tiles"));
+            ui.add(style::Check::new(&mut advanced.tiles, tr.get("tiles")));
             ui.add(egui::Label::new(hint(tr.get("tiles-hint"))).wrap());
         });
         sheet_section(ui, &tr.get("advanced-photos"));
         sheet_field(ui, "", |ui| {
-            ui.checkbox(&mut advanced.keep_metadata, tr.get("keep-metadata"))
-                .on_hover_text(tr.get("keep-metadata-hint"));
+            ui.add(style::Check::new(
+                &mut advanced.keep_metadata,
+                tr.get("keep-metadata"),
+            ))
+            .on_hover_text(tr.get("keep-metadata-hint"));
             ui.horizontal(|ui| {
                 ui.add_space(23.0);
                 ui.add_enabled(
                     advanced.keep_metadata,
-                    egui::Checkbox::new(&mut advanced.keep_gps, tr.get("keep-gps")),
+                    style::Check::new(&mut advanced.keep_gps, tr.get("keep-gps")),
                 );
             });
         });
@@ -1343,11 +1352,14 @@ impl AppState {
                 });
         });
         sheet_field(ui, "", |ui| {
-            ui.checkbox(&mut advanced.remove_audio, tr.get("remove-audio"));
+            ui.add(style::Check::new(
+                &mut advanced.remove_audio,
+                tr.get("remove-audio"),
+            ));
             ui.add(egui::Label::new(hint(tr.get("remove-audio-hint"))).wrap());
         });
         sheet_field(ui, "", |ui| {
-            ui.checkbox(&mut advanced.gpu, tr.get("gpu"))
+            ui.add(style::Check::new(&mut advanced.gpu, tr.get("gpu")))
                 .on_hover_text(tr.get("gpu-hint"));
         });
         sheet_section(ui, &tr.get("models-title"));

@@ -236,7 +236,10 @@ impl Models {
             if !present && file.terms.non_commercial_only && !self.downloads.contains_key(&model) {
                 let mut accepted = self.accepted.contains(&model);
                 if ui
-                    .checkbox(&mut accepted, tr.get("model-accept-terms"))
+                    .add(style::Check::new(
+                        &mut accepted,
+                        tr.get("model-accept-terms"),
+                    ))
                     .changed()
                 {
                     if accepted {

@@ -162,6 +162,91 @@ pub fn install(ctx: &egui::Context) {
     });
 }
 
+/// A checkbox as the design draws it: a ticked box is filled in the text colour, which egui's
+/// own checkbox cannot do without its experimental theming.
+pub struct Check<'a> {
+    checked: &'a mut bool,
+    text: egui::WidgetText,
+}
+
+impl<'a> Check<'a> {
+    pub fn new(checked: &'a mut bool, text: impl Into<egui::WidgetText>) -> Self {
+        Self {
+            checked,
+            text: text.into(),
+        }
+    }
+}
+
+impl egui::Widget for Check<'_> {
+    fn ui(self, ui: &mut egui::Ui) -> egui::Response {
+        let spacing = ui.spacing();
+        let (box_size, inner_size, gap) = (
+            spacing.icon_width,
+            spacing.icon_width_inner,
+            spacing.icon_spacing,
+        );
+        let min_height = spacing.interact_size.y;
+        let galley = self.text.into_galley(
+            ui,
+            None,
+            ui.available_width() - box_size - gap,
+            TextStyle::Button,
+        );
+        let size = egui::vec2(
+            box_size + gap + galley.size().x,
+            galley.size().y.max(min_height),
+        );
+        let (rect, mut response) = ui.allocate_exact_size(size, egui::Sense::click());
+        if response.clicked() {
+            *self.checked = !*self.checked;
+            response.mark_changed();
+        }
+        let checked = *self.checked;
+        response.widget_info(|| {
+            egui::WidgetInfo::selected(
+                egui::Role::CheckBox,
+                ui.is_enabled(),
+                checked,
+                galley.text(),
+            )
+        });
+        if ui.is_rect_visible(rect) {
+            let p = Palette::of(ui);
+            let visuals = ui.style().interact(&response);
+            let frame = egui::Rect::from_center_size(
+                egui::pos2(rect.left() + box_size / 2.0, rect.center().y),
+                egui::Vec2::splat(box_size),
+            );
+            let radius = visuals
+                .corner_radius
+                .at_most((0.3 * box_size).round() as u8);
+            let (fill, stroke) = if checked {
+                (p.text, Stroke::new(1.0, p.text))
+            } else {
+                (visuals.bg_fill, visuals.bg_stroke)
+            };
+            let painter = ui.painter();
+            painter.rect(frame, radius, fill, stroke, egui::StrokeKind::Inside);
+            if checked {
+                let tick =
+                    egui::Rect::from_center_size(frame.center(), egui::Vec2::splat(inner_size));
+                painter.line(
+                    vec![
+                        egui::pos2(tick.left(), tick.center().y),
+                        egui::pos2(tick.center().x, tick.bottom()),
+                        egui::pos2(tick.right(), tick.top()),
+                    ],
+                    Stroke::new(visuals.fg_stroke.width, p.on_primary),
+                );
+            }
+            let text_pos = egui::pos2(frame.right() + gap, rect.center().y - galley.size().y / 2.0);
+            painter.galley(text_pos, galley, visuals.text_color());
+        }
+        response
+    }
+}
+
 /// The width `text` takes in one line in the body font, or the primary button's.
 pub fn text_width(ui: &egui::Ui, text: &str) -> f32 {
     egui::WidgetText::from(text)

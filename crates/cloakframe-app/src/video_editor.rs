@@ -710,7 +710,10 @@ fn play_row(
                         *help = !*help;
                     }
                     ui.label(egui::RichText::new("M").color(p.secondary));
-                    ui.checkbox(&mut editor.masked_playback, tr.get("editor-video-masked"));
+                    ui.add(style::Check::new(
+                        &mut editor.masked_playback,
+                        tr.get("editor-video-masked"),
+                    ));
                 });
             });
         });

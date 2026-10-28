@@ -907,7 +907,7 @@ fn masked_row(
                 .max_rect(rect)
                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
             |ui| {
-                let check = ui.add_enabled(enabled, egui::Checkbox::new(masked, name));
+                let check = ui.add_enabled(enabled, style::Check::new(masked, name));
                 check.widget_info(|| {
                     egui::WidgetInfo::selected(
                         egui::Role::CheckBox,
