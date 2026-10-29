@@ -190,7 +190,18 @@
 남은 것:
 
 - **8·10번:** Windows 배포(M7) 전.
-- **1.x 문서:** README·ROADMAP·RELEASING·SECURITY는 고치지 않았다. README를 2.0 기준으로 쓸지(최신 릴리스는 아직 1.12.1), 서명 키를 2.0에서 바꿀지 정해야 한다. preview 게시 전에 한다.
+- **1.x 문서:** README·ROADMAP·RELEASING·SECURITY는 고치지 않았다. README를 2.0 기준으로 쓸지(최신 릴리스는 아직 1.12.1), 서명 키를 2.0에서 바꿀지 정해야 한다. preview 게시 전에 한다. 아래 "1.x 문서" 절에서 처리.
 - **12번(낮음):** M8 품질 비교 전.
 - 검사(로컬 macOS, 문서 커밋 전): `cargo fmt --check`, clippy 두 조합(기본·`--all-features`, `-D warnings`), `cargo test --workspace --locked --all-features`(577개 통과, 새 시험 8개, 무시 4개), `cargo deny check` 모두 통과. Windows·Linux CI는 아직 돌지 않았다.
 - **병합(2026-10-29):** PR #73으로 올려 CI 13개(형식·린트·라이선스, 3개 OS 시험, fuzz, ORT 3개, 탐지·영상 벤치마크, 1패스 처리량 3개)가 통과했고 main `78bff36`으로 fast-forward했다. 탐지 벤치마크 기본 설정 얼굴 재현율 87.9%, 영상 추적 벤치마크 노출 프레임 타일 끔 5,322·켬 912로 기록과 같다(9번은 가리기 강도만 바꿈).
+
+## 1.x 문서(2026-10-29, `preview-docs`)
+
+main `78bff36`에서 브랜치를 만들었다. 결정은 시작할 때 한 번에 물었고 메인테이너가 모두 추천대로 답했다.
+
+- **README:** 다운로드 링크와 배지가 가리키는 판은 preview를 게시해도 1.12.1이다(prerelease는 latest가 되지 않음). 그래서 사용법·지원 형식·FAQ는 1.12.1 설명으로 두고, "CloakFrame 2 preview" 절을 더했다(main은 2.0, macOS 사진 전용 preview, 새로 설치, 1.12.1과 함께 둠, 설정은 옮기지 않고 받은 모델은 같이 씀). 직접 빌드할 때의 FFmpeg 안내는 CONTRIBUTING으로 보낸다. 2.0 전체로 다시 쓰는 것은 M8.
+- **새로 설치 안내:** README 2.0 절과 PREVIEW_NOTES "Coming from 1.x". 계획 10장에 적음.
+- **서명 키:** 2.0은 1.x 업데이트 키를 믿지 않는다. M7에서 Sparkle·Velopack 키를 새로 만들어 `release` environment 비밀로만 둔다. 저장소 범위 비밀 8개와 공개 키 변수 2개는 메인테이너가 지운다(Apple 인증서·공증 키는 M7에서 다시 넣음). RELEASING "Signing keys", 계획 10장.
+- **RELEASING:** 1.x 절차(CMake, `release.yml`, `CloakFrame-updates`)를 빼고 `v1.12.1` 태그와 `78bff36`의 파일 이력으로 안내. preview 절차(판, PREVIEW_NOTES, `preview.yml`, 초안 확인 뒤 게시)와 서명 키 원칙만 둔다.
+- **SECURITY:** 지원 판은 2.0(1.12.1은 고치지 않음, 2026-10-16 재작성만 결정). staging 파일, 사용자 모델, 소유권 검사, Qt·OpenCV·exiv2·libsodium을 빼고 계획 5장 위협 모델(같은 사용자의 다른 프로세스와 다른 계정은 범위 밖)과 맞춤.
+- **ROADMAP:** 2.0의 남은 일(M6 앱 점검, M7 설치본·업데이트·8·10번·FFmpeg 대응 소스·약관, M8 비교·실제 OS·일본어 검토·낮음 목록·릴리스 문서, M9, 메인테이너 할 일, upstream turbojpeg-sys, 받아들인 위험)로 다시 씀. 1.x 항목은 `78bff36`의 파일 이력으로 안내. CONTRIBUTING의 ROADMAP 안내 문장도 맞춤.

@@ -31,6 +31,19 @@ On Linux, make the AppImage executable first: `chmod +x CloakFrame-*-Linux-x86_6
 CloakFrame updates itself. It tells you when a new version is out and installs it
 only when you agree.
 
+## CloakFrame 2 preview
+
+The `main` branch is CloakFrame 2, a rewrite in Rust. The rest of this page describes
+1.12.1, the current release. A preview of CloakFrame 2 for macOS on Apple silicon is on
+the [releases page](https://github.com/nyabi-gh/CloakFrame/releases) as a pre-release. It
+masks photos only: videos need FFmpeg, which the preview does not include yet.
+
+CloakFrame 1.x does not update to 2: install it as a new app. The preview has its own
+name and sits next to 1.12.1, which keeps its settings and keeps working. The preview
+starts with its own default settings and uses the detection models 1.12.1 already
+downloaded. What changed from 1.12.1 is listed in
+[docs/CHANGES_FROM_1.12.md](docs/CHANGES_FROM_1.12.md).
+
 ## How it works
 
 1. **Drop** photos, videos, or a whole folder into the window.
@@ -81,7 +94,8 @@ drivers are installed. The app is available in English, Korean, and Japanese.
 selected. You can always add missed areas by hand in the review screen.
 
 **A video will not start.** HDR and 10-bit videos are not supported. If you built
-CloakFrame yourself, `ffmpeg` and `ffprobe` need to be on your `PATH`.
+CloakFrame from source, [CONTRIBUTING.md](CONTRIBUTING.md#build-and-test) says where it
+finds FFmpeg.
 
 **Can I use my own model?** Yes — choose an SCRFD `.onnx` file with **Browse…**. Only use
 models from sources you trust.

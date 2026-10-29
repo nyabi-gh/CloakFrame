@@ -197,10 +197,10 @@ Change a pinned toolchain, crate, ONNX Runtime, Windows ML, FFmpeg or model
 version only together with the files under [manifests/](manifests/README.md),
 the evidence they point to, and CI in the same pull request.
 
-[docs/ROADMAP.md](docs/ROADMAP.md) lists where these properties still have a
-gap and what else is planned. Read the part that covers the area you are
-touching before working on privacy coverage, the video timeline, publication,
-or the updater, and update it when an item changes state.
+[docs/ROADMAP.md](docs/ROADMAP.md) lists the open work on CloakFrame 2, such as
+packaging, updates and the Windows-specific fixes. Read the part that covers the
+area you are touching before working on it, and update it when an item changes
+state.
 
 ## Dependencies and licenses
 
