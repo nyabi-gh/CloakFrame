@@ -433,11 +433,13 @@ mod os {
         JOBOBJECT_EXTENDED_LIMIT_INFORMATION, JobObjectExtendedLimitInformation,
         SetInformationJobObject, TerminateJobObject,
     };
-    use windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP;
+    use windows_sys::Win32::System::Threading::{CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW};
 
-    /// A new process group does not receive the console's Ctrl+C, which then reaches only the CLI.
+    /// A console of its own without a window: the app has no console, so Windows would open a
+    /// console window for every tool, and the CLI's console then sends Ctrl+C, Ctrl+Break and its
+    /// closing only to the CLI. The new group keeps Ctrl+C away even if a console is shared.
     pub fn own_process_group(command: &mut Command) {
-        command.creation_flags(CREATE_NEW_PROCESS_GROUP);
+        command.creation_flags(CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW);
     }
 
     /// A job object holding the tool and anything it starts. Closing the last handle kills them,
@@ -610,6 +612,47 @@ mod tests {
             thread::sleep(Duration::from_millis(5));
         }
         running.wait().unwrap();
+    }
+
+    /// The app has no console, so a tool that shares this process's console here would get a
+    /// console window of its own there. A test run may itself have a console without a window.
+    #[cfg(windows)]
+    #[test]
+    fn a_tool_gets_a_console_without_a_window() {
+        let mut running = tool(
+            "powershell",
+            &[
+                "-NoProfile",
+                "-Command",
+                "Add-Type -Namespace CloakFrameTest -Name Kernel -MemberDefinition \
+                 '[DllImport(\"kernel32.dll\")] public static extern IntPtr GetConsoleWindow(); \
+                 [DllImport(\"kernel32.dll\")] \
+                 public static extern uint GetConsoleProcessList(uint[] list, uint count);'; \
+                 $list = New-Object 'UInt32[]' 64; \
+                 $n = [CloakFrameTest.Kernel]::GetConsoleProcessList($list, 64); \
+                 [CloakFrameTest.Kernel]::GetConsoleWindow(); \
+                 ($list | Select-Object -First $n) -join ' '",
+            ],
+        )
+        .spawn(Stdio::null(), Stdio::piped(), &CancelToken::new())
+        .unwrap();
+        let mut out = String::new();
+        running
+            .take_stdout()
+            .unwrap()
+            .read_to_string(&mut out)
+            .unwrap();
+        running.wait().unwrap();
+        let mut lines = out.lines();
+        assert_eq!(lines.next(), Some("0"), "{out}");
+        let sharing: Vec<u32> = lines
+            .next()
+            .unwrap_or_default()
+            .split_whitespace()
+            .map(|pid| pid.parse().unwrap())
+            .collect();
+        assert!(!sharing.is_empty(), "{out}");
+        assert!(!sharing.contains(&std::process::id()), "{out}");
     }
 
     #[test]
