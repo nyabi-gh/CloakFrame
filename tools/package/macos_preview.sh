@@ -8,6 +8,10 @@
 # corresponding source cannot be had (the macOS one fetches x264's master when it is built), so
 # FFmpeg waits for M7's own build (plan 10.1).
 #
+# The notices of the Rust crates linked into the app are made here by cargo-about
+# (tools/about), which has to be installed. ONNX Runtime's license and its own third-party
+# notices come from its release archive, beside the lib folder that holds the library.
+#
 # Usage: macos_preview.sh <version> <cloakframe> <libonnxruntime.dylib> <out>
 # Writes <out>/CloakFrame-Preview-<version>-macOS-arm64.zip and prints its path.
 set -euo pipefail
@@ -20,6 +24,7 @@ root=$(cd "$(dirname "$0")/../.." && pwd)
 
 # CFBundleShortVersionString takes numbers only: 2.0.0-alpha.0 is 2.0.0 there.
 short=${version%%-*}
+ort_root=$(cd "$(dirname "$ort")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 app="$work/CloakFrame Preview.app"
@@ -29,6 +34,11 @@ cp "$exe" "$app/Contents/MacOS/cloakframe"
 cp "$ort" "$app/Contents/MacOS/libonnxruntime.dylib"
 cp "$root/assets/icons/CloakFrame.icns" "$app/Contents/Resources/CloakFrame.icns"
 cp "$root/LICENSE" "$root/THIRD_PARTY_NOTICES.txt" "$app/Contents/Resources/"
+cp "$ort_root/LICENSE" "$app/Contents/Resources/ONNXRUNTIME_LICENSE.txt"
+cp "$ort_root/ThirdPartyNotices.txt" "$app/Contents/Resources/ONNXRUNTIME_THIRD_PARTY_NOTICES.txt"
+cargo about generate --locked --manifest-path "$root/crates/cloakframe-app/Cargo.toml" \
+    --config "$root/tools/about/about.toml" --target aarch64-apple-darwin \
+    --output-file "$app/Contents/Resources/RUST_CRATE_NOTICES.txt" "$root/tools/about/notices.hbs"
 
 cat >"$app/Contents/Info.plist" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>

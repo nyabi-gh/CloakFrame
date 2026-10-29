@@ -5,7 +5,9 @@ This file covers the Rust implementation of CloakFrame in this repository. Its
 source code is licensed under the Apache License 2.0 (see LICENSE). Notices for
 each component are added here when the component enters the build or a
 package; the pinned versions, sources and licenses of the native components are
-listed in manifests/native.toml.
+listed in manifests/native.toml. The licenses of the Rust crates linked into the
+app are in RUST_CRATE_NOTICES.txt beside this file in a package, generated from
+Cargo.lock by cargo-about (tools/about).
 
 The packages of CloakFrame 1.12.1 and earlier link Exiv2 and were therefore
 distributed as a whole under the GNU General Public License v3.0 or later. Their
@@ -44,6 +46,34 @@ Citations
     arXiv:2105.12931, 2021.
   Wang, Liao. YOLOv9: Learning What You Want to Learn Using Programmable
     Gradient Information. arXiv:2402.13616, 2024.
+================================================================================
+ONNX Runtime 1.30.0  (bundled in packages as a dynamic library; runs the detection models)
+--------------------------------------------------------------------------------
+https://github.com/microsoft/onnxruntime  The release build from its GitHub
+release (manifests/native.toml). The third-party notices it carries are in
+ONNXRUNTIME_THIRD_PARTY_NOTICES.txt beside this file in a package.
+
+MIT License
+
+Copyright (c) Microsoft Corporation
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ================================================================================
 libjpeg-turbo 3.1.0  (statically linked; JPEG decoding and encoding)
 --

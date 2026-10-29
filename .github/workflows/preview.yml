@@ -15,6 +15,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_ABOUT: 0.9.2
 
 jobs:
   macos:
@@ -33,6 +34,9 @@ jobs:
         env:
           MACOSX_DEPLOYMENT_TARGET: "15.0"
         run: cargo build --release --locked -p cloakframe-app
+
+      - name: Install cargo-about
+        run: cargo install cargo-about --version "$CARGO_ABOUT" --locked
 
       - name: Fetch ONNX Runtime
         run: echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"

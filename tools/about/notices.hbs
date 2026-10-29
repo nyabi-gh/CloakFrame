@@ -1,0 +1,16 @@
+CloakFrame — Rust crate notices
+===============================
+
+The Rust crates linked into this build of CloakFrame and their licenses, made by
+cargo-about from Cargo.lock. Each license below is followed by the crates under
+it. CloakFrame's own notices are in THIRD_PARTY_NOTICES.txt.
+{{#each licenses}}
+
+================================================================================
+{{{name}}}
+Used by:
+{{#each used_by}}  {{crate.name}} {{crate.version}}
+{{/each}}
+
+{{{text}}}
+{{/each}}
