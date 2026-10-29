@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use crate::app_dirs;
 
 /// Where 1.12.1 kept downloaded models (`<GenericDataLocation>/CloakFrame/models`), then where it
-/// still looked for those of its predecessor Redactly. On macOS and Windows the first is
+/// still looked for those of its predecessor Redactly. On macOS the first is
 /// [`app_dirs::model_dir`] itself, so there 1.12.1's models are used where they are.
 pub fn model_dirs() -> Vec<PathBuf> {
     app_dirs::data_home()
@@ -43,9 +43,10 @@ mod tests {
             dirs,
             [home.join("CloakFrame/models"), home.join("Redactly/models")]
         );
-        // Linux names the rewrite's folder in lower case, as XDG applications do.
+        // Linux names the rewrite's folder in lower case, as XDG applications do, and Windows
+        // keeps it out of 1.12.1's installation folder.
         let same = dirs[0] == app_dirs::model_dir().unwrap();
-        assert_eq!(same, cfg!(any(target_os = "macos", windows)));
+        assert_eq!(same, cfg!(target_os = "macos"));
     }
 
     #[cfg(target_os = "macos")]

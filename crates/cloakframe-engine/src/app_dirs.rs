@@ -82,9 +82,11 @@ fn platform_data_home() -> Option<PathBuf> {
     absolute(folder)
 }
 
+/// Not `CloakFrame`, where Velopack installed 1.12.1, nor `CloakFrameApp`, 2.0's `packId`:
+/// uninstalling either removes its whole folder, and the data must outlive both.
 #[cfg(windows)]
 fn platform_data_dir() -> Option<PathBuf> {
-    platform_data_home().map(|local| local.join("CloakFrame"))
+    platform_data_home().map(|local| local.join("CloakFrameData"))
 }
 
 #[cfg(windows)]
@@ -100,14 +102,37 @@ mod tests {
     fn names_an_absolute_folder_for_cloakframe() {
         let dir = data_dir().expect("the test user has a data folder");
         assert!(dir.is_absolute());
-        assert!(dir.ends_with("CloakFrame") || dir.ends_with("cloakframe"));
+        let app = |name: &std::ffi::OsStr| {
+            name.eq_ignore_ascii_case("cloakframe") || name == "CloakFrameData"
+        };
+        assert!(app(dir.file_name().unwrap()), "{}", dir.display());
         let cache = cache_dir().expect("the test user has a cache folder");
         assert!(cache.is_absolute());
-        let app = |c: std::path::Component<'_>| c.as_os_str().eq_ignore_ascii_case("cloakframe");
-        assert!(cache.components().any(app), "{}", cache.display());
+        assert!(
+            cache.components().any(|c| app(c.as_os_str())),
+            "{}",
+            cache.display()
+        );
         assert_ne!(cache, dir);
         assert_eq!(model_dir(), Some(dir.join("models")));
         assert_eq!(dir.parent(), data_home().as_deref());
+    }
+
+    /// Velopack installed 1.12.1 in `%LocalAppData%\CloakFrame` and installs 2.0 in
+    /// `%LocalAppData%\CloakFrameApp`; uninstalling either removes its whole folder.
+    #[cfg(windows)]
+    #[test]
+    fn windows_keeps_data_outside_both_installations() {
+        let local = data_home().unwrap();
+        let data = data_dir().unwrap();
+        for installed in ["CloakFrame", "CloakFrameApp"] {
+            assert!(
+                !data.starts_with(local.join(installed)),
+                "{}",
+                data.display()
+            );
+        }
+        assert_eq!(data, local.join("CloakFrameData"));
     }
 
     #[test]

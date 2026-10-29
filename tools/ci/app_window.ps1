@@ -91,7 +91,7 @@ if (-not (Select-String -Quiet -Pattern '^graphics: wgpu, ' (Join-Path $Out 'def
 $null = $process.CloseMainWindow()
 if (-not $process.WaitForExit(30000)) { throw 'default: the app did not close' }
 if ($process.ExitCode -ne 0) { throw "default: the app closed with $($process.ExitCode)" }
-$settings = Join-Path $env:LOCALAPPDATA 'CloakFrame\settings.toml'
+$settings = Join-Path $env:LOCALAPPDATA 'CloakFrameData\settings.toml'
 if (-not (Select-String -Quiet -Pattern '^\[window\]' $settings)) {
     throw "default: closing did not save the window's place in $settings"
 }
