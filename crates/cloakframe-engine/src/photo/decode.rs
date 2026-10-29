@@ -297,7 +297,6 @@ fn decode_jpeg(bytes: &[u8]) -> Result<DynamicImage, ReadError> {
     image.ok_or_else(|| ReadError::Decode("unexpected buffer size".into()))
 }
 
-/// 1–8 from the EXIF block in any of the containers, 1 when there is none or it is invalid.
 /// A picture of the photo at `path` in display orientation, its longer side at most `side`, as
 /// RGBA rows. It goes through the same checks and memory budget as a run's decode.
 pub fn thumbnail(
@@ -311,9 +310,13 @@ pub fn thumbnail(
     Ok((small.width(), small.height(), small.into_raw()))
 }
 
+/// 1–8 from the EXIF block in any of the containers, 1 when there is none or it is invalid.
+/// IFD0 is read even when another IFD of the block is broken, as exiftool does.
 pub fn exif_orientation(bytes: &[u8]) -> u8 {
     exif::Reader::new()
+        .continue_on_error(true)
         .read_from_container(&mut Cursor::new(bytes))
+        .or_else(|e| e.distill_partial_result(|_| ()))
         .ok()
         .and_then(|e| {
             e.get_field(exif::Tag::Orientation, exif::In::PRIMARY)
@@ -374,9 +377,15 @@ mod tests {
 
     /// A JPEG with an APP1 EXIF block holding only IFD0 Orientation.
     fn jpeg_with_orientation(image: &RgbImage, orientation: u16) -> Vec<u8> {
+        jpeg_with_ifd0(image, orientation, 0)
+    }
+
+    /// A JPEG whose APP1 EXIF block holds IFD0 Orientation and `next` as the offset of IFD1.
+    fn jpeg_with_ifd0(image: &RgbImage, orientation: u16, next: u32) -> Vec<u8> {
         let mut tiff = b"II*\0\x08\0\0\0\x01\0\x12\x01\x03\0\x01\0\0\0".to_vec();
         tiff.extend(orientation.to_le_bytes());
-        tiff.extend([0, 0, 0, 0, 0, 0]);
+        tiff.extend([0, 0]);
+        tiff.extend(next.to_le_bytes());
         let mut app1 = b"Exif\0\0".to_vec();
         app1.extend(tiff);
         let plain = jpeg(image);
@@ -465,6 +474,13 @@ mod tests {
         }
         assert_eq!(exif_orientation(&jpeg_with_orientation(&base, 9)), 1);
         assert_eq!(exif_orientation(&jpeg(&base)), 1);
+    }
+
+    /// exiftool still turns these: a broken IFD1 does not make IFD0 unreadable.
+    #[test]
+    fn a_broken_ifd_elsewhere_keeps_the_orientation() {
+        let base = RgbImage::new(3, 2);
+        assert_eq!(exif_orientation(&jpeg_with_ifd0(&base, 6, 0xFFF0)), 6);
     }
 
     /// The estimate before a run reads the file: stored width and height where the start of the
