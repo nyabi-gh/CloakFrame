@@ -178,8 +178,8 @@ impl MosaicGrid {
         if width == 0 || height == 0 {
             return Self::MIN_CELL;
         }
-        let padded = padded_region(bbox, style.padding.ratio(), width as usize, height as usize);
-        let short = padded.w.min(padded.h) as u32;
+        let grown = grown_region(bbox, style.padding.ratio());
+        let short = u32::try_from(grown.short()).unwrap_or(u32::MAX);
         short
             .div_ceil(u32::from(style.mosaic_strength.cells()))
             .max(Self::MIN_CELL)
@@ -395,6 +395,38 @@ impl IRect {
     }
 }
 
+/// The box grown by `padding` on every side and rounded outwards to whole pixels, before it is
+/// clamped to the image. The strengths follow it: a face cut by the image's edge is masked as
+/// strongly as a whole one (D3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Grown {
+    x: i64,
+    y: i64,
+    w: u64,
+    h: u64,
+}
+
+impl Grown {
+    fn short(self) -> u64 {
+        self.w.min(self.h)
+    }
+}
+
+fn grown_region(bbox: &Rect, padding: f32) -> Grown {
+    let pad_x = f64::from(bbox.width()) * f64::from(padding);
+    let pad_y = f64::from(bbox.height()) * f64::from(padding);
+    let left = (f64::from(bbox.x()) - pad_x).floor() as i64;
+    let top = (f64::from(bbox.y()) - pad_y).floor() as i64;
+    let right = (f64::from(bbox.right()) + pad_x).ceil() as i64;
+    let bottom = (f64::from(bbox.bottom()) + pad_y).ceil() as i64;
+    Grown {
+        x: left,
+        y: top,
+        w: right.abs_diff(left).max(1),
+        h: bottom.abs_diff(top).max(1),
+    }
+}
+
 /// The box grown by `padding` on every side, rounded outwards to whole pixels and clamped to the
 /// image, never empty (1.12.1 `paddedRegion`).
 fn padded_region(bbox: &Rect, padding: f32, width: usize, height: usize) -> IRect {
@@ -432,12 +464,19 @@ fn render_one<S: Sample>(
     }
     let (width, height) = (plane.width, plane.height);
     let padded = padded_region(&region.bbox, style.padding.ratio(), width, height);
+    let grown = grown_region(&region.bbox, style.padding.ratio());
     let detected = padded_region(&region.bbox, 0.0, width, height);
 
     if style.method == Method::CustomImage {
         let overlay = overlay.expect("checked by render");
         let mut area = Effect::copy(plane, padded);
-        mosaic(plane, &mut area, padded, style.mosaic_strength, region.grid);
+        mosaic(
+            plane,
+            &mut area,
+            (padded, grown),
+            style.mosaic_strength,
+            region.grid,
+        );
         custom_image(&mut area, overlay, region.roll);
         area.write_back(plane, |_, _| 1.0);
         return;
@@ -445,7 +484,7 @@ fn render_one<S: Sample>(
 
     if !style.soft_edges {
         let mut area = Effect::copy(plane, padded);
-        apply_effect(plane, &mut area, padded, style, region.grid);
+        apply_effect(plane, &mut area, (padded, grown), style, region.grid);
         match style.shape {
             Shape::Rectangle => area.write_back(plane, |_, _| 1.0),
             Shape::Ellipse => {
@@ -474,7 +513,7 @@ fn render_one<S: Sample>(
         h: (padded.bottom() + outer).min(height) - top,
     };
     let mut area = Effect::copy(plane, outer_rect);
-    apply_effect(plane, &mut area, padded, style, region.grid);
+    apply_effect(plane, &mut area, (padded, grown), style, region.grid);
     let ramp = SoftEdge {
         core: padded,
         shape: style.shape,
@@ -493,14 +532,14 @@ fn render_one<S: Sample>(
 fn apply_effect<S: Sample>(
     plane: &Plane<'_, S>,
     area: &mut Effect<S>,
-    padded: IRect,
+    (padded, grown): (IRect, Grown),
     style: &MaskStyle,
     grid: Option<MosaicGrid>,
 ) {
     match style.method {
         Method::Fill => fill(area),
-        Method::Mosaic => mosaic(plane, area, padded, style.mosaic_strength, grid),
-        Method::Blur => blur(plane, area, padded),
+        Method::Mosaic => mosaic(plane, area, (padded, grown), style.mosaic_strength, grid),
+        Method::Blur => blur(plane, area, blur_sigma(grown, plane.width, plane.height)),
         Method::CustomImage => unreachable!("handled before"),
     }
 }
@@ -569,37 +608,59 @@ fn fill<S: Sample>(area: &mut Effect<S>) {
     }
 }
 
-/// Cell boundaries along one side: `floor(i * len / cells)`.
-fn cell_edges(len: usize, cells: usize) -> Vec<usize> {
-    (0..=cells).map(|i| i * len / cells).collect()
+/// Cell boundaries along one side of `cells` cells over `len` pixels from `start`, at
+/// `start + floor(i * len / cells)`, of the cells that reach into `clip` (start, length), as
+/// offsets into it and cut to it.
+fn cell_edges(start: i64, len: u64, cells: u64, clip: (usize, usize)) -> Vec<usize> {
+    let edge = |i: u64| start + (u128::from(i) * u128::from(len) / u128::from(cells)) as i64;
+    let (lo, hi) = (clip.0 as i64, (clip.0 + clip.1) as i64);
+    // The first cell ending after `lo`, from an estimate that rounding can leave one off.
+    let estimate = u128::from(lo.saturating_sub(start).max(0).unsigned_abs()) * u128::from(cells)
+        / u128::from(len);
+    let mut first = u64::try_from(estimate).unwrap_or(cells).min(cells - 1);
+    while first > 0 && edge(first) > lo {
+        first -= 1;
+    }
+    while first + 1 < cells && edge(first + 1) <= lo {
+        first += 1;
+    }
+    let mut edges = vec![0];
+    let mut i = first + 1;
+    while i < cells && edge(i) < hi {
+        edges.push((edge(i) - lo) as usize);
+        i += 1;
+    }
+    edges.push(clip.1);
+    edges
 }
 
-/// Mosaic over `padded`, on `grid` if given and otherwise fitted to it: cells along the short
-/// side are the strength, but at least 2 pixels wide so a small region still changes; the long
-/// side gets cells of about the same size. Each cell is the rounded mean of the pixels it covers.
-/// Pixels of `area` outside `padded` (the soft-edge band) take the nearest edge cell of a fitted
-/// mosaic and their own cell on a grid.
+/// Mosaic over `padded`, on `grid` if given and otherwise fitted to `grown`, the region before it
+/// was clamped to the image: cells along the short side are the strength, but at least 2 pixels
+/// wide so a small region still changes; the long side gets cells of about the same size. Each
+/// cell is the rounded mean of its pixels in the image. Pixels of `area` outside `padded` (the
+/// soft-edge band) take the nearest edge cell of a fitted mosaic and their own cell on a grid.
 fn mosaic<S: Sample>(
     plane: &Plane<'_, S>,
     area: &mut Effect<S>,
-    padded: IRect,
+    (padded, grown): (IRect, Grown),
     strength: MosaicStrength,
     grid: Option<MosaicGrid>,
 ) {
     if let Some(grid) = grid {
         return grid_mosaic(plane, area, grid.cell as usize);
     }
-    let (short, long) = (padded.w.min(padded.h), padded.w.max(padded.h));
-    let cells_short = usize::from(strength.cells()).min((short / 2).max(1));
-    let cells_long = ((cells_short * long) as f64 / short as f64).round() as usize;
+    let (short, long) = (grown.short(), grown.w.max(grown.h));
+    let cells_short = u64::from(strength.cells()).min((short / 2).max(1));
+    let cells_long = (cells_short as f64 * long as f64 / short as f64).round() as u64;
     let cells_long = cells_long.clamp(1, (long / 2).max(1));
-    let (cx, cy) = if padded.w <= padded.h {
+    let (cells_x, cells_y) = if grown.w <= grown.h {
         (cells_short, cells_long)
     } else {
         (cells_long, cells_short)
     };
-    let xs = cell_edges(padded.w, cx);
-    let ys = cell_edges(padded.h, cy);
+    let xs = cell_edges(grown.x, grown.w, cells_x, (padded.x, padded.w));
+    let ys = cell_edges(grown.y, grown.h, cells_y, (padded.y, padded.h));
+    let (cx, cy) = (xs.len() - 1, ys.len() - 1);
     let cn = area.cn;
     let mut means = vec![S::default(); cx * cy * cn];
     for j in 0..cy {
@@ -685,12 +746,18 @@ fn grid_mosaic<S: Sample>(plane: &Plane<'_, S>, area: &mut Effect<S>, cell: usiz
 /// The weakest blur: below this a thin or small region keeps readable detail (plan 5).
 const MIN_BLUR_SIGMA: f32 = 4.0;
 
-/// Gaussian blur with sigma = short side / 6 (1.12.1), at least [`MIN_BLUR_SIGMA`]. Pixels around
-/// the area feed the kernel too, so its edges are as blurred as its middle (plan 5: the kernel is
-/// not cut at the region). Three box passes approximate the Gaussian in time independent of
-/// sigma; image borders repeat the edge pixel.
-fn blur<S: Sample>(plane: &Plane<'_, S>, area: &mut Effect<S>, padded: IRect) {
-    let sigma = (padded.w.min(padded.h) as f32 / 6.0).max(MIN_BLUR_SIGMA);
+/// The region's short side / 6 (1.12.1), at least [`MIN_BLUR_SIGMA`]. A region larger than the
+/// image counts as the image's longer side: each box pass starts with a sum over its whole
+/// kernel.
+fn blur_sigma(grown: Grown, width: usize, height: usize) -> f32 {
+    let short = grown.short().min(width.max(height) as u64);
+    (short as f32 / 6.0).max(MIN_BLUR_SIGMA)
+}
+
+/// Gaussian blur. Pixels around the area feed the kernel too, so its edges are as blurred as its
+/// middle (plan 5: the kernel is not cut at the region). Three box passes approximate the
+/// Gaussian in time independent of sigma; image borders repeat the edge pixel.
+fn blur<S: Sample>(plane: &Plane<'_, S>, area: &mut Effect<S>, sigma: f32) {
     let boxes = box_radii(sigma);
     let reach: usize = boxes.iter().sum();
     let rect = area.rect;
@@ -1088,6 +1155,48 @@ mod tests {
                 w: 1,
                 h: 1
             }
+        );
+    }
+
+    /// A face cut by the image's edge gets the cells and the blur of the whole face (D3), not
+    /// of the part left in the image.
+    #[test]
+    fn a_face_cut_by_the_edge_is_masked_as_strongly_as_a_whole_one() {
+        let runs = |bbox: Rect| {
+            let (w, h) = (200u32, 96u32);
+            let mut px: Vec<u8> = (0..h).flat_map(|_| 0..w as u8).collect();
+            let mut image = ImageMut::new(w, h, Layout::Gray, Pixels::U8(&mut px)).unwrap();
+            let s = style(Method::Mosaic, Shape::Rectangle, 0.0, false);
+            render(&mut image, &[Region::new(bbox)], &s, None).unwrap();
+            let row = &px[48 * w as usize..49 * w as usize];
+            let (from, to) = (bbox.x().max(0.0) as usize, bbox.right() as usize);
+            1 + row[from..to].windows(2).filter(|p| p[0] != p[1]).count()
+        };
+        assert_eq!(
+            runs(rect(100.0, 0.0, 96.0, 96.0)),
+            8,
+            "the strength's 8 cells"
+        );
+        assert_eq!(runs(rect(-48.0, 0.0, 96.0, 96.0)), 4, "half of them");
+
+        let s = MaskStyle {
+            method: Method::Mosaic,
+            ..MaskStyle::default()
+        };
+        assert_eq!(
+            MosaicGrid::cell_for(&rect(-200.0, 100.0, 300.0, 360.0), &s, 1920, 1080),
+            MosaicGrid::cell_for(&rect(800.0, 100.0, 300.0, 360.0), &s, 1920, 1080),
+        );
+
+        let sigma = |bbox: Rect| blur_sigma(grown_region(&bbox, 0.18), 1920, 1080);
+        assert_eq!(
+            sigma(rect(-200.0, 100.0, 300.0, 360.0)),
+            sigma(rect(800.0, 100.0, 300.0, 360.0))
+        );
+        assert_eq!(
+            sigma(rect(-5000.0, -5000.0, 20_000.0, 20_000.0)),
+            1920.0 / 6.0,
+            "no more than a box the size of the image"
         );
     }
 
