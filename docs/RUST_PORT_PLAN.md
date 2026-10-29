@@ -414,6 +414,7 @@ crates/
 
 - **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 이 저장소의 `updates` 릴리스로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, 모델 미러(4.6). 1.x 설정 이전은 하지 않는다(0.1, 2026-10-28)
 - **완료 기준:** 깨끗한 최소 지원 OS(Windows 10 1903 VM 포함, M0에서 옮김)에서 설치·오프라인 실행·업데이트·제거, 1.12.1이 설치된 컴퓨터에 새로 설치해도 1.12.1의 설정·모델이 그대로 남음. P-7 통과
+- **M7 전 재검토 8번(2026-10-29, `m6-windows-console`, [기록](M0_M6_REVIEW.md#8번-windows-콘솔-창2026-10-29-m6-windows-console)):** release 앱이 영상 하나에 띄운 ffprobe·ffmpeg 3개마다 Windows Terminal 창이 열리는 것을 재현했고, 도구를 `CREATE_NO_WINDOW`로 띄워 창 없는 자기 콘솔을 주게 고쳤다. CLI의 Ctrl+C 취소(130)와 Job 정리는 그대로다. Job 지정 시점은 stable std로 바꿀 수 없고 FFmpeg가 자식을 띄우지 않아 그대로 둔다
 
 ### M8 — 검증과 stable 전환
 

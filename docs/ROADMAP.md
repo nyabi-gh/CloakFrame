@@ -29,9 +29,6 @@ close it. Check the caller and the full scope before recording a change of state
   whole folder with 2.0's review sessions and models in it. Choose a different data
   folder or `packId` so 1.12.1 and 2.0 can be installed and removed independently
   ([review](M0_M6_REVIEW.md) 10).
-- **Windows console windows.** FFmpeg and ffprobe are started with
-  `CREATE_NEW_PROCESS_GROUP` only, so a console window flashes for each one the app
-  starts. Add `CREATE_NO_WINDOW` ([review](M0_M6_REVIEW.md) 8).
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
   source can be published; until then releases mask photos only (plan 10.1).
 - **Notices and terms.** An SBOM and the native manifest with each release, and the

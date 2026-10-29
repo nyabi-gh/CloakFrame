@@ -206,3 +206,13 @@ main `78bff36`에서 브랜치를 만들었다. 결정은 시작할 때 한 번�
 - **SECURITY:** 지원 판은 2.0(1.12.1은 고치지 않음, 2026-10-16 재작성만 결정). staging 파일, 사용자 모델, 소유권 검사, Qt·OpenCV·exiv2·libsodium을 빼고 계획 5장 위협 모델(같은 사용자의 다른 프로세스와 다른 계정은 범위 밖)과 맞춤.
 - **ROADMAP:** 2.0의 남은 일(M6 앱 점검, M7 설치본·업데이트·8·10번·FFmpeg 대응 소스·약관, M8 비교·실제 OS·일본어 검토·낮음 목록·릴리스 문서, M9, 메인테이너 할 일, upstream turbojpeg-sys, 받아들인 위험)로 다시 씀. 1.x 항목은 `78bff36`의 파일 이력으로 안내. CONTRIBUTING의 ROADMAP 안내 문장도 맞춤.
 - **병합(2026-10-29):** PR #74로 올려 CI 4개(형식·린트·라이선스, 3개 OS 시험)가 통과했고 main `44039fb`로 fast-forward했다.
+
+## 8번: Windows 콘솔 창(2026-10-29, `m6-windows-console`)
+
+main `47210be`에서 브랜치를 만들어 Windows 11 Pro(Insider 26300, 기본 터미널 Windows Terminal, RTX 5080)에서 했다.
+
+- **재현:** release 앱(`target/release/cloakframe.exe`, 실행 파일 옆에 Windows ML `onnxruntime.dll`과 고정 FFmpeg 9.0.2의 `ffmpeg.exe`·`ffprobe.exe`)을 띄우고 파일 > 파일 추가(Ctrl+O)로 1분짜리 1080p 영상을 넣었다(앱 조작은 PowerShell `SendKeys`). 앱이 띄운 ffprobe 2개와 썸네일 ffmpeg 1개마다 Windows Terminal 창이 열렸다. 그동안 새로 보인 최상위 창은 6개(`CASCADIA_HOSTING_WINDOW_CLASS` 3, 각 도구의 `PseudoConsoleWindow` 3)였다. 앱은 콘솔이 없으므로 콘솔 프로그램인 도구마다 Windows가 새 콘솔을 만든다.
+- **고친 것:** `own_process_group`이 `CREATE_NEW_PROCESS_GROUP`에 `CREATE_NO_WINDOW`를 더한다. 도구는 창 없는 자기 콘솔을 받는다(conhost는 여전히 생기지만 창이 없다). 같은 절차에서 새로 보인 창은 0개다. 같은 이유로 CLI 콘솔의 Ctrl+Break와 콘솔 닫기도 더 이상 FFmpeg에 가지 않는다([M4 재검토](M4_REVIEW.md) 12번 둘째 항목).
+- **시험:** `media::process` `a_tool_gets_a_console_without_a_window`가 PowerShell로 도구의 `GetConsoleWindow`와 콘솔 프로세스 목록을 읽어, 창이 없고 시험 프로세스와 콘솔을 공유하지 않는지 본다. 처음에는 창만 봤는데 고치기 전에도 통과했다. 시험을 띄운 셸(이 PC의 Claude Code Bash)이 창 없는 콘솔을 갖고 있어, 도구가 그 콘솔을 물려받으면 창이 없기 때문이다. 콘솔 공유 조건을 더해 고치기 전에 실패하는 것(시험 프로세스를 포함한 12개 프로세스가 한 콘솔)을 확인했다.
+- **CLI·Job 확인(release CLI, 1분 영상, `--videos`, 1패스 ffmpeg가 도는 중):** Ctrl+C 한 번(다른 프로세스가 CLI 콘솔에 `GenerateConsoleCtrlEvent`)은 "cancelling; press Ctrl+C again to stop at once" 뒤 0.45초에 130으로 끝났고 ffmpeg가 남지 않았으며 출력이 없었다. 20 ms 간격의 두 번도 130(0.41초)이었지만, 첫 취소가 그만큼 빨리 끝나 두 번째가 즉시 종료 경로(`exit_now`)를 탔는지는 구별되지 않는다. 그 경로는 이번 변경과 무관한 `TerminateProcess`이고, 같은 상황인 CLI 강제 종료(`Stop-Process -Force`)에서 ffmpeg가 남지 않아 Job의 마지막 핸들 정리를 확인했다. 중단하지 않은 실행은 0으로 끝나 출력을 게시했다. engine 단위 시험 237개와 미디어·영상 통합 시험(`media_*`, `video_*`, `cli_video`)이 이 PC에서 통과했다.
+- **Job 시점:** 그대로 둔다. stable std의 `Command`는 `CREATE_SUSPENDED` 뒤 재개할 thread handle도, 만들 때 Job을 지정하는 속성 목록도 내지 않는다(1.98.1에 `raw_attribute` 없음). Job 지정 전에 도구가 띄운 손자만 Job 밖에 남을 수 있는데, FFmpeg·ffprobe는 자식을 띄우지 않는다.
