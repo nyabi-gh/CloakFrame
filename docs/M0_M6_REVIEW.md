@@ -167,3 +167,29 @@
 2. Windows 배포(M7) 전: 8(콘솔 창), 10(데이터 폴더)
 3. 문서: 1.x 문서(README·ROADMAP·RELEASING·SECURITY)는 preview 게시 전에, 나머지는 다음 문서 커밋에
 4. 낮음 목록은 M8 품질 비교 전에 다시 본다
+
+## 처리(2026-10-29, `m6-review`)
+
+`m6-complete` `6ff88d1`에서 브랜치를 만들어 항목마다 실패하는 시험을 먼저 넣고 고쳤다. 결정 항목은 시작할 때 한 번에 물었고 메인테이너가 모두 추천대로 답했다.
+
+| # | 커밋 | 처리 |
+| --- | --- | --- |
+| 1 | `5bd030d` | 원인은 egui 0.37 modal이 뒤 레이어의 `request_focus`를 막지 않는 것(Tab 이동만 막음). modal 뒤의 위젯(사진·영상 캔버스, 영상 타임라인)은 포커스를 내놓고 다시 요청하지 않는다(`editor::behind_modal`). 편집기 시험에 확인 창이 열린 동안 Enter·PageDown·Tab을 더함 |
+| 2 | `b1d1d6d` | 방향만 `continue_on_error(true)`의 부분 결과로 IFD0에서 읽는다. 보존 태그(`metadata::keep`)는 엄격하게 둠. IFD1 포인터가 파일 밖인 EXIF 시험 |
+| 3 | `075b279` | 원인은 seek: `-ss`가 DTS 기준으로 CRA에 내려앉아, CRA 뒤에 디코드하지만 앞 GOP를 참조하는 RASL(28·29번 등)을 만들 수 없음. 패킷 목록의 keyframe을 `SourceFrames::with_keys`로 넘기고, 미리보기·재생은 프레임 pts 이하의 마지막 keyframe으로 seek한다(`seek_frame`). H.264·HEVC open GOP 4초의 모든 프레임에서 정지 미리보기와 재생 첫 프레임이 전체 디코드와 같음 |
+| 4 | `61065c5` | 결정(추천대로): 앱 기본값을 채우기로, 계획·CHANGES·core·CLI와 같게. 저장된 설정·세션은 고른 값을 그대로 씀. 기본 설정의 `RunOptions::style()`이 core `MaskStyle::default()`와 같은지 시험 |
+| 5 | `d6c75c0` | 실행 목록은 보이는 행만 썸네일을 요청하고(행 찾기도 그때만), 캐시는 직전 pass에 보인 것을 밀어내지 않고 가장 오래 안 보인 것부터 밀어낸다. 300행 실행에서 요청 수, 250칸이 보이는 캐시 시험 |
+| 6 | `963d360` | 실행이 끝나기 전에는 실행 화면이 250 ms마다 다시 그리기를 예약한다(`request_repaint_after`). 엔진 보드는 그대로(UI가 보드를 읽는 쪽이 다시 그리기를 맡음). 실행 화면의 repaint 지연 시험 |
+| 7 | `a60fab9` | 스캔 중에는 시작을 막고 "사진과 동영상을 다 찾을 때까지 기다리세요"를 보인다(세 언어, 일본어는 검토 필요). 시작 조건 시험에 다시 스캔을 더함 |
+| 9 | `1979c83` | 강도(모자이크 칸, 트랙 격자 칸, 블러 sigma)를 이미지로 자르기 전의 padding 상자(`Grown`)에서 정하고, 쓰는 pixel만 자른다. 칸 경계는 자르기 전 상자에 놓고 이미지 안에 걸치는 칸만 계산한다. 이미지보다 큰 상자의 블러는 이미지 긴 변 크기로 셈(box pass 첫 합이 kernel 크기에 비례). 엔진 시험 전체가 그대로 통과 |
+| 11 | `ad95dd2` | 결정(추천대로): THIRD_PARTY_NOTICES에 ONNX Runtime(MIT) 절, 패키지에 ORT의 LICENSE·ThirdPartyNotices를 `ONNXRUNTIME_*.txt`로, crate 고지는 cargo-about 0.9.2(`tools/about`, deny.toml 허용 목록, 앱 자체 crate 제외)로 `RUST_CRATE_NOTICES.txt`를 만든다. `preview.yml`이 cargo-about을 고정 판으로 설치. 로컬에서 zip을 만들어 파일 다섯 개를 확인 |
+| preview 판 | `fb4816d` | 결정(추천대로): workspace 판 `2.0.0-preview.1`, `CFBundleVersion`·`CFBundleShortVersionString`은 `2.0.0` |
+| 모델 복사 | — | 결정(추천대로): 계획 0.1·CHANGES대로 M3의 모델 폴더 복사를 유지한다. 2026-10-28 메모가 틀렸고 코드·문서는 그대로 |
+| 13 | 문서 커밋 | PREVIEW_NOTES·CONTRIBUTING·CHANGES의 감지 모델 창, M6_VERIFY의 ORT·FFmpeg와 1.1절, M6_PLAN의 설정 이전·누적 일수, 계획 3장(글꼴, 쓰지 않는 crate, `windows-sys`, MSRV, 참고 자료)·4.1·7장(crate 이름, 배치)·6장(이미지)·머리말 목록, CoreML 수치(측정 이름을 붙임), manifest(Medium 글꼴 둘, jiff, kittest `eframe`), CHANGELOG `:3` |
+
+남은 것:
+
+- **8·10번:** Windows 배포(M7) 전.
+- **1.x 문서:** README·ROADMAP·RELEASING·SECURITY는 고치지 않았다. README를 2.0 기준으로 쓸지(최신 릴리스는 아직 1.12.1), 서명 키를 2.0에서 바꿀지 정해야 한다. preview 게시 전에 한다.
+- **12번(낮음):** M8 품질 비교 전.
+- 검사(로컬 macOS, 문서 커밋 전): `cargo fmt --check`, clippy 두 조합(기본·`--all-features`, `-D warnings`), `cargo test --workspace --locked --all-features`(577개 통과, 새 시험 8개, 무시 4개), `cargo deny check` 모두 통과. Windows·Linux CI는 아직 돌지 않았다.

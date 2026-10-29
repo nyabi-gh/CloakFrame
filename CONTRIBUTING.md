@@ -97,8 +97,8 @@ A packaged app finds ONNX Runtime and FFmpeg next to its executable. A debug
 build also takes them from `CLOAKFRAME_ORT_LIBRARY`, `CLOAKFRAME_FFMPEG` and
 `CLOAKFRAME_FFPROBE`, so with the variables above it runs as is. It keeps its
 settings in `settings.toml` and its review sessions and models in the same app
-data folder the command-line tool uses; its Detection Models window downloads
-the models. The fonts it bundles are cut by `tools/fonts/subset.sh`.
+data folder the command-line tool uses; the Detection models section of its
+Advanced Options downloads the models. The fonts it bundles are cut by `tools/fonts/subset.sh`.
 
 Changes to detection also run the detection benchmark: 610 Open Images photos
 (Open Images' own copies, about 160 MB) fetched by hash, scored against their

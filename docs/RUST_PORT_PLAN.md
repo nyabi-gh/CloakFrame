@@ -1,6 +1,6 @@
 # CloakFrame Rust 재작성 계획
 
-작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md), [조사와 TimelineSpec](M4_PROBE.md), [디코드와 프레임 대응](M4_DECODE.md), [0–2단계 재검토](M4_REVIEW.md), [인코드](M4_ENCODE.md), [영상 처리기](M4_VIDEO.md), [완료 확인](M4_VERIFY.md). M5 기록: [단계 계획 실험](M5_PLAN.md), [core 추적](M5_TRACK.md), [분석 1패스](M5_ANALYSIS.md), [2패스와 게시 게이트](M5_RENDER.md), [검토 세션과 결정](M5_REVIEW.md), [영상 탐지 품질](M5_BENCHMARK.md), [완료 확인](M5_VERIFY.md), [M0–M5 재검토](M0_M5_REVIEW.md). M6 기록: [단계 계획](M6_PLAN.md), [완료 확인](M6_VERIFY.md), [M0–M6 재검토](M0_M6_REVIEW.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
+작성 2026-10-15, 전면 개정 2026-10-16(같은 날 Windows·macOS M0 결과와 시간 예산 반영). 근거: [코드베이스 분석 보고서](REWRITE_ASSESSMENT.ko.md). M0 기록: [ORT](M0_ORT_SPIKE.md), [EXIF writer](M0_EXIF_WRITER.md), [egui](M0_EGUI.md), [FFmpeg 파이프](M0_FFMPEG_PIPE.md), [Windows·Linux 실행 절차](M0_PLATFORM_RUNBOOK.md), [기준 fixture](../tests/fixtures/README.md). M2 기록: [코덱 spike](M2_ENCODE_SPIKE.md), [M0–M2 재검토](M0_M2_REVIEW.md). M3 기록: [감지](M3_DETECTION.md), [EP·CPU 폴백](M3_EP.md), [모델 파일](M3_MODELS.md), [타일 모드](M3_TILES.md), [탐지 벤치마크](M3_BENCHMARK.md), [타일 오탐](M3_TILE_FALSE_DETECTIONS.md). M4 기록: [프로세스 감독](M4_PROCESS.md), [조사와 TimelineSpec](M4_PROBE.md), [디코드와 프레임 대응](M4_DECODE.md), [0–2단계 재검토](M4_REVIEW.md), [인코드](M4_ENCODE.md), [영상 처리기](M4_VIDEO.md), [완료 확인](M4_VERIFY.md). M5 기록: [단계 계획 실험](M5_PLAN.md), [core 추적](M5_TRACK.md), [분석 1패스](M5_ANALYSIS.md), [2패스와 게시 게이트](M5_RENDER.md), [검토 세션과 결정](M5_REVIEW.md), [영상 탐지 품질](M5_BENCHMARK.md), [완료 확인](M5_VERIFY.md), [M0–M5 재검토](M0_M5_REVIEW.md). M6 기록: [단계 계획](M6_PLAN.md), [화면 재설계](M6_UX.md), [완료 확인](M6_VERIFY.md), [CoreML 영상 속도](M6_COREML_SPEED.md), [M0–M6 재검토](M0_M6_REVIEW.md). 이전 판은 git 기록(`a42dec2`의 이 파일)에 있다.
 
 ## 0. 요약
 
@@ -83,16 +83,16 @@
 
 | 분야 | 선정 | 메모 |
 | --- | --- | --- |
-| 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.36.x 기준 1.95)가 결정 |
-| UI | egui/eframe 0.37.x(M6 0단계에서 0.36.2에서 올림, wgpu 기본, glow 대체 경로), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda`로 macOS·Windows만(Windows는 winit 메시지 훅에서 `TranslateAcceleratorW`). muda는 GTK 창에만 붙어 Linux는 egui 메뉴 막대. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL, Regular 2개 4.1 MB, 이름 이체자 처리는 M6). UI 시험은 `egui_kittest`([M0 기록](M0_EGUI.md)) |
+| 언어 | Rust stable, `rust-toolchain.toml`로 정확한 버전 고정 | 최소 버전은 eframe MSRV(0.37.x 기준 1.95)가 결정 |
+| UI | egui/eframe 0.37.x(M6 0단계에서 0.36.2에서 올림, wgpu 기본, glow 대체 경로), `rfd`(파일 대화상자), AccessKit(eframe 내장) | 네이티브 메뉴는 `muda`로 macOS·Windows만(Windows는 winit 메시지 훅에서 `TranslateAcceleratorW`). muda는 GTK 창에만 붙어 Linux는 egui 메뉴 막대. 한글·일본어는 Noto Sans KR/JP 부분 집합을 번들(OFL, Regular·Medium 넷 약 15 MB. 범위는 한글·KS X 1001 한자, JIS X 0213·cp932, [M6 계획](M6_PLAN.md)). UI 시험은 `egui_kittest`([M0 기록](M0_EGUI.md)) |
 | 추론 | `ort` =2.0.0-rc.15(`load-dynamic`, `api-27`, `default-features = false`) + ONNX Runtime | 런타임은 Windows가 Windows ML 2.4.89 안의 ORT 1.27.1, macOS·Linux가 공식 ORT 1.30.x다. ORT C API는 하위 호환이므로 API 수준은 가장 낮은 Windows에 맞춰 세 OS 공통 `api-27`로 둔다. Windows ML이 새 ORT를 담으면(2.5.77-rc는 1.28.0) 함께 올린다. 독립 배포 `Microsoft.ML.OnnxRuntime.DirectML`은 1.24.4가 마지막이고 DirectML은 두 경로 모두 1.15.4이므로, Windows ML로 옮겨 얻는 것은 이어지는 ORT 갱신이다. `api-30`으로 빌드하면 Windows에서 `BadVersion`으로 로드가 멈춘다(M0 확인). M0에서 `api-27`로 macOS 공식 1.30.0·Windows ML 1.27.1 모두 세 모델의 CPU 결과와 CoreML·DML 결과가 1.12.1과 같음을 확인. `ort`의 세션 빌더는 EP 자동 선택 정책 `MaxEfficiency`를 기본으로 걸어 ORT 1.31이 CPU 세션에도 CoreML을 붙이므로, 세션마다 `with_auto_device(PreferCPU)`로 덮고 EP를 명시한다. RC이므로 정확한 버전으로 고정. M5 5단계에서 rc.14의 세션 출력 누수(실행마다 272 B) 때문에 rc.15로 올림([기록](M5_VERIFY.md#찾은-것-ort-rc14의-출력-누수)) |
-| 이미지 | `image` 0.25(PNG·TIFF·BMP·WebP, 필요 codec만), JPEG 디코드·인코드는 libjpeg-turbo(`turbojpeg`, 2026-10-18 결정: `image`의 zune-jpeg 0.5.15가 non-interleaved 4:2:0 JPEG를 조용히 잘못 디코드하고, libjpeg-turbo는 1.12.1의 OpenCV와 pixel까지 같음, [기록](M2_ENCODE_SPIKE.md)), 손실 WebP 인코드는 libwebp(`libwebp-sys`), TIFF 인코드(LZW)와 TIFF ICC 판독은 `tiff`(M2 5단계: `image`의 TIFF 인코더는 압축을 고를 수 없고, `image`는 작은 TIFF의 ICC를 limit 때문에 버림), BMP V5의 내장 ICC는 자체 판독(`image`가 읽지 않음, M2 7단계), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer(`engine::photo::metadata`) | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(`engine::detect::resize`). 정확히 2배 축소일 때 OpenCV가 바꿔 쓰는 `INTER_AREA` 경로까지 옮겼고, x86 OpenCV 5.0.0 일반 경로와 92개 크기 조합에서 바이트 일치를 시험으로 고정했다(M2 3단계, `tests/fixtures/resize`). `fast_image_resize`는 화면 표시용에만 |
+| 이미지 | `image` 0.25(PNG·TIFF·BMP·WebP, 필요 codec만), JPEG 디코드·인코드는 libjpeg-turbo(`turbojpeg`, 2026-10-18 결정: `image`의 zune-jpeg 0.5.15가 non-interleaved 4:2:0 JPEG를 조용히 잘못 디코드하고, libjpeg-turbo는 1.12.1의 OpenCV와 pixel까지 같음, [기록](M2_ENCODE_SPIKE.md)), 손실 WebP 인코드는 libwebp(`libwebp-sys`), TIFF 인코드(LZW)와 TIFF ICC 판독은 `tiff`(M2 5단계: `image`의 TIFF 인코더는 압축을 고를 수 없고, `image`는 작은 TIFF의 ICC를 limit 때문에 버림), BMP V5의 내장 ICC는 자체 판독(`image`가 읽지 않음, M2 7단계), `moxcms`(색), `kamadak-exif`(읽기) + 자체 allowlist EXIF writer(`engine::photo::metadata`) | 모델 전처리 resize는 OpenCV `INTER_LINEAR`를 옮긴 자체 구현(`engine::detect::resize`). 정확히 2배 축소일 때 OpenCV가 바꿔 쓰는 `INTER_AREA` 경로까지 옮겼고, x86 OpenCV 5.0.0 일반 경로와 92개 크기 조합에서 바이트 일치를 시험으로 고정했다(M2 3단계, `tests/fixtures/resize`). 화면 표시용 축소는 `image`의 `thumbnail`(앱 썸네일, M6) |
 | 영상 | 번들 FFmpeg/ffprobe 외부 프로세스 | nonfree 없는 GPL/LGPL 빌드, 대응 소스 제공. 별도 프로세스라 앱의 Apache-2.0 라이선스에 영향이 없다. M0에서 파이프가 병목이 아님을 확인(4.4) |
-| 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), Rayon pool(CPU 연산), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 자식 프로세스 감독(M4)에 필요할 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았고, M3 모델 다운로드도 동기 HTTP(ureq)라 쓰지 않는다(2026-10-19). M4 0단계의 자식 프로세스 감독도 도구마다 감시 스레드로 해 쓰지 않는다(2026-10-21) |
-| 설정·로그·오류 | serde + TOML, 앱 데이터 폴더는 자체 구현(`engine::app_dirs`. `directories`는 의존성 `option-ext`가 MPL-2.0이라 쓰지 않음, 2026-10-18), `tracing`, `thiserror` | 기본 로그에 경로·파일명을 넣지 않음 |
+| 동시성 | 작업 실행기는 std 스레드와 bounded 채널(항목 단위 순서 보존 병렬, 상태 이벤트는 유실 없는 bounded 채널, 진행률은 최신값 보드), 전용 추론 스레드(`Detector`를 단독 소유, D8). 작은 Tokio runtime은 자식 프로세스 감독(M4)에 필요할 때 추가 | CPU 연산을 async executor에서 돌리지 않는다. M1 실행기에는 async 작업이 없어 Tokio를 쓰지 않았고, M3 모델 다운로드도 동기 HTTP(ureq)라 쓰지 않는다(2026-10-19). M4 0단계의 자식 프로세스 감독도 도구마다 감시 스레드로 해 쓰지 않는다(2026-10-21) |
+| 설정·로그·오류 | serde + TOML, 앱 데이터 폴더는 자체 구현(`engine::app_dirs`. `directories`는 의존성 `option-ext`가 MPL-2.0이라 쓰지 않음, 2026-10-18), 오류 타입은 직접 구현 | 기본 로그에 경로·파일명을 넣지 않음 |
 | 다국어 | `fluent-bundle` | 기존 `.ts` 번역을 스크립트로 `.ftl`로 이전 |
 | 네트워크·무결성 | `ureq`(동기) + rustls(ring) + `rustls-platform-verifier`(OS 인증서 저장소), `sha2`, `ed25519-dalek` | 모델·업데이트 URL allowlist. reqwest 대신 ureq(2026-10-19 결정: 의존성 114개 → 33개, Tokio 없음, [기록](M3_MODELS.md#http-crate)) |
-| 파일시스템 | `rustix`(Unix), `windows` crate | no-replace rename과 identity 조회에만 사용 |
+| 파일시스템 | `rustix`(Unix), `windows-sys` | no-replace rename과 identity 조회에만 사용 |
 | 업데이트·패키징 | Velopack Rust SDK(Windows·Linux), Sparkle(macOS, `objc2` 어댑터) | feed는 이 저장소의 고정 태그 `updates` 릴리스(1.x에서 넘어오는 경로 없음, 0.1) |
 
 **추론 EP 정책**
@@ -122,10 +122,10 @@ crates/
   cloakframe-engine    작업 실행, 스캔, codec·색·EXIF, 모델 관리와 추론(ORT), FFmpeg,
                        게시, 세션 저장, 설정
                        bin: cloakframe-cli  (M1부터, 검증 도구 겸 배치 실행)
-  cloakframe-desktop   egui 앱 (M6)
+  cloakframe-app       egui 앱 (M6, bin: cloakframe)
 ```
 
-- desktop은 pixel 처리와 FFmpeg 인자 생성을 하지 않는다. engine의 명령·이벤트·조회 API만 쓴다. CLI도 같은 공개 API만 쓴다.
+- 앱은 pixel 처리와 FFmpeg 인자 생성을 하지 않는다. engine의 명령·이벤트·조회 API만 쓴다. CLI도 같은 공개 API만 쓴다.
 - ORT는 `engine::detect` 안에서만 쓰고 `Detector` trait 뒤에 둔다. 나중에 프로세스로 분리해도 호출부가 바뀌지 않게 한다.
 - trait는 교체·실패 주입이 필요한 경계(추론, 미디어 프로세스, 파일 게시, HTTP)에만 둔다. 기하·추적 내부는 구체 타입과 함수로 쓴다.
 - `unsafe`는 기본 금지하고 OS·FFI 어댑터에서만 국소 허용한다.
@@ -218,7 +218,7 @@ crates/
 
 **메인 화면:**
 1. 가운데에 드롭 영역과 썸네일 그리드. 형식별 개수는 도구 막대에, 미지원 파일은 그리드 아래 한 줄에 이유와 함께 표시한다.
-2. 오른쪽 패널에 *무엇을*(얼굴·번호판)과 *어떻게*(채우기·모자이크·블러·이미지, 강도 슬라이더), 실제 샘플 사진에 바로 적용한 미리보기, 저장 전 검토, 저장 위치.
+2. 오른쪽 패널에 *무엇을*(얼굴·번호판)과 *어떻게*(채우기·모자이크·블러, 강도 슬라이더. 사용자 이미지는 M6 뒤, [M6_UX](M6_UX.md)), 실제 샘플 사진에 바로 적용한 미리보기, 저장 전 검토, 저장 위치.
 3. 시작 단추는 도구 막대 오른쪽. 누를 수 없으면 가운데에 이유를 보인다.
 
 **고급 설정(시트):** 정확/빠름 모델 토글, 민감도 슬라이더 하나(점수 임계값, NMS는 노출하지 않음), 타일 모드, 메타데이터 보존·GPS, 오디오 제거, 영상 품질·코덱, GPU 사용.
@@ -241,10 +241,11 @@ crates/
 ```text
 ./
   Cargo.toml, Cargo.lock, rust-toolchain.toml
-  crates/{cloakframe-core, cloakframe-engine, cloakframe-desktop}/
-  assets/{icons, fonts, locales}/
+  crates/{cloakframe-core, cloakframe-engine, cloakframe-app}/
+  crates/cloakframe-app/assets/{fonts, i18n, sample}/   앱에 넣는 글꼴·번역·샘플
+  assets/{icons, icc}/
   manifests/        모델·네이티브 런타임의 버전·URL·해시·라이선스
-  tests/{fixtures, golden, integration}/
+  tests/fixtures/   기준 fixture. 시험 코드는 각 crate의 tests/
   packaging/{windows, macos, linux}/
   tools/            fixture 추출, 번역 이전, 패키지 검사
   spikes/           M0 spike(독립 Cargo 프로젝트, workspace 밖). M0 기록을 다시 돌리는 용도
@@ -402,7 +403,8 @@ crates/
   3. 영상 검토(`m6-video-review`): 타임라인·track 레인·gap, 프레임 이동·미리보기, 저해상도 연속 재생(범위 조정 ①), keyframe, gap 결정, 미리보기 전 `VideoEdits::check`(재검토 11번) **구현(2026-10-26, [기록](M6_PLAN.md#3단계2026-10-26)):** 결정(추천대로): 현재 프레임부터 긴 변 960으로 디코드해 가린 실시간 재생(늦은 프레임은 건너뜀, 소리 없음), Space 재생·M 가린 결과·←/→ 프레임·Shift 1초·[ ] gap, 수동 track은 현재 프레임부터 1초에 box를 바꾼 프레임이 keyframe, gap 덮기는 양옆 track의 box로 gap 전체 수동 track. engine 미리보기가 직접 `VideoEdits::check`(재검토 11번)·`Preview::play`·`FrameReader::start_at`. 타임라인(눈금·gap·그린 track·종류별로 겹치지 않게 모은 track 줄), 캔버스 편집, 옆 패널. 시험 7개 추가, 로컬 전체 547개. 첫 CI에서 macOS runner의 사진 편집기 시험이 승인한 사진의 렌더를 기다리지 않고 정착해 실패한 것을 고침. **완료(2026-10-26, PR #60, main `f41d090`):** CI 4개 통과(벤치마크·처리량 workflow는 경로 필터 밖이라 돌지 않음)
   4. 설정·미리보기·번역·접근성(`m6-settings`): 고급 설정, 샘플 미리보기, 하드웨어 인코드 실패 이유 표시(M5에서 넘어옴), `.ts` 이전 완료, 접근성 이름·역할·포커스 **구현(2026-10-26, [기록](M6_PLAN.md#4단계2026-10-26)):** 결정(추천대로): 민감도 5단계(score 0.70–0.30, 기본 0.50, 얼굴·번호판 같은 값, NMS는 숨김), 번들 공공 영역 사진의 샘플 미리보기, 실패는 engine `FailureKind`만 번역하고 영어 이유는 자세히로, 하드웨어 인코드 실패는 소프트웨어 재시도가 성공할 때만 하드웨어 탓([재검토](M0_M5_REVIEW.md) 11번). 고급 설정을 `settings.toml`과 세션의 실행 설정에 저장, 영상 오디오 제거(engine `VideoSettings::remove_audio`), engine 알림·실패·거절 문장 번역, 목록 역할과 Tab 순서, `tools/i18n/ts_matches.py`로 1.12.1 번역 대조. 시험 9개 추가, 로컬 전체 556개. **완료(2026-10-26, PR #61, main `4f5f848`):** CI 10개 통과. 탐지 벤치마크 기본 설정 얼굴 재현율 87.9%, 영상 추적 벤치마크 노출 프레임 타일 끔 5,322·켬 912로 기록과 같음
   5. 완료 확인(`m6-verify`): 흐름별 시험 표, macOS 실제 OS 점검, Windows·Linux CI 실행·스크린샷, 범위 조정 점검 **구현(2026-10-26, [기록](M6_VERIFY.md)):** 결정(추천대로): 정보 창과 stderr에 렌더러·백엔드·어댑터, wgpu와 OpenGL 모두 실패하면 번역한 네이티브 오류 창, preview는 ad-hoc 서명 macOS arm64 zip을 초안 prerelease로(`preview.yml`). 흐름별 시험 표(UI 시험 2개 추가: 테마, 항목·실행 취소), Linux(Xvfb)·Windows CI에서 앱 창 실행·스크린샷과 wgpu → OpenGL 대체(`tools/ci/app_window.*`, Linux는 Docker arm64에서 사전 실행), macOS 사람 점검 목록, M0 공개 이슈 7개 모두 열림(앱에 글자 입력 칸이 없어 IME 영향 작음), 범위 조정 점검(누적 14일, 미루는 항목 없음). 남은 것: macOS 사람 점검, preview 게시 전 FFmpeg GPL 고지·대응 소스 **병합(2026-10-26, PR #62, main `d10636a`):** CI 4개 통과(run 40280951135). Linux Xvfb는 wgpu(Vulkan llvmpipe)로, Vulkan을 막으면 OpenGL(llvmpipe 4.5)로 떴다. Windows runner는 wgpu dx12(Microsoft Basic Render Driver)로 떠 WM_CLOSE로 정상 종료했고, `WGPU_BACKEND=vulkan`이면 OpenGL 1.1뿐이라 오류 창이 떴다. 그 창 문구의 겹친 접두를 고쳤다. main push CI의 Windows에서 앱 시험이 세션 목록 읽기 스레드를 기다리지 않아 실패해 고쳤다. FFmpeg는 대응 소스를 낼 수 없는 빌드라서 preview는 사진만 낸다(10.1). [기록](M6_VERIFY.md#windowslinuxci)
-  6. 화면 재설계(`m6-ux-shell`·`m6-ux-run`·`m6-ux-review`·`m6-ux-verify`): HTML 설계안을 확정(2026-10-27)하고 틀과 메인, 실행·결과, 검토 화면을 차례로 옮긴 뒤 snapshot과 사람 점검으로 확인. Noto Medium 번들, 테마·언어는 보기 메뉴로([기록](M6_UX.md)). 1–4단계 완료(PR #65·#66·#68·#70, main 1d3462c, 2026-10-28). 4단계는 화면마다 밝게·어둡게·세 언어 snapshot(`tests/screens.rs`, CI 밖)과 설정 패널 넘침 시험(CI)으로 설계안과 비교하고 차이를 고쳤다. 메인테이너가 앱에서 본 느린 영상 분석은 YOLO5Face-n의 동적 batch가 CoreML 그래프를 두 조각으로 나눈 탓이었고, CoreML 세션의 batch를 1로 고정해 감지는 같게 두고 영상 1패스를 약 25–28% 줄였다(PR #72, main 87202a3, 2026-10-29, [기록](M6_COREML_SPEED.md)). 남은 확인은 메인테이너의 앱 점검(영상 속도 포함)이고, 그 뒤 M6 완료와 사진 전용 preview
+  6. 화면 재설계(`m6-ux-shell`·`m6-ux-run`·`m6-ux-review`·`m6-ux-verify`): HTML 설계안을 확정(2026-10-27)하고 틀과 메인, 실행·결과, 검토 화면을 차례로 옮긴 뒤 snapshot과 사람 점검으로 확인. Noto Medium 번들, 테마·언어는 보기 메뉴로([기록](M6_UX.md)). 1–4단계 완료(PR #65·#66·#68·#70, main 1d3462c, 2026-10-28). 4단계는 화면마다 밝게·어둡게·세 언어 snapshot(`tests/screens.rs`, CI 밖)과 설정 패널 넘침 시험(CI)으로 설계안과 비교하고 차이를 고쳤다. 메인테이너가 앱에서 본 느린 영상 분석은 YOLO5Face-n의 동적 batch가 CoreML 그래프를 두 조각으로 나눈 탓이었고, CoreML 세션의 batch를 1로 고정해 감지는 같게 두고 영상 벤치마크 1패스를 26%, 메인테이너 클립 전체 실행을 28% 줄였다(PR #72, main 87202a3, 2026-10-29, [기록](M6_COREML_SPEED.md)). 남은 확인은 메인테이너의 앱 점검(영상 속도 포함)이고, 그 뒤 M6 완료와 사진 전용 preview
+  7. M0–M6 재검토 수정(`m6-review`, 2026-10-29, [기록](M0_M6_REVIEW.md#처리2026-10-29-m6-review)): 결함 1–3·5–7·9번(확인 창 뒤 키, 깨진 EXIF의 방향, HEVC open GOP 미리보기, 실행 화면 썸네일·진행률·스캔 중 시작, 가장자리 얼굴 강도), 결정(추천대로): 앱 기본 방식 채우기, ONNX Runtime·crate 고지 번들(cargo-about), preview 판 `2.0.0-preview.1`, 모델 폴더 복사 유지. 남은 것: 1.x 문서(README·ROADMAP·RELEASING·SECURITY)는 preview 게시 전, 8·10번은 M7 전
 - **결정(2026-10-27, [기록](M6_VERIFY.md#macos-사람-점검메인테이너)):** macOS 사람 점검 10항목은 모두 동작했지만, 메인테이너가 화면이 투박하고 무엇이 무엇인지 구분되지 않아 쓰기 어렵다고 봤다. M6 완료 기준(모든 흐름을 UI로 수행)은 기능만 보았으므로 6단계 UX 다듬기를 더한다(메인테이너가 추천대로). 설계안(HTML)을 먼저 확인받은 뒤 egui로 옮기고, M6 완료 표시와 preview 게시는 그 뒤로 미룬다
 - **결정(2026-10-25, [기록](M6_PLAN.md)):** 위 단계, 범위 조정 ①②는 미루지 않음, 재검토 7·10번은 M8 품질 비교 전 별도 브랜치. egui·egui_kittest·eframe은 0.37.x(0단계 첫 커밋에서 M0 자동 시험을 다시 돌림), muda·rfd도 그때의 최신 판(같은 날 2주 규칙을 없애 0단계를 바로 시작할 수 있음, 3장). 글꼴은 JIS X 0213 전체와 KS X 1001 한자를 번들, 메뉴는 muda "custom"(Linux는 egui 메뉴 막대), 번역은 영어 `.ftl` 기준으로 1.12.1 `.ts`에서 쓰는 문장만 옮김(새 일본어는 기계 초안 + 검토 필요 표시), 설정은 앱 데이터 폴더의 `settings.toml`, 렌더러는 wgpu 기본·실패 시 glow. **완료(2026-10-25, PR #56, main `87e0e22`):** CI 4개(형식·린트·라이선스, 3개 OS 시험) 통과
 
@@ -512,7 +514,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 
 ## 참고 자료
 
-- egui/eframe: <https://github.com/emilk/egui>, <https://docs.rs/crate/eframe/0.36.2>, `egui_kittest`: <https://docs.rs/egui_kittest/latest/egui_kittest/>
+- egui/eframe: <https://github.com/emilk/egui>, <https://docs.rs/crate/eframe/0.37.0>, `egui_kittest`: <https://docs.rs/egui_kittest/latest/egui_kittest/>
 - ort: <https://github.com/pykeio/ort>, rc.15: <https://github.com/pykeio/ort/releases/tag/v2.0.0-rc.15>
 - ONNX Runtime EP: DirectML <https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html>, CoreML <https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html>
 - Windows ML 배포: <https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/distributing-your-app>, EP 카탈로그 비교: <https://learn.microsoft.com/en-us/windows/ai/new-windows-ml/windows-ml-eps-vs-bring-your-own>
@@ -520,7 +522,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 - ort 기능 플래그(`api-17`–`api-31`): <https://docs.rs/crate/ort/2.0.0-rc.15/features>, `with_telemetry`: <https://docs.rs/ort/2.0.0-rc.15/ort/environment/struct.EnvironmentBuilder.html>
 - ONNX Runtime 텔레메트리: <https://github.com/microsoft/onnxruntime/blob/main/docs/Privacy.md>
 - Apache License 2.0: <https://www.apache.org/licenses/LICENSE-2.0>, cargo-deny: <https://github.com/EmbarkStudios/cargo-deny>
-- image: <https://github.com/image-rs/image>, moxcms: <https://docs.rs/moxcms/latest/moxcms/>, kamadak-exif: <https://docs.rs/kamadak-exif/latest/exif/>, fast_image_resize: <https://docs.rs/fast_image_resize/latest/fast_image_resize/>
+- image: <https://github.com/image-rs/image>, moxcms: <https://docs.rs/moxcms/latest/moxcms/>, kamadak-exif: <https://docs.rs/kamadak-exif/latest/exif/>
 - FFmpeg: CLI <https://ffmpeg.org/ffmpeg.html>, 프로토콜 <https://ffmpeg.org/ffmpeg-protocols.html>, 라이선스 <https://ffmpeg.org/legal.html>, ffmpeg-next <https://github.com/zmwangx/rust-ffmpeg>
 - Velopack Rust: <https://docs.velopack.io/getting-started/rust>, Sparkle: <https://sparkle-project.org/documentation/>
 - Tokio·Rayon: <https://tokio.rs/tokio/topics/bridging>, <https://docs.rs/rayon/latest/rayon/>

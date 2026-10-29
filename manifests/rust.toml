@@ -32,9 +32,15 @@ evidence = "docs/M0_EGUI.md"
 
 [crates.egui_kittest]
 version = "=0.37.0"
-features = ["wgpu", "snapshot"]
+features = ["wgpu", "snapshot", "eframe"]
 dev = true
+# eframe: 화면 사진 시험(tests/screens.rs)이 앱을 eframe::App으로 그린다.
 evidence = "docs/M0_EGUI.md"
+
+[crates.jiff]
+version = "=0.2.38"
+# 결과 제목·사이드바의 현지 시각("오늘 14:12"). MIT/Unlicense 중 MIT.
+evidence = "docs/M6_UX.md"
 
 [crates.muda]
 version = "=0.21.2"

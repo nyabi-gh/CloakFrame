@@ -149,10 +149,25 @@ license = "OFL-1.1"
 license_url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/LICENSE"
 license_sha256 = "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
 source = "https://github.com/notofonts/noto-cjk/tree/Sans2.004"
-# 원본을 pyftsubset으로 잘라 번들한다(spikes/egui/fetch_fonts.sh). 이름 이체자 범위는 M6에서 정한다.
+# 원본을 pyftsubset으로 잘라 번들한다(tools/fonts/subset.sh: 한글과 KS X 1001 한자).
 use = "bundle"
 status = "m0"
 evidence = "docs/M0_EGUI.md"
+
+[[artifact]]
+id = "noto-sans-kr-medium"
+platform = "all"
+version = "Sans2.004"
+url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/Sans/SubsetOTF/KR/NotoSansKR-Medium.otf"
+sha256 = "b46988ef13e8bac08f3933af686eaf770972994f9b6d335be0184d60169b5431"
+license = "OFL-1.1"
+license_url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/LICENSE"
+license_sha256 = "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+source = "https://github.com/notofonts/noto-cjk/tree/Sans2.004"
+# 제목·강조 굵기. Regular와 같은 범위로 자른다(tools/fonts/subset.sh).
+use = "bundle"
+status = "m6"
+evidence = "docs/M6_UX.md"
 
 [[artifact]]
 id = "noto-sans-jp"
@@ -164,9 +179,24 @@ license = "OFL-1.1"
 license_url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/LICENSE"
 license_sha256 = "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
 source = "https://github.com/notofonts/noto-cjk/tree/Sans2.004"
+# tools/fonts/subset.sh: JIS X 0213과 cp932.
 use = "bundle"
 status = "m0"
 evidence = "docs/M0_EGUI.md"
+
+[[artifact]]
+id = "noto-sans-jp-medium"
+platform = "all"
+version = "Sans2.004"
+url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/Sans/SubsetOTF/JP/NotoSansJP-Medium.otf"
+sha256 = "f396a3b57256e4515be9cb41f7aac54766d654890082a9f1b5c2451b5c093d8a"
+license = "OFL-1.1"
+license_url = "https://github.com/notofonts/noto-cjk/raw/Sans2.004/LICENSE"
+license_sha256 = "6a73f9541c2de74158c0e7cf6b0a58ef774f5a780bf191f2d7ec9cc53efe2bf2"
+source = "https://github.com/notofonts/noto-cjk/tree/Sans2.004"
+use = "bundle"
+status = "m6"
+evidence = "docs/M6_UX.md"
 
 [[artifact]]
 id = "model-yolo5face-n"

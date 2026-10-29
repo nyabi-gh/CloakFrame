@@ -6,12 +6,12 @@
 
 - **렌더러 표시:** 정보 창에 "그래픽: wgpu, metal, Apple M4"처럼 렌더러·백엔드·어댑터를 보이고(소프트웨어 어댑터면 "(software)"), 시작할 때 stderr에 같은 내용을 `graphics: …` 한 줄로 쓴다. 버그 보고에 쓰고, CI가 대체 경로를 이 줄로 확인한다.
 - **두 렌더러 모두 실패:** wgpu와 OpenGL 둘 다 시작하지 못하면 네이티브 오류 창(rfd)으로 "CloakFrame을 시작할 수 없습니다"와 두 오류를 보이고 끝난다. 설정의 언어, 없으면 시스템 언어로 번역한다. 전에는 창 없이 끝나 Windows release(콘솔 없음)에서는 아무 표시가 없었다. Linux의 rfd 메시지 창은 zenity가 있어야 뜨고, 없으면 stderr만 남는다.
-- **preview 릴리스:** macOS arm64 zip. `preview.yml`이 release 빌드에 ORT·FFmpeg를 넣은 ad-hoc 서명 앱(공증 없음)을 zip으로 만들어 GitHub의 초안 prerelease에 올린다. 게시는 메인테이너가 macOS 점검 뒤에 한다. Windows·Linux 배포본과 DMG·서명·공증은 M7.
+- **preview 릴리스:** macOS arm64 zip. `preview.yml`이 release 빌드에 ORT를 넣은 ad-hoc 서명 앱(공증 없음)을 zip으로 만들어 GitHub의 초안 prerelease에 올린다. 게시는 메인테이너가 macOS 점검 뒤에 한다. Windows·Linux 배포본과 DMG·서명·공증은 M7.
 
 함께 정한 것(질문하지 않음):
 
 - 렌더러 문장은 기술 정보라 번역하지 않는다(라벨 "그래픽"만 번역).
-- preview 앱 이름은 "CloakFrame Preview", 식별자는 `com.cloakframe.app.preview`다. 1.12.1(`com.cloakframe.app`)과 응용 프로그램 폴더에 함께 둘 수 있게 했다. 최소 macOS 15.0(계획 2장 지원 OS).
+- preview 앱 이름은 "CloakFrame Preview", 식별자는 `com.cloakframe.app.preview`다. 1.12.1(`com.cloakframe.app`)과 응용 프로그램 폴더에 함께 둘 수 있게 했다. 최소 macOS 15.0(계획 1.1절 지원 OS).
 
 ## 흐름별 시험 표
 
