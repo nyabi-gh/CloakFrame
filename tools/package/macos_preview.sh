@@ -22,7 +22,8 @@ ort=$3
 out=$4
 root=$(cd "$(dirname "$0")/../.." && pwd)
 
-# CFBundleShortVersionString takes numbers only: 2.0.0-alpha.0 is 2.0.0 there.
+# CFBundleShortVersionString and CFBundleVersion take numbers only: 2.0.0-preview.1 is 2.0.0
+# there.
 short=${version%%-*}
 ort_root=$(cd "$(dirname "$ort")/.." && pwd)
 work=$(mktemp -d)
@@ -70,7 +71,7 @@ cat >"$app/Contents/Info.plist" <<EOF
     <key>CFBundleShortVersionString</key>
     <string>$short</string>
     <key>CFBundleVersion</key>
-    <string>$version</string>
+    <string>$short</string>
     <key>LSApplicationCategoryType</key>
     <string>public.app-category.photography</string>
     <key>LSMinimumSystemVersion</key>
