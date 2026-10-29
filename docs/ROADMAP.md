@@ -20,15 +20,13 @@ close it. Check the caller and the full scope before recording a change of state
 
 - **Installers.** Velopack installers for Windows and Linux plus an AppImage, and a DMG
   signed with Developer ID and notarized. Each installs, runs offline, updates and
-  uninstalls on a clean minimum supported OS, including a Windows 10 1903 VM.
+  uninstalls on a clean minimum supported OS, including a Windows 10 1903 VM. The Windows
+  installer uses `packId` `CloakFrameApp`, so it neither replaces 1.12.1 (`CloakFrame`) nor
+  removes the data in `%LocalAppData%\CloakFrameData`; check both with 1.12.1 installed
+  ([review](M0_M6_REVIEW.md) 10).
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused.
-- **Windows data folder.** The data folder `%LocalAppData%\CloakFrame` is also where
-  Velopack installed 1.12.1 (`packId` `CloakFrame`), and uninstalling 1.12.1 removes the
-  whole folder with 2.0's review sessions and models in it. Choose a different data
-  folder or `packId` so 1.12.1 and 2.0 can be installed and removed independently
-  ([review](M0_M6_REVIEW.md) 10).
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
   source can be published; until then releases mask photos only (plan 10.1).
 - **Notices and terms.** An SBOM and the native manifest with each release, and the

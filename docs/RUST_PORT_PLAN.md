@@ -415,6 +415,7 @@ crates/
 - **작업:** 세 OS 패키지(Velopack 설치본·AppImage, DMG), 서명·공증, 이 저장소의 `updates` 릴리스로 업데이트, 키 필수화와 서명 feed, 네이티브 manifest·SBOM·라이선스·대응 소스, 모델 미러(4.6). 1.x 설정 이전은 하지 않는다(0.1, 2026-10-28)
 - **완료 기준:** 깨끗한 최소 지원 OS(Windows 10 1903 VM 포함, M0에서 옮김)에서 설치·오프라인 실행·업데이트·제거, 1.12.1이 설치된 컴퓨터에 새로 설치해도 1.12.1의 설정·모델이 그대로 남음. P-7 통과
 - **M7 전 재검토 8번(2026-10-29, `m6-windows-console`, [기록](M0_M6_REVIEW.md#8번-windows-콘솔-창2026-10-29-m6-windows-console)):** release 앱이 영상 하나에 띄운 ffprobe·ffmpeg 3개마다 Windows Terminal 창이 열리는 것을 재현했고, 도구를 `CREATE_NO_WINDOW`로 띄워 창 없는 자기 콘솔을 주게 고쳤다. CLI의 Ctrl+C 취소(130)와 Job 정리는 그대로다. Job 지정 시점은 stable std로 바꿀 수 없고 FFmpeg가 자식을 띄우지 않아 그대로 둔다
+- **M7 전 재검토 10번(2026-10-29, `m7-windows-data-folder`, [기록](M0_M6_REVIEW.md#10번-windows-데이터-폴더2026-10-29-m7-windows-data-folder)):** 이 PC에 1.12.1을 설치하고 2.0의 설정·세션·모델을 만든 뒤 1.12.1을 제거하자 `%LocalAppData%\CloakFrame`이 통째로 지워졌다. 결정(추천대로): Windows 데이터 폴더 `%LocalAppData%\CloakFrameData`, 2.0 `packId` `CloakFrameApp`(10장). Windows도 1.12.1 모델을 해시를 확인해 복사한다
 
 ### M8 — 검증과 stable 전환
 
@@ -464,7 +465,7 @@ CI에서 모델과 FFmpeg는 해시로 고정해 받고, `cargo-deny`로 의존�
 
 | 플랫폼 | 패키지 | 포함할 것 |
 | --- | --- | --- |
-| Windows | Velopack 설치본 | Windows ML 런타임 DLL, FFmpeg, 앱. 실행 파일은 `+crt-static`으로 빌드한다(VC++ 런타임 없는 PC에서 시작 실패를 막음, M0 확인). `System32`에 OS의 오래된 ORT·DirectML이 있으므로 `ort::init_from`에 앱 폴더의 절대 경로를 준다. DLL 검색 경로를 앱 폴더로 제한. Authenticode 확보 여부는 운영 결정(ROADMAP) |
+| Windows | Velopack 설치본 | Windows ML 런타임 DLL, FFmpeg, 앱. 실행 파일은 `+crt-static`으로 빌드한다(VC++ 런타임 없는 PC에서 시작 실패를 막음, M0 확인). `System32`에 OS의 오래된 ORT·DirectML이 있으므로 `ort::init_from`에 앱 폴더의 절대 경로를 준다. DLL 검색 경로를 앱 폴더로 제한. `packId`는 `CloakFrameApp`(설치 `%LocalAppData%\CloakFrameApp`)이고 사용자 데이터는 그 밖의 `%LocalAppData%\CloakFrameData`에 둔다. 1.12.1(`packId` `CloakFrame`)과 따로 설치·제거되고, 2.0 제거·재설치가 세션·모델을 지우지 않는다(2026-10-29 결정, [재검토](M0_M6_REVIEW.md) 10번). Authenticode 확보 여부는 운영 결정(ROADMAP) |
 | macOS | app bundle + DMG | Developer ID 서명과 공증, Sparkle 2.9.x, ORT dylib, FFmpeg |
 | Linux | AppImage(Ubuntu 24.04에서 빌드) + Velopack | CPU ORT, FFmpeg |
 
