@@ -1,8 +1,8 @@
 //! Photo and video thumbnails for the input grid, made one at a time on a worker thread for the cells on
-//! screen. Only the most recently made are kept, so a folder of thousands of photos does not fill
-//! the GPU's memory.
+//! screen. Only those shown most recently are kept, so a folder of thousands of photos does not
+//! fill the GPU's memory.
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 
@@ -16,6 +16,7 @@ use eframe::egui;
 
 /// Pixels along the longer side: enough for a 128-point cell at twice the pixel density.
 const SIDE: u32 = 256;
+/// Kept when not on screen; more stay while the screen shows more.
 const KEPT: usize = 200;
 
 /// Width, height and RGBA rows.
@@ -34,7 +35,10 @@ pub struct Thumbnails {
     asked: HashSet<PathBuf>,
     textures: HashMap<PathBuf, Option<egui::TextureHandle>>,
     seconds: HashMap<PathBuf, f64>,
-    order: VecDeque<PathBuf>,
+    /// The pass each thumbnail was last asked for in.
+    shown: HashMap<PathBuf, u64>,
+    /// The context's pass when the thumbnails made since were last taken.
+    pass: u64,
 }
 
 impl Thumbnails {
@@ -71,12 +75,14 @@ impl Thumbnails {
             asked: HashSet::new(),
             textures: HashMap::new(),
             seconds: HashMap::new(),
-            order: VecDeque::new(),
+            shown: HashMap::new(),
+            pass: 0,
         })
     }
 
     /// Uploads the thumbnails made since the last frame.
     pub fn take(&mut self, ctx: &egui::Context) {
+        self.pass = ctx.cumulative_pass_nr();
         while let Ok(made) = self.made.try_recv() {
             self.made_now(made, ctx);
         }
@@ -92,13 +98,22 @@ impl Thumbnails {
         if let Some(seconds) = seconds {
             self.seconds.insert(path.clone(), seconds);
         }
-        self.order.push_back(path);
-        while self.order.len() > KEPT {
-            if let Some(old) = self.order.pop_front() {
-                self.textures.remove(&old);
-                self.seconds.remove(&old);
-                self.asked.remove(&old);
-            }
+        while self.textures.len() > KEPT {
+            // What the last pass asked for is still on screen.
+            let Some(old) = self
+                .textures
+                .keys()
+                .map(|p| (self.shown.get(p).copied(), p))
+                .filter(|(shown, _)| shown.is_none_or(|s| s + 1 < self.pass))
+                .min()
+                .map(|(_, p)| p.clone())
+            else {
+                break;
+            };
+            self.textures.remove(&old);
+            self.seconds.remove(&old);
+            self.asked.remove(&old);
+            self.shown.remove(&old);
         }
     }
 
@@ -115,6 +130,12 @@ impl Thumbnails {
     /// The thumbnail of `path` if it is made; asks for it otherwise. `None` inside means the
     /// photo could not be read.
     pub fn get(&mut self, path: &Path, kind: MediaKind) -> Option<Option<&egui::TextureHandle>> {
+        match self.shown.get_mut(path) {
+            Some(pass) => *pass = self.pass,
+            None => {
+                self.shown.insert(path.to_path_buf(), self.pass);
+            }
+        }
         if let Some(texture) = self.textures.get(path) {
             return Some(texture.as_ref());
         }
@@ -122,6 +143,12 @@ impl Thumbnails {
             let _ = self.requests.send((path.to_path_buf(), kind));
         }
         None
+    }
+
+    /// How many thumbnails are asked for or made.
+    #[cfg(test)]
+    pub(crate) fn asked(&self) -> usize {
+        self.asked.len()
     }
 
     /// A video's length, once its thumbnail is made.
@@ -194,6 +221,39 @@ mod tests {
         assert_eq!(texture.size_vec2().max_elem(), SIDE as f32);
         assert!(thumbnails.get(&broken, MediaKind::Image).unwrap().is_none());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// However many cells the last pass showed, their thumbnails stay; the rest goes, least
+    /// recently shown first.
+    #[test]
+    fn thumbnails_on_screen_are_kept() {
+        let ctx = egui::Context::default();
+        let mut thumbnails = Thumbnails::new(&ctx, None).unwrap();
+        let path = |i: usize| PathBuf::from(format!("missing-{i}.jpg"));
+        let made = |t: &mut Thumbnails, i: usize| {
+            t.made_now((path(i), Some((1, 1, vec![0; 4])), None), &ctx);
+        };
+        let on_screen = KEPT + 50;
+        thumbnails.pass = 1;
+        for i in 0..on_screen {
+            assert!(thumbnails.get(&path(i), MediaKind::Image).is_none());
+        }
+        thumbnails.pass = 2;
+        for i in 0..on_screen {
+            made(&mut thumbnails, i);
+        }
+        assert!(
+            (0..on_screen).all(|i| thumbnails.get(&path(i), MediaKind::Image).is_some()),
+            "every cell on screen keeps its thumbnail"
+        );
+        thumbnails.pass = 5;
+        for i in 0..10 {
+            assert!(thumbnails.get(&path(i), MediaKind::Image).is_some());
+        }
+        thumbnails.pass = 6;
+        made(&mut thumbnails, on_screen);
+        assert_eq!(thumbnails.textures.len(), KEPT);
+        assert!((0..10).all(|i| thumbnails.textures.contains_key(&path(i))));
     }
 
     fn tool(name: &str) -> PathBuf {

@@ -1552,13 +1552,21 @@ impl AppState {
                     ui.spacing_mut().item_spacing.y = 0.0;
                     for (item, input) in &board.items {
                         let row = RunRow::of(board, *item, input, &progress, session.is_some(), tr);
-                        let kind = found
-                            .as_ref()
-                            .and_then(|f| f.files.iter().find(|f| &f.path == input))
-                            .map_or(MediaKind::Image, |f| f.kind);
-                        let thumbnail = thumbnails
-                            .as_mut()
-                            .and_then(|t| t.get(input, kind).flatten());
+                        let next = egui::Rect::from_min_size(
+                            ui.cursor().min,
+                            egui::vec2(ui.available_width(), ROW_HEIGHT),
+                        );
+                        let thumbnail = if ui.is_rect_visible(next) {
+                            let kind = found
+                                .as_ref()
+                                .and_then(|f| f.files.iter().find(|f| &f.path == input))
+                                .map_or(MediaKind::Image, |f| f.kind);
+                            thumbnails
+                                .as_mut()
+                                .and_then(|t| t.get(input, kind).flatten())
+                        } else {
+                            None
+                        };
                         let chosen = ui.scope(|ui| {
                             a11y::mark_item(ui, &row.described);
                             run_row(ui, &row, thumbnail, board.is_over())
@@ -2551,5 +2559,28 @@ mod tests {
         let queued = row(waiting, "next.mp4");
         assert_eq!(queued.state, "Waiting");
         assert!(matches!(queued.look, Look::Waiting));
+    }
+
+    /// A run of hundreds of items asks for the thumbnails of the rows on screen only.
+    #[test]
+    fn only_the_rows_on_screen_ask_for_thumbnails() {
+        let mut state = AppState::new(Settings::default(), None, Vec::new());
+        let mut board = Board::new(std::time::Instant::now(), PathBuf::from("out"));
+        board.take(run::Message::Started {
+            items: (0..300)
+                .map(|i| (ItemId(i), PathBuf::from(format!("missing-{i}.jpg"))))
+                .collect(),
+            progress: Default::default(),
+            cancels: BTreeMap::new(),
+        });
+        state.board = Some(board);
+        let mut harness = egui_kittest::Harness::builder()
+            .with_size(egui::vec2(1100.0, 760.0))
+            .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
+            .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state);
+        harness.step();
+        harness.step();
+        let asked = harness.state().thumbnails.as_ref().unwrap().asked();
+        assert!((1..20).contains(&asked), "{asked} thumbnails asked for");
     }
 }
