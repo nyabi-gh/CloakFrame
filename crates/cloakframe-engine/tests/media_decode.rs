@@ -123,12 +123,9 @@ fn a_faster_stretch_after_the_first_seconds_keeps_every_frame() {
     assert_eq!(shown, (0..listed.len()).collect::<Vec<_>>());
 }
 
-/// An open GOP cut at a later keyframe without an edit list: the decoder drops the leading
-/// pictures that refer to the GOP before, which the packet list still has.
-#[test]
-fn leading_pictures_the_decoder_drops_are_not_listed() {
-    let dir = TestDir::new();
-    for (codec, params) in [
+/// Four seconds of open GOPs, a keyframe every 30 frames, from H.264 and from HEVC.
+fn open_gops(dir: &TestDir) -> Vec<(&'static str, PathBuf)> {
+    [
         (
             "libx264",
             [
@@ -143,8 +140,10 @@ fn leading_pictures_the_decoder_drops_are_not_listed() {
                 "keyint=30:min-keyint=30:open-gop=1:bframes=4:scenecut=0:log-level=error",
             ],
         ),
-    ] {
-        let whole = dir.path().join(format!("{codec}-open-gop.mp4"));
+    ]
+    .into_iter()
+    .map(|(codec, params)| {
+        let path = dir.path().join(format!("{codec}-open-gop.mp4"));
         let mut c = ToolCommand::ffmpeg(&ffmpeg());
         c.args([
             "-f",
@@ -156,8 +155,19 @@ fn leading_pictures_the_decoder_drops_are_not_listed() {
         ])
         .args(params)
         .args(["-pix_fmt", "yuv420p"])
-        .output_file(&whole);
+        .output_file(&path);
         c.output(&CancelToken::new()).unwrap();
+        (codec, path)
+    })
+    .collect()
+}
+
+/// An open GOP cut at a later keyframe without an edit list: the decoder drops the leading
+/// pictures that refer to the GOP before, which the packet list still has.
+#[test]
+fn leading_pictures_the_decoder_drops_are_not_listed() {
+    let dir = TestDir::new();
+    for (codec, whole) in open_gops(&dir) {
         let cut = dir.path().join(format!("{codec}-cut.mp4"));
         let mut c = ToolCommand::ffmpeg(&ffmpeg());
         c.args(["-ss", "1"])
@@ -182,6 +192,51 @@ fn leading_pictures_the_decoder_drops_are_not_listed() {
             )
             .unwrap();
             assert!(preview == pass[k], "{codec} frame {k}");
+        }
+    }
+}
+
+/// An open GOP's leading pictures come after their keyframe in decoding order but refer to the
+/// GOP before it. The preview and playback of any frame, those pictures too, are the pass's.
+#[test]
+fn every_frame_of_open_gops_previews_and_plays_from_itself() {
+    let dir = TestDir::new();
+    for (codec, path) in open_gops(&dir) {
+        let (spec, listed) = opened(&path);
+        let size = frame_size(&spec, None);
+        let pass = all_frames(&path, &spec, &listed, size);
+        assert_eq!(pass.len(), 120, "{codec}");
+        for (k, expected) in pass.iter().enumerate() {
+            let preview = source_frame(
+                &ffmpeg(),
+                &path,
+                &spec,
+                &listed,
+                k,
+                size,
+                &CancelToken::new(),
+            );
+            assert!(
+                preview.is_ok_and(|p| p == *expected),
+                "{codec} preview of frame {k}"
+            );
+            let mut reader = FrameReader::start_at(
+                &ffmpeg(),
+                &path,
+                &spec,
+                &listed,
+                k,
+                size,
+                &CancelToken::new(),
+            )
+            .unwrap();
+            let mut first = Rgb8Image {
+                width: 0,
+                height: 0,
+                data: Vec::new(),
+            };
+            assert!(reader.next_into(&mut first).unwrap());
+            assert!(first == *expected, "{codec} playback from frame {k}");
         }
     }
 }

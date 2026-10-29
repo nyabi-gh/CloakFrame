@@ -95,8 +95,11 @@ pub fn list(
         let decoded = decoded_timestamps(ffprobe, input, spec.stream, end, cancel)?;
         kept.retain(|p| p.place >= end || decoded.contains(&p.pts));
     }
+    let keys: Vec<i64> = kept.iter().filter(|p| p.key).map(|p| p.pts).collect();
     let pts = kept.into_iter().map(|p| p.pts).collect();
-    SourceFrames::new(spec.time_base, pts, last_duration).map_err(FramesError::Frames)
+    SourceFrames::new(spec.time_base, pts, last_duration)
+        .map(|frames| frames.with_keys(keys))
+        .map_err(FramesError::Frames)
 }
 
 /// A packet of the processed stream that the container keeps, in decoding order.

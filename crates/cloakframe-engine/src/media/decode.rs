@@ -264,11 +264,12 @@ fn read_frame(stdout: &mut ChildStdout, buf: &mut [u8]) -> io::Result<bool> {
     Ok(true)
 }
 
-/// The `-ss` that lands at or before frame `k`. FFmpeg adds the container's start to it. The
-/// margin covers the start time's decimal rounding; the frames before `k` are dropped by
-/// matching its timestamp.
+/// The `-ss` that lands where decoding gives frame `k` ([`SourceFrames::seek_frame`]). FFmpeg
+/// adds the container's start to it. The margin covers the start time's decimal rounding; the
+/// frames before `k` are dropped by matching its timestamp.
 fn seek_to(spec: &TimelineSpec, frames: &SourceFrames, k: usize) -> String {
-    let seek = (frames.time(k).as_f64() - spec.container_start_seconds - 0.001).max(0.0);
+    let at = frames.time(frames.seek_frame(k));
+    let seek = (at.as_f64() - spec.container_start_seconds - 0.001).max(0.0);
     format!("{seek:.6}")
 }
 

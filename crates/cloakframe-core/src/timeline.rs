@@ -406,6 +406,8 @@ pub struct SourceFrames {
     pts: Vec<i64>,
     /// When the last frame stops showing.
     end: i64,
+    /// The keyframes' timestamps, sorted; empty when they are not known.
+    keys: Vec<i64>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -449,7 +451,31 @@ impl SourceFrames {
             time_base,
             pts,
             end: last.saturating_add(shown_for),
+            keys: Vec::new(),
         })
+    }
+
+    /// The same frames with the timestamps of the packets marked as keyframes.
+    pub fn with_keys(mut self, keys: impl IntoIterator<Item = i64>) -> Self {
+        self.keys = keys.into_iter().collect();
+        self.keys.sort_unstable();
+        self
+    }
+
+    /// The frame a seek for frame `k` goes to: the last keyframe at or before it in
+    /// presentation order, the first frame when none is, and `k` itself when the keyframes are
+    /// not known. A seek to `k` lands on the keyframe that comes before `k` in decoding order,
+    /// which for an open GOP's leading picture is the keyframe after it: decoding from there
+    /// cannot give `k`, which refers to the GOP before.
+    pub fn seek_frame(&self, k: usize) -> usize {
+        if self.keys.is_empty() {
+            return k;
+        }
+        let at = self.keys.partition_point(|&key| key <= self.pts[k]);
+        match at.checked_sub(1) {
+            Some(key) => self.pts.partition_point(|&p| p < self.keys[key]),
+            None => 0,
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -899,6 +925,17 @@ mod tests {
         let one = SourceFrames::new(tb(1000), vec![0], None).unwrap();
         let s = at(Rational::new(1000, 1).unwrap(), Seconds::ZERO, tb(1000));
         assert_eq!(one.output_frames(&s), 1);
+    }
+
+    #[test]
+    fn a_seek_goes_to_the_last_keyframe_shown_before_the_frame() {
+        let pts: Vec<i64> = (0..10).map(|k| k * 10).collect();
+        let frames = SourceFrames::new(tb(1000), pts, None).unwrap();
+        assert_eq!(frames.seek_frame(7), 7, "keyframes not known");
+        // A stream opening on pictures before its first keyframe, and a keyframe between frames.
+        let frames = frames.with_keys([55, 20]);
+        let seeks: Vec<usize> = (0..10).map(|k| frames.seek_frame(k)).collect();
+        assert_eq!(seeks, [0, 0, 2, 2, 2, 2, 6, 6, 6, 6]);
     }
 
     fn rational(num: u32, den: u32) -> Rational {
