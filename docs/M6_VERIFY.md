@@ -102,6 +102,8 @@ preview zip(아래) 또는 개발 빌드(`cargo run -p cloakframe-app`, CONTRIBU
 
 M6은 2026-10-25에 시작해 지금까지 2일(예산 7주)이다. M1–M5 누적 12일과 합쳐 14일로, 32주 예산 가운데 남은 M7·M8(6주)이 넉넉히 들어간다. 범위 조정 순서의 ①(영상 연속 재생)과 ②(재시작 뒤 검토 재개)는 모두 M6에 들어갔고 미루는 항목은 없다. 계획 8장 표의 M6 "실제" 칸은 macOS 점검까지 끝난 날로 적는다. macOS 점검은 2026-10-27에 끝났지만 UX 단계(6단계)를 더해 M6은 이어진다.
 
+**완료(2026-10-29):** UX 단계 뒤 메인테이너가 release 앱을 다시 확인해 문제가 없었고, M6은 5일(예산 7주)로 끝났다. M1–M6 누적 17일이다. 미룬 범위 조정 항목은 없다.
+
 ## preview 릴리스 준비
 
 - `tools/package/macos_preview.sh`: release 실행 파일과 ORT를 `Contents/MacOS`에(앱은 실행 파일 옆에서 찾음, `tools.rs`), 아이콘과 `LICENSE`·`THIRD_PARTY_NOTICES.txt`를 `Contents/Resources`에 넣고, 안쪽부터 ad-hoc 서명한 뒤 `ditto`로 zip을 만든다. 처음에는 FFmpeg·ffprobe도 넣었다(zip 84 MB, 앱이 Metal로 뜨고 FFmpeg를 찾음). 사진만으로 바꾼 뒤(아래) 이 Mac에서 만든 zip은 28 MB이고, 풀어 연 앱이 `graphics: wgpu, metal, Apple M4`로 뜨고 "앱 옆에서 FFmpeg를 찾지 못해 동영상은 뺐습니다."를 보였다.
@@ -110,7 +112,7 @@ M6은 2026-10-25에 시작해 지금까지 2일(예산 7주)이다. M1–M5 누�
 
 ## 남긴 것
 
-- 6단계 화면 재설계([계획](M6_UX.md)), 그 뒤 M6 완료 표시.
+- 6단계 화면 재설계([계획](M6_UX.md)), 그 뒤 M6 완료 표시. 둘 다 끝남(2026-10-29).
 - **첫 `preview.yml` 실행(2026-10-29, run 40828323326, main `44039fb`):** 패키지 단계에서 `cargo about`이 없다며 실패해 초안은 만들어지지 않았다. cargo-about 0.9.2는 실행 파일을 기본 기능이 아닌 `cli` 기능 뒤에 두므로, `--features cli` 없이 설치하면 라이브러리만 빌드하고 경고만 낸다(로컬은 `cli`로 설치돼 있어 zip이 만들어졌음). 설치 명령에 `--features cli`를 넣었다.
 - UX 단계 뒤 preview 게시(메인테이너, 사진만). 그 전에 workflow가 만든 zip을 받아 Gatekeeper 차단과 "그래도 열기"를 본다.
 - 일본어 "검토 필요" 문장(새 2개 포함)은 일본어 검토자가 생길 때까지 남는다.

@@ -205,3 +205,4 @@ main `78bff36`에서 브랜치를 만들었다. 결정은 시작할 때 한 번�
 - **RELEASING:** 1.x 절차(CMake, `release.yml`, `CloakFrame-updates`)를 빼고 `v1.12.1` 태그와 `78bff36`의 파일 이력으로 안내. preview 절차(판, PREVIEW_NOTES, `preview.yml`, 초안 확인 뒤 게시)와 서명 키 원칙만 둔다.
 - **SECURITY:** 지원 판은 2.0(1.12.1은 고치지 않음, 2026-10-16 재작성만 결정). staging 파일, 사용자 모델, 소유권 검사, Qt·OpenCV·exiv2·libsodium을 빼고 계획 5장 위협 모델(같은 사용자의 다른 프로세스와 다른 계정은 범위 밖)과 맞춤.
 - **ROADMAP:** 2.0의 남은 일(M6 앱 점검, M7 설치본·업데이트·8·10번·FFmpeg 대응 소스·약관, M8 비교·실제 OS·일본어 검토·낮음 목록·릴리스 문서, M9, 메인테이너 할 일, upstream turbojpeg-sys, 받아들인 위험)로 다시 씀. 1.x 항목은 `78bff36`의 파일 이력으로 안내. CONTRIBUTING의 ROADMAP 안내 문장도 맞춤.
+- **병합(2026-10-29):** PR #74로 올려 CI 4개(형식·린트·라이선스, 3개 OS 시험)가 통과했고 main `44039fb`로 fast-forward했다.
