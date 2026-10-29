@@ -1413,6 +1413,17 @@ enum Drawn {
     Remove,
 }
 
+/// Whether a modal is open over the widget, which then gives up the keyboard. An egui 0.37
+/// modal keeps widgets behind it from being tabbed to but not from keeping or asking for focus,
+/// so they would go on taking the keys meant for the modal.
+pub(crate) fn behind_modal(ui: &egui::Ui, response: &egui::Response) -> bool {
+    let behind = !ui.memory(|m| m.allows_interaction(ui.layer_id()));
+    if behind {
+        response.surrender_focus();
+    }
+    behind
+}
+
 /// The photo with its boxes; returns a step through the queue the keys asked for.
 fn canvas(
     ui: &mut egui::Ui,
@@ -1459,7 +1470,9 @@ fn canvas(
     });
     // Keys go to the photo unless another widget took them, as one does when tabbed to.
     let unfocused = ui.memory(|m| m.focused().is_none());
-    if editor.focus || unfocused || response.clicked() || response.drag_started() {
+    if !behind_modal(ui, &response)
+        && (editor.focus || unfocused || response.clicked() || response.drag_started())
+    {
         response.request_focus();
         editor.focus = false;
     }

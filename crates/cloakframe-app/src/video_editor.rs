@@ -12,7 +12,7 @@ use eframe::egui;
 use fluent_bundle::FluentValue;
 
 use crate::draft::{Draft, Pick};
-use crate::editor::{Go, Mark, View, dashed, kind_name, paint_mark};
+use crate::editor::{Go, Mark, View, behind_modal, dashed, kind_name, paint_mark};
 use crate::i18n::Translator;
 use crate::lanes;
 use crate::style::{self, Palette};
@@ -228,7 +228,9 @@ pub(crate) fn ui(
     });
     let view = &mut view;
     let unfocused = ui.memory(|m| m.focused().is_none());
-    if editor.focus || unfocused || response.clicked() || response.drag_started() {
+    if !behind_modal(ui, &response)
+        && (editor.focus || unfocused || response.clicked() || response.drag_started())
+    {
         response.request_focus();
         editor.focus = false;
     }
@@ -895,7 +897,7 @@ fn timeline(
             None => editor.seek(k, frames),
         }
     }
-    if response.has_focus() {
+    if !behind_modal(ui, &response) && response.has_focus() {
         let (left, right) = ui.input(|i| {
             (
                 i.key_pressed(egui::Key::ArrowLeft),

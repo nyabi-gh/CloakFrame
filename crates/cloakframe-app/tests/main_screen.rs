@@ -891,6 +891,34 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         Some(Pick::Detection(0)),
         "Tab selects the face"
     );
+    // A confirmation takes the keys from the editor behind it.
+    harness.get_by_role_and_label(Role::Button, "More").click();
+    harness.run_traced();
+    harness
+        .get_by_role_and_label(Role::Button, "Export Without Anonymization…")
+        .click();
+    harness.run_traced();
+    harness.key_press(egui::Key::Enter);
+    harness.step();
+    harness.key_press(egui::Key::PageDown);
+    harness.run_traced();
+    assert!(draft(&harness).is_excluded(0), "Enter left the face alone");
+    let screen = harness.state().review.as_ref().unwrap();
+    assert!(screen.confirm.is_some(), "still asking");
+    assert_eq!(screen.editor.as_ref().map(|e| e.item), Some(item));
+    harness.key_press(egui::Key::Tab);
+    harness.run_traced();
+    assert!(
+        harness
+            .get_by_role_and_label(Role::Button, "Export Without Anonymization")
+            .is_focused(),
+        "Tab reaches the confirmation's buttons"
+    );
+    harness
+        .get_by_role_and_label(Role::Button, "Cancel")
+        .click();
+    harness.run_traced();
+    assert!(harness.state().review.as_ref().unwrap().confirm.is_none());
     harness.key_press(egui::Key::Enter);
     harness.step();
     assert!(!draft(&harness).is_excluded(0), "Enter masks it again");
