@@ -769,6 +769,15 @@ mod tests {
         );
     }
 
+    /// The app masks by default as the CLI does: a solid fill (plan 5).
+    #[test]
+    fn the_default_settings_mask_with_the_engines_default_style() {
+        assert_eq!(
+            RunOptions::of(&Settings::default()).style(),
+            MaskStyle::default()
+        );
+    }
+
     /// The shape reaches the photo and the video processor for every method, so a review made
     /// with the other shape is refused.
     #[test]

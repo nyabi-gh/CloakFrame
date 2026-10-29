@@ -22,8 +22,8 @@ pub enum Theme {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Method {
-    Fill,
     #[default]
+    Fill,
     Mosaic,
     Blur,
 }
