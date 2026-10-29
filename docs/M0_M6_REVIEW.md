@@ -193,3 +193,4 @@
 - **1.x 문서:** README·ROADMAP·RELEASING·SECURITY는 고치지 않았다. README를 2.0 기준으로 쓸지(최신 릴리스는 아직 1.12.1), 서명 키를 2.0에서 바꿀지 정해야 한다. preview 게시 전에 한다.
 - **12번(낮음):** M8 품질 비교 전.
 - 검사(로컬 macOS, 문서 커밋 전): `cargo fmt --check`, clippy 두 조합(기본·`--all-features`, `-D warnings`), `cargo test --workspace --locked --all-features`(577개 통과, 새 시험 8개, 무시 4개), `cargo deny check` 모두 통과. Windows·Linux CI는 아직 돌지 않았다.
+- **병합(2026-10-29):** PR #73으로 올려 CI 13개(형식·린트·라이선스, 3개 OS 시험, fuzz, ORT 3개, 탐지·영상 벤치마크, 1패스 처리량 3개)가 통과했고 main `78bff36`으로 fast-forward했다. 탐지 벤치마크 기본 설정 얼굴 재현율 87.9%, 영상 추적 벤치마크 노출 프레임 타일 끔 5,322·켬 912로 기록과 같다(9번은 가리기 강도만 바꿈).
