@@ -1374,6 +1374,8 @@ impl AppState {
             Some("running")
         } else if !self.settings.faces && !self.settings.plates {
             Some("models-need-one")
+        } else if self.scanning.is_some() {
+            Some("start-scanning")
         } else if self.found.as_ref().is_none_or(|f| f.files.is_empty()) {
             Some("start-needs-files")
         } else if self.settings.output.is_none() {

@@ -37,6 +37,7 @@ no-output-folder = フォルダーが選ばれていません
 start = 開始
 ## needs review
 start-needs-files = 先に写真または動画を追加してください。
+start-scanning = 写真と動画を探し終わるまでお待ちください。
 start-needs-output = 先に保存先を選んでください。
 
 menu-app-about = CloakFrame について

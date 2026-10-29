@@ -38,6 +38,7 @@ choose-folder = Choose…
 no-output-folder = No folder chosen
 start = Start
 start-needs-files = Add photos or videos first.
+start-scanning = Wait until the photos and videos are found.
 start-needs-output = Choose an output folder first.
 
 menu-app-about = About CloakFrame

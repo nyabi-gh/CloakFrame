@@ -27,6 +27,7 @@ choose-folder = 선택…
 no-output-folder = 폴더를 고르지 않았습니다
 start = 시작
 start-needs-files = 먼저 사진이나 동영상을 추가하세요.
+start-scanning = 사진과 동영상을 다 찾을 때까지 기다리세요.
 start-needs-output = 먼저 저장 위치를 고르세요.
 
 menu-app-about = CloakFrame 정보

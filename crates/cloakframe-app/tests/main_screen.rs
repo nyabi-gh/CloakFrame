@@ -191,6 +191,21 @@ fn start_waits_for_models_files_and_a_folder() {
     harness.state_mut().tools.ort_library = Some(dir.file("libonnxruntime"));
     harness.run_traced();
     assert_eq!(harness.state().start_blocker(), None);
+    // A run would take what the scan before found.
+    harness
+        .input_mut()
+        .dropped_files
+        .push(Arc::new(Dropped(dir.file("b.jpg"))));
+    harness.step();
+    assert_eq!(harness.state().start_blocker(), Some("start-scanning"));
+    harness.state_mut().wait_for_scan();
+    harness.state_mut().wait_for_sessions();
+    harness.step();
+    let ctx = harness.ctx.clone();
+    harness.state_mut().wait_for_thumbnails(&ctx);
+    harness.run_traced();
+    assert_eq!(harness.state().start_blocker(), None);
+    assert_eq!(harness.state().found.as_ref().unwrap().files.len(), 2);
     harness
         .get_by_role_and_label(Role::CheckBox, "Faces")
         .click();
