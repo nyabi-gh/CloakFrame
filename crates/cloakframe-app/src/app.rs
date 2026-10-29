@@ -1527,6 +1527,9 @@ impl AppState {
         else {
             return;
         };
+        if !board.is_over() {
+            ctx.request_repaint_after(PROGRESS_REDRAW);
+        }
         let mut act = run_summary(ui, board, tr);
         let details = egui::Id::unique("run-details");
         let open =
@@ -2012,6 +2015,8 @@ pub fn log_line(board: &Board, at: Duration, logged: &Logged, tr: &Translator) -
 
 /// The run's log, folded away under the list (plan 6).
 const ROW_HEIGHT: f32 = 52.0;
+/// The engine updates a run's progress without a message that would draw the window again.
+const PROGRESS_REDRAW: Duration = Duration::from_millis(250);
 /// The room the run's folded details take below its list, and the room they take unfolded.
 const DETAILS_HEIGHT: f32 = 40.0;
 const DETAILS_OPEN_HEIGHT: f32 = 300.0;
@@ -2559,6 +2564,26 @@ mod tests {
         let queued = row(waiting, "next.mp4");
         assert_eq!(queued.state, "Waiting");
         assert!(matches!(queued.look, Look::Waiting));
+    }
+
+    /// The engine's progress comes without a message, so the run screen draws itself again
+    /// while the run works.
+    #[test]
+    fn a_working_run_is_drawn_again_for_its_progress() {
+        let mut state = AppState::new(Settings::default(), None, Vec::new());
+        let mut board = Board::new(std::time::Instant::now(), PathBuf::from("out"));
+        board.take(run::Message::Started {
+            items: vec![(ItemId(0), PathBuf::from("clip.mp4"))],
+            progress: Default::default(),
+            cancels: BTreeMap::new(),
+        });
+        state.board = Some(board);
+        let mut harness = egui_kittest::Harness::builder()
+            .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
+            .build_ui_state(|ui, state: &mut AppState| state.ui(ui), state);
+        harness.run();
+        let delay = harness.output().viewport_output[&egui::ViewportId::ROOT].repaint_delay;
+        assert!(delay <= PROGRESS_REDRAW, "drawn again after {delay:?}");
     }
 
     /// A run of hundreds of items asks for the thumbnails of the rows on screen only.
