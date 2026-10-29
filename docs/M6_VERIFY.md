@@ -113,6 +113,7 @@ M6은 2026-10-25에 시작해 지금까지 2일(예산 7주)이다. M1–M5 누�
 ## 남긴 것
 
 - 6단계 화면 재설계([계획](M6_UX.md)), 그 뒤 M6 완료 표시. 둘 다 끝남(2026-10-29).
-- **첫 `preview.yml` 실행(2026-10-29, run 40828323326, main `44039fb`):** 패키지 단계에서 `cargo about`이 없다며 실패해 초안은 만들어지지 않았다. cargo-about 0.9.2는 실행 파일을 기본 기능이 아닌 `cli` 기능 뒤에 두므로, `--features cli` 없이 설치하면 라이브러리만 빌드하고 경고만 낸다(로컬은 `cli`로 설치돼 있어 zip이 만들어졌음). 설치 명령에 `--features cli`를 넣었다.
+- **첫 `preview.yml` 실행(2026-10-29, run 40828323326, main `44039fb`):** 패키지 단계에서 `cargo about`이 없다며 실패해 초안은 만들어지지 않았다. cargo-about 0.9.2는 실행 파일을 기본 기능이 아닌 `cli` 기능 뒤에 두므로, `--features cli` 없이 설치하면 라이브러리만 빌드하고 경고만 낸다(로컬은 `cli`로 설치돼 있어 zip이 만들어졌음). 설치 명령에 `--features cli`를 넣었다. 이 수정과 M6 완료 표시를 PR #75(`m6-done`)로 올려 CI 4개(형식·린트·라이선스, 3개 OS 시험)가 통과했고 main `47210be`로 fast-forward했다.
+- **두 번째 `preview.yml` 실행(2026-10-29, run 40832361620, main `47210be`):** 성공. 초안 prerelease "CloakFrame 2.0.0-preview.1"(tag `v2.0.0-preview.1`, 대상 `47210be`)에 `CloakFrame-Preview-2.0.0-preview.1-macOS-arm64.zip`(34,940,294바이트, sha256 `391d8d91c3c4f0cd53cf4b63f55d6fd717631a314b8c511c93c90d410aa03a27`, ad-hoc 서명, 사진 전용)이 올라갔다. 게시는 아래 항목대로 메인테이너가 한다.
 - UX 단계 뒤 preview 게시(메인테이너, 사진만). 그 전에 workflow가 만든 zip을 받아 Gatekeeper 차단과 "그래도 열기"를 본다.
 - 일본어 "검토 필요" 문장(새 2개 포함)은 일본어 검토자가 생길 때까지 남는다.

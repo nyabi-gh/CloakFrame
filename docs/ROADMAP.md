@@ -10,11 +10,11 @@ the commit that closes one says so. The 1.x roadmap is in this file's history:
 A field that is written but never read, or a fix that covers part of the cases, does not
 close it. Check the caller and the full scope before recording a change of state.
 
-## Before the preview (M6)
+## Preview
 
-- **Maintainer check of the app on macOS**, including how fast videos are analyzed. Then
-  M6 is marked done and the [preview workflow](RELEASING.md#preview) drafts the
-  photo-only macOS pre-release.
+- **Publish 2.0.0-preview.1.** The [preview workflow](RELEASING.md#preview) drafted the
+  photo-only macOS pre-release `v2.0.0-preview.1`. Download its zip, check that Gatekeeper
+  blocks it and "Open Anyway" opens it, then publish the draft.
 
 ## Packages and updates (M7)
 
