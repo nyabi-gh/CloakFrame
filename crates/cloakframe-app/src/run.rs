@@ -13,8 +13,9 @@ use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stal
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::Acceleration;
 use cloakframe_engine::detect::models::{DetectionModels, FaceModel as EngineFaceModel, LoadError};
-use cloakframe_engine::detect::runtime::OrtRuntime;
+use cloakframe_engine::detect::runtime::{Backend, OrtRuntime};
 use cloakframe_engine::events::{Event, ProgressBoard};
+use cloakframe_engine::gpu_pack::GpuPack;
 use cloakframe_engine::media::encode::{OutputCodec, Quality};
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::model_files::{ModelStore, model_file};
@@ -23,7 +24,7 @@ use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Failure as ItemFailure, ItemProcessor, Note, RunReport, start_under};
 use cloakframe_engine::scan::ScannedFile;
 use cloakframe_engine::session::{SessionId, SessionStore};
-use cloakframe_engine::startup::{self, StartError};
+use cloakframe_engine::startup::{self, StartError, StartNote};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools as VideoTools, VideoProcessor, VideoSettings};
 use eframe::egui;
@@ -50,6 +51,13 @@ impl Folders {
             models: cloakframe_engine::app_dirs::model_dir(),
             app_models: true,
         }
+    }
+
+    /// The Linux GPU pack's place, which the CLI shares.
+    pub fn gpu_pack(&self) -> Option<GpuPack> {
+        self.data
+            .as_ref()
+            .map(|data| GpuPack::new(data.join("gpu")))
     }
 
     /// Where runs keep the items they leave for review, which the CLI's sessions share.
@@ -307,17 +315,32 @@ pub fn processor(
     Ok(MediaProcessor::new(photo, video))
 }
 
+static RUNTIME: Mutex<Option<OrtRuntime>> = Mutex::new(None);
+
 /// The process's ONNX Runtime, loaded by the first run that needs it and shared by every later
-/// one: ORT allows one environment per process. A load that fails is tried again by the next run.
-fn runtime(library: &Path) -> Result<OrtRuntime, Failure> {
-    static RUNTIME: Mutex<Option<OrtRuntime>> = Mutex::new(None);
+/// one: ORT allows one environment per process, so a GPU pack installed after it was loaded is
+/// used from the next start. A load that fails is tried again by the next run.
+fn runtime(
+    library: &Path,
+    gpu_pack: Option<&GpuPack>,
+    note: &mut dyn FnMut(StartNote),
+) -> Result<OrtRuntime, Failure> {
     let mut runtime = RUNTIME.lock().unwrap_or_else(|e| e.into_inner());
     if let Some(loaded) = &*runtime {
         return Ok(loaded.clone());
     }
-    let loaded = OrtRuntime::load(library).map_err(other)?;
+    let loaded = startup::load_runtime(library, gpu_pack, note).map_err(other)?;
     *runtime = Some(loaded.clone());
     Ok(loaded)
+}
+
+/// The accelerator of the runtime this process loaded, or None before a run loaded one.
+pub fn loaded_accelerator() -> Option<Option<Backend>> {
+    RUNTIME
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .as_ref()
+        .map(OrtRuntime::accelerator)
 }
 
 /// Estimates each item's work in turn, the order the run takes them, until all have one or the
@@ -375,13 +398,14 @@ fn run(request: Request, cancel: &CancelToken, tell: &Tell) -> Result<(), Failur
             .models
             .clone()
             .ok_or(Failure::NoDataFolder)?;
+        let mut note = |note: StartNote| tell.tell(Message::Note(RunNote::of_start(&note)));
         startup::with_runtime(
-            runtime(library)?,
+            runtime(library, request.folders.gpu_pack().as_ref(), &mut note)?,
             &ModelStore::new(folder),
             request.folders.app_models,
             models,
             options.acceleration(),
-            |note| tell.tell(Message::Note(RunNote::of_start(&note))),
+            note,
         )
         .map_err(|e| match e {
             StartError::Load(LoadError::Missing { model, .. }) => {

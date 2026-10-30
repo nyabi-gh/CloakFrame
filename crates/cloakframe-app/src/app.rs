@@ -18,6 +18,7 @@ use crate::a11y;
 use crate::clock;
 use crate::editor::{ReviewScreen, ScreenAct};
 use crate::fonts;
+use crate::gpu_pack::GpuPackRow;
 use crate::i18n::{Language, Translator};
 use crate::models::Models;
 use crate::progress::Left;
@@ -107,6 +108,8 @@ pub struct AppState {
     running: Option<Running>,
     thumbnails: Option<Thumbnails>,
     pub models: Models,
+    /// The Linux GPU pack, shown on Linux x86_64 only.
+    pub gpu_pack: GpuPackRow,
     pub updates: Updates,
     /// The check at startup has been asked for, or was not wanted.
     updates_started: bool,
@@ -151,6 +154,7 @@ impl AppState {
             running: None,
             thumbnails: None,
             models: Models::new(None, false),
+            gpu_pack: GpuPackRow::new(None),
             updates: Updates::unavailable(String::new()),
             updates_started: false,
             board: None,
@@ -174,6 +178,7 @@ impl AppState {
 
     pub fn set_folders(&mut self, folders: run::Folders) {
         self.models = Models::new(folders.models.clone(), folders.app_models);
+        self.gpu_pack = GpuPackRow::new(folders.gpu_pack());
         self.sessions = SavedSessions::new(folders.clone());
         self.sessions_read = false;
         self.folders = folders;
@@ -285,6 +290,7 @@ impl AppState {
         }
         self.take_run_messages();
         self.models.take(&ctx);
+        self.gpu_pack.take();
         if self.updates.take() {
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
@@ -715,6 +721,7 @@ impl AppState {
             Command::Models => {
                 self.sheet_open = true;
                 self.models.check(ctx);
+                self.gpu_pack.check();
             }
             Command::About => self.about_open = true,
             Command::CheckUpdates => self.updates.check(true, ctx),
@@ -1392,6 +1399,12 @@ impl AppState {
         });
         sheet_section(ui, &tr.get("models-title"));
         self.models.rows(ui, tr);
+        if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
+            sheet_section(ui, &tr.get("gpu-pack-title"));
+            let restart = crate::run::loaded_accelerator()
+                .is_some_and(|a| a != Some(cloakframe_engine::detect::runtime::Backend::Cuda));
+            self.gpu_pack.rows(ui, tr, restart);
+        }
     }
 
     /// The message saying why the run cannot start yet.

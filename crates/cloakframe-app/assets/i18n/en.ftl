@@ -477,3 +477,12 @@ update-restart = Restart Now
 update-restart-after-run = Available once the work in progress has finished.
 update-failed = The update could not be installed: { $error }
 update-refused = The update was refused because it could not be verified. Nothing was installed.
+
+gpu-pack-title = NVIDIA GPU
+gpu-pack-name = NVIDIA GPU pack (CUDA)
+gpu-pack-size = { $download } MB download, { $installed } MB installed
+gpu-pack-about = Runs detection on an NVIDIA GPU. It needs the NVIDIA driver and is downloaded from GitHub and PyPI.
+gpu-pack-terms = NVIDIA's terms apply to these files:
+gpu-pack-remove = Remove
+gpu-pack-damaged = The GPU pack is incomplete and is not used: { $reason }. Download it again to repair it.
+gpu-pack-restart = Restart CloakFrame to use the GPU pack.

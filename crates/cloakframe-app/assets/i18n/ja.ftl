@@ -449,3 +449,13 @@ update-restart-after-run = 進行中の作業が終わると押せます。
 ## 1.12.1
 update-failed = 更新をインストールできませんでした: { $error }
 update-refused = アップデートを検証できなかったため拒否しました。何もインストールされていません。
+
+## needs review
+gpu-pack-title = NVIDIA GPU
+gpu-pack-name = NVIDIA GPU パック (CUDA)
+gpu-pack-size = ダウンロード { $download } MB、インストール後 { $installed } MB
+gpu-pack-about = 検出を NVIDIA GPU で実行します。NVIDIA ドライバーが必要で、GitHub と PyPI からダウンロードします。
+gpu-pack-terms = これらのファイルには NVIDIA の条件が適用されます:
+gpu-pack-remove = 削除
+gpu-pack-damaged = GPU パックが不完全なため使いません: { $reason }。もう一度ダウンロードすると修復します。
+gpu-pack-restart = GPU パックを使うには CloakFrame を再起動してください。

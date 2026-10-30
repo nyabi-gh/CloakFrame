@@ -7,6 +7,7 @@ pub mod clock;
 pub mod draft;
 pub mod editor;
 pub mod fonts;
+pub mod gpu_pack;
 pub mod graphics;
 pub mod i18n;
 pub mod lanes;

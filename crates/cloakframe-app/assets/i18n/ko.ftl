@@ -396,3 +396,12 @@ update-restart = 지금 다시 시작
 update-restart-after-run = 진행 중인 작업이 끝나면 누를 수 있습니다.
 update-failed = 업데이트를 설치하지 못했습니다: { $error }
 update-refused = 업데이트를 확인할 수 없어 거부했습니다. 아무것도 설치하지 않았습니다.
+
+gpu-pack-title = NVIDIA GPU
+gpu-pack-name = NVIDIA GPU 묶음 (CUDA)
+gpu-pack-size = 받기 { $download } MB, 설치 { $installed } MB
+gpu-pack-about = 감지를 NVIDIA GPU에서 실행합니다. NVIDIA 드라이버가 필요하며 GitHub와 PyPI에서 받습니다.
+gpu-pack-terms = 이 파일들에는 NVIDIA의 조건이 적용됩니다:
+gpu-pack-remove = 지우기
+gpu-pack-damaged = GPU 묶음이 완전하지 않아 쓰지 않습니다: { $reason }. 다시 받으면 고쳐집니다.
+gpu-pack-restart = GPU 묶음을 쓰려면 CloakFrame을 다시 시작하세요.
