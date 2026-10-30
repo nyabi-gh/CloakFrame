@@ -127,17 +127,17 @@ status = "carried"
 stage = "M7"
 
 [[artifact]]
-id = "velopack"
+id = "vpk"
 platform = "windows-x64, linux-x86_64"
-version = "1.2.0"
-# 1.12.1의 C 라이브러리 고정값. Rust SDK(crate)와 vpk 도구 버전은 이 버전에 맞춰 M7에서 rust.toml에 적는다.
-url = "https://github.com/velopack/velopack/releases/download/1.2.0/velopack_libc_1.2.0.zip"
-sha256 = "547262ed7a1ab1ff62f580aa53851ede2f1a451ac61b8974eb7bc01117488835"
+version = "1.2.161"
+# 패키지를 만드는 .NET 도구. 설치본에 들어가는 Setup·Update.exe가 이 안에 있다. 앱의 SDK는 같은 판의 crate(rust.toml).
+url = "https://api.nuget.org/v3-flatcontainer/vpk/1.2.161/vpk.1.2.161.nupkg"
+sha256 = "ac9be73846d9a7a76483f8684abd1503cd50703b992727429dcdc045589c5e08"
 license = "MIT"
-source = "https://github.com/velopack/velopack/tree/1.2.0"
-use = "bundle"
-status = "carried"
-stage = "M7"
+source = "https://github.com/velopack/velopack/tree/92d6a1c91716729d449034df5c50307dcce39493"
+use = "tool"
+status = "m7"
+evidence = "docs/M7_WINDOWS.md"
 
 [[artifact]]
 id = "noto-sans-kr"
