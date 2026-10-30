@@ -689,7 +689,7 @@ mod velopack_backend {
         let found = locator::auto_locate_app_manifest(LocationContext::FromCurrentExe)
             .map_err(|e| e.to_string())?;
         Ok(Some(velopack::locator::VelopackLocatorConfig {
-            RootAppDir: found.get_root_dir(),
+            RootAppDir: found.get_appimage_path(),
             UpdateExePath: found.get_update_path(),
             PackagesDir: packages,
             ManifestPath: found.get_current_bin_dir().join("sq.version"),
