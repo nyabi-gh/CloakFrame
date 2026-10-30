@@ -3,8 +3,8 @@
   <assemblyIdentity type="win32" name="CloakFrame" version="1.0.0.0"/>
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
-      <!-- 1.12.1 needed UTF-8 here for the ANSI paths Exiv2 received. Decide in M7 whether
-           the Rust app (wide-character APIs throughout) still needs it. -->
+      <!-- The app's own calls are wide-character; UTF-8 keeps a narrow call in a linked C
+           library from mangling non-ASCII paths. -->
       <activeCodePage xmlns="http://schemas.microsoft.com/SMI/2019/WindowsSettings">UTF-8</activeCodePage>
       <!-- Batches of nested folders reach beyond MAX_PATH; without this the scanner sees
            files it cannot then open. -->

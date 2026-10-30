@@ -121,6 +121,13 @@ targets = ["windows"]
 # MPL-2.0이기 때문(2026-10-18 결정, deny.toml 허용 목록 유지).
 evidence = "crates/cloakframe-engine/src/identity.rs"
 
+[crates.winresource]
+version = "=0.1.34"
+default-features = false
+build = true
+# 실행 파일에 아이콘·packaging/windows/CloakFrame.manifest(긴 경로·DPI·UTF-8)·버전 정보를 넣는다. Windows SDK의 rc.exe가 필요하다.
+evidence = "docs/M7_WINDOWS.md"
+
 [crates.rustix]
 version = "=1.1.5"
 features = ["fs", "process"]
