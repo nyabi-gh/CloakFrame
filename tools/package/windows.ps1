@@ -1,9 +1,10 @@
 # The Windows x64 Velopack installer (plan 10). Photos only until FFmpeg is built from source
-# (plan 10.1). Needs Rust, Python, cargo-about, the .NET 10 runtime and the Windows SDK's rc.exe.
+# (plan 10.1). Needs Rust, Python, cargo-about, the .NET 10 runtime and the Windows SDK's rc.exe,
+# and CLOAKFRAME2_UPDATE_PUBLIC_KEY, the update key the app pins (P-7).
 #
 # Usage: tools/package/windows.ps1 <out>
 # Writes the installer, the portable zip, the full package and releases.win.json to <out> and
-# prints the installer's path.
+# prints the installer's path. tools/package/sign_updates.py signs the package for the feed.
 param(
     [Parameter(Mandatory)] [string] $Out
 )
