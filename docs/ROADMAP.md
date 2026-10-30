@@ -30,6 +30,11 @@ close it. Check the caller and the full scope before recording a change of state
   app checks, downloads and installs an update only when the pinned key signed it, and a
   release build does not build without the key ([record](M7_UPDATES.md)); it still needs the
   key pair, the release job that signs and uploads, Sparkle on macOS, and a run on Linux.
+- **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
+  terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
+  ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,
+  and a legal look at offering NVIDIA's terms this way. The Windows ML catalog providers were
+  measured and left out.
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
   source can be published; until then releases mask photos only (plan 10.1).
 - **Notices and terms.** An SBOM and the native manifest with each release, and the

@@ -51,7 +51,7 @@
 ### 1.3 첫 stable 이후
 
 - **M9(최우선):** HEIC/HEIF 사진 입력, 10비트·HDR 영상 입력(SDR 톤매핑 출력)
-- 그다음 후보: 원본 VFR 보존, RAW, MKV/AVI, Linux GPU(CUDA), Windows ML EP 카탈로그, 사람·머리 보조 검출, CLI 사용자 기능(preset·스크립팅)
+- 그다음 후보: 원본 VFR 보존, RAW, MKV/AVI, Windows ML EP 카탈로그(M7에서 측정, 지금은 넣지 않음), 사람·머리 보조 검출, CLI 사용자 기능(preset·스크립팅)
 
 ## 2. 합격 기준: 1.12.1 결함
 
@@ -101,7 +101,7 @@
 | --- | --- | --- |
 | Windows x64 | Windows ML self-contained 런타임의 DirectML → CPU | ORT를 따로 번들하지 않고 `Microsoft.Windows.AI.MachineLearning` 2.4.89의 `onnxruntime.dll`(ORT 1.27.1)·`DirectML.dll`을 넣는다. 이 패키지의 최소 OS가 Windows 10 1903(18362)이다(1809는 `Microsoft.WindowsAppSDK.ML`이 필요하므로 지원하지 않음). M0에서 `ort::init_from`으로 이 DLL을 `api-27`로 불러 DML EP가 붙는 것과, 네트워크 없는 Windows 11 Sandbox에서 실행되는 것을 확인했다([기록](M0_ORT_SPIKE.md#windows-ml--directml)). 세션 순차 실행, memory pattern 비활성화. 재배포 약관은 10.1 |
 | macOS arm64 | CoreML(`ModelFormat=MLProgram`, `MLComputeUnits=ALL`) → CPU | 기본 옵션은 결과가 달라진다(M0). compiled cache는 앱 캐시 폴더 아래로 명시하고, 이 빌드가 쓰지 않는 ORT 빌드·모델의 폴더와 1.12.1의 cache는 지운다(M3 4단계). 번호판 end2end 모델은 감지 0건일 때 CoreML이 빈 동적 텐서를 거부하므로 CPU로 돌린다(M0, ORT 1.30·1.31). YOLO5Face-n의 CoreML 세션은 입력 batch를 1로 고정해(free dimension override) 그래프 전체가 CoreML 조각 하나에 들어가고, 그 compiled cache 폴더 이름에 고정한 차원을 붙인다(M6, [기록](M6_COREML_SPEED.md)). CPU에서는 얻는 것이 없고 점수가 소수 여섯째 자리에서 바뀌어 고정하지 않는다. 번호판 출력의 `batch`는 감지 개수라 고정하지 않는다 |
-| Linux x86_64 | CPU | CUDA는 1.3의 후보 |
+| Linux x86_64 | CPU, 사용자가 받은 NVIDIA GPU 묶음이 있으면 CUDA → CPU | 묶음은 ORT 1.30.0 CUDA 13 빌드와 NVIDIA wheel(고정 URL·SHA-256, 받기 1.2 GB). TF32와 CPU EP 폴백을 끈다. 드라이버가 없으면 알림 뒤 CPU 빌드(M7, 2026-10-30 결정, [기록](M7_ACCELERATORS.md)) |
 
 Windows ML의 **EP 카탈로그**(NVIDIA TensorRT-RTX, Intel OpenVINO, AMD MIGraphX·VitisAI, Qualcomm QNN)는 첫 stable에서 쓰지 않는다. Windows 11 24H2 이상이 필요하고, 첫 실행에 네트워크로 받고 Windows Update로 자동 갱신되어 오프라인 실행·고정 manifest 원칙과 맞지 않는다. 이 앱의 모델은 작아 DML로 충분하다. 필요가 측정되면 사용자가 켜는 opt-in 기능으로 따로 설계한다.
 
@@ -418,6 +418,7 @@ crates/
 - **M7 전 재검토 10번(2026-10-29, `m7-windows-data-folder`, [기록](M0_M6_REVIEW.md#10번-windows-데이터-폴더2026-10-29-m7-windows-data-folder)):** 이 PC에 1.12.1을 설치하고 2.0의 설정·세션·모델을 만든 뒤 1.12.1을 제거하자 `%LocalAppData%\CloakFrame`이 통째로 지워졌다. 결정(추천대로): Windows 데이터 폴더 `%LocalAppData%\CloakFrameData`, 2.0 `packId` `CloakFrameApp`(10장). Windows도 1.12.1 모델을 해시를 확인해 복사한다
 - **Windows 설치본(2026-10-30, `m7-windows-installer`, [기록](M7_WINDOWS.md)):** `tools/package/windows.ps1`이 `+crt-static` 빌드와 Windows ML DLL·고지를 vpk 1.2.161로 묶는다. 앱은 Velopack SDK 1.2.161 hook, 실행 파일 manifest·아이콘(winresource), DLL 검색 제한을 넣었다. 1.12.1이 설치된 이 PC에서 2.0 설치·실행·제거·재설치, 1.12.1 제거를 해 서로의 설치와 `CloakFrameData`가 남음을 확인했다. 결정(추천대로): SDK의 zip 8 권고 3건·derivative와 webpki-roots(CDLA-Permissive-2.0)는 근거를 적어 cargo-deny 예외, 표시 이름 `CloakFrame 2`(같은 이름이면 2.0이 1.12.1의 바로 가기를 덮어쓰고 제거할 때 지움). 남은 것: Windows 10 1903 VM, 업데이트, 릴리스 job과 서명
 - **Windows·Linux 업데이트(2026-10-30, `m7-updates`, [기록](M7_UPDATES.md)):** 앱이 이 저장소의 `updates` 릴리스 feed를 자체 HTTPS 클라이언트로 읽고, 1.12.1과 같은 v2 Ed25519 서명을 고정 키로 확인한 뒤에만 받고 설치한다. 받은 패키지는 서명된 SHA-256과 다시 비교하고, delta와 Velopack의 시작 시 자동 적용은 쓰지 않으며, Linux packages 폴더는 사용자 캐시로 옮겼다. P-7: 키 없는 빌드는 업데이트를 거부하고 Windows·Linux release 빌드는 키 없이 실패한다. 서명 도구 `tools/package/sign_updates.py`. 이 PC에서 시험 키로 preview.1 → preview.2 업데이트와 위조 feed 거부를 확인했다. 계획과 다른 것: 최고 설치 버전 기록 대신 서명된 버전과 설치 버전 비교, `ed25519-dalek` 대신 이미 쓰는 `ring`. 남은 것: 키 쌍, 릴리스 job, Sparkle, Linux 실행
+- **가속기(2026-10-30, `m7-accelerators`, [기록](M7_ACCELERATORS.md)):** 이 PC(RTX 5080, Intel Core Ultra)에서 Windows ML 카탈로그의 TensorRT-RTX·OpenVINO를 측정해 넣지 않기로 했다(결과가 1.12.1과 다르거나 번호판을 못 돌리거나 NPU가 앱을 죽임, DirectML보다 빠르지 않음). 메인테이너 결정으로 Linux CUDA를 정식판 전에 넣는다: 사용자가 NVIDIA 조건에 동의하고 받는 GPU 묶음(ORT CUDA 13 빌드 + NVIDIA wheel), TF32·CPU EP 폴백 끔, 앱 고급 옵션과 CLI `gpu-pack`. WSL2에서 실제 받기·fixture·CLI 실행·드라이버 없음을 확인했다. 함께 고친 것: 추론 스레드가 detach돼 CUDA 세션이 프로세스 종료 중에 풀려 abort하던 문제(마지막 handle이 join). NVENC·QSV 색 태그와 DirectML 번호판 빈 입력도 실기기에서 확인했다. 남은 것: 실제 Linux와 Turing 이전 GPU, NVIDIA 조건의 법률 검토
 
 ### M8 — 검증과 stable 전환
 
