@@ -82,6 +82,19 @@ p50(ms)은 astronaut / crowd. 세션은 두 번째 생성 시간(첫 생성은 �
 - 단위: engine `gpu_pack` 4개(가짜 tgz·wheel로 설치·손상·재설치·제거, 해시 틀림·취소·파일 누락·크기 틀림에서 아무것도 남지 않음, 실제 목록이 manifest와 같음), `fallback`의 가속기별 위치, app `tests/gpu_pack.rs` 3개(조건 동의 전 받기 꺼짐, 실패 표시, 설치됨·지우기·다시 시작 안내, 손상 표시). Windows에서 워크스페이스 시험 584개 통과(FAT32 제외), Windows·WSL 모두 clippy 경고 없음.
 - WSL2(RTX 5080)에서 CLI `gpu-pack fetch --accept-terms`로 실제로 받기: 32초, 1,217 MB, 설치 1.9 GB. 그 묶음으로 `detect_fixtures` 전부 통과(세 모델 모두 CUDA, 폴백 없음), CLI 사진 실행 세 번 모두 CUDA로 게시하고 exit 0. 드라이버를 숨긴 mount namespace에서는 알림 뒤 CPU로 게시하고 exit 0.
 
+### WSL2에서 다시 해 보기
+
+WSL의 Ubuntu는 Windows의 NVIDIA 드라이버를 `/usr/lib/wsl/lib/libcuda.so.1`로 본다. 빌드 도구(`build-essential cmake nasm pkg-config`)와 rustup이 있으면 저장소를 `/mnt/c/...`에서 그대로 빌드할 수 있다(`CARGO_TARGET_DIR`는 WSL 홈 아래로).
+
+```bash
+export ORT_DISABLE_TELEMETRY=1 CLOAKFRAME_TEST_ASSETS=/mnt/c/Users/<user>/.cache/cloakframe-test-assets
+export CLOAKFRAME_ORT_LIBRARY=<CPU 빌드의 libonnxruntime.so.1.30.0>
+cargo run --release -p cloakframe-engine --bin cloakframe-cli -- gpu-pack fetch --accept-terms --gpu-pack ~/gpu
+CLOAKFRAME_GPU_PACK=~/gpu/cuda13-ort1.30.0 cargo test --release -p cloakframe-engine --test detect_fixtures -- --include-ignored --nocapture
+```
+
+드라이버가 없는 경우는 root로 `unshare -m`을 하고 빈 폴더를 `/usr/lib/wsl/lib`에 bind mount해 재현했다.
+
 ## 확인하지 못한 것
 
 - 실제 Linux(WSL 아님)에서 CUDA와 앱 화면, 그리고 Turing 이전 GPU(CUDA 13 미지원)에서의 동작. 그런 GPU에서는 세션이 실패해 CPU로 갈 것으로 보지만 확인하지 않았다.
