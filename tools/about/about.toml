@@ -16,3 +16,7 @@ ignore-build-dependencies = true
 ignore-dev-dependencies = true
 # CloakFrame's own crates, which LICENSE covers.
 private = { ignore = true }
+
+# The same crate-scoped exception as deny.toml.
+[webpki-roots]
+accepted = ["CDLA-Permissive-2.0"]

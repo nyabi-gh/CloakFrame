@@ -226,6 +226,9 @@ fn main() -> eframe::Result {
     };
     #[cfg(target_os = "windows")]
     restrict_dll_search();
+    // The installer and updater start the app with hook arguments and wait for it to exit.
+    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    velopack::VelopackApp::build().run();
     // Where wgpu finds no adapter (no GPU driver, some remote desktops), OpenGL often still runs.
     let wgpu = match run(eframe::Renderer::Wgpu) {
         Err(eframe::Error::Wgpu(e)) => e,

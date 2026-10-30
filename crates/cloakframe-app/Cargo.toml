@@ -36,6 +36,10 @@ arboard = { version = "=3.7.0", default-features = false }
 # to select a file.
 zbus = { version = "=5.19.0", default-features = false, features = ["async-io", "blocking-api"] }
 
+[target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
+# Install, update and uninstall hooks of the Velopack package; macOS updates through Sparkle.
+velopack = { version = "=1.2.161", default-features = false }
+
 [target.'cfg(target_os = "windows")'.dependencies]
 raw-window-handle = "=0.6.2"
 winit = { version = "=0.30.13", default-features = false }

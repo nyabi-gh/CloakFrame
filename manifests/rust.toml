@@ -200,8 +200,8 @@ version = "=3.4.2"
 default-features = false
 features = ["rustls-no-provider", "platform-verifier"]
 # 모델 다운로드. 동기 API라 Tokio가 없다(2026-10-19, 계획 3장의 reqwest 대신). redirect는 engine이 한 단계씩
-# allowlist로 검사한다. rustls feature는 webpki-roots(CDLA-Permissive-2.0)를 넣으므로 쓰지 않고 OS 인증서
-# 저장소(platform-verifier)로 확인한다. ureq-proto 0.6.5 등 다섯 crate는 당시 공개 2주 규칙(2026-10-25에 없앰, 계획 3장)으로 Cargo.lock에서 이전 판.
+# allowlist로 검사한다. 인증서는 OS 저장소(RootCerts::PlatformVerifier)로 확인한다. Velopack SDK가 기본 feature를
+# 켜서 webpki-roots(CDLA-Permissive-2.0)도 들어오지만 engine은 쓰지 않는다(deny.toml 예외, 2026-10-30). ureq-proto 0.6.5 등 다섯 crate는 당시 공개 2주 규칙(2026-10-25에 없앰, 계획 3장)으로 Cargo.lock에서 이전 판.
 evidence = "docs/M3_MODELS.md"
 
 [crates.rustls]
@@ -210,3 +210,11 @@ default-features = false
 features = ["ring", "std", "tls12"]
 # ureq에 넘기는 암호 provider(ring). 0.23.45에는 보안 권고 4건(RUSTSEC-2026-0346–0349)이 있어 공개 5일 된 판을 쓴다.
 evidence = "docs/M3_MODELS.md"
+
+[crates.velopack]
+version = "=1.2.161"
+default-features = false
+# Windows·Linux 설치본의 설치·업데이트·제거 hook. vpk 도구도 같은 1.2.161(tools/package/windows.ps1).
+# zip 8의 extract() 권고 3건과 derivative는 deny.toml 예외로 두고 zip 9를 쓰는 안정판에서 올린다.
+targets = ["windows", "linux"]
+evidence = "docs/M7_WINDOWS.md"

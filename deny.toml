@@ -22,6 +22,11 @@ allow = [
 ]
 confidence-threshold = 0.9
 unused-allowed-license = "allow"
+# The Velopack SDK forces ureq's default rustls feature, which links Mozilla's root list; model
+# downloads still verify with the OS store (2026-10-30 decision).
+exceptions = [
+    { crate = "webpki-roots", allow = ["CDLA-Permissive-2.0"] },
+]
 
 [bans]
 multiple-versions = "allow"
@@ -42,4 +47,10 @@ ignore = [
     { id = "RUSTSEC-2026-0370", reason = "zvariant, merged into zbus 6; AccessKit and rfd still on zbus 5" },
     { id = "RUSTSEC-2026-0371", reason = "zbus_names, merged into zbus 6; AccessKit and rfd still on zbus 5" },
     { id = "RUSTSEC-2026-0372", reason = "zvariant_derive, merged into zbus 6; AccessKit and rfd still on zbus 5" },
+    # Velopack 1.2.161 pins zip 8, and its SDK copies entries itself instead of calling extract().
+    # Remove these with a stable Velopack on zip 9 (2026-10-30 decision).
+    { id = "RUSTSEC-2026-0367", reason = "zip extract() keeps SUID bits; Velopack SDK does not call extract()" },
+    { id = "RUSTSEC-2026-0368", reason = "zip extract() follows symlinks; Velopack SDK does not call extract()" },
+    { id = "RUSTSEC-2026-0369", reason = "zip extract() sets permissions through symlinks; Velopack SDK does not call extract()" },
+    { id = "RUSTSEC-2024-0388", reason = "derivative is unmaintained; a proc-macro of Velopack 1.2, gone in 1.3" },
 ]
