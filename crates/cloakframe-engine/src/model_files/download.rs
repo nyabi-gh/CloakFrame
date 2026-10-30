@@ -24,6 +24,14 @@ const HOSTS: [&str; 4] = [
     "objects.githubusercontent.com",
     "media.githubusercontent.com",
 ];
+/// The GPU pack's hosts (src/gpu_pack.rs): GitHub for ONNX Runtime, PyPI's file host for
+/// NVIDIA's own wheels.
+const GPU_PACK_HOSTS: [&str; 4] = [
+    "github.com",
+    "release-assets.githubusercontent.com",
+    "objects.githubusercontent.com",
+    "files.pythonhosted.org",
+];
 const MAX_REDIRECTS: usize = 5;
 const TIMEOUT: Duration = Duration::from_secs(30);
 /// 1.12.1's limit for a whole download.
@@ -112,6 +120,12 @@ impl Allowlist {
         port: None,
     };
 
+    const GPU_PACK: Self = Self {
+        scheme: "https",
+        hosts: &GPU_PACK_HOSTS,
+        port: None,
+    };
+
     fn check(&self, url: &str) -> Result<Uri, FetchError> {
         let refused = || FetchError::NotAllowed(url.to_owned());
         let uri: Uri = url.parse().map_err(|_| refused())?;
@@ -153,6 +167,11 @@ impl Default for Https {
 }
 
 impl Https {
+    /// For the GPU pack's archives, from their hosts only.
+    pub fn gpu_pack() -> Self {
+        Self::with(Allowlist::GPU_PACK)
+    }
+
     fn with(allowlist: Allowlist) -> Self {
         let tls = TlsConfig::builder()
             .root_certs(RootCerts::PlatformVerifier)

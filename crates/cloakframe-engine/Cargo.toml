@@ -29,6 +29,10 @@ ureq = { version = "=3.4.2", default-features = false, features = ["rustls-no-pr
 rustls = { version = "=0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
 base64 = { version = "=0.23.1", default-features = false, features = ["alloc"] }
 ring = { version = "=0.17.14", default-features = false }
+# Reading the archives of the Linux GPU pack (src/gpu_pack.rs).
+flate2 = "=1.1.10"
+tar = { version = "=0.4.46", default-features = false }
+zip = { version = "=8.6.0", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 ctrlc = { version = "=3.5.2", features = ["termination"] }
 
 [features]

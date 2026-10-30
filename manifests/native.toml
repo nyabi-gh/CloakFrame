@@ -7,8 +7,9 @@
 #
 # use
 #   bundle    패키지에 넣는다
-#   download  사용자가 받기로 하면 앱이 내려받고 해시로 확인한다(저장소·패키지에 넣지 않음). URL·해시·
-#             크기·license·source는 engine model_files::MODEL_FILES와 같은지 시험한다
+#   download  사용자가 받기로 하면 앱이 내려받고 해시로 확인한다(저장소·패키지에 넣지 않음). 모델의 URL·해시·
+#             크기·license·source는 engine model_files::MODEL_FILES와, Linux GPU 묶음의 URL·해시·크기는
+#             engine gpu_pack::ARCHIVES와 같은지 시험한다
 
 schema = 1
 
@@ -267,3 +268,70 @@ source = "https://chromium.googlesource.com/webm/libwebp/+/refs/tags/v1.6.0"
 use = "build"
 status = "m0"
 evidence = "docs/M2_ENCODE_SPIKE.md"
+
+[[artifact]]
+id = "gpu-pack-onnxruntime"
+platform = "linux-x86_64"
+version = "1.30.0 CUDA 13"
+url = "https://github.com/microsoft/onnxruntime/releases/download/v1.30.0/onnxruntime-linux-x64-gpu_cuda13-1.30.0.tgz"
+sha256 = "382d79133112388cf94ce5855789b7c9bef12bef76a08b6b277e5a317213adcd"
+size = 235697517
+# CPU 빌드 대신 쓰는 libonnxruntime.so와 CUDA provider. GPU 묶음을 켠 사용자만 받는다.
+license = "MIT"
+source = "https://github.com/microsoft/onnxruntime/tree/v1.30.0"
+use = "download"
+status = "m7"
+evidence = "docs/M7_ACCELERATORS.md"
+
+[[artifact]]
+id = "gpu-pack-cuda-runtime"
+platform = "linux-x86_64"
+version = "13.4.92"
+url = "https://files.pythonhosted.org/packages/98/8a/3431271f6344874b8f1ac03f16b3d679c91493f8da63f716160403e6d0a0/nvidia_cuda_runtime-13.4.92-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl"
+sha256 = "9641f797da20ce1dd8e779b6e96d08cf9ba564cec8e8225458811ee26423f3a5"
+size = 2494438
+# NVIDIA가 PyPI에 올린 wheel. 재배포하지 않고 사용자가 조건에 동의한 뒤 받는다.
+license = "NVIDIA CUDA Toolkit EULA"
+source = "https://pypi.org/project/nvidia-cuda-runtime/13.4.92/"
+use = "download"
+status = "m7"
+evidence = "docs/M7_ACCELERATORS.md"
+
+[[artifact]]
+id = "gpu-pack-cublas"
+platform = "linux-x86_64"
+version = "13.8.2.12"
+url = "https://files.pythonhosted.org/packages/04/36/c6f716dbd080fa030e6056261f238fb82c2b78d94e5074460740f61384b3/nvidia_cublas-13.8.2.12-py3-none-manylinux_2_27_x86_64.whl"
+sha256 = "21721774d8e7044debec3034ecc1a8cd22e173eb6dae5d7f5f8a014852382894"
+size = 439349182
+license = "NVIDIA CUDA Toolkit EULA"
+source = "https://pypi.org/project/nvidia-cublas/13.8.2.12/"
+use = "download"
+status = "m7"
+evidence = "docs/M7_ACCELERATORS.md"
+
+[[artifact]]
+id = "gpu-pack-curand"
+platform = "linux-x86_64"
+version = "10.4.4.72"
+url = "https://files.pythonhosted.org/packages/07/73/3ee8e5b4cb891401e603ffd3a59b35c6afe785fd2de123afe7c7029603dc/nvidia_curand-10.4.4.72-py3-none-manylinux_2_27_x86_64.whl"
+sha256 = "25c3457ae7a224fdd484dab90b0fc5dc0e842fab5db3012afa4a5bd2af4eb7e5"
+size = 61498332
+license = "NVIDIA CUDA Toolkit EULA"
+source = "https://pypi.org/project/nvidia-curand/10.4.4.72/"
+use = "download"
+status = "m7"
+evidence = "docs/M7_ACCELERATORS.md"
+
+[[artifact]]
+id = "gpu-pack-cudnn"
+platform = "linux-x86_64"
+version = "9.27.0.42"
+url = "https://files.pythonhosted.org/packages/af/75/96ea5c5368eb595c39d629cde08a66227a864e71ccb0e593add2612bb952/nvidia_cudnn_cu13-9.27.0.42-py3-none-manylinux_2_27_x86_64.whl"
+sha256 = "9677e76f21862eb5da7ee5ed69d544738b2d8b5c3ce7e5ec125c5592e6cdbdc8"
+size = 536771498
+license = "NVIDIA cuDNN SLA"
+source = "https://pypi.org/project/nvidia-cudnn-cu13/9.27.0.42/"
+use = "download"
+status = "m7"
+evidence = "docs/M7_ACCELERATORS.md"

@@ -6,6 +6,7 @@ pub mod cancel;
 pub mod detect;
 pub mod events;
 pub mod fs_case;
+pub mod gpu_pack;
 pub mod identity;
 pub mod legacy;
 pub mod media;

@@ -664,6 +664,7 @@ dependencies = [
  "base64",
  "cloakframe-core",
  "ctrlc",
+ "flate2",
  "image",
  "kamadak-exif",
  "libc",
@@ -676,11 +677,13 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "tar",
  "tiff",
  "turbojpeg",
  "unicode-normalization",
  "ureq",
  "windows-sys 0.61.2",
+ "zip",
 ]
 
 [[package]]
@@ -1296,6 +1299,16 @@ name = "fearless_simd"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97b65636e5b9ef369943878ac74335ba1c55c1cb6adbf1e2c293c624248d693"
+
+[[package]]
+name = "filetime"
+version = "0.2.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c287a33c7f0a620c38e641e7f60827713987b3c0f26e8ddc9462cc69cf75759"
+dependencies = [
+ "cfg-if",
+ "libc",
+]
 
 [[package]]
 name = "find-msvc-tools"
@@ -3881,6 +3894,16 @@ version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8eab9a99a024a169fe8a903cf9d4a3b3601109bcc13bd9e3c6fff259138626c4"
 dependencies = [
+ "libc",
+]
+
+[[package]]
+name = "tar"
+version = "0.4.46"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f6221d9a6003c78398e3b239969f352578258df48c8eb051caadae0015bc840"
+dependencies = [
+ "filetime",
  "libc",
 ]
 
