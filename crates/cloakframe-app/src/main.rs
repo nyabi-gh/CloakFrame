@@ -224,6 +224,8 @@ fn main() -> eframe::Result {
     unsafe {
         cloakframe_engine::detect::runtime::disable_telemetry()
     };
+    #[cfg(target_os = "windows")]
+    restrict_dll_search();
     // Where wgpu finds no adapter (no GPU driver, some remote desktops), OpenGL often still runs.
     let wgpu = match run(eframe::Renderer::Wgpu) {
         Err(eframe::Error::Wgpu(e)) => e,
@@ -236,6 +238,24 @@ fn main() -> eframe::Result {
         cannot_draw(&format!("{}\n{opengl}", eframe::Error::Wgpu(wgpu)));
     }
     result
+}
+
+/// DLLs, ONNX Runtime's DirectML.dll among them, load from the app's folder and System32 only,
+/// never from the current folder or PATH.
+#[cfg(target_os = "windows")]
+fn restrict_dll_search() {
+    use windows_sys::Win32::System::LibraryLoader::{
+        LOAD_LIBRARY_SEARCH_DEFAULT_DIRS, SetDefaultDllDirectories,
+    };
+    #[allow(unsafe_code)]
+    // SAFETY: takes only flags.
+    let restricted = unsafe { SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_DEFAULT_DIRS) };
+    if restricted == 0 {
+        eprintln!(
+            "cannot restrict the DLL search: {}",
+            std::io::Error::last_os_error()
+        );
+    }
 }
 
 /// Without a window the app has nowhere else to say why it ends, and a release build on Windows

@@ -39,7 +39,7 @@ zbus = { version = "=5.19.0", default-features = false, features = ["async-io", 
 [target.'cfg(target_os = "windows")'.dependencies]
 raw-window-handle = "=0.6.2"
 winit = { version = "=0.30.13", default-features = false }
-windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_UI_WindowsAndMessaging"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_System_LibraryLoader", "Win32_UI_WindowsAndMessaging"] }
 
 [build-dependencies]
 winresource = { version = "=0.1.34", default-features = false }
