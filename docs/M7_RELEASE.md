@@ -22,6 +22,10 @@
 
 ## 시험
 
+- 이 PC에서 `windows.ps1`이 쓴 파일 이름(`CloakFrameApp-win-Setup.exe`, `CloakFrameApp-<판>-full.nupkg`, `releases.win.json`, 그리고 올리지 않는 `-Portable.zip`·`assets.win.json`·`RELEASES`)이 workflow가 고르는 이름과 같다.
+- PR #82의 Release 실행(run 41017059120): Version, macOS zip, Windows 설치본 job 통과. 서명·초안·feed job은 태그가 아니라 건너뜀. `windows-2025` 러너에 vpk가 쓰는 .NET 10 runtime이 있었고, 빌드는 cargo-about 설치 3분, 패키지 10분이었다.
+- 설치 시험: `Setup.exe --silent`로 설치한 `%LocalAppData%\CloakFrameApp\current\cloakframe.exe`가 software dx12로 창을 열었다. 아직 없는 feed에는 "the feed has no releases.win.json"이라고 알리고 계속 떴다. wgpu를 막은 실행은 "CloakFrame cannot start" 창을 보였다. `Update.exe --uninstall --silent` 뒤 `current`가 없다. 창 검사는 자기가 띄운 프로세스의 창만 보므로, Setup이 설치 뒤 앱을 스스로 띄웠는지는 이 시험으로 알 수 없다.
+
 ## 남은 것
 
 - 첫 태그(`v2.0.0-preview.1`)에서 서명·초안·feed job이 실제로 도는 것. 그 전에는 environment 정책 때문에 시험할 수 없다.
