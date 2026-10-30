@@ -660,6 +660,7 @@ dependencies = [
 name = "cloakframe-engine"
 version = "2.0.0-preview.1"
 dependencies = [
+ "base64",
  "cloakframe-core",
  "ctrlc",
  "image",
@@ -668,6 +669,7 @@ dependencies = [
  "libwebp-sys",
  "moxcms 0.9.1",
  "ort",
+ "ring",
  "rustix 1.1.5",
  "rustls",
  "serde",

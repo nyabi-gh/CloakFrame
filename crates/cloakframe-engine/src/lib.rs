@@ -22,6 +22,7 @@ pub mod session;
 pub mod startup;
 #[cfg(feature = "synthetic")]
 pub mod synthetic;
+pub mod update;
 pub mod video;
 
 #[cfg(test)]
