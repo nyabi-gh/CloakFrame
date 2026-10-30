@@ -12,8 +12,8 @@
 함께 정한 것(질문하지 않음):
 
 - `packaging/windows/CloakFrame.manifest`의 `activeCodePage` UTF-8은 둔다. 앱의 호출은 모두 wide 문자 API지만, 링크한 C 라이브러리의 narrow 호출이 비ASCII 경로를 깨지 않게 한다.
-- `packAuthors`는 1.12.1과 같은 `Nyabi`다. vpk 1.2에는 `--noPortable`이 없어 portable zip도 만들어진다. 릴리스에 올릴지는 릴리스 workflow를 만들 때 정한다.
-- 설치본은 서명하지 않았다(Authenticode는 ROADMAP "Waiting on the maintainer"). SmartScreen이 처음 실행에서 경고한다.
+- `packAuthors`는 1.12.1과 같은 `Nyabi`다. vpk 1.2에는 `--noPortable`이 없어 portable zip도 만들어진다. 릴리스에는 올리지 않는다([M7_RELEASE](M7_RELEASE.md)).
+- 설치본은 서명하지 않는다(메인테이너 결정 2026-10-30, Authenticode 비용). SmartScreen이 처음 실행에서 경고한다.
 
 ## 바꾼 것
 
@@ -47,5 +47,5 @@
 
 - 깨끗한 Windows 10 1903 VM에서 설치·오프라인 실행·제거.
 - 업데이트(ROADMAP M7 "Updates"): 새 키로 서명한 feed, 다운그레이드 거부, 이 저장소의 `updates` 릴리스.
-- 릴리스 workflow의 Windows job(빌드는 비밀 없이, 서명·게시는 `release` environment)과 패키지 실행 시험.
+- 릴리스 workflow의 Windows job은 [M7_RELEASE](M7_RELEASE.md).
 - Microsoft 약관 3b의 설치 시 동의 필요 여부(ROADMAP "Notices and terms").

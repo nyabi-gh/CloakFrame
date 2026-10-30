@@ -1,0 +1,234 @@
+name: Release
+
+# Builds the macOS preview zip and the Windows installer. On a v* tag it also signs the update
+# package in the `release` environment, drafts the pre-release, and, after a second approval once
+# the maintainer has checked and published the draft, puts the update feed on the `updates`
+# release (docs/RELEASING.md). Elsewhere it only builds and checks the packages.
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/release.yml
+      - tools/package/**
+      - tools/ci/app_window.ps1
+      - manifests/native.toml
+      - packaging/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_type != 'tag' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_ABOUT: 0.9.2
+
+jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - id: version
+        run: |
+          version=$(python3 -I -c 'import tomllib; print(tomllib.load(open("Cargo.toml", "rb"))["workspace"]["package"]["version"])')
+          if [ "$GITHUB_REF_TYPE" = tag ] && [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME but Cargo.toml says $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  macos:
+    name: macOS arm64 preview
+    needs: version
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Build
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "15.0"
+        run: cargo build --release --locked -p cloakframe-app
+
+      - name: Install cargo-about
+        run: cargo install cargo-about --version "$CARGO_ABOUT" --features cli --locked
+
+      - name: Fetch ONNX Runtime
+        run: echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+
+      - name: Package
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: tools/package/macos_preview.sh "$VERSION" target/release/cloakframe "$ORT" "$RUNNER_TEMP/dist"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: macos
+          path: ${{ runner.temp }}/dist/*.zip
+          if-no-files-found: error
+
+  windows:
+    name: Windows x64 installer
+    needs: version
+    runs-on: windows-2025
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Install cargo-about
+        run: cargo install cargo-about --version "$env:CARGO_ABOUT" --features cli --locked
+
+      - name: Package
+        env:
+          CLOAKFRAME2_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME2_UPDATE_PUBLIC_KEY }}
+        run: tools/package/windows.ps1 "$env:RUNNER_TEMP/windows"
+
+      - name: Install, open and uninstall
+        run: |
+          $installed = "$env:LOCALAPPDATA/CloakFrameApp"
+          Start-Process -Wait "$env:RUNNER_TEMP/windows/CloakFrameApp-win-Setup.exe" -ArgumentList '--silent'
+          tools/ci/app_window.ps1 "$installed/current/cloakframe.exe" "$env:RUNNER_TEMP/app-window"
+          Start-Process -Wait "$installed/Update.exe" -ArgumentList '--uninstall', '--silent'
+          if (Test-Path "$installed/current") { throw "uninstalling left $installed/current" }
+
+      - name: Keep the app window screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: app-window-installed
+          path: |
+            ${{ runner.temp }}/app-window/*.png
+            ${{ runner.temp }}/app-window/*.log
+          if-no-files-found: ignore
+
+      - name: Sort the files
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          $from = "$env:RUNNER_TEMP/windows"
+          New-Item -ItemType Directory "$env:RUNNER_TEMP/installer", "$env:RUNNER_TEMP/feed" | Out-Null
+          Copy-Item "$from/CloakFrameApp-win-Setup.exe" "$env:RUNNER_TEMP/installer/CloakFrame-$env:VERSION-Windows-x64-Setup.exe"
+          Copy-Item "$from/releases.win.json", "$from/CloakFrameApp-$env:VERSION-full.nupkg" "$env:RUNNER_TEMP/feed"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: windows-installer
+          path: ${{ runner.temp }}/installer/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: windows-feed
+          path: ${{ runner.temp }}/feed/*
+          if-no-files-found: error
+
+  sign-updates:
+    name: Sign the update package
+    needs: windows
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-feed
+          path: ${{ runner.temp }}/feed
+
+      - name: Sign
+        env:
+          CLOAKFRAME2_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME2_UPDATE_PRIVATE_KEY }}
+          CLOAKFRAME2_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME2_UPDATE_PUBLIC_KEY }}
+        run: python3 -I tools/package/sign_updates.py "$RUNNER_TEMP/feed" win
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: windows-feed-signed
+          path: ${{ runner.temp }}/feed/*
+          if-no-files-found: error
+
+  draft:
+    name: Draft the pre-release
+    needs: [version, macos, windows, sign-updates]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: macos
+          path: ${{ runner.temp }}/dist
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-installer
+          path: ${{ runner.temp }}/dist
+
+      - name: Draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/dist/* --draft --prerelease --verify-tag \
+            --title "CloakFrame $VERSION" --notes-file docs/PREVIEW_NOTES.md
+
+  # Installed apps take the feed as soon as it changes, so it goes up only after the maintainer
+  # has published the draft and approves this job.
+  publish-updates:
+    name: Publish the update feed
+    needs: [sign-updates, draft]
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: release
+    permissions:
+      contents: write
+    steps:
+      - name: Check that the release is published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != false ]; then
+            echo "::error::Publish the $GITHUB_REF_NAME draft first, then re-run this job"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: windows-feed-signed
+          path: ${{ runner.temp }}/feed
+
+      # The feed goes last, so that it never lists a package that is not there yet.
+      - name: Upload to the updates release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if ! gh release view updates -R "$GITHUB_REPOSITORY" > /dev/null; then
+            gh release create updates -R "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" \
+              --title "Update feed" --notes "The feed CloakFrame 2 reads for updates. Download the app from the releases above."
+          fi
+          cd "$RUNNER_TEMP/feed"
+          gh release upload updates -R "$GITHUB_REPOSITORY" --clobber *.nupkg *.nupkg.sig
+          gh release upload updates -R "$GITHUB_REPOSITORY" --clobber releases.win.json

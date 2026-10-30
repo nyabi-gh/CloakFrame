@@ -22,7 +22,7 @@
 
 - **downgrade 차단:** 계획 10장은 "최고 설치 버전을 기록"한다. 기록은 두지 않았다. 서명이 버전을 덮어 서명된 패키지를 다른 버전으로 내놓을 수 없고, 앱은 설치된 버전보다 높은 버전만 받는다(`AllowVersionDowngrade: false`, 앱에서 semver로 다시 비교). 기록이 더 막는 것은 사용자가 직접 낮은 버전을 설치한 뒤의 업데이트뿐인데, 그때 최신으로 가는 것은 막을 이유가 없다.
 - **Ed25519 구현:** 계획 표는 `ed25519-dalek`이지만 rustls가 이미 쓰는 `ring` 0.17.14로 확인한다. base64 0.23.1도 ureq가 이미 쓰는 판이라 새로 들어온 crate가 없다(`Cargo.lock` 변화는 의존성 줄 3개).
-- **키 이름:** 1.x의 `CLOAKFRAME_UPDATE_PUBLIC_KEY`·`_PRIVATE_KEY`는 지울 예정이라([RELEASING](RELEASING.md#signing-keys)) 새 키는 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`·`CLOAKFRAME2_UPDATE_PRIVATE_KEY`다.
+- **키 이름:** 1.x의 `CLOAKFRAME_UPDATE_PUBLIC_KEY`·`_PRIVATE_KEY`와 겹치지 않게([RELEASING](RELEASING.md#signing-keys), 1.x 키는 2026-10-30에 지움) 새 키는 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`·`CLOAKFRAME2_UPDATE_PRIVATE_KEY`다.
 - **velopack `public-utils` feature:** `UpdateSource::get_release_feed`가 받는 `bundle::Manifest`가 이 feature 없이는 crate 밖에서 이름을 쓸 수 없다. 의존성은 늘지 않는다.
 
 ## 시험
@@ -50,7 +50,6 @@ Linux 경로(packages 폴더 바꾸기)는 컴파일만 CI에서 확인하고 �
 
 ## 남은 것
 
-- 메인테이너: 새 Velopack 업데이트 키 쌍 생성과 보관, `release` environment 비밀과 공개 키 변수 등록(RELEASING "Signing keys").
-- 릴리스 workflow: 서명 job에서 `sign_updates.py`, `updates` 릴리스에 feed·패키지·`.sig` 올리기, 빌드 job에 공개 키 넘기기.
+- 키 쌍은 2026-10-30에 만들어 등록했고, 서명과 feed 게시는 릴리스 workflow가 한다([M7_RELEASE](M7_RELEASE.md)). 첫 릴리스에서 그 job들이 실제로 돌아야 한다.
 - macOS Sparkle(새 EdDSA 키, `SURequireSignedFeed`, `SUVerifyUpdateBeforeExtraction`).
 - Windows 10 1903 VM과 Linux 설치본에서 업데이트.

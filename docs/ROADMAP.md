@@ -12,9 +12,11 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Preview
 
-- **Publish 2.0.0-preview.1.** The [preview workflow](RELEASING.md#preview) drafted the
-  photo-only macOS pre-release `v2.0.0-preview.1`. Download its zip, check that Gatekeeper
-  blocks it and "Open Anyway" opens it, then publish the draft.
+- **Publish 2.0.0-preview.1** for macOS and Windows, photos only. Delete the macOS-only
+  draft `v2.0.0-preview.1` that the old preview workflow made, then release as
+  [RELEASING](RELEASING.md#preview) describes. Check that Gatekeeper blocks the zip and
+  "Open Anyway" opens it, and that the Windows installer installs past SmartScreen's warning.
+  It is the first run of the signing and feed jobs.
 
 ## Packages and updates (M7)
 
@@ -23,13 +25,16 @@ close it. Check the caller and the full scope before recording a change of state
   uninstalls on a clean minimum supported OS, including a Windows 10 1903 VM. The Windows
   installer ([`tools/package/windows.ps1`](../tools/package/windows.ps1)) installs and
   uninstalls beside 1.12.1 without touching it or `%LocalAppData%\CloakFrameData`
-  ([record](M7_WINDOWS.md)); it still needs the VM, a release job and signing.
+  ([record](M7_WINDOWS.md)). The release workflow builds it, installs, opens and uninstalls
+  it, and releases it without Authenticode, so SmartScreen warns on its first run (decision
+  2026-10-30). It still needs the VM.
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
   app checks, downloads and installs an update only when the pinned key signed it, and a
-  release build does not build without the key ([record](M7_UPDATES.md)); it still needs the
-  key pair, the release job that signs and uploads, Sparkle on macOS, and a run on Linux.
+  release build does not build without the key ([record](M7_UPDATES.md)). The release
+  workflow signs the Windows package and, after a second approval, publishes the feed. It
+  still needs a release through those jobs, Sparkle on macOS, and a run on Linux.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
   ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,
@@ -60,13 +65,6 @@ close it. Check the caller and the full scope before recording a change of state
 ## After stable (M9)
 
 - **HEIC and HDR input**, the first feature after the stable release.
-
-## Waiting on the maintainer
-
-- **Retire the 1.x signing secrets.** Delete the repository secrets and variables listed
-  in [RELEASING](RELEASING.md#signing-keys).
-- **Authenticode for the Windows installer.** A cost question. Without it SmartScreen
-  warns on first run.
 
 ## Waiting on upstream
 

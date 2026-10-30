@@ -1,6 +1,8 @@
-A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 15 or later). It is not the stable release: there is no automatic update, and the app is not notarized. It masks photos only: FFmpeg, which videos need, is not included yet, so videos are left out.
+A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 15 or later) and Windows 10 version 1903 or later (x64). It is not the stable release. It masks photos only: FFmpeg, which videos need, is not included yet, so videos are left out.
 
-**Opening it:** unzip, move "CloakFrame Preview" to Applications and open it. macOS blocks the first open of an app that is not notarized; open System Settings > Privacy & Security and choose "Open Anyway".
+**macOS:** unzip, move "CloakFrame Preview" to Applications and open it. The app is not notarized, so macOS blocks its first open; open System Settings > Privacy & Security and choose "Open Anyway". The macOS preview does not update itself.
+
+**Windows:** run the Setup file. It is not code signed, so SmartScreen may warn on its first run; choose "More info", then "Run anyway". It installs for your account only, as "CloakFrame 2", and later previews come to it as updates, each checked against CloakFrame's own signature before it is installed.
 
 **Coming from 1.x:** CloakFrame 1.x does not update to 2, so install the preview as a new app. It sits next to CloakFrame 1.12.1, which keeps its settings and keeps working. The preview starts with its own default settings, since settings from 1.12.1 are not carried over, and uses the detection models 1.12.1 already downloaded.
 
