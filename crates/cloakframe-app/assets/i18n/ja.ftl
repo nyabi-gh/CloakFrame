@@ -428,3 +428,23 @@ cancel-all = すべてキャンセル
 cancel-item = この項目をキャンセル
 review-all = 確認する
 run-ended = { $when } · { $folder }
+
+menu-check-updates = 更新を確認…
+## 1.12.1
+menu-check-updates-on-start = 起動時に更新を確認
+## needs review
+update-checking = 更新を確認しています…
+update-none = 最新のバージョン CloakFrame { $version } を使っています。
+update-check-failed = 更新を確認できませんでした: { $error }
+## 1.12.1
+update-available = CloakFrame { $version } が利用できます。
+update-install = 更新
+update-later = 後で
+update-downloading = CloakFrame { $version } をダウンロード中…
+update-ready = CloakFrame { $version } をダウンロードしました。今すぐ再起動してインストールを完了しますか？
+update-restart = 今すぐ再起動
+## needs review
+update-restart-after-run = 進行中の作業が終わると押せます。
+## 1.12.1
+update-failed = 更新をインストールできませんでした: { $error }
+update-refused = アップデートを検証できなかったため拒否しました。何もインストールされていません。

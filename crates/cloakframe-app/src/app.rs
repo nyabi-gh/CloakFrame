@@ -33,6 +33,7 @@ use crate::style::{self, Palette};
 use crate::summary;
 use crate::thumbnails::Thumbnails;
 use crate::tools::Tools;
+use crate::updates::Updates;
 use crate::wording;
 
 /// The sample photo's height over its width in the settings panel.
@@ -55,6 +56,9 @@ pub enum Command {
     AddFolder,
     Models,
     About,
+    CheckUpdates,
+    /// Turns the check at startup on or off.
+    CheckUpdatesOnStart(bool),
     Quit,
     Theme(Theme),
     /// None follows the system's language.
@@ -103,6 +107,9 @@ pub struct AppState {
     running: Option<Running>,
     thumbnails: Option<Thumbnails>,
     pub models: Models,
+    pub updates: Updates,
+    /// The check at startup has been asked for, or was not wanted.
+    updates_started: bool,
     /// The run in progress or the last one, until the user starts anew.
     pub board: Option<Board>,
     pub sessions: SavedSessions,
@@ -144,6 +151,8 @@ impl AppState {
             running: None,
             thumbnails: None,
             models: Models::new(None, false),
+            updates: Updates::unavailable(String::new()),
+            updates_started: false,
             board: None,
             sessions: SavedSessions::new(run::Folders::default()),
             sessions_read: false,
@@ -276,6 +285,9 @@ impl AppState {
         }
         self.take_run_messages();
         self.models.take(&ctx);
+        if self.updates.take() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
         self.sessions.take();
         let dropped: Vec<PathBuf> = ctx.input(|i| {
             i.raw
@@ -293,6 +305,12 @@ impl AppState {
         if !self.sessions_read {
             self.sessions_read = true;
             self.sessions.reload(&ctx);
+        }
+        if !self.updates_started {
+            self.updates_started = true;
+            if self.settings.check_updates {
+                self.updates.check(false, &ctx);
+            }
         }
         self.watch_close(&ctx);
 
@@ -699,6 +717,14 @@ impl AppState {
                 self.models.check(ctx);
             }
             Command::About => self.about_open = true,
+            Command::CheckUpdates => self.updates.check(true, ctx),
+            Command::CheckUpdatesOnStart(on) => {
+                self.settings.check_updates = on;
+                self.save_settings();
+                if !on {
+                    self.updates.forget_startup_check();
+                }
+            }
             Command::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Command::Theme(theme) => {
                 self.settings.theme = theme;
@@ -744,6 +770,8 @@ impl AppState {
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(ui, |ui| {
+                let working = self.working();
+                self.updates.bar(ui, &self.tr, working);
                 for notice in &self.notices {
                     ui.colored_label(p.needs_review, notice);
                 }

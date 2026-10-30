@@ -74,7 +74,11 @@ impl App {
             self.menu = attach_menu(&self.ctx, &self.state, self.hwnd);
         }
         if let Some(menu) = &self.menu {
-            menu.sync(self.state.settings.theme, self.state.settings.language);
+            menu.sync(
+                self.state.settings.theme,
+                self.state.settings.language,
+                self.state.settings.check_updates,
+            );
         }
     }
 }
@@ -147,6 +151,7 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
                 cloakframe_app::tools::Tools::locate(),
                 cloakframe_app::run::Folders::of_the_app(),
             );
+            state.updates = cloakframe_app::updates::Updates::installed();
             state.graphics = cloakframe_app::graphics::of(cc);
             if let Some(graphics) = &state.graphics {
                 eprintln!("graphics: {graphics}");
@@ -226,9 +231,8 @@ fn main() -> eframe::Result {
     };
     #[cfg(target_os = "windows")]
     restrict_dll_search();
-    // The installer and updater start the app with hook arguments and wait for it to exit.
     #[cfg(any(target_os = "windows", target_os = "linux"))]
-    velopack::VelopackApp::build().run();
+    velopack_hooks();
     // Where wgpu finds no adapter (no GPU driver, some remote desktops), OpenGL often still runs.
     let wgpu = match run(eframe::Renderer::Wgpu) {
         Err(eframe::Error::Wgpu(e)) => e,
@@ -241,6 +245,20 @@ fn main() -> eframe::Result {
         cannot_draw(&format!("{}\n{opengl}", eframe::Error::Wgpu(wgpu)));
     }
     result
+}
+
+/// The installer and updater start the app with hook arguments and wait for it to exit. A
+/// package downloaded earlier is installed only from the app, after its signature check, never
+/// by Velopack as the app starts.
+#[cfg(any(target_os = "windows", target_os = "linux"))]
+fn velopack_hooks() {
+    let mut app = velopack::VelopackApp::build().set_auto_apply_on_startup(false);
+    match cloakframe_app::updates::locator_config() {
+        Ok(Some(config)) => app = app.set_locator(config),
+        Ok(None) => {}
+        Err(e) => eprintln!("updates are unavailable: {e}"),
+    }
+    app.run();
 }
 
 /// DLLs, ONNX Runtime's DirectML.dll among them, load from the app's folder and System32 only,

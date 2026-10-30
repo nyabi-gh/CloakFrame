@@ -140,6 +140,8 @@ pub struct Settings {
     /// Hold every result for review; off publishes those with no unresolved problem.
     pub review: bool,
     pub advanced: Advanced,
+    /// Ask the update feed for a newer version when the app starts.
+    pub check_updates: bool,
 }
 
 impl Default for Settings {
@@ -157,6 +159,7 @@ impl Default for Settings {
             mosaic_strength: cloakframe_core::mask::MosaicStrength::default().cells(),
             review: true,
             advanced: Advanced::default(),
+            check_updates: true,
         }
     }
 }

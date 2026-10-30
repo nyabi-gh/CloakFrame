@@ -9,7 +9,7 @@ use eframe::egui;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
     egui::MenuBar::new().ui(ui, |ui| {
-        let (file, add_files, add_folder, models, quit, help, about) = {
+        let (file, add_files, add_folder, models, quit, help, about, check, on_start) = {
             let tr = state.tr();
             (
                 tr.get("menu-file"),
@@ -19,6 +19,8 @@ pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
                 tr.get("menu-file-quit"),
                 tr.get("menu-help"),
                 tr.get("menu-app-about"),
+                tr.get("menu-check-updates"),
+                tr.get("menu-check-updates-on-start"),
             )
         };
         ui.menu_button(file, |ui| {
@@ -45,6 +47,14 @@ pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
             ui.menu_button(language, |ui| state.language_choice(ui));
         });
         ui.menu_button(help, |ui| {
+            if ui.button(check).clicked() {
+                state.command(Command::CheckUpdates);
+            }
+            let mut on = state.settings.check_updates;
+            if ui.checkbox(&mut on, on_start).changed() {
+                state.command(Command::CheckUpdatesOnStart(on));
+            }
+            ui.separator();
             if ui.button(about).clicked() {
                 state.command(Command::About);
             }
@@ -73,6 +83,8 @@ pub mod native {
         pub language: Language,
         themes: Vec<(Theme, CheckMenuItem)>,
         languages: Vec<(Option<Language>, CheckMenuItem)>,
+        /// Where the app updates itself.
+        updates_on_start: Option<CheckMenuItem>,
     }
 
     const THEMES: [(Theme, &str, &str); 3] = [
@@ -192,12 +204,21 @@ pub mod native {
         let view = Submenu::new(tr.get("menu-view"), true);
         view.append_items(&[&theme, &language])?;
         menu.append(&view)?;
+        #[cfg(not(target_os = "windows"))]
+        let updates_on_start = None;
         #[cfg(target_os = "windows")]
-        {
+        let updates_on_start = {
+            let on_start = check("updates_on_start", tr.get("menu-check-updates-on-start"));
             let help = Submenu::new(tr.get("menu-help"), true);
-            help.append(&item("about", tr.get("menu-app-about"), None))?;
+            help.append_items(&[
+                &item("check_updates", tr.get("menu-check-updates"), None),
+                &on_start,
+                &PredefinedMenuItem::separator(),
+                &item("about", tr.get("menu-app-about"), None),
+            ])?;
             menu.append(&help)?;
-        }
+            Some(on_start)
+        };
 
         let (send, events) = mpsc::channel();
         let repaint = ctx.clone();
@@ -211,6 +232,7 @@ pub mod native {
             language: tr.language(),
             themes,
             languages,
+            updates_on_start,
         })
     }
 
@@ -227,7 +249,12 @@ pub mod native {
     impl NativeMenu {
         /// Ticks the theme and the language in use. The menu ticks an item when it is chosen,
         /// so the others are unticked here.
-        pub fn sync(&self, theme: Theme, language: Option<Language>) {
+        pub fn sync(&self, theme: Theme, language: Option<Language>, check_updates: bool) {
+            if let Some(item) = &self.updates_on_start
+                && item.is_checked() != check_updates
+            {
+                item.set_checked(check_updates);
+            }
             for (t, item) in &self.themes {
                 if item.is_checked() != (*t == theme) {
                     item.set_checked(*t == theme);
@@ -250,6 +277,14 @@ pub mod native {
                     "add_files" => commands.push(Command::AddFiles),
                     "add_folder" => commands.push(Command::AddFolder),
                     "models" => commands.push(Command::Models),
+                    "check_updates" => commands.push(Command::CheckUpdates),
+                    "updates_on_start" => {
+                        let on = self
+                            .updates_on_start
+                            .as_ref()
+                            .is_some_and(|i| i.is_checked());
+                        commands.push(Command::CheckUpdatesOnStart(on));
+                    }
                     "copy" => events.push(egui::Event::Copy),
                     "cut" => events.push(egui::Event::Cut),
                     "paste" => {

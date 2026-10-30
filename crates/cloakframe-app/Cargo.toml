@@ -37,8 +37,10 @@ arboard = { version = "=3.7.0", default-features = false }
 zbus = { version = "=5.19.0", default-features = false, features = ["async-io", "blocking-api"] }
 
 [target.'cfg(any(target_os = "windows", target_os = "linux"))'.dependencies]
-# Install, update and uninstall hooks of the Velopack package; macOS updates through Sparkle.
-velopack = { version = "=1.2.161", default-features = false }
+# Install, update and uninstall hooks and updates of the Velopack package; macOS updates through
+# Sparkle. `public-utils` makes public the manifest type a custom update source takes.
+velopack = { version = "=1.2.161", default-features = false, features = ["public-utils"] }
+semver = "=1.0.28"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 raw-window-handle = "=0.6.2"

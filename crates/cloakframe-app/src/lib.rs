@@ -25,6 +25,7 @@ pub mod summary;
 pub mod thumbnails;
 pub mod tiles;
 pub mod tools;
+pub mod updates;
 pub mod video;
 pub mod video_editor;
 pub mod wording;

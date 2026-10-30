@@ -636,6 +636,7 @@ dependencies = [
  "muda",
  "raw-window-handle",
  "rfd",
+ "semver",
  "serde",
  "serde_json",
  "sys-locale",
