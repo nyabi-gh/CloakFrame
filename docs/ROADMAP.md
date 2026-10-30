@@ -26,7 +26,10 @@ close it. Check the caller and the full scope before recording a change of state
   ([record](M7_WINDOWS.md)); it still needs the VM, a release job and signing.
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
-  ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused.
+  ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
+  app checks, downloads and installs an update only when the pinned key signed it, and a
+  release build does not build without the key ([record](M7_UPDATES.md)); it still needs the
+  key pair, the release job that signs and uploads, Sparkle on macOS, and a run on Linux.
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
   source can be published; until then releases mask photos only (plan 10.1).
 - **Notices and terms.** An SBOM and the native manifest with each release, and the

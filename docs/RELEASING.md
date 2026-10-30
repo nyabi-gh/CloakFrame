@@ -49,12 +49,24 @@ workflow on any branch could read, and no 1.x release follows 1.12.1, so they ar
   and delete the exported private key from that machine. Losing a private key means
   installed clients reject every later update, so it has to outlive the machine that
   created it.
+- The Velopack update key is an Ed25519 pair. The private half, in PEM, is the
+  `CLOAKFRAME2_UPDATE_PRIVATE_KEY` secret; the public half, the base64 of its 32 bytes, is
+  the `CLOAKFRAME2_UPDATE_PUBLIC_KEY` variable, which every Windows and Linux release build
+  needs ([M7_UPDATES](M7_UPDATES.md)).
+  [sign_updates.py](../tools/package/sign_updates.py) signs the full packages a feed lists.
 - Store every signing secret in the `release` environment, never in the repository.
   Environment protection, which limits deployments to `v*` tags and requires a reviewer,
   applies only to environment secrets; a repository secret can be read by a workflow
   pushed to any branch. Only the signing and publishing jobs declare
   `environment: release`; the build jobs, which run third-party tools, reference no
   secret. Public keys are not secret and are repository variables.
+
+The Velopack update key pair, and the public half for the variable:
+
+```bash
+openssl genpkey -algorithm ed25519 -out update-key.pem
+openssl pkey -in update-key.pem -pubout -outform DER | tail -c 32 | base64
+```
 
 ```bash
 gh secret list --env release
