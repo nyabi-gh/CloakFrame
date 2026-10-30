@@ -14,6 +14,7 @@ use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::{Acceleration, ModelBackend};
 use cloakframe_engine::detect::models::{DetectionModels, FaceModel, LoadError};
 use cloakframe_engine::detect::{Detector, DetectorHandle, NoDetections};
+use cloakframe_engine::gpu_pack::{self, GpuPack, Status as PackStatus};
 use cloakframe_engine::media::encode::{OutputCodec, Quality};
 use cloakframe_engine::media_processor::MediaProcessor;
 use cloakframe_engine::model_files::download::{Https, download};
@@ -46,6 +47,8 @@ usage:
   cloakframe-cli models [--models DIR]
   cloakframe-cli models fetch [--accept-terms] [--models DIR] yolo5face-n|yunet|plates...
   cloakframe-cli sessions [--sessions DIR]
+  cloakframe-cli gpu-pack [--gpu-pack DIR]
+  cloakframe-cli gpu-pack fetch|remove [--accept-terms] [--gpu-pack DIR]
   cloakframe-cli --version
 
 --ort-library is the ONNX Runtime library to load. --models is the folder that holds the model
@@ -61,6 +64,10 @@ masks an ellipse in the padded box, which still covers all of the detected box; 
 whole padded box is masked. review takes the settings run was given, the video ones too;
 decisions on items analyzed with other settings are refused. A decision may carry its item's key from the session (the revision's key); one made
 for another input, models, settings or timeline is refused.
+On Linux x86_64, run and review use the NVIDIA GPU pack when it is installed: ONNX Runtime's CUDA
+build and the NVIDIA libraries it needs, about 1.3 GB, which gpu-pack fetch downloads from GitHub
+and PyPI. The NVIDIA CUDA Toolkit EULA and the cuDNN Software License Agreement apply to it;
+--accept-terms accepts them. --gpu-pack is the folder that holds it, by default the app's.
 --videos processes MP4, MOV, M4V and WebM files as well, with the given FFmpeg and ffprobe.
 Every frame of a video is detected with the same models and settings as photos, and what is
 tracked is masked; each --mask area (display pixels, repeatable) is masked in every frame as
@@ -126,6 +133,7 @@ struct Options {
     session: Option<String>,
     decisions: Option<PathBuf>,
     ort_library: Option<PathBuf>,
+    gpu_pack: Option<PathBuf>,
     models: Option<PathBuf>,
     faces: Option<Option<FaceModel>>,
     plates: Option<bool>,
@@ -187,6 +195,7 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
             "--session" => o.session = Some(args.value(&arg)?),
             "--decisions" => o.decisions = Some(args.value(&arg)?.into()),
             "--ort-library" => o.ort_library = Some(args.value(&arg)?.into()),
+            "--gpu-pack" => o.gpu_pack = Some(args.value(&arg)?.into()),
             "--models" => o.models = Some(args.value(&arg)?.into()),
             "--faces" => {
                 o.faces = Some(match args.value(&arg)?.as_str() {
@@ -401,16 +410,32 @@ fn model_store(o: &Options) -> Result<(ModelStore, bool), CliError> {
         .ok_or_else(|| failed("no app data folder for this user; pass --models DIR"))
 }
 
-/// Loads ONNX Runtime from `library` and the models from `store`, and says where each runs.
+/// The GPU pack's folder: --gpu-pack, or the app's.
+fn gpu_pack(o: &Options) -> Option<GpuPack> {
+    o.gpu_pack
+        .clone()
+        .or_else(|| cloakframe_engine::app_dirs::data_dir().map(|d| d.join("gpu")))
+        .map(GpuPack::new)
+}
+
+/// Loads ONNX Runtime from `library` (or the GPU pack) and the models from `store`, and says
+/// where each runs.
 fn detector(
     library: &Path,
+    gpu_pack: Option<&GpuPack>,
     (store, app_folder): &(ModelStore, bool),
     models: DetectionModels,
     acceleration: Acceleration,
 ) -> Result<Started, CliError> {
-    let started = startup::with_models(library, store, *app_folder, models, acceleration, |n| {
-        eprintln!("{n}")
-    })
+    let started = startup::with_models(
+        library,
+        gpu_pack,
+        store,
+        *app_folder,
+        models,
+        acceleration,
+        |n| eprintln!("{n}"),
+    )
     .map_err(|e| match e {
         StartError::Load(e @ LoadError::Missing { model, .. }) => failed(format!(
             "{e}; download it with `cloakframe-cli models fetch {}{}`",
@@ -602,11 +627,12 @@ fn run(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
         .ok_or_else(|| usage("run needs --ort-library FILE"))?;
     let models_store = model_store(&o)?;
     let acceleration = o.gpu.unwrap_or_default();
+    let pack = gpu_pack(&o);
     run_with(
         &o,
         &output,
         processor,
-        || detector(&library, &models_store, models, acceleration),
+        || detector(&library, pack.as_ref(), &models_store, models, acceleration),
         (store, session),
         cancel,
     )
@@ -956,6 +982,63 @@ fn fetch_models(
     Ok(DONE)
 }
 
+fn gpu_pack_command(o: Options, cancel: &CancelToken) -> Result<u8, CliError> {
+    let pack = gpu_pack(&o)
+        .ok_or_else(|| failed("no app data folder for this user; pass --gpu-pack DIR"))?;
+    let words: Vec<String> = o
+        .inputs
+        .iter()
+        .map(|p| p.to_string_lossy().into_owned())
+        .collect();
+    match words.as_slice() {
+        [] => {
+            let status = match pack.status() {
+                PackStatus::Missing => "missing".to_owned(),
+                PackStatus::Ready => "installed".to_owned(),
+                PackStatus::Damaged(reason) => format!("damaged: {reason}"),
+            };
+            println!("{}	{status}", pack.dir().display());
+            println!(
+                "download {}, installed {}",
+                megabytes(gpu_pack::download_size()),
+                megabytes(gpu_pack::installed_size())
+            );
+            for (name, url) in gpu_pack::TERMS {
+                println!("{name}	{url}");
+            }
+            Ok(DONE)
+        }
+        [command] if command == "fetch" => {
+            if pack.status() == PackStatus::Ready {
+                eprintln!("the GPU pack is already in {}", pack.dir().display());
+                return Ok(DONE);
+            }
+            if !o.accept_terms {
+                for (name, url) in gpu_pack::TERMS {
+                    eprintln!("{name}: {url}");
+                }
+                return Err(usage(
+                    "pass --accept-terms to accept NVIDIA's terms and download",
+                ));
+            }
+            eprintln!(
+                "downloading the GPU pack ({})",
+                megabytes(gpu_pack::download_size())
+            );
+            pack.install(&Https::gpu_pack(), cancel, &mut |_| {})
+                .map_err(|e| failed(format!("cannot install the GPU pack: {e}")))?;
+            println!("{}", pack.dir().display());
+            Ok(DONE)
+        }
+        [command] if command == "remove" => {
+            pack.remove()
+                .map_err(|e| failed(format!("cannot remove {}: {e}", pack.dir().display())))?;
+            Ok(DONE)
+        }
+        _ => Err(usage("gpu-pack takes fetch, remove or nothing")),
+    }
+}
+
 fn sessions(o: Options) -> Result<u8, CliError> {
     let store = session_store(&o)?;
     for id in store
@@ -990,11 +1073,12 @@ fn main() -> ExitCode {
             println!("cloakframe-cli {}", env!("CARGO_PKG_VERSION"));
             Ok(DONE)
         }
-        Some(c @ ("run" | "review" | "models" | "sessions")) => {
+        Some(c @ ("run" | "review" | "models" | "gpu-pack" | "sessions")) => {
             parse(rest).map_err(usage).and_then(|o| match c {
                 "run" => run(o, &cancel),
                 "review" => review(o, &cancel),
                 "models" => models(o, &cancel),
+                "gpu-pack" => gpu_pack_command(o, &cancel),
                 _ => sessions(o),
             })
         }

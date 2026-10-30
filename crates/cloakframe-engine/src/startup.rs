@@ -11,6 +11,7 @@ use crate::detect::fallback::{Acceleration, Backends};
 use crate::detect::models::{DetectionModels, LoadError};
 use crate::detect::runtime::OrtRuntime;
 use crate::detect::{Detector, DetectorHandle, NoDetections};
+use crate::gpu_pack::GpuPack;
 use crate::model_files::{InstallError, ModelStore, model_file};
 
 /// The inference thread and where each model on it runs.
@@ -28,6 +29,8 @@ pub enum StartNote {
     LegacyCoremlCache(io::Error),
     /// Compiled CoreML models of model files this build does not use could not be removed.
     UnusedCoremlCaches(io::Error),
+    /// The Linux GPU pack is installed but was not used, for this reason.
+    GpuPackUnused(String),
 }
 
 impl fmt::Display for StartNote {
@@ -47,6 +50,9 @@ impl fmt::Display for StartNote {
                 f,
                 "cannot remove compiled CoreML models this build does not use: {e}"
             ),
+            Self::GpuPackUnused(reason) => {
+                write!(f, "the NVIDIA GPU pack is not used: {reason}")
+            }
         }
     }
 }
@@ -94,10 +100,38 @@ pub fn without_models() -> Result<Started, StartError> {
     })
 }
 
-/// Loads ONNX Runtime from `library` and `models` from `store`. The app's own model folder
+/// ONNX Runtime from the Linux GPU pack when one is installed in `gpu_pack`, otherwise from
+/// `library`. A damaged pack, or one whose NVIDIA libraries do not load, is passed over with a
+/// note; ORT can be loaded only once, so a pack that fails after loading it is an error.
+pub fn load_runtime(
+    library: &Path,
+    gpu_pack: Option<&GpuPack>,
+    note: &mut dyn FnMut(StartNote),
+) -> Result<OrtRuntime, StartError> {
+    #[cfg(target_os = "linux")]
+    if let Some(pack) = gpu_pack {
+        use crate::detect::runtime::RuntimeError;
+        use crate::gpu_pack::Status;
+        match pack.status() {
+            Status::Missing => {}
+            Status::Damaged(reason) => note(StartNote::GpuPackUnused(reason)),
+            Status::Ready => match OrtRuntime::load_gpu_pack(&pack.dir()) {
+                Ok(runtime) => return Ok(runtime),
+                Err(RuntimeError::GpuPack(reason)) => note(StartNote::GpuPackUnused(reason)),
+                Err(e) => return Err(StartError::Runtime(e.to_string())),
+            },
+        }
+    }
+    #[cfg(not(target_os = "linux"))]
+    let _ = (gpu_pack, note);
+    OrtRuntime::load(library).map_err(|e| StartError::Runtime(e.to_string()))
+}
+
+/// Loads ONNX Runtime (`load_runtime`) and `models` from `store`. The app's own model folder
 /// (`app_folder`) first takes the models it lacks from 1.12.1's.
 pub fn with_models(
     library: &Path,
+    gpu_pack: Option<&GpuPack>,
     store: &ModelStore,
     app_folder: bool,
     models: DetectionModels,
@@ -107,7 +141,7 @@ pub fn with_models(
     if app_folder {
         import_legacy(store, models.ids(), &mut note)?;
     }
-    let runtime = OrtRuntime::load(library).map_err(|e| StartError::Runtime(e.to_string()))?;
+    let runtime = load_runtime(library, gpu_pack, &mut note)?;
     load(runtime, store, models, acceleration, note)
 }
 

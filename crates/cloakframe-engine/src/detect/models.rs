@@ -161,7 +161,7 @@ impl DetectionModels {
                 }
                 Err(error) => return Err(LoadError::Read { path, error }),
             };
-            let backend = fallback::backend_for(id, acceleration);
+            let backend = fallback::backend_for(id, acceleration, runtime.accelerator());
             let detector = fallback::load(runtime, id, bytes, backend, &backends)
                 .map_err(|error| LoadError::Model { path, error })?;
             detectors.push(detector);

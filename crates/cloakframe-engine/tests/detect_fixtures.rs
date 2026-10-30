@@ -12,6 +12,8 @@
 //! - `CLOAKFRAME_ORT_LIBRARY`: the library `tools/fetch_native.py` prints for this platform
 //! - `CLOAKFRAME_TEST_ASSETS`: the folder `tools/fetch_test_assets.py` filled
 //! - `ORT_DISABLE_TELEMETRY=1`
+//!
+//! On Linux, `CLOAKFRAME_GPU_PACK` names an installed GPU pack folder to run on CUDA instead.
 
 mod common;
 
@@ -69,7 +71,13 @@ struct ExpectedDetection {
 /// ORT has one environment per process, shared by the tests here.
 fn runtime() -> &'static OrtRuntime {
     static RUNTIME: OnceLock<OrtRuntime> = OnceLock::new();
-    RUNTIME.get_or_init(|| OrtRuntime::load(&required_env("CLOAKFRAME_ORT_LIBRARY")).unwrap())
+    RUNTIME.get_or_init(|| {
+        #[cfg(target_os = "linux")]
+        if let Some(pack) = std::env::var_os("CLOAKFRAME_GPU_PACK") {
+            return OrtRuntime::load_gpu_pack(Path::new(&pack)).unwrap();
+        }
+        OrtRuntime::load(&required_env("CLOAKFRAME_ORT_LIBRARY")).unwrap()
+    })
 }
 
 /// The model's file from the test assets, checked against tests/fixtures/assets.json.
@@ -145,7 +153,7 @@ fn plate_matches_the_1_12_1_fixtures() {
 fn the_models_match_the_fixtures_where_a_run_puts_them() {
     for id in MODELS {
         let backends = Backends::default();
-        let backend = fallback::backend_for(id, Acceleration::Gpu);
+        let backend = fallback::backend_for(id, Acceleration::Gpu, runtime().accelerator());
         let mut detector =
             fallback::load(runtime(), id, model_bytes(id), backend, &backends).unwrap();
         compare(detector.as_mut(), id, expected_count(id));
@@ -154,7 +162,7 @@ fn the_models_match_the_fixtures_where_a_run_puts_them() {
             "{id:?}: asked for {backend}, ran on {} {:?}",
             entry.backend, entry.fallback
         );
-        if cfg!(target_os = "macos") {
+        if cfg!(target_os = "macos") || backend == Backend::Cuda {
             assert_eq!((entry.backend, &entry.fallback), (backend, &None), "{id:?}");
         }
         if let Some(f) = &entry.fallback {
@@ -430,4 +438,62 @@ fn compare(detector: &mut dyn Detector, id: ModelId, expected: impl Fn(&str, usi
     );
     assert_eq!(cases, 18);
     assert!(failures.is_empty(), "{failures:#?}");
+}
+
+/// Each model where a run puts it: session times, latency and the fixture comparison
+/// (docs/M7_ACCELERATORS.md).
+#[test]
+#[ignore = "measurement"]
+fn accelerator_latency() {
+    use std::time::Instant;
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    let images = [
+        ("astronaut", detection_copy(&assets.join("astronaut.png"))),
+        (
+            "crowd",
+            detection_copy(&fixtures().join("detect/inputs/crowd-280-faces.png")),
+        ),
+    ];
+    let runtime = runtime();
+    for id in MODELS {
+        let backend = fallback::backend_for(id, Acceleration::Gpu, runtime.accelerator());
+        let bytes = model_bytes(id);
+        let mut sessions = Vec::new();
+        let mut detector = None;
+        for _ in 0..2 {
+            let backends = Backends::default();
+            let start = Instant::now();
+            detector =
+                Some(fallback::load(runtime, id, bytes.clone(), backend, &backends).unwrap());
+            sessions.push(start.elapsed().as_secs_f64() * 1e3);
+            let entry = &backends.get()[0];
+            println!("{id:?}: ran on {} {:?}", entry.backend, entry.fallback);
+        }
+        let mut detector = detector.unwrap();
+        let t = id.default_thresholds();
+        let thresholds = Thresholds { face: t, plate: t };
+        for (name, image) in &images {
+            let start = Instant::now();
+            let first = detector.detect(image, &thresholds).unwrap();
+            let first_ms = start.elapsed().as_secs_f64() * 1e3;
+            let mut times: Vec<f64> = (0..40)
+                .map(|_| {
+                    let start = Instant::now();
+                    let found = detector.detect(image, &thresholds).unwrap();
+                    assert!(!found.reran_on_cpu, "{id:?} reran on the CPU");
+                    start.elapsed().as_secs_f64() * 1e3
+                })
+                .collect();
+            times.sort_by(f64::total_cmp);
+            println!(
+                "{id:?} {name}: first {first_ms:.1} ms (reran {}), p50 {:.2} ms, p90 {:.2} ms",
+                first.reran_on_cpu, times[20], times[36]
+            );
+        }
+        println!(
+            "{id:?} sessions: first {:.0} ms, again {:.0} ms",
+            sessions[0], sessions[1]
+        );
+        compare(detector.as_mut(), id, expected_count(id));
+    }
 }

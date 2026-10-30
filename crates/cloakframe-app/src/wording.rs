@@ -27,6 +27,7 @@ pub enum RunNote {
     },
     LegacyCoremlCacheLeft(String),
     UnusedCoremlCachesLeft(String),
+    GpuPackUnused(String),
     NoEstimate(String),
     SessionNotSaved(String),
     RecordsLeft {
@@ -48,6 +49,7 @@ impl RunNote {
             },
             StartNote::LegacyCoremlCache(e) => Self::LegacyCoremlCacheLeft(e.to_string()),
             StartNote::UnusedCoremlCaches(e) => Self::UnusedCoremlCachesLeft(e.to_string()),
+            StartNote::GpuPackUnused(reason) => Self::GpuPackUnused(reason.clone()),
         }
     }
 }
@@ -73,6 +75,9 @@ pub fn run_note(note: &RunNote, name: impl Fn(ItemId) -> String, tr: &Translator
         }
         RunNote::UnusedCoremlCachesLeft(e) => {
             tr.with("run-note-unused-coreml", &[("error", arg(e.as_str()))])
+        }
+        RunNote::GpuPackUnused(e) => {
+            tr.with("run-note-gpu-pack-unused", &[("error", arg(e.as_str()))])
         }
         RunNote::NoEstimate(e) => tr.with("run-note-no-estimate", &[("error", arg(e.as_str()))]),
         RunNote::SessionNotSaved(e) => {

@@ -21,11 +21,15 @@ pub enum Acceleration {
     CpuOnly,
 }
 
-/// Where `model` runs: the platform's accelerator, except that under CoreML the plate model stays
+/// Where `model` runs: the runtime's `accelerator`, except that under CoreML the plate model stays
 /// on the CPU, since CoreML rejects the plate graph's empty tensor whenever nothing is found
 /// (docs/M0_ORT_SPIKE.md, still so in ORT 1.30 with the graph's NMS lifted).
-pub fn backend_for(model: ModelId, acceleration: Acceleration) -> Backend {
-    match (acceleration, Backend::accelerator(), model) {
+pub fn backend_for(
+    model: ModelId,
+    acceleration: Acceleration,
+    accelerator: Option<Backend>,
+) -> Backend {
+    match (acceleration, accelerator, model) {
         (Acceleration::CpuOnly, _, _)
         | (_, None, _)
         | (_, Some(Backend::CoreMl), ModelId::PlateYolov9T) => Backend::Cpu,
@@ -404,18 +408,23 @@ mod tests {
     }
 
     #[test]
-    fn each_platform_runs_the_models_where_plan_3_says() {
+    fn each_accelerator_runs_the_models_where_plan_3_says() {
+        use Backend::*;
         let models = [ModelId::Yolo5FaceN, ModelId::YuNet, ModelId::PlateYolov9T];
-        let expected = if cfg!(target_os = "macos") {
-            [Backend::CoreMl, Backend::CoreMl, Backend::Cpu]
-        } else if cfg!(windows) {
-            [Backend::DirectMl; 3]
-        } else {
-            [Backend::Cpu; 3]
-        };
-        for (model, backend) in models.into_iter().zip(expected) {
-            assert_eq!(backend_for(model, Acceleration::Gpu), backend, "{model:?}");
-            assert_eq!(backend_for(model, Acceleration::CpuOnly), Backend::Cpu);
+        for (accelerator, expected) in [
+            (None, [Cpu, Cpu, Cpu]),
+            (Some(CoreMl), [CoreMl, CoreMl, Cpu]),
+            (Some(DirectMl), [DirectMl; 3]),
+            (Some(Cuda), [Cuda; 3]),
+        ] {
+            for (model, backend) in models.into_iter().zip(expected) {
+                assert_eq!(
+                    backend_for(model, Acceleration::Gpu, accelerator),
+                    backend,
+                    "{model:?} {accelerator:?}"
+                );
+                assert_eq!(backend_for(model, Acceleration::CpuOnly, accelerator), Cpu);
+            }
         }
     }
 }

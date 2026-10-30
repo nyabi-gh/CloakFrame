@@ -339,6 +339,7 @@ run-note-not-swept = { $path } を削除できません: { $error }
 run-note-model-copied = CloakFrame 1.12.1 から { $name } をコピーしました（{ $from }）
 run-note-legacy-coreml = CloakFrame 1.12.1 が CoreML 用にコンパイルしたモデルを削除できません: { $error }
 run-note-unused-coreml = このバージョンが使わないコンパイル済み CoreML モデルを削除できません: { $error }
+run-note-gpu-pack-unused = NVIDIA GPU パックを使いません: { $error }
 run-note-no-estimate = 作業量を見積もれません: { $error }
 run-note-session-not-saved = 確認セッションを保存できません: { $error }
 run-note-records-left = { $path } の動画分析記録を削除できません: { $error }

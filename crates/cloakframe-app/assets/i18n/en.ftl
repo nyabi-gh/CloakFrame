@@ -378,6 +378,7 @@ run-note-not-swept = Cannot remove { $path }: { $error }
 run-note-model-copied = Copied { $name } from CloakFrame 1.12.1 ({ $from })
 run-note-legacy-coreml = Cannot remove the models CloakFrame 1.12.1 compiled for CoreML: { $error }
 run-note-unused-coreml = Cannot remove compiled CoreML models this version does not use: { $error }
+run-note-gpu-pack-unused = The NVIDIA GPU pack is not used: { $error }
 run-note-no-estimate = Cannot estimate the work: { $error }
 run-note-session-not-saved = Cannot save the review session: { $error }
 run-note-records-left = Cannot remove the video analysis records in { $path }: { $error }

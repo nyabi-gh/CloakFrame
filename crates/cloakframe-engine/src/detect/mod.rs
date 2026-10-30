@@ -1,3 +1,5 @@
+#[cfg(target_os = "linux")]
+pub mod cuda;
 pub mod fallback;
 pub mod models;
 pub mod plate;

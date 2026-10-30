@@ -306,6 +306,7 @@ run-note-not-swept = { $path }을(를) 지울 수 없습니다: { $error }
 run-note-model-copied = CloakFrame 1.12.1에서 { $name }을(를) 복사했습니다({ $from })
 run-note-legacy-coreml = CloakFrame 1.12.1이 CoreML용으로 컴파일한 모델을 지울 수 없습니다: { $error }
 run-note-unused-coreml = 이 버전이 쓰지 않는 컴파일된 CoreML 모델을 지울 수 없습니다: { $error }
+run-note-gpu-pack-unused = NVIDIA GPU 묶음을 쓰지 않습니다: { $error }
 run-note-no-estimate = 작업량을 추정할 수 없습니다: { $error }
 run-note-session-not-saved = 검토 세션을 저장할 수 없습니다: { $error }
 run-note-records-left = { $path }의 영상 분석 기록을 지울 수 없습니다: { $error }

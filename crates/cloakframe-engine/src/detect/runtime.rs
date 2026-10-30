@@ -35,6 +35,8 @@ pub enum RuntimeError {
     /// [`disable_telemetry`] was not called before loading.
     TelemetryNotDisabled,
     Load(String),
+    /// The NVIDIA libraries of the Linux GPU pack did not load; ONNX Runtime was not touched.
+    GpuPack(String),
 }
 
 impl fmt::Display for RuntimeError {
@@ -42,6 +44,7 @@ impl fmt::Display for RuntimeError {
         match self {
             Self::TelemetryNotDisabled => write!(f, "{TELEMETRY_VARIABLE} is not set to 1"),
             Self::Load(reason) => write!(f, "could not load ONNX Runtime: {reason}"),
+            Self::GpuPack(reason) => write!(f, "the NVIDIA libraries did not load: {reason}"),
         }
     }
 }
@@ -49,25 +52,14 @@ impl fmt::Display for RuntimeError {
 impl std::error::Error for RuntimeError {}
 
 /// Where a session runs. The accelerators are the ones the pinned runtimes carry (plan 3):
-/// CoreML in the macOS build, DirectML in Windows ML.
+/// CoreML in the macOS build, DirectML in Windows ML, and CUDA in the Linux GPU pack
+/// (`crate::gpu_pack`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Backend {
     Cpu,
     CoreMl,
     DirectMl,
-}
-
-impl Backend {
-    /// This platform's accelerator, if its runtime has one.
-    pub fn accelerator() -> Option<Self> {
-        if cfg!(target_os = "macos") {
-            Some(Self::CoreMl)
-        } else if cfg!(windows) {
-            Some(Self::DirectMl)
-        } else {
-            None
-        }
-    }
+    Cuda,
 }
 
 impl fmt::Display for Backend {
@@ -76,6 +68,7 @@ impl fmt::Display for Backend {
             Self::Cpu => "CPU",
             Self::CoreMl => "CoreML",
             Self::DirectMl => "DirectML",
+            Self::Cuda => "CUDA",
         })
     }
 }
@@ -85,6 +78,7 @@ impl fmt::Display for Backend {
 #[derive(Debug, Clone)]
 pub struct OrtRuntime {
     env: Environment,
+    accelerator: Option<Backend>,
     cpu_spinning: bool,
     #[cfg(target_os = "macos")]
     coreml_cache: Option<PathBuf>,
@@ -104,12 +98,38 @@ impl OrtRuntime {
             .with_telemetry(false)
             .build()
             .map_err(|e| load(e.to_string()))?;
+        let accelerator = if cfg!(target_os = "macos") {
+            Some(Backend::CoreMl)
+        } else if cfg!(windows) {
+            Some(Backend::DirectMl)
+        } else {
+            None
+        };
         Ok(Self {
             env,
+            accelerator,
             cpu_spinning: false,
             #[cfg(target_os = "macos")]
             coreml_cache: None,
         })
+    }
+
+    /// Loads ONNX Runtime from the Linux GPU pack in `dir`, after the NVIDIA libraries its CUDA
+    /// provider needs. CPU sessions on it give the CPU build's results.
+    #[cfg(target_os = "linux")]
+    pub fn load_gpu_pack(dir: &Path) -> Result<Self, RuntimeError> {
+        if std::env::var_os(TELEMETRY_VARIABLE).is_none_or(|v| v != "1") {
+            return Err(RuntimeError::TelemetryNotDisabled);
+        }
+        super::cuda::preload(dir, &crate::gpu_pack::preloaded()).map_err(RuntimeError::GpuPack)?;
+        let mut runtime = Self::load(&dir.join(crate::gpu_pack::ORT_LIBRARY))?;
+        runtime.accelerator = Some(Backend::Cuda);
+        Ok(runtime)
+    }
+
+    /// The accelerator this runtime carries, if any.
+    pub fn accelerator(&self) -> Option<Backend> {
+        self.accelerator
     }
 
     /// Keeps CoreML's compiled models under `dir`. Without it, every CoreML session compiles its
@@ -186,7 +206,9 @@ impl OrtRuntime {
                 GraphOptimizationLevel::All,
                 std::thread::available_parallelism().map_or(1, |n| n.get()),
             ),
-            Backend::CoreMl | Backend::DirectMl => (GraphOptimizationLevel::Level2, 1),
+            Backend::CoreMl | Backend::DirectMl | Backend::Cuda => {
+                (GraphOptimizationLevel::Level2, 1)
+            }
         };
         builder = option(builder.with_optimization_level(level))?;
         builder = option(builder.with_intra_threads(threads))?;
@@ -228,6 +250,17 @@ impl OrtRuntime {
                 builder = option(builder.with_memory_pattern(false))?;
                 builder = option(builder.with_parallel_execution(false))?;
                 ep::DirectML::default().with_device_id(0).build()
+            }
+            // TF32 moves YuNet's boxes to an IoU of 0.66 with the fixtures. Without the CPU EP a
+            // provider missing a library fails the session or the run, which falls back visibly,
+            // instead of running the convolutions on the CPU unnoticed (docs/M7_ACCELERATORS.md).
+            #[cfg(target_os = "linux")]
+            Backend::Cuda => {
+                builder = option(builder.with_disable_cpu_fallback())?;
+                ep::CUDA::default()
+                    .with_device_id(0)
+                    .with_tf32(false)
+                    .build()
             }
             other => return Err(ort::Error::new(format!("{other} is not in this build"))),
         };

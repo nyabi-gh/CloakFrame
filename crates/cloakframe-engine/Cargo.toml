@@ -45,6 +45,10 @@ synthetic = []
 [target.'cfg(target_os = "macos")'.dependencies]
 ort = { workspace = true, features = ["coreml"] }
 
+# The CUDA provider of the GPU pack (src/gpu_pack.rs).
+[target.'cfg(target_os = "linux")'.dependencies]
+ort = { workspace = true, features = ["cuda"] }
+
 [target.'cfg(unix)'.dependencies]
 rustix = { version = "=1.1.5", features = ["fs", "process"] }
 libc = "=0.2.191"
