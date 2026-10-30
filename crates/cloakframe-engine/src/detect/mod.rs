@@ -9,7 +9,7 @@ pub mod yunet;
 
 use std::any::Any;
 use std::fmt;
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::thread;
 
 use cloakframe_core::detection::{Detection, ModelId, Thresholds};
@@ -120,38 +120,59 @@ impl Detector for NoDetections {
 type Reply = mpsc::SyncSender<Result<Found, DetectError>>;
 type Request = (Rgb8Image, Thresholds, Reply);
 
-/// Cloneable access to the detector running on its own thread. The thread ends when the last
-/// handle is dropped.
+/// Cloneable access to the detector running on its own thread. Dropping the last handle ends
+/// the thread and waits for it, so the detector's sessions are released before the caller goes
+/// on: a CUDA session released while the process exits aborts it, as the CUDA runtime is already
+/// shutting down.
 #[derive(Debug, Clone)]
-pub struct DetectorHandle {
-    requests: mpsc::SyncSender<Request>,
+pub struct DetectorHandle(Arc<Threads>);
+
+#[derive(Debug)]
+struct Threads {
+    requests: Option<mpsc::SyncSender<Request>>,
+    running: Vec<thread::JoinHandle<()>>,
+}
+
+impl Drop for Threads {
+    fn drop(&mut self) {
+        self.requests.take();
+        for running in self.running.drain(..) {
+            let _ = running.join();
+        }
+    }
 }
 
 impl DetectorHandle {
     pub fn spawn(mut detector: Box<dyn Detector>) -> std::io::Result<Self> {
         let (requests, incoming) = mpsc::sync_channel::<Request>(4);
+        let handle = |running| {
+            Self(Arc::new(Threads {
+                requests: Some(requests),
+                running,
+            }))
+        };
         let Some(prepare) = detector.preparer() else {
-            thread::Builder::new()
+            let inference = thread::Builder::new()
                 .name("cloakframe-inference".into())
                 .spawn(move || {
                     for (image, thresholds, reply) in incoming {
                         let _ = reply.send(detector.detect(&image, &thresholds));
                     }
                 })?;
-            return Ok(Self { requests });
+            return Ok(handle(vec![inference]));
         };
         // Inputs made ahead: while the session runs one, the next waits in the channel and the
         // preparer holds one more until there is room, so the next is ready when the session is
         // free.
         let (ready, inputs) = mpsc::sync_channel::<(Rgb8Image, Prepared, Thresholds, Reply)>(1);
-        thread::Builder::new()
+        let inference = thread::Builder::new()
             .name("cloakframe-inference".into())
             .spawn(move || {
                 for (image, input, thresholds, reply) in inputs {
                     let _ = reply.send(detector.detect_prepared(&image, input, &thresholds));
                 }
             })?;
-        thread::Builder::new()
+        let preparing = thread::Builder::new()
             .name("cloakframe-prepare".into())
             .spawn(move || {
                 for (image, thresholds, reply) in incoming {
@@ -163,7 +184,7 @@ impl DetectorHandle {
                     }
                 }
             })?;
-        Ok(Self { requests })
+        Ok(handle(vec![preparing, inference]))
     }
 
     pub fn detect(&self, image: Rgb8Image, thresholds: Thresholds) -> Result<Found, DetectError> {
@@ -174,7 +195,10 @@ impl DetectorHandle {
     /// this one's result. Images are detected in the order they are queued.
     pub fn submit(&self, image: Rgb8Image, thresholds: Thresholds) -> Result<Pending, DetectError> {
         let (reply, response) = mpsc::sync_channel(1);
-        self.requests
+        self.0
+            .requests
+            .as_ref()
+            .ok_or(DetectError::Unavailable)?
             .send((image, thresholds, reply))
             .map_err(|_| DetectError::Unavailable)?;
         Ok(Pending(response))
