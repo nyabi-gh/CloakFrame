@@ -21,9 +21,9 @@ close it. Check the caller and the full scope before recording a change of state
 - **Installers.** Velopack installers for Windows and Linux plus an AppImage, and a DMG
   signed with Developer ID and notarized. Each installs, runs offline, updates and
   uninstalls on a clean minimum supported OS, including a Windows 10 1903 VM. The Windows
-  installer uses `packId` `CloakFrameApp`, so it neither replaces 1.12.1 (`CloakFrame`) nor
-  removes the data in `%LocalAppData%\CloakFrameData`; check both with 1.12.1 installed
-  ([review](M0_M6_REVIEW.md) 10).
+  installer ([`tools/package/windows.ps1`](../tools/package/windows.ps1)) installs and
+  uninstalls beside 1.12.1 without touching it or `%LocalAppData%\CloakFrameData`
+  ([record](M7_WINDOWS.md)); it still needs the VM, a release job and signing.
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused.
