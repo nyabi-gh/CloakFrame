@@ -58,7 +58,21 @@ close it. Check the caller and the full scope before recording a change of state
 - **Japanese translations.** Messages under `## needs review` in
   `crates/cloakframe-app/assets/i18n/ja.ftl` are machine drafts that need a Japanese
   reviewer.
-- **Low-severity review items.** The list under "낮음" in [M0_M6_REVIEW](M0_M6_REVIEW.md).
+- **Video detection before the comparison.** Two risks from [M0_M5_REVIEW](M0_M5_REVIEW.md),
+  on their own branch before the comparison with 1.12.1 (plan M6 decision 2026-10-25):
+  the coarse-view check of video tiles passes on a detection of any score, looser than for
+  photos (7), and a moving subject becomes a new track well before 2 s, leaving the frames
+  between unmasked and unreported (10).
+- **"Image" masking method.** Core and the photo pipeline have it, but the video pipeline,
+  the saved settings and sessions, and the app do not. Add them together, design first
+  ([M6_UX](M6_UX.md), decision 2026-10-27).
+- **CLI options.** The CLI cannot remove audio or set the sensitivity, which the app's
+  advanced options can (plan 12: every flow in the UI and the CLI).
+- **EXIF fuzz target.** Plan 9.1 fuzzes the EXIF reader and the ffprobe parsers; only the
+  ffprobe targets exist ([M4_PROBE](M4_PROBE.md)).
+- **Low-severity review items.** The lists under "낮음" in [M0_M6_REVIEW](M0_M6_REVIEW.md) and
+  the open rows of 11 in [M0_M5_REVIEW](M0_M5_REVIEW.md) (all but the audio fault and the
+  preview panic, which M6 fixed).
 - **Release documents.** Rewrite the README for CloakFrame 2 and write the CHANGELOG from
   [CHANGES_FROM_1.12.md](CHANGES_FROM_1.12.md), with the note that 1.x users install 2
   as a new app.
