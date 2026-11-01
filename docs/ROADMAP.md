@@ -10,14 +10,6 @@ the commit that closes one says so. The 1.x roadmap is in this file's history:
 A field that is written but never read, or a fix that covers part of the cases, does not
 close it. Check the caller and the full scope before recording a change of state.
 
-## Preview
-
-- **Publish 2.0.0-preview.1** for macOS and Windows, photos only. Delete the macOS-only
-  draft `v2.0.0-preview.1` that the old preview workflow made, then release as
-  [RELEASING](RELEASING.md#preview) describes. Check that Gatekeeper blocks the zip and
-  "Open Anyway" opens it, and that the Windows installer installs past SmartScreen's warning.
-  It is the first run of the signing and feed jobs.
-
 ## Packages and updates (M7)
 
 - **Installers.** Velopack installers for Windows and Linux plus an AppImage, and a DMG
@@ -33,8 +25,10 @@ close it. Check the caller and the full scope before recording a change of state
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
   app checks, downloads and installs an update only when the pinned key signed it, and a
   release build does not build without the key ([record](M7_UPDATES.md)). The release
-  workflow signs the Windows package and, after a second approval, publishes the feed. It
-  still needs a release through those jobs, Sparkle on macOS, and a run on Linux.
+  workflow signs the Windows package and, after a second approval, publishes the feed;
+  2.0.0-preview.1 went out through it ([record](M7_RELEASE.md#첫-릴리스2026-11-01)). It
+  still needs an installed preview updating to the next one from that feed, Sparkle on
+  macOS, and a run on Linux.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
   ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,

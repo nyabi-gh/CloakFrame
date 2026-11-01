@@ -33,9 +33,17 @@
 - **바꾼 것:** engine·app 기능 `require-simd`(turbojpeg의 같은 기능)를 두고, `windows.ps1`과 macOS 빌드가 켠다. 이 기능은 nasm이 없으면 빌드를 실패시킨다. `windows.ps1`은 `native.toml`에 해시로 고정한 nasm 3.01(nasm.us 공식 win64 zip)을 받아 PATH에 넣는다. CI는 모든 job이 `--all-features`라 Windows job은 같은 nasm을, Linux job은 Ubuntu의 `nasm` 패키지를 설치한다. 그래서 CI 시험도 패키지와 같은 SIMD 빌드로 돈다.
 - **시험(이 PC, Core Ultra 7 270K Plus, release):** nasm 없이 `--features require-simd`는 turbojpeg-sys 빌드에서 실패했다. 고정 nasm이 PATH에 있으면 `WITH_SIMD_INT=1`로 빌드됐다. 12 MP JPEG(4032×3024, 4:2:0, 7.0 MB)의 engine `decode`·`encode` 12회 p50은 SIMD 없이 234.3 ms·525.1 ms, SIMD로 115.1 ms·216.8 ms였다(디코드 2.0배, 인코드 2.4배).
 
+## 첫 릴리스(2026-11-01)
+
+`preview.yml`이 만든 macOS만의 초안을 지우고 main `c55bcc1`에 `v2.0.0-preview.1`을 태그했다(run 41310016529).
+
+- Version, macOS zip, Windows 설치본, 서명, 초안 job이 첫 시도에 통과했다. 초안에는 `CloakFrame-2.0.0-preview.1-Windows-x64-Setup.exe`(50,534,838바이트)와 `CloakFrame-Preview-2.0.0-preview.1-macOS-arm64.zip`(35,014,201바이트)이 올라갔다.
+- feed 승인이 초안 게시보다 먼저 들어가 feed job이 "Publish the v2.0.0-preview.1 draft first"로 실패했고, `updates` 릴리스는 바뀌지 않았다. 게시 뒤 다시 돌린 job이 통과했다.
+- `updates` 릴리스에 `CloakFrameApp-2.0.0-preview.1-full.nupkg`(sha256 `8f3037a0…547a7e9`), `.sig`, `releases.win.json`이 이 순서로 올라갔다. 올라간 파일을 받아 SHA-256이 feed와 같고 서명이 저장소 변수 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다.
+- 릴리스는 pre-release로 게시했고 Latest는 1.12.1 그대로다.
+
 ## 남은 것
 
 - Linux release job을 만들 때 nasm을 소스로 빌드할지 Ubuntu 패키지를 쓸지 정한다.
-- 첫 태그(`v2.0.0-preview.1`)에서 서명·초안·feed job이 실제로 도는 것. 그 전에는 environment 정책 때문에 시험할 수 없다.
 - 설치된 preview.1이 preview.2를 이 feed로 받는 것.
 - Linux 설치본·AppImage, DMG·Sparkle, 1903 VM.
