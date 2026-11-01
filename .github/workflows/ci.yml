@@ -34,6 +34,10 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all --check
 
+      # --all-features includes require-simd, which needs nasm for libjpeg-turbo.
+      - name: Install nasm
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
       - name: Clippy
         run: |
           cargo clippy --workspace --all-targets --locked -- -D warnings
@@ -70,6 +74,17 @@ jobs:
 
       - name: Install Rust
         run: rustup toolchain install
+
+      # --all-features includes require-simd, which needs nasm for libjpeg-turbo on x86, so the
+      # tests run the SIMD build the packages ship.
+      - name: Install nasm (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y nasm
+
+      - name: Install nasm (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Split-Path (python -I tools/fetch_native.py nasm windows-x64 "$env:RUNNER_TEMP/native") | Out-File -Append -Encoding utf8 $env:GITHUB_PATH
 
       # The detector tests run the pinned ONNX Runtime (manifests/native.toml) on the hashed
       # models and images of tests/fixtures/assets.json; the media tests run the pinned FFmpeg.

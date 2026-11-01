@@ -162,7 +162,8 @@ version = "=1.5.1"
 default-features = false
 features = ["cmake"]
 # libjpeg-turbo 3.1.0을 turbojpeg-sys 1.2.0이 소스에서 정적 빌드한다(native.toml의 libjpeg-turbo).
-# 릴리스 빌드는 x86에서 nasm을 두어 SIMD를 켠다.
+# 기본 기능의 require-simd를 끄고 engine·app 기능 require-simd로 다시 연다. 패키지와 --all-features는
+# 그 기능을 켜서 x86에서 nasm이 없으면 빌드가 실패한다(SIMD 없이 조용히 빌드되지 않게).
 evidence = "docs/M2_ENCODE_SPIKE.md"
 
 [crates.libwebp-sys]

@@ -128,6 +128,21 @@ status = "carried"
 stage = "M7"
 
 [[artifact]]
+id = "nasm"
+platform = "windows-x64"
+version = "3.01"
+# libjpeg-turbo의 x86 SIMD를 빌드하는 어셈블러. 앱 기능 require-simd가 없으면 빌드를 실패시킨다.
+# nasm.us는 체크섬을 내지 않아 받은 파일의 해시를 고정했다. Linux CI는 Ubuntu의 nasm 패키지를 쓴다.
+url = "https://www.nasm.us/pub/nasm/releasebuilds/3.01/win64/nasm-3.01-win64.zip"
+sha256 = "e0ba5157007abc7b1a65118a96657a961ddf55f7e3f632ee035366dfce039ca4"
+library = "nasm-3.01/nasm.exe"
+license = "BSD-2-Clause"
+source = "https://www.nasm.us/pub/nasm/releasebuilds/3.01/nasm-3.01.tar.xz"
+use = "tool"
+status = "m7"
+evidence = "docs/M2_ENCODE_SPIKE.md"
+
+[[artifact]]
 id = "vpk"
 platform = "windows-x64, linux-x86_64"
 version = "1.2.161"

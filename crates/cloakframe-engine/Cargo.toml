@@ -39,6 +39,9 @@ ctrlc = { version = "=3.5.2", features = ["termination"] }
 # The synthetic processor for exercising the whole run without a media pipeline (M1 tests and
 # `cloakframe-cli --synthetic`). Not part of release builds.
 synthetic = []
+# Fails the build instead of falling back to libjpeg-turbo without SIMD when nasm is missing on
+# x86 (docs/M2_ENCODE_SPIKE.md). Packages build with it.
+require-simd = ["turbojpeg/require-simd"]
 
 # The accelerators the pinned runtimes carry (plan 3); with load-dynamic the features only add
 # their API.

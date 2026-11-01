@@ -20,7 +20,9 @@ $version = ($metadata.packages | Where-Object name -EQ 'cloakframe-app').version
 
 # Without the static CRT the app does not start on a PC lacking the VC++ runtime (docs/M0_ORT_SPIKE.md).
 $env:CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS = '-C target-feature=+crt-static'
-cargo build --release --locked -p cloakframe-app --target $target --manifest-path "$root/Cargo.toml"
+$nasm = python -I "$root/tools/fetch_native.py" nasm windows-x64 $native
+$env:PATH = "$(Split-Path $nasm);$env:PATH"
+cargo build --release --locked -p cloakframe-app --features require-simd --target $target --manifest-path "$root/Cargo.toml"
 $exe = "$root/target/$target/release/cloakframe.exe"
 if ([Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)) -match 'VCRUNTIME140') {
     throw "$exe still imports the VC++ runtime"

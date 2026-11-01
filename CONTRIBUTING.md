@@ -25,7 +25,11 @@ kept at the `v1.12.1` tag. This branch is the Rust rewrite described in
 toolchain pinned in `rust-toolchain.toml`, which `rustup` installs on first use.
 The JPEG and WebP codecs (libjpeg-turbo, libwebp) are built from source during
 the build, so a C compiler and CMake are also needed. On x86, NASM enables
-libjpeg-turbo's SIMD code; builds without it work but are slower.
+libjpeg-turbo's SIMD code; builds without it work but are slower. The
+`require-simd` feature, which `--all-features` and the packages turn on, fails
+the build instead, so the CI checks below need NASM on PATH on x86
+(`python -I tools/fetch_native.py nasm windows-x64 <dir>` on Windows, the
+distribution's `nasm` package on Linux).
 
 ```bash
 cargo build --workspace

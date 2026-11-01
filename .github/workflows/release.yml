@@ -61,7 +61,7 @@ jobs:
       - name: Build
         env:
           MACOSX_DEPLOYMENT_TARGET: "15.0"
-        run: cargo build --release --locked -p cloakframe-app
+        run: cargo build --release --locked -p cloakframe-app --features require-simd
 
       - name: Install cargo-about
         run: cargo install cargo-about --version "$CARGO_ABOUT" --features cli --locked

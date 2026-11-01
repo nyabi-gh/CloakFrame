@@ -54,5 +54,8 @@ winresource = { version = "=0.1.34", default-features = false }
 egui_kittest.workspace = true
 fluent-syntax.workspace = true
 
+[features]
+require-simd = ["cloakframe-engine/require-simd"]
+
 [lints]
 workspace = true

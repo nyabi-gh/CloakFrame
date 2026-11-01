@@ -26,8 +26,16 @@
 - PR #82의 Release 실행(run 41017059120): Version, macOS zip, Windows 설치본 job 통과. 서명·초안·feed job은 태그가 아니라 건너뜀. `windows-2025` 러너에 vpk가 쓰는 .NET 10 runtime이 있었고, 빌드는 cargo-about 설치 3분, 패키지 10분이었다.
 - 설치 시험: `Setup.exe --silent`로 설치한 `%LocalAppData%\CloakFrameApp\current\cloakframe.exe`가 software dx12로 창을 열었다. 아직 없는 feed에는 "the feed has no releases.win.json"이라고 알리고 계속 떴다. wgpu를 막은 실행은 "CloakFrame cannot start" 창을 보였다. `Update.exe --uninstall --silent` 뒤 `current`가 없다. 창 검사는 자기가 띄운 프로세스의 창만 보므로, Setup이 설치 뒤 앱을 스스로 띄웠는지는 이 시험으로 알 수 없다.
 
+## libjpeg-turbo SIMD(2026-11-01)
+
+빌드 출력에 turbojpeg-sys의 "NASM does not seem to be installed, so turbojpeg will be compiled without SIMD extensions" 경고가 있었다. workspace가 turbojpeg를 `default-features = false`로 가져와 `require-simd`가 꺼져 있고 release workflow에 nasm이 없어, Windows 설치본도 SIMD 없이 빌드됐을 것이다(cargo가 빌드 스크립트 출력을 숨겨 workflow 로그로는 확인하지 못함). macOS arm64는 NEON이라 해당 없다.
+
+- **바꾼 것:** engine·app 기능 `require-simd`(turbojpeg의 같은 기능)를 두고, `windows.ps1`과 macOS 빌드가 켠다. 이 기능은 nasm이 없으면 빌드를 실패시킨다. `windows.ps1`은 `native.toml`에 해시로 고정한 nasm 3.01(nasm.us 공식 win64 zip)을 받아 PATH에 넣는다. CI는 모든 job이 `--all-features`라 Windows job은 같은 nasm을, Linux job은 Ubuntu의 `nasm` 패키지를 설치한다. 그래서 CI 시험도 패키지와 같은 SIMD 빌드로 돈다.
+- **시험(이 PC, Core Ultra 7 270K Plus, release):** nasm 없이 `--features require-simd`는 turbojpeg-sys 빌드에서 실패했다. 고정 nasm이 PATH에 있으면 `WITH_SIMD_INT=1`로 빌드됐다. 12 MP JPEG(4032×3024, 4:2:0, 7.0 MB)의 engine `decode`·`encode` 12회 p50은 SIMD 없이 234.3 ms·525.1 ms, SIMD로 115.1 ms·216.8 ms였다(디코드 2.0배, 인코드 2.4배).
+
 ## 남은 것
 
+- Linux release job을 만들 때 nasm을 소스로 빌드할지 Ubuntu 패키지를 쓸지 정한다.
 - 첫 태그(`v2.0.0-preview.1`)에서 서명·초안·feed job이 실제로 도는 것. 그 전에는 environment 정책 때문에 시험할 수 없다.
 - 설치된 preview.1이 preview.2를 이 feed로 받는 것.
 - Linux 설치본·AppImage, DMG·Sparkle, 1903 VM.
