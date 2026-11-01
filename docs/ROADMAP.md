@@ -42,9 +42,10 @@ close it. Check the caller and the full scope before recording a change of state
   measured and left out.
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
   source can be published; until then releases mask photos only (plan 10.1).
-- **Notices and terms.** An SBOM and the native manifest with each release, and the
-  Microsoft license terms for the Windows ML runtime in the package and the About window.
-  Decide whether the installer has to show those terms for consent (plan 10.1).
+- **Notices and terms.** An SBOM and the native manifest with each release. The Microsoft
+  license terms for the Windows ML runtime are in THIRD_PARTY_NOTICES, which the package
+  and the About window carry; the installer shows no consent page (decision 2026-11-01,
+  plan 10.1).
 - **Model mirror** (plan 4.6).
 
 ## Verification and stable (M8)

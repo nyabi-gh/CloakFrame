@@ -486,7 +486,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 **지켜야 할 것:**
 - 링크하는 의존성은 Apache-2.0과 호환되어야 한다. GPL·AGPL crate는 쓰지 않고 `cargo-deny`로 막는다. LGPL 네이티브 라이브러리는 동적 링크로만 쓴다.
 - FFmpeg는 별도 프로세스이므로 GPL 빌드를 번들해도 된다. nonfree 빌드는 금지하고, FFmpeg의 GPL 고지와 대응 소스 위치를 THIRD_PARTY_NOTICES에 둔다. 제3자 빌드는 대응 소스를 낼 수 없을 수 있다. macOS의 Martin Riedl 빌드는 x264를 빌드할 때마다 `master`로 받아 정확한 소스를 다시 만들 수 없다(2026-10-26 확인, [M6 기록](M6_VERIFY.md#preview-릴리스-준비)). 그래서 M7에서 고정한 소스 tarball로 직접 빌드하고, 그 소스와 스크립트를 대응 소스로 낸다. 그때까지 preview는 FFmpeg 없이(사진만) 낸다.
-- Microsoft 약관(Windows ML 런타임) 전문을 THIRD_PARTY_NOTICES와 정보 창에 넣는다. 3b에 따라 설치 시 동의 화면까지 필요한지는 M7 전에 정한다.
+- Microsoft 약관(Windows ML 런타임) 전문을 THIRD_PARTY_NOTICES와 정보 창에 넣는다. 3b는 설치 시 동의 화면 없이 고지로 지킨다(2026-11-01 결정): THIRD_PARTY_NOTICES의 Windows ML 절이 약관 전문과 "Windows에서 설치·사용하면 이 구성 요소에 대해 이 약관에 동의한다"는 문장을 담고, 패키지·정보 창·PREVIEW_NOTES·README가 그것을 가리킨다. 약관은 동의 방식을 정하지 않고, 같은 조항의 VC++·DirectX 재배포와 1.12.1의 DirectML도 클릭 동의 없이 고지로 배포했다. 동의 창은 "시작 시 모달 금지"(10장)에 걸린다.
 - 레거시 코드를 Apache-2.0으로 바꾸는 것은 저작권자 전원의 결정이어야 한다. 커밋 작성자는 메인테이너의 계정들뿐이다.
 
 이 절은 법률 자문이 아니다.
@@ -499,7 +499,7 @@ CloakFrame 소스는 Apache License 2.0으로 배포한다. 저장소의 `LICENS
 | Windows ML이 ORT 버전을 정함(현재 1.27.1), DirectML은 유지보수 모드 | M0, M7 | Windows ML 패키지 버전을 manifest에 고정하고 세 OS의 `api-N`을 그 ORT에 맞춤. 맞는 짝이 없으면 그 버전에 머묾. DML 회귀는 실기기 게이트로 잡음 |
 | `ort` RC | M0, M3 | 확인한 정확한 버전으로 고정, 추론 어댑터 뒤에 숨김 |
 | 의존성 라이선스 호환 | 전 단계 | `cargo-deny`로 GPL·AGPL crate 차단, 네이티브는 manifest에 라이선스 기록(10.1) |
-| Microsoft 약관 3b의 동의 요건 | M7 | 설치 화면에 약관 동의가 필요한지 M7 전에 정함 |
+| Microsoft 약관 3b의 동의 요건 | M7(2026-11-01 결정) | 동의 화면 없이 THIRD_PARTY_NOTICES의 약관 전문과 동의 문장으로 고지(10.1) |
 | ORT 텔레메트리 | M0, M8 | `ORT_DISABLE_TELEMETRY=1`(실제 차단) + `with_telemetry(false)` + 네트워크 감시. 새 ORT 버전마다 다시 확인 |
 | 프로세스 내 추론의 GPU driver crash | M3, M8 | 측정되면 `Detector` trait 뒤에서 별도 프로세스로 분리 |
 | FFmpeg 파이프 처리량 | M0(macOS 해소), M4 | 파이프 상한 9.5 GB/s, 병목은 인코더. Windows·Linux 하드웨어 인코더 경로는 같은 spike로 확인. 디코드 파이프는 M4 2단계 CI가 3개 OS에서 잼(1080p rgb24, Windows 775 MB/s), 4K 내보내기에서 Windows 파이프 상한은 3단계 CI와 실기기로 확인 |

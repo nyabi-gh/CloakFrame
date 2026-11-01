@@ -2,7 +2,7 @@ A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 
 
 **macOS:** unzip, move "CloakFrame Preview" to Applications and open it. The app is not notarized, so macOS blocks its first open; open System Settings > Privacy & Security and choose "Open Anyway". The macOS preview does not update itself.
 
-**Windows:** run the Setup file. It is not code signed, so SmartScreen may warn on its first run; choose "More info", then "Run anyway". It installs for your account only, as "CloakFrame 2", and later previews come to it as updates, each checked against CloakFrame's own signature before it is installed.
+**Windows:** run the Setup file. It is not code signed, so SmartScreen may warn on its first run; choose "More info", then "Run anyway". It installs for your account only, as "CloakFrame 2", and later previews come to it as updates, each checked against CloakFrame's own signature before it is installed. It includes Microsoft's Windows ML runtime, which is licensed under Microsoft's terms in THIRD_PARTY_NOTICES.txt (also in the About window); installing or using the app means agreeing to them for that runtime.
 
 **Coming from 1.x:** CloakFrame 1.x does not update to 2, so install the preview as a new app. It sits next to CloakFrame 1.12.1, which keeps its settings and keeps working. The preview starts with its own default settings, since settings from 1.12.1 are not carried over, and uses the detection models 1.12.1 already downloaded.
 

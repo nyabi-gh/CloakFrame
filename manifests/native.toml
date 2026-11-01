@@ -56,7 +56,7 @@ license_url = "https://www.nuget.org/packages/Microsoft.Windows.AI.MachineLearni
 source = "none (proprietary; ORT 1.27.1 source is MIT at https://github.com/microsoft/onnxruntime/tree/v1.27.1)"
 use = "bundle"
 status = "m0"
-# 패키지가 정한 최소 OS가 Windows 10 1903(18362)이다. 약관 3b의 설치 시 동의 필요 여부는 M7 전에 정한다.
+# 패키지가 정한 최소 OS가 Windows 10 1903(18362)이다. 약관 3b는 THIRD_PARTY_NOTICES의 고지로 지킨다(계획 10.1).
 evidence = "docs/M0_ORT_SPIKE.md#windows-ml--directml"
 
 [[artifact]]
