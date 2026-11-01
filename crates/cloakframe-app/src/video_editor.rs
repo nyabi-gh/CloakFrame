@@ -795,7 +795,7 @@ fn timeline(
         egui::Rect::from_min_max(
             egui::pos2(x_of(first as f32), top),
             egui::pos2(
-                x_of((last + 1) as f32).max(x_of(first as f32) + 2.0),
+                x_of((last + 1) as f32).max(x_of(first as f32) + MIN_BAR_WIDTH),
                 top + height,
             ),
         )
@@ -951,16 +951,23 @@ fn timeline(
             painter.vline(r.right(), r.y_range(), edge);
         }
     }
+    // As on the canvas: a masked track is filled, one left as it is only has a dashed frame,
+    // and the selected one gets a ring in the text colour.
+    let ring = |r: egui::Rect| {
+        painter.rect_stroke(
+            r,
+            3,
+            egui::Stroke::new(1.5, p.text),
+            egui::StrokeKind::Outside,
+        );
+    };
     for (i, t) in tracks.iter().enumerate() {
         let r = span(t.first, t.last, track_top(i), row_height);
-        let selected = draft.selected == Some(Pick::Track(t.id));
         if draft.is_track_excluded(t.id) {
-            painter.rect(
-                r,
-                3,
-                p.window,
-                egui::Stroke::new(1.0, p.border),
-                egui::StrokeKind::Inside,
+            dashed(
+                &painter,
+                r.shrink(0.75),
+                egui::Stroke::new(1.5, p.secondary),
             );
         } else if t.low_confidence {
             painter.rect_filled(r, 3, p.separator);
@@ -970,21 +977,18 @@ fn timeline(
                 egui::Stroke::new(1.5, p.secondary),
             );
         } else {
-            painter.rect_filled(r, 3, if selected { p.text } else { p.secondary });
+            painter.rect_filled(r, 3, p.secondary);
         }
-        if selected && (draft.is_track_excluded(t.id) || t.low_confidence) {
-            painter.rect_stroke(
-                r,
-                3,
-                egui::Stroke::new(1.5, p.text),
-                egui::StrokeKind::Outside,
-            );
+        if draft.selected == Some(Pick::Track(t.id)) {
+            ring(r);
         }
     }
     for (i, t) in draft.doc.video.added_tracks.iter().enumerate() {
         let r = span(t.first, t.last, manual_top(i), row_height);
-        let selected = draft.selected == Some(Pick::Manual(i));
-        painter.rect_filled(r, 3, if selected { p.text } else { p.secondary });
+        painter.rect_filled(r, 3, p.secondary);
+        if draft.selected == Some(Pick::Manual(i)) {
+            ring(r);
+        }
         for k in &t.keyframes {
             let c = egui::pos2(x_of(k.frame as f32 + 0.5), r.center().y);
             let d = (row_height / 2.0).min(5.0);
@@ -1019,6 +1023,8 @@ fn timeline(
 /// Room at the timeline's left for each row group's name, unless a name needs more.
 const GUTTER: f32 = 70.0;
 const LANE_NAME_SIZE: f32 = 11.0;
+/// A track only a frame or two long still shows as a bar, not a hairline.
+const MIN_BAR_WIDTH: f32 = 6.0;
 
 /// Seconds between the ruler's marks: the shortest of a few round steps that leaves room for
 /// the labels.

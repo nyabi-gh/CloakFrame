@@ -39,6 +39,7 @@ use crate::wording;
 
 /// The sample photo's height over its width in the settings panel.
 const SAMPLE_ASPECT: f32 = 146.0 / 260.0;
+const APP_ICON: &[u8] = include_bytes!("../../../assets/icons/cloakframe.png");
 const DIALOG_WIDTH: f32 = 600.0;
 /// The least room left above and below the advanced options dialog.
 const DIALOG_MARGIN: f32 = 40.0;
@@ -130,6 +131,8 @@ pub struct AppState {
     pub dialog_open: bool,
     /// How much of the run is done, drawn as a line under the toolbar.
     progress_line: Option<f32>,
+    /// The app's icon at the head of the sidebar, made on first use.
+    icon: Option<egui::TextureHandle>,
 }
 
 impl AppState {
@@ -167,6 +170,7 @@ impl AppState {
             sample: Sample::new(),
             dialog_open: false,
             progress_line: None,
+            icon: None,
         }
     }
 
@@ -378,6 +382,10 @@ impl AppState {
             painter.rect_filled(middle, 0.0, p.empty);
         }
 
+        if sidebar {
+            let head = egui::Rect::from_x_y_ranges(whole.left()..=sidebar_right, bar.y_range());
+            self.sidebar_head(ui, head);
+        }
         region(ui, bar, |ui| {
             self.toolbar(ui, if sidebar { sidebar_right } else { whole.left() })
         });
@@ -418,6 +426,36 @@ impl AppState {
             ui.ctx()
                 .request_discard("the screen changed while it was laid out");
         }
+    }
+
+    /// The app's icon and name above the sidebar, in the toolbar's height.
+    fn sidebar_head(&mut self, ui: &egui::Ui, head: egui::Rect) {
+        const ICON: f32 = 20.0;
+        let p = Palette::of(ui);
+        let icon = self.icon.get_or_insert_with(|| {
+            // The 512 px icon is scaled down here: egui samples textures without mipmaps, so
+            // drawing it at 20 px would alias.
+            let image = image::load_from_memory_with_format(APP_ICON, image::ImageFormat::Png)
+                .expect("the bundled icon decodes")
+                .resize_exact(64, 64, image::imageops::FilterType::Lanczos3)
+                .into_rgba8();
+            let pixels = egui::ColorImage::from_rgba_unmultiplied([64, 64], image.as_raw());
+            ui.ctx()
+                .load_texture("app-icon", pixels, egui::TextureOptions::LINEAR)
+        });
+        let left = head.left() + 18.0;
+        let picture = egui::Rect::from_min_size(
+            egui::pos2(left, head.center().y - ICON / 2.0),
+            egui::vec2(ICON, ICON),
+        );
+        egui::Image::new((icon.id(), picture.size())).paint_at(ui, picture);
+        ui.painter().text(
+            egui::pos2(picture.right() + 8.0, head.center().y),
+            egui::Align2::LEFT_CENTER,
+            "CloakFrame",
+            style::medium(13.0),
+            p.text,
+        );
     }
 
     fn sidebar_shown(&self) -> bool {
@@ -1658,7 +1696,7 @@ impl AppState {
                         };
                         let chosen = ui.scope(|ui| {
                             a11y::mark_item(ui, &row.described);
-                            run_row(ui, &row, thumbnail, board.is_over())
+                            run_row(ui, &row, thumbnail)
                         });
                         match chosen.inner {
                             None => {}
@@ -2287,7 +2325,6 @@ fn run_row(
     ui: &mut egui::Ui,
     row: &RunRow,
     thumbnail: Option<&egui::TextureHandle>,
-    over: bool,
 ) -> Option<RowAct> {
     let p = *Palette::of(ui);
     let width = ui.available_width();
@@ -2307,7 +2344,9 @@ fn run_row(
     );
 
     let gap = 14.0;
-    let (detail_width, buttons_width) = if over { (200.0, 200.0) } else { (140.0, 28.0) };
+    // The same columns while the run works and once it is over, so the state does not move
+    // when the buttons of a finished row arrive.
+    let (detail_width, buttons_width) = (200.0, 200.0);
     let mut x = rect.left() + 24.0;
     let mut column = |w: f32| {
         let column = egui::Rect::from_x_y_ranges(x..=x + w, rect.y_range());
