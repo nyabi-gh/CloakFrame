@@ -45,11 +45,11 @@ close it. Check the caller and the full scope before recording a change of state
 ## Verification and stable (M8)
 
 - **UI polish.** Feedback on preview.1: controls, hierarchy and alignment did not match. Five
-  steps were agreed on 2026-11-01. Step 1 (controls) is on branch `ui-controls`, step 2 (group
-  hierarchy and row alignment) on `ui-hierarchy`, step 3 (the advanced options as a centered
-  dialog) on `ui-dialog`, step 4 (button levels) on `ui-buttons`, step 5 (list columns,
-  timeline bars, sidebar header and the Korean "track" wording) on `ui-finish`. Still open: the
-  space under the run list's details. Record in
+  steps were agreed on 2026-11-01 and are open as stacked PRs, merged in this order: #88
+  controls (`ui-controls`), #89 group hierarchy and row alignment (`ui-hierarchy`), #90 the
+  advanced options as a centered dialog (`ui-dialog`), #91 button levels (`ui-buttons`), #92
+  list columns, timeline bars, sidebar header and Korean wording (`ui-finish`). Still open: the
+  maintainer's look at the app, and the space under the run list's details. Record in
   [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
 - **Comparison with 1.12.1.** Detection quality and speed, long runs, and Windows DML on
   NVIDIA, Intel and AMD hardware.
