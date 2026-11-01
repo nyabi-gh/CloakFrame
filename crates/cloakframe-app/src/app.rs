@@ -1091,7 +1091,7 @@ impl AppState {
             );
             ui.horizontal_centered(|ui| {
                 ui.add_space(20.0);
-                if style::link(ui, &tr.get("advanced-open")).clicked() {
+                if style::outlined(ui, tr.get("advanced-open")).clicked() {
                     self.command(Command::Models);
                 }
             });

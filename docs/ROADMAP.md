@@ -47,8 +47,8 @@ close it. Check the caller and the full scope before recording a change of state
 - **UI polish.** Feedback on preview.1: controls, hierarchy and alignment did not match. Five
   steps were agreed on 2026-11-01. Step 1 (controls) is on branch `ui-controls`, step 2 (group
   hierarchy and row alignment) on `ui-hierarchy`, step 3 (the advanced options as a centered
-  dialog) on `ui-dialog`. Still to do: button levels, and lists, timeline, sidebar header and
-  the Korean "track" wording. Record in
+  dialog) on `ui-dialog`, step 4 (button levels) on `ui-buttons`. Still to do: lists,
+  timeline, sidebar header and the Korean "track" wording. Record in
   [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
 - **Comparison with 1.12.1.** Detection quality and speed, long runs, and Windows DML on
   NVIDIA, Intel and AMD hardware.

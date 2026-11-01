@@ -340,8 +340,8 @@ fn sized(button: egui::Button<'_>) -> egui::Button<'_> {
         .corner_radius(BUTTON_RADIUS)
 }
 
-/// The screen's one main action: filled with the text colour. When it cannot be pressed it is a
-/// flat grey button, not a faded black one, so it does not read as pressable.
+/// The screen's one main action: filled with the text colour. When it cannot be pressed it keeps
+/// its colours at 40% opacity, so it still reads as the screen's main action.
 pub fn primary(ui: &mut egui::Ui, text: &str, enabled: bool) -> egui::Response {
     primary_sized(ui, text, enabled, egui::vec2(0.0, BUTTON_HEIGHT))
 }
@@ -354,19 +354,18 @@ pub fn primary_sized(
     size: egui::Vec2,
 ) -> egui::Response {
     let p = Palette::of(ui);
-    let (fill, border, color) = if enabled {
-        (p.text, p.text, p.on_primary)
-    } else {
-        (p.sidebar, p.separator, p.disabled)
-    };
-    let button = egui::Button::new(egui::RichText::new(text).font(medium(13.0)).color(color))
-        .min_size(size)
-        .corner_radius(BUTTON_RADIUS)
-        .fill(fill)
-        .stroke(Stroke::new(1.0, border));
+    let button = egui::Button::new(
+        egui::RichText::new(text)
+            .font(medium(13.0))
+            .color(p.on_primary),
+    )
+    .min_size(size)
+    .corner_radius(BUTTON_RADIUS)
+    .fill(p.text)
+    .stroke(Stroke::new(1.0, p.text));
     let response = ui
         .scope(|ui| {
-            ui.visuals_mut().disabled_alpha = 1.0;
+            ui.visuals_mut().disabled_alpha = 0.4;
             ui.add_enabled(enabled, button)
         })
         .inner;
