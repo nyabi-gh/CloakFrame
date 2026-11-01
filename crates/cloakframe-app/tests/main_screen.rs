@@ -6,7 +6,7 @@ use cloakframe_app::draft::Pick;
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
 use cloakframe_app::run::{Folders, RunOptions, processor};
-use cloakframe_app::settings::{Method, Settings, Shape};
+use cloakframe_app::settings::{Coverage, Method, Settings, Shape};
 use cloakframe_app::tools::Tools;
 use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, ModelId};
@@ -368,6 +368,31 @@ fn the_shape_is_chosen_under_how() {
             cloakframe_core::mask::Shape::Ellipse
         );
     }
+}
+
+/// The coverage is chosen under the shape, standard at first, and runs take it.
+#[test]
+fn the_coverage_is_chosen_under_how() {
+    let mut harness = harness(Language::En, Settings::default());
+    harness.run_traced();
+    let chosen = |harness: &Harness<'_, AppState>, label: &str| {
+        harness
+            .get_by_role_and_label(Role::RadioButton, label)
+            .accesskit_node()
+            .toggled()
+            == Some(Toggled::True)
+    };
+    assert!(chosen(&harness, "Standard") && !chosen(&harness, "Narrow"));
+    harness
+        .get_by_role_and_label(Role::RadioButton, "Narrow")
+        .click();
+    harness.run_traced();
+    assert!(chosen(&harness, "Narrow") && !chosen(&harness, "Standard"));
+    assert_eq!(harness.state().settings.coverage, Coverage::Narrow);
+    assert_eq!(
+        RunOptions::of(&harness.state().settings).style().padding,
+        cloakframe_core::mask::Padding::NARROW
+    );
 }
 
 /// The notices and the font license are drawn in full, in the bundled fonts only, and the

@@ -20,6 +20,11 @@ strength = 강도
 shape = 모양
 shape-rectangle = 사각형
 shape-ellipse = 타원
+coverage = 범위
+coverage-narrow = 좁게
+coverage-standard = 기본
+coverage-wide = 넓게
+coverage-hint = 감지된 얼굴이나 번호판보다 사방으로 얼마나 더 가릴지입니다. 그 크기의 좁게 8%, 기본 18%(1.12.1과 같음), 넓게 30%입니다.
 models-need-one = 얼굴이나 번호판 중 하나 이상을 고르세요.
 
 output-folder = 저장 위치

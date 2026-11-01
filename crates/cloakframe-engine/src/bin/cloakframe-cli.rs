@@ -8,7 +8,7 @@ use cloakframe_core::coverage::{CoverageEvidence, Problem};
 use cloakframe_core::detection::{DetectionKind, ModelId};
 use cloakframe_core::geometry::Rect;
 use cloakframe_core::item::{ItemState, PublishBasis, ReviewMode};
-use cloakframe_core::mask::{MaskStyle, Shape};
+use cloakframe_core::mask::{MaskStyle, Padding, Shape};
 use cloakframe_engine::batch::{Kept, job_from_scan, keep_for_review, remove_stale_outputs};
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::fallback::{Acceleration, ModelBackend};
@@ -33,13 +33,15 @@ const USAGE: &str = "\
 usage:
   cloakframe-cli run --output DIR --ort-library FILE [--models DIR]
                      [--faces yolo5face-n|yunet|off] [--plates on|off] [--tiles on|off]
-                     [--gpu on|off] [--shape rectangle|ellipse] [--review required|off]
+                     [--gpu on|off] [--shape rectangle|ellipse]
+                     [--coverage narrow|standard|wide] [--review required|off]
                      [--keep-metadata [--keep-gps]] [--recursive] [--workers N] [--sessions DIR]
                      [--videos --ffmpeg FILE --ffprobe FILE [--mask X,Y,W,H...]
                       [--video-codec h264|hevc] [--video-quality high|balanced|space-saver]
                       [--hardware-encode on|off]] INPUT...
   cloakframe-cli review --session ID --decisions FILE [--faces yolo5face-n|yunet|off]
                         [--plates on|off] [--tiles on|off] [--shape rectangle|ellipse]
+                        [--coverage narrow|standard|wide]
                         [--keep-metadata [--keep-gps]] [--workers N] [--sessions DIR]
                         [--videos --ffmpeg FILE --ffprobe FILE [--mask X,Y,W,H...]
                         [--video-codec h264|hevc]
@@ -61,7 +63,9 @@ is uploaded). YOLO5Face-n is for non-commercial use only; --accept-terms accepts
 tiles are detected as well, which finds small faces in large photos at more cost. --gpu off keeps every model on the CPU; by default each runs on the GPU where this
 build can, and a model the GPU fails moves to the CPU for the rest of the run. --shape ellipse
 masks an ellipse in the padded box, which still covers all of the detected box; by default the
-whole padded box is masked. review takes the settings run was given, the video ones too;
+whole padded box is masked. --coverage is how far past each detected box the mask reaches on
+every side: narrow 8%, standard 18% (the default, as in 1.12.1) or wide 30% of the box's size.
+review takes the settings run was given, the video ones too;
 decisions on items analyzed with other settings are refused. A decision may carry its item's key from the session (the revision's key); one made
 for another input, models, settings or timeline is refused.
 On Linux x86_64, run and review use the NVIDIA GPU pack when it is installed: ONNX Runtime's CUDA
@@ -139,6 +143,7 @@ struct Options {
     plates: Option<bool>,
     tiles: Option<bool>,
     shape: Option<Shape>,
+    coverage: Option<Padding>,
     gpu: Option<Acceleration>,
     keep_metadata: bool,
     keep_gps: bool,
@@ -226,6 +231,18 @@ fn parse(args: Vec<String>) -> Result<Options, String> {
                     "rectangle" => Shape::Rectangle,
                     "ellipse" => Shape::Ellipse,
                     other => return Err(format!("--shape is rectangle or ellipse, not {other}")),
+                })
+            }
+            "--coverage" => {
+                o.coverage = Some(match args.value(&arg)?.as_str() {
+                    "narrow" => Padding::NARROW,
+                    "standard" => Padding::default(),
+                    "wide" => Padding::WIDE,
+                    other => {
+                        return Err(format!(
+                            "--coverage is narrow, standard or wide, not {other}"
+                        ));
+                    }
                 })
             }
             "--gpu" => {
@@ -316,6 +333,7 @@ fn photo_processor(o: &Options) -> Result<PhotoProcessor, CliError> {
         tiles: o.tiles.unwrap_or(PhotoSettings::default().tiles),
         style: MaskStyle {
             shape: o.shape.unwrap_or(MaskStyle::default().shape),
+            padding: o.coverage.unwrap_or_default(),
             ..MaskStyle::default()
         },
         metadata,

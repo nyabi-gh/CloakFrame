@@ -48,6 +48,7 @@ impl Sample {
             shown.faces == options.faces
                 && shown.method == options.method
                 && shown.shape == options.shape
+                && shown.coverage == options.coverage
                 && shown.mosaic_strength == options.mosaic_strength
         };
         if !self.shown.as_ref().is_some_and(|(o, _)| looks_the_same(o)) {
@@ -70,7 +71,7 @@ impl Default for Sample {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::settings::{Method, Settings, Shape};
+    use crate::settings::{Coverage, Method, Settings, Shape};
 
     fn options(faces: bool, method: Method, strength: u8) -> RunOptions {
         RunOptions {
@@ -150,5 +151,28 @@ mod tests {
                 "{method:?}"
             );
         }
+    }
+
+    /// The preview shows each coverage: a wider one masks more around the face.
+    #[test]
+    fn a_wider_coverage_masks_more() {
+        let sample = Sample::new();
+        let changed = |coverage| {
+            sample
+                .masked(&RunOptions {
+                    coverage,
+                    ..options(true, Method::Fill, 8)
+                })
+                .pixels()
+                .zip(sample.photo.pixels())
+                .filter(|(a, b)| a != b)
+                .count()
+        };
+        let [narrow, standard, wide] =
+            [Coverage::Narrow, Coverage::Standard, Coverage::Wide].map(changed);
+        assert!(
+            narrow < standard && standard < wide,
+            "{narrow} {standard} {wide}"
+        );
     }
 }

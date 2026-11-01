@@ -36,6 +36,28 @@ pub enum Shape {
     Ellipse,
 }
 
+/// How far the mask reaches past the detected box on every side.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Coverage {
+    Narrow,
+    /// 1.12.1's padding.
+    #[default]
+    Standard,
+    Wide,
+}
+
+impl Coverage {
+    pub fn padding(self) -> cloakframe_core::mask::Padding {
+        use cloakframe_core::mask::Padding;
+        match self {
+            Self::Narrow => Padding::NARROW,
+            Self::Standard => Padding::default(),
+            Self::Wide => Padding::WIDE,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum FaceModel {
@@ -136,6 +158,7 @@ pub struct Settings {
     pub plates: bool,
     pub method: Method,
     pub shape: Shape,
+    pub coverage: Coverage,
     pub mosaic_strength: u8,
     /// Hold every result for review; off publishes those with no unresolved problem.
     pub review: bool,
@@ -156,6 +179,7 @@ impl Default for Settings {
             plates: false,
             method: Method::default(),
             shape: Shape::default(),
+            coverage: Coverage::default(),
             mosaic_strength: cloakframe_core::mask::MosaicStrength::default().cells(),
             review: true,
             advanced: Advanced::default(),
@@ -380,20 +404,23 @@ mod tests {
     }
 
     #[test]
-    fn shape_round_trips_and_is_a_rectangle_when_missing() {
+    fn shape_and_coverage_round_trip_and_default_when_missing() {
         let dir = Dir::new("shape");
         let path = dir.0.join("settings.toml");
         std::fs::write(&path, "version = 1\nmethod = \"fill\"\n").unwrap();
         let (mut file, settings, notices) = SettingsFile::load(&path);
         assert!(notices.is_empty(), "{notices:?}");
         assert_eq!(settings.shape, Shape::Rectangle);
+        assert_eq!(settings.coverage, Coverage::Standard);
         let changed = Settings {
             shape: Shape::Ellipse,
+            coverage: Coverage::Narrow,
             ..settings
         };
         file.save(&changed).unwrap();
         let table: toml::Table = std::fs::read_to_string(&path).unwrap().parse().unwrap();
         assert_eq!(table["shape"].as_str(), Some("ellipse"));
+        assert_eq!(table["coverage"].as_str(), Some("narrow"));
         let (_, back, notices) = SettingsFile::load(&path);
         assert_eq!((back, notices), (changed, vec![]));
     }

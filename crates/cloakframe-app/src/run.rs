@@ -31,7 +31,9 @@ use eframe::egui;
 use serde::{Deserialize, Serialize};
 
 use crate::progress::{self, Overall, Pace};
-use crate::settings::{Advanced, FaceModel, Method, Settings, Shape, VideoCodec, VideoQuality};
+use crate::settings::{
+    Advanced, Coverage, FaceModel, Method, Settings, Shape, VideoCodec, VideoQuality,
+};
 use crate::tools::Tools;
 use crate::wording::RunNote;
 
@@ -186,6 +188,10 @@ pub struct RunOptions {
     /// Missing from sessions saved before the shape could be chosen, which ran with rectangles.
     #[serde(default)]
     pub shape: Shape,
+    /// Missing from sessions saved before the coverage could be chosen, which ran with the
+    /// standard one.
+    #[serde(default)]
+    pub coverage: Coverage,
     pub mosaic_strength: u8,
     /// Missing from sessions saved before there were advanced settings, which ran with the
     /// defaults.
@@ -200,6 +206,7 @@ impl RunOptions {
             plates: settings.plates,
             method: settings.method,
             shape: settings.shape,
+            coverage: settings.coverage,
             mosaic_strength: settings.mosaic_strength,
             advanced: settings.advanced,
         }
@@ -216,6 +223,7 @@ impl RunOptions {
                 Shape::Rectangle => MaskShape::Rectangle,
                 Shape::Ellipse => MaskShape::Ellipse,
             },
+            padding: self.coverage.padding(),
             ..MaskStyle::default()
         };
         if let Ok(strength) = MosaicStrength::new(self.mosaic_strength) {
@@ -862,8 +870,42 @@ mod tests {
         });
         let before = serde_json::from_value::<RunOptions>(before).unwrap();
         assert_eq!(
-            (before.shape, before.advanced),
-            (Shape::Rectangle, Advanced::default())
+            (before.shape, before.coverage, before.advanced),
+            (Shape::Rectangle, Coverage::Standard, Advanced::default())
         );
+    }
+
+    /// Each coverage pads by its own amount, and the standard one by 1.12.1's; it reaches the
+    /// photo and the video processor, so a review made with another coverage is refused.
+    #[test]
+    fn the_coverage_changes_what_the_engine_processes_with() {
+        let tools = Tools {
+            ffmpeg: Some(PathBuf::from("ffmpeg")),
+            ffprobe: Some(PathBuf::from("ffprobe")),
+            ..Tools::default()
+        };
+        assert_eq!(
+            Coverage::Standard.padding(),
+            cloakframe_core::mask::Padding::default()
+        );
+        let fingerprints = |coverage: Coverage| {
+            let options = RunOptions {
+                coverage,
+                ..RunOptions::of(&Settings::default())
+            };
+            assert_eq!(options.style().padding, coverage.padding());
+            let processor = processor(&options, &tools, PathBuf::from("records")).unwrap();
+            (
+                processor.fingerprint(Path::new("a.jpg")),
+                processor.fingerprint(Path::new("a.mp4")),
+            )
+        };
+        let all = [Coverage::Narrow, Coverage::Standard, Coverage::Wide].map(fingerprints);
+        for (i, a) in all.iter().enumerate() {
+            for b in &all[i + 1..] {
+                assert_ne!(a.0, b.0);
+                assert_ne!(a.1, b.1);
+            }
+        }
     }
 }

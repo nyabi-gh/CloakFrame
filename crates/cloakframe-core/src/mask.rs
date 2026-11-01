@@ -78,6 +78,10 @@ impl Default for MosaicStrength {
 pub struct Padding(f32);
 
 impl Padding {
+    /// The narrow and wide coverage the app and the CLI offer besides the default.
+    pub const NARROW: Self = Self(0.08);
+    pub const WIDE: Self = Self(0.30);
+
     pub fn new(ratio: f32) -> Result<Self, MaskError> {
         if !(0.0..=1.0).contains(&ratio) {
             return Err(MaskError::PaddingOutOfRange);

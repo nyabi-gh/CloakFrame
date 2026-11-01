@@ -294,23 +294,33 @@ pub fn group_title(ui: &mut egui::Ui, text: &str) {
 }
 
 /// A row with its name in a column `label_width` wide and its controls beside it, so the
-/// controls of every row start at one place even when a row has no name.
-pub fn field(ui: &mut egui::Ui, label_width: f32, label: &str, add: impl FnOnce(&mut egui::Ui)) {
+/// controls of every row start at one place even when a row has no name. Returns the name's
+/// response.
+pub fn field(
+    ui: &mut egui::Ui,
+    label_width: f32,
+    label: &str,
+    add: impl FnOnce(&mut egui::Ui),
+) -> egui::Response {
     let p = Palette::of(ui);
     ui.horizontal_top(|ui| {
-        ui.allocate_ui_with_layout(
-            egui::vec2(label_width, BUTTON_HEIGHT),
-            egui::Layout::left_to_right(egui::Align::Center),
-            |ui| {
-                ui.set_min_size(egui::vec2(label_width, BUTTON_HEIGHT));
-                ui.label(egui::RichText::new(label).color(p.body));
-            },
-        );
+        let name = ui
+            .allocate_ui_with_layout(
+                egui::vec2(label_width, BUTTON_HEIGHT),
+                egui::Layout::left_to_right(egui::Align::Center),
+                |ui| {
+                    ui.set_min_size(egui::vec2(label_width, BUTTON_HEIGHT));
+                    ui.label(egui::RichText::new(label).color(p.body))
+                },
+            )
+            .inner;
         ui.vertical(|ui| {
             ui.set_width(ui.available_width());
             add(ui);
         });
-    });
+        name
+    })
+    .inner
 }
 
 /// One group of the settings panel, with the faint line under it.

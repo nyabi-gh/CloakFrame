@@ -27,7 +27,8 @@ use crate::run::{self, Board, Failure, Logged, Running};
 use crate::sample::Sample;
 use crate::sessions::{Saved, SavedSessions};
 use crate::settings::{
-    FaceModel, Method, Notice, Settings, SettingsFile, Shape, Theme, VideoCodec, VideoQuality,
+    Coverage, FaceModel, Method, Notice, Settings, SettingsFile, Shape, Theme, VideoCodec,
+    VideoQuality,
 };
 use crate::shell;
 use crate::style::{self, Palette};
@@ -1150,6 +1151,17 @@ impl AppState {
                 style::segmented(ui, &mut self.settings.shape, &shapes);
             });
         });
+        style::field(ui, label_width, &tr.get("coverage"), |ui| {
+            let coverages = [
+                (Coverage::Narrow, tr.get("coverage-narrow")),
+                (Coverage::Standard, tr.get("coverage-standard")),
+                (Coverage::Wide, tr.get("coverage-wide")),
+            ];
+            ui.push_id("coverage", |ui| {
+                style::segmented(ui, &mut self.settings.coverage, &coverages);
+            });
+        })
+        .on_hover_text(tr.get("coverage-hint"));
     }
 
     fn strength(&mut self, ui: &mut egui::Ui, tr: &Translator) {
@@ -1990,7 +2002,7 @@ impl SessionRow {
 
 /// The names of the rows under How share one column, so their controls start together.
 fn how_label_width(ui: &egui::Ui, tr: &Translator) -> f32 {
-    ["shape", "strength"]
+    ["shape", "coverage", "strength"]
         .into_iter()
         .map(|id| style::text_width(ui, &tr.get(id)))
         .fold(34.0, f32::max)

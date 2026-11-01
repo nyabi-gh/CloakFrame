@@ -31,6 +31,11 @@ strength = Strength
 shape = Shape
 shape-rectangle = Rectangle
 shape-ellipse = Ellipse
+coverage = Coverage
+coverage-narrow = Narrow
+coverage-standard = Standard
+coverage-wide = Wide
+coverage-hint = How far past the detected face or plate to mask, on every side: narrow 8%, standard 18% (as in 1.12.1), wide 30% of its size.
 models-need-one = Choose faces, license plates, or both.
 
 output-folder = Output folder

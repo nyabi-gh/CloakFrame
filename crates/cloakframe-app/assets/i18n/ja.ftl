@@ -26,6 +26,11 @@ strength = 強さ
 shape = 形
 shape-rectangle = 四角形
 shape-ellipse = 楕円
+coverage = 範囲
+coverage-narrow = 狭い
+coverage-standard = 標準
+coverage-wide = 広い
+coverage-hint = 検出された顔やナンバープレートより四方にどれだけ広く隠すかです。そのサイズの狭い 8%、標準 18%（1.12.1 と同じ）、広い 30% です。
 models-need-one = 顔とナンバープレートのどちらか、または両方を選んでください。
 
 output-folder = 保存先

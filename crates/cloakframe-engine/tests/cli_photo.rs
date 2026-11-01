@@ -209,10 +209,16 @@ fn exporting_without_anonymization_keeps_every_pixel() {
 fn decisions_need_the_settings_the_run_used() {
     let f = Fixture::new();
     f.astronaut();
-    let r = f.run(&["--review", "required", "--keep-metadata", "--tiles", "off"]);
+    let used = ["--keep-metadata", "--tiles", "off", "--coverage", "wide"];
+    let r = f.run(&[&["--review", "required"][..], &used].concat());
     let id = session_id(&r.stdout);
     let decision = r#"{"items": [{"item": 0, "revision": 0, "action": "approve"}]}"#;
-    for other in [&[][..], &["--keep-metadata"], &["--tiles", "off"]] {
+    for other in [
+        &[][..],
+        &["--keep-metadata", "--tiles", "off"],
+        &["--keep-metadata", "--coverage", "wide"],
+        &["--tiles", "off", "--coverage", "wide"],
+    ] {
         let r = f.review(&id, decision, other);
         assert_eq!(r.code, 1, "{other:?}: {}{}", r.stdout, r.stderr);
         assert!(
@@ -223,12 +229,39 @@ fn decisions_need_the_settings_the_run_used() {
     }
     assert!(!f.root.join("out").exists());
 
-    let r = f.review(&id, decision, &["--keep-metadata", "--tiles", "off"]);
+    let r = f.review(&id, decision, &used);
     assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
 
     let r = f.run(&["--tiles", "maybe"]);
     assert_eq!(r.code, 2);
     assert!(r.stderr.contains("--tiles is on or off"), "{}", r.stderr);
+    let r = f.run(&["--coverage", "huge"]);
+    assert_eq!(r.code, 2);
+    assert!(
+        r.stderr.contains("--coverage is narrow, standard or wide"),
+        "{}",
+        r.stderr
+    );
+}
+
+/// Below the face, a fifth of its height past the box is masked with the wide coverage (30%)
+/// and left as it was with the narrow one (8%).
+#[test]
+fn the_coverage_sets_how_far_past_the_face_the_mask_reaches() {
+    let face = astronaut_face();
+    let (x, _) = centre(face);
+    let y = (face[1] + face[3] * 1.2) as u32;
+    for (coverage, masked) in [("narrow", false), ("wide", true)] {
+        let f = Fixture::new();
+        let source = f.astronaut();
+        let r = f.run(&["--review", "off", "--coverage", coverage]);
+        assert_eq!(r.code, 0, "{}{}", r.stdout, r.stderr);
+        let out = rgb(&f.out("astronaut.png"));
+        assert_eq!(out.get_pixel(x, y).0 == BLACK, masked, "{coverage}");
+        if !masked {
+            assert_eq!(out.get_pixel(x, y), rgb(&source).get_pixel(x, y));
+        }
+    }
 }
 
 #[test]
