@@ -49,7 +49,7 @@ close it. Check the caller and the full scope before recording a change of state
   hierarchy and row alignment) on `ui-hierarchy`, step 3 (the advanced options as a centered
   dialog) on `ui-dialog`, step 4 (button levels) on `ui-buttons`, step 5 (list columns,
   timeline bars, sidebar header and the Korean "track" wording) on `ui-finish`. Still open: the
-  Korean words for "keyframe" and "gap", and the space under the run list's details. Record in
+  space under the run list's details. Record in
   [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
 - **Comparison with 1.12.1.** Detection quality and speed, long runs, and Windows DML on
   NVIDIA, Intel and AMD hardware.
