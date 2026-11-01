@@ -688,6 +688,12 @@ fn run_with<P: ItemProcessor>(
         };
         eprintln!("skipped {count} file(s) of unsupported type {shown}");
     }
+    if scanned.videos_left_out > 0 {
+        eprintln!(
+            "skipped {} video(s); --videos processes them",
+            scanned.videos_left_out
+        );
+    }
     let workers = o
         .workers
         .unwrap_or_else(|| std::thread::available_parallelism().map_or(1, |n| n.get()));

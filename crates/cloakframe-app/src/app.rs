@@ -886,8 +886,11 @@ impl AppState {
                 lines.push((egui::RichText::new(text).color(p.secondary), hover));
             }
         }
-        if !self.tools.videos() {
-            let text = tr.get("videos-need-ffmpeg");
+        if let Some(found) = self.found.as_ref().filter(|f| f.videos_left_out > 0) {
+            let text = tr.with(
+                "videos-left-out",
+                &[("count", FluentValue::from(found.videos_left_out))],
+            );
             lines.push((egui::RichText::new(text).color(p.secondary), None));
         }
         let has_files = self.found.as_ref().is_some_and(|f| !f.files.is_empty());

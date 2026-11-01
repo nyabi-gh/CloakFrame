@@ -185,7 +185,10 @@ discard-confirm = Discard
 discard-keep = Keep
 start-needs-runtime = ONNX Runtime was not found next to the app.
 model-missing = The detection model { $name } is not downloaded yet.
-videos-need-ffmpeg = FFmpeg was not found next to the app, so videos are left out.
+videos-left-out = { $count ->
+    [one] One video is left out: this installation has no FFmpeg, which videos need.
+   *[other] { $count } videos are left out: this installation has no FFmpeg, which videos need.
+}
 
 models-title = Detection models
 models-open = Detection Models…

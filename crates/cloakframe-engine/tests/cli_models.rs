@@ -91,6 +91,7 @@ const PLATES: &str = "yolo-v9-t-512-license-plates-end2end.onnx";
 fn nothing_is_loaded_before_the_scan_finds_media() {
     let f = Fixture::new();
     f.dir.write("in/notes.txt");
+    f.dir.write("in/clip.mp4");
     let nowhere = f.root().join("nowhere");
     let r = f.cli(&[
         "run",
@@ -108,6 +109,12 @@ fn nothing_is_loaded_before_the_scan_finds_media() {
     assert!(
         r.stderr
             .contains("skipped 1 file(s) of unsupported type txt"),
+        "{}",
+        r.stderr
+    );
+    assert!(
+        r.stderr
+            .contains("skipped 1 video(s); --videos processes them"),
         "{}",
         r.stderr
     );

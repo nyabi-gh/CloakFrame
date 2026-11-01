@@ -60,6 +60,9 @@ pub struct ScanResult {
     pub files: Vec<ScannedFile>,
     /// Unsupported files by lowercase extension without the dot ("" for none).
     pub skipped: BTreeMap<String, usize>,
+    /// Videos passed over because the request left videos out. They are a supported type, so
+    /// they are not in `skipped`.
+    pub videos_left_out: usize,
     pub issues: Vec<ScanIssue>,
 }
 
@@ -162,10 +165,11 @@ impl Scanner<'_> {
     }
 
     fn file(&mut self, path: &Path, relative: PathBuf) {
-        let kind = match MediaKind::of(path) {
-            Some(MediaKind::Video) if !self.request.include_videos => None,
-            kind => kind,
-        };
+        let kind = MediaKind::of(path);
+        if kind == Some(MediaKind::Video) && !self.request.include_videos {
+            self.result.videos_left_out += 1;
+            return;
+        }
         let Some(kind) = kind else {
             let extension = path
                 .extension()
@@ -292,8 +296,9 @@ mod tests {
             include_videos: false,
             ..request(&photos, true)
         });
-        assert_eq!(images_only.skipped["mp4"], 1);
-        assert_eq!(images_only.skipped["mkv"], 1);
+        assert_eq!(images_only.skipped, expected);
+        assert_eq!(images_only.videos_left_out, 1);
+        assert_eq!(media.videos_left_out, 0);
     }
 
     #[test]

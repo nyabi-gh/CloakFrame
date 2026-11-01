@@ -160,7 +160,7 @@ discard-confirm = 破棄
 discard-keep = 残す
 start-needs-runtime = アプリの隣に ONNX Runtime が見つかりません。
 model-missing = 検出モデル { $name } はまだダウンロードされていません。
-videos-need-ffmpeg = アプリの隣に FFmpeg が見つからないため、動画は除外しました。
+videos-left-out = 動画 { $count } 件は除外しました。このインストールには動画の処理に必要な FFmpeg が含まれていません。
 
 models-title = 検出モデル
 models-open = 検出モデル…

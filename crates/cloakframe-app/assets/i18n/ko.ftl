@@ -138,7 +138,7 @@ discard-confirm = 버리기
 discard-keep = 그대로 두기
 start-needs-runtime = 앱 옆에서 ONNX Runtime을 찾지 못했습니다.
 model-missing = 감지 모델 { $name }을(를) 아직 받지 않았습니다.
-videos-need-ffmpeg = 앱 옆에서 FFmpeg를 찾지 못해 동영상은 뺐습니다.
+videos-left-out = 동영상 { $count }개는 뺐습니다. 이 설치에는 동영상 처리에 필요한 FFmpeg가 없습니다.
 
 models-title = 감지 모델
 models-open = 감지 모델…

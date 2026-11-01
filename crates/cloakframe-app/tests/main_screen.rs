@@ -160,13 +160,18 @@ fn dropped_files_are_scanned_and_counted() {
     harness.get_by_role_and_label(Role::ListItem, "写真 髙橋.jpg");
     harness.get_by_role_and_label(Role::ListItem, "動画 clip.mp4");
 
-    // Without FFmpeg the videos are left out, and the window says why.
+    // Without FFmpeg the videos are left out as videos, not as an unsupported type, and the
+    // window says why only when there were videos to leave out.
     let mut harness = harness_without_tools(&files);
     let found = harness.state().found.as_ref().unwrap();
     assert_eq!(found.files.len(), 2);
-    harness.get_by_label_contains("mp4 1 件（対応していない形式）");
-    let why = harness.state().tr().get("videos-need-ffmpeg");
-    harness.get_by_label(&why);
+    harness.get_by_label("処理しないファイル 1 件 — txt 1 件（対応していない形式）");
+    let why = "動画 1 件は除外しました。このインストールには動画の処理に必要な FFmpeg が含まれていません。";
+    harness.get_by_label(why);
+    harness.run_traced();
+
+    let mut harness = harness_without_tools(&files[..2]);
+    assert!(harness.query_by_label(why).is_none());
     harness.run_traced();
 }
 
