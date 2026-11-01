@@ -179,7 +179,7 @@ impl Models {
         }
     }
 
-    /// One row per model, for the advanced options sheet: its name and size, whether it is here,
+    /// One row per model, for the advanced options dialog: its name and size, whether it is here,
     /// and its terms, which are accepted before a model they limit can be downloaded.
     pub fn rows(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         let p = Palette::of(ui);

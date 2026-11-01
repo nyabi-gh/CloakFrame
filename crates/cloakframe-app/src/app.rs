@@ -39,7 +39,10 @@ use crate::wording;
 
 /// The sample photo's height over its width in the settings panel.
 const SAMPLE_ASPECT: f32 = 146.0 / 260.0;
-const SHEET_WIDTH: f32 = 600.0;
+const DIALOG_WIDTH: f32 = 600.0;
+/// The least room left above and below the advanced options dialog.
+const DIALOG_MARGIN: f32 = 40.0;
+const DIALOG_RADIUS: u8 = 10;
 
 /// The words of the sensitivity slider's steps, least sensitive first.
 const SENSITIVITY_LEVELS: [&str; 5] = [
@@ -123,12 +126,10 @@ pub struct AppState {
     pub discarding: Option<SessionId>,
     pub quit: Quit,
     sample: Sample,
-    /// The advanced options sheet, where the detection models are too, is open.
-    pub sheet_open: bool,
+    /// The advanced options dialog, where the detection models are too, is open.
+    pub dialog_open: bool,
     /// How much of the run is done, drawn as a line under the toolbar.
     progress_line: Option<f32>,
-    /// Where the middle of the window was last drawn, which the sheet hangs below.
-    middle_rect: egui::Rect,
 }
 
 impl AppState {
@@ -164,9 +165,8 @@ impl AppState {
             discarding: None,
             quit: Quit::No,
             sample: Sample::new(),
-            sheet_open: false,
+            dialog_open: false,
             progress_line: None,
-            middle_rect: egui::Rect::NOTHING,
         }
     }
 
@@ -326,7 +326,7 @@ impl AppState {
             .frame(egui::Frame::NONE)
             .show(ui, |ui| self.window(ui));
         crate::about::window(&ctx, self);
-        self.advanced_sheet(&ctx);
+        self.advanced_dialog(&ctx);
         self.discard_dialog(&ctx);
         self.quit_dialog(&ctx);
     }
@@ -365,7 +365,6 @@ impl AppState {
             egui::Rect::from_x_y_ranges(sidebar_right..=settings_left, below_bar..=whole.bottom());
         let panel =
             egui::Rect::from_x_y_ranges(settings_left..=whole.right(), below_bar..=whole.bottom());
-        self.middle_rect = middle;
 
         let painter = ui.painter();
         painter.rect_filled(whole, 0.0, p.window);
@@ -719,7 +718,7 @@ impl AppState {
                 }
             }
             Command::Models => {
-                self.sheet_open = true;
+                self.dialog_open = true;
                 self.models.check(ctx);
                 self.gpu_pack.check();
             }
@@ -1189,87 +1188,130 @@ impl AppState {
         }
     }
 
-    /// The advanced options, in a sheet that hangs from the toolbar.
-    fn advanced_sheet(&mut self, ctx: &egui::Context) {
-        if !self.sheet_open {
+    /// The advanced options, in a dialog in the middle of the window over a darkened backdrop. Its
+    /// title and its Done line stay put while the options between them scroll.
+    fn advanced_dialog(&mut self, ctx: &egui::Context) {
+        if !self.dialog_open {
             return;
         }
         let before = self.settings.clone();
         let tr = self.tr.clone();
-        let p = if ctx.theme() == egui::Theme::Dark {
-            style::DARK
+        let (p, backdrop) = if ctx.theme() == egui::Theme::Dark {
+            (style::DARK, egui::Color32::from_black_alpha(128))
         } else {
-            style::LIGHT
+            (
+                style::LIGHT,
+                egui::Color32::from_rgba_unmultiplied(24, 24, 27, 71),
+            )
         };
-        let top = self.middle_rect.top();
         let id = egui::Id::unique("advanced");
-        let area = egui::Modal::default_area(id).anchor(
-            egui::Align2::CENTER_TOP,
-            egui::vec2(0.0, top - ctx.content_rect().top()),
-        );
         let frame = egui::Frame::NONE
             .fill(p.window)
             .stroke(egui::Stroke::new(1.0, p.border))
-            .corner_radius(egui::CornerRadius {
-                nw: 0,
-                ne: 0,
-                sw: 10,
-                se: 10,
-            })
+            .corner_radius(DIALOG_RADIUS)
             .shadow(egui::Shadow {
-                offset: [0, 18],
-                blur: 50,
+                offset: [0, 12],
+                blur: 32,
                 spread: 0,
                 color: egui::Color32::from_black_alpha(46),
             });
-        let height = (ctx.content_rect().bottom() - top - 40.0).max(200.0);
+        let height = (ctx.content_rect().height() - 2.0 * DIALOG_MARGIN).max(240.0);
+        let line = egui::Stroke::new(1.0, p.faint_line);
         let mut done = false;
         let modal = egui::Modal::new(id)
-            .area(area)
             .frame(frame)
-            .backdrop_color(egui::Color32::from_black_alpha(30))
+            .backdrop_color(backdrop)
             .show(ctx, |ui| {
-                ui.set_width(SHEET_WIDTH);
+                ui.set_width(DIALOG_WIDTH);
+                let top = ui.cursor().top();
+                ui.spacing_mut().item_spacing.y = 0.0;
                 let label = tr.get("advanced");
                 ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
                     node.set_role(egui::accesskit::Role::Dialog);
                     node.set_label(label.as_str());
                 });
-                egui::ScrollArea::vertical()
-                    .id_salt("advanced")
-                    .max_height(height - 64.0)
-                    .show(ui, |ui| {
-                        egui::Frame::NONE
-                            .inner_margin(egui::Margin::symmetric(24, 6))
-                            .show(ui, |ui| self.advanced(ui, &tr));
-                    });
-                ui.painter().hline(
-                    ui.max_rect().x_range(),
-                    ui.cursor().top(),
-                    egui::Stroke::new(1.0, p.faint_line),
-                );
                 egui::Frame::NONE
-                    .inner_margin(egui::Margin::symmetric(24, 16))
+                    .inner_margin(egui::Margin::symmetric(24, 12))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
-                            ui.add(
-                                egui::Label::new(
-                                    egui::RichText::new(tr.get("advanced-next-run"))
-                                        .size(12.0)
-                                        .color(p.secondary),
-                                )
-                                .wrap(),
+                            ui.label(egui::RichText::new(&label).font(style::medium(14.0)));
+                            ui.with_layout(
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    let close = tr.get("close");
+                                    if style::icon_button(ui, &close, style::icon::close).clicked()
+                                    {
+                                        done = true;
+                                    }
+                                },
                             );
                         });
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                            if style::primary(ui, &tr.get("done"), true).clicked() {
-                                done = true;
-                            }
-                        });
                     });
+                ui.painter()
+                    .hline(ui.max_rect().x_range(), ui.min_rect().bottom(), line);
+                // An area's ui has no bottom to lay out up from, so the part under the title is
+                // given its own rect down to the dialog's height.
+                let rest = egui::Rect::from_x_y_ranges(
+                    ui.max_rect().x_range(),
+                    ui.cursor().top()..=top + height,
+                );
+                ui.advance_cursor_after_rect(rest);
+                let builder = egui::UiBuilder::new()
+                    .max_rect(rest)
+                    .layout(egui::Layout::bottom_up(egui::Align::Min));
+                ui.scope_builder(builder, |ui| {
+                    egui::Frame::NONE
+                        .inner_margin(egui::Margin::symmetric(24, 14))
+                        .show(ui, |ui| {
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if style::primary(ui, &tr.get("done"), true).clicked() {
+                                        done = true;
+                                    }
+                                    ui.add_space(16.0);
+                                    ui.allocate_ui_with_layout(
+                                        egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                                        egui::Layout::left_to_right(egui::Align::Center),
+                                        |ui| {
+                                            ui.add(
+                                                egui::Label::new(
+                                                    egui::RichText::new(
+                                                        tr.get("advanced-next-run"),
+                                                    )
+                                                    .size(12.0)
+                                                    .color(p.secondary),
+                                                )
+                                                .wrap(),
+                                            );
+                                        },
+                                    );
+                                },
+                            );
+                        });
+                    ui.painter()
+                        .hline(ui.max_rect().x_range(), ui.min_rect().top(), line);
+                    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                        ui.spacing_mut().item_spacing.y = 6.0;
+                        egui::ScrollArea::vertical()
+                            .id_salt("advanced")
+                            .auto_shrink(false)
+                            .show(ui, |ui| {
+                                egui::Frame::NONE
+                                    .inner_margin(egui::Margin {
+                                        left: 24,
+                                        right: 24,
+                                        top: 4,
+                                        bottom: 20,
+                                    })
+                                    .show(ui, |ui| self.advanced(ui, &tr));
+                            });
+                    });
+                });
             });
         if done || modal.should_close() {
-            self.sheet_open = false;
+            self.dialog_open = false;
         }
         if self.settings != before {
             self.save_settings();
@@ -1281,8 +1323,8 @@ impl AppState {
         let hint = |text: String| egui::RichText::new(text).size(12.0).color(p.secondary);
         let faces = self.settings.faces;
         let advanced = &mut self.settings.advanced;
-        sheet_section(ui, &tr.get("advanced-detection"));
-        sheet_field(ui, &tr.get("face-model"), |ui| {
+        dialog_section(ui, &tr.get("advanced-detection"));
+        dialog_field(ui, &tr.get("face-model"), |ui| {
             ui.add_enabled_ui(faces, |ui| {
                 let models = [
                     (FaceModel::Accurate, tr.get("face-model-accurate")),
@@ -1293,7 +1335,7 @@ impl AppState {
                 });
             });
         });
-        sheet_field(ui, &tr.get("sensitivity"), |ui| {
+        dialog_field(ui, &tr.get("sensitivity"), |ui| {
             advanced.sensitivity = advanced.sensitivity.clamp(1, 5);
             ui.horizontal(|ui| {
                 let width = ui.available_width() - 90.0;
@@ -1318,12 +1360,12 @@ impl AppState {
                 ui.label(level);
             });
         });
-        sheet_field(ui, "", |ui| {
+        dialog_field(ui, "", |ui| {
             ui.add(style::Check::new(&mut advanced.tiles, tr.get("tiles")));
             ui.add(egui::Label::new(hint(tr.get("tiles-hint"))).wrap());
         });
-        sheet_section(ui, &tr.get("advanced-photos"));
-        sheet_field(ui, "", |ui| {
+        dialog_section(ui, &tr.get("advanced-photos"));
+        dialog_field(ui, "", |ui| {
             ui.add(style::Check::new(
                 &mut advanced.keep_metadata,
                 tr.get("keep-metadata"),
@@ -1337,13 +1379,13 @@ impl AppState {
                 );
             });
         });
-        sheet_section(ui, &tr.get("advanced-videos"));
+        dialog_section(ui, &tr.get("advanced-videos"));
         let quality = |q: VideoQuality| match q {
             VideoQuality::High => "video-quality-high",
             VideoQuality::Balanced => "video-quality-balanced",
             VideoQuality::SpaceSaver => "video-quality-space-saver",
         };
-        sheet_field(ui, &tr.get("video-quality"), |ui| {
+        dialog_field(ui, &tr.get("video-quality"), |ui| {
             style::select(
                 ui,
                 "video-quality",
@@ -1369,7 +1411,7 @@ impl AppState {
             VideoCodec::H264 => "video-codec-h264",
             VideoCodec::Hevc => "video-codec-hevc",
         };
-        sheet_field(ui, &tr.get("video-codec"), |ui| {
+        dialog_field(ui, &tr.get("video-codec"), |ui| {
             style::select(
                 ui,
                 "video-codec",
@@ -1387,24 +1429,24 @@ impl AppState {
                 egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-codec"))
             });
         });
-        sheet_field(ui, "", |ui| {
+        dialog_field(ui, "", |ui| {
             ui.add(style::Check::new(
                 &mut advanced.remove_audio,
                 tr.get("remove-audio"),
             ));
             ui.add(egui::Label::new(hint(tr.get("remove-audio-hint"))).wrap());
         });
-        sheet_field(ui, "", |ui| {
+        dialog_field(ui, "", |ui| {
             ui.add(style::Check::new(&mut advanced.gpu, tr.get("gpu")))
                 .on_hover_text(tr.get("gpu-hint"));
         });
-        sheet_section(ui, &tr.get("models-title"));
-        sheet_field(ui, "", |ui| self.models.rows(ui, tr));
+        dialog_section(ui, &tr.get("models-title"));
+        dialog_field(ui, "", |ui| self.models.rows(ui, tr));
         if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
-            sheet_section(ui, &tr.get("gpu-pack-title"));
+            dialog_section(ui, &tr.get("gpu-pack-title"));
             let restart = crate::run::loaded_accelerator()
                 .is_some_and(|a| a != Some(cloakframe_engine::detect::runtime::Backend::Cuda));
-            sheet_field(ui, "", |ui| self.gpu_pack.rows(ui, tr, restart));
+            dialog_field(ui, "", |ui| self.gpu_pack.rows(ui, tr, restart));
         }
     }
 
@@ -1966,15 +2008,15 @@ fn duration_badge(ui: &egui::Ui, picture: egui::Rect, seconds: f64) {
     );
 }
 
-/// A heading of the advanced options sheet.
-fn sheet_section(ui: &mut egui::Ui, title: &str) {
+/// A heading of the advanced options dialog.
+fn dialog_section(ui: &mut egui::Ui, title: &str) {
     ui.add_space(12.0);
     style::group_title(ui, title);
     ui.add_space(2.0);
 }
 
-/// A row of the sheet: its name in a column of its own, the controls beside it.
-fn sheet_field(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui)) {
+/// A row of the dialog: its name in a column of its own, the controls beside it.
+fn dialog_field(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui)) {
     style::field(ui, 150.0, label, add);
     ui.add_space(4.0);
 }

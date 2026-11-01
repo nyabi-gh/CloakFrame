@@ -286,7 +286,7 @@ pub fn medium(size: f32) -> FontId {
     FontId::new(size, fonts::medium())
 }
 
-/// A group's title in the settings panel and the sheet: the body size in the main text colour
+/// A group's title in the settings panel and the advanced options: the body size in the main text colour
 /// and Medium, so it stands above the grey row labels under it.
 pub fn group_title(ui: &mut egui::Ui, text: &str) {
     let p = Palette::of(ui);

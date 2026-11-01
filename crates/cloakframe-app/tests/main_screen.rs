@@ -1631,7 +1631,7 @@ fn tab_follows_the_screen_from_top_to_bottom() {
     assert!(at("Choose…") < at("Advanced Options…"), "{order:?}");
 }
 
-/// The advanced options are in a sheet, and what is chosen in them is saved and runs with the
+/// The advanced options are in a dialog, and what is chosen in them is saved and runs with the
 /// next run's options.
 #[test]
 fn advanced_options_are_saved_and_run_with() {
@@ -1714,7 +1714,7 @@ fn advanced_options_are_saved_and_run_with() {
     // With faces off, the face model has nothing to choose.
     harness.get_by_role_and_label(Role::Button, "Done").click();
     harness.run_traced();
-    assert!(!harness.state().sheet_open);
+    assert!(!harness.state().dialog_open);
     harness.get_by_label("Faces").click();
     harness.run_traced();
     harness.get_by_label("Advanced Options…").click();
@@ -1725,4 +1725,15 @@ fn advanced_options_are_saved_and_run_with() {
             .accesskit_node()
             .is_disabled()
     );
+
+    // The dialog also closes from its title line and with Esc.
+    harness.get_by_role_and_label(Role::Button, "Close").click();
+    harness.run_traced();
+    assert!(!harness.state().dialog_open);
+    harness.get_by_label("Advanced Options…").click();
+    harness.run_traced();
+    harness.get_by_role_and_label(Role::Dialog, "Advanced Options");
+    harness.key_press(egui::Key::Escape);
+    harness.run_traced();
+    assert!(!harness.state().dialog_open);
 }

@@ -1,4 +1,4 @@
-//! The NVIDIA GPU pack in the advanced options sheet on Linux (docs/M7_ACCELERATORS.md): what it
+//! The NVIDIA GPU pack in the advanced options dialog on Linux (docs/M7_ACCELERATORS.md): what it
 //! is, NVIDIA's terms, which the user accepts before the download, the download on its own
 //! thread, and removing the pack.
 
