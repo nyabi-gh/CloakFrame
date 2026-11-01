@@ -151,6 +151,7 @@ fn run(renderer: eframe::Renderer) -> eframe::Result {
                 cloakframe_app::tools::Tools::locate(),
                 cloakframe_app::run::Folders::of_the_app(),
             );
+            state.default_output = cloakframe_engine::app_dirs::default_output_dir();
             state.updates = cloakframe_app::updates::Updates::installed();
             state.graphics = cloakframe_app::graphics::of(cc);
             if let Some(graphics) = &state.graphics {

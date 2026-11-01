@@ -220,6 +220,28 @@ fn start_waits_for_models_files_and_a_folder() {
     harness.get_by_label("Choose faces, license plates, or both.");
 }
 
+/// Until a folder is picked, results go to the default one, which is not saved as a choice; a
+/// picked folder takes its place.
+#[test]
+fn results_go_to_the_default_folder_until_one_is_picked() {
+    let dir = Dir::new("default-output");
+    let default = dir.0.join("Pictures").join("CloakFrame");
+    let mut harness = harness(Language::En, Settings::default());
+    harness.state_mut().default_output = Some(default.clone());
+    harness.state_mut().tools.ort_library = Some(dir.file("libonnxruntime"));
+    drop_files(&mut harness, &[dir.file("a.jpg")]);
+    harness.run_traced();
+    assert_eq!(harness.state().start_blocker(), None);
+    assert_eq!(harness.state().output(), Some(&default));
+    assert_eq!(harness.state().settings.output, None);
+    harness.get_by_label_contains("CloakFrame");
+
+    let picked = dir.0.join("picked");
+    harness.state_mut().settings.output = Some(picked.clone());
+    harness.run_traced();
+    assert_eq!(harness.state().output(), Some(&picked));
+}
+
 #[test]
 fn the_language_menu_changes_the_text() {
     let mut harness = harness(Language::En, Settings::default());

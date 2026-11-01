@@ -112,6 +112,8 @@ pub struct AppState {
     fonts_for: Option<Language>,
     pub tools: Tools,
     pub folders: run::Folders,
+    /// Where results go while the user has not picked a folder; None in tests.
+    pub default_output: Option<PathBuf>,
     running: Option<Running>,
     thumbnails: Option<Thumbnails>,
     pub models: Models,
@@ -161,6 +163,7 @@ impl AppState {
             fonts_for: None,
             tools: Tools::default(),
             folders: run::Folders::default(),
+            default_output: None,
             running: None,
             thumbnails: None,
             models: Models::new(None, false),
@@ -185,6 +188,14 @@ impl AppState {
         self.tools = tools;
         self.set_folders(folders);
         self
+    }
+
+    /// The folder the user picked, or else the default one.
+    pub fn output(&self) -> Option<&PathBuf> {
+        self.settings
+            .output
+            .as_ref()
+            .or(self.default_output.as_ref())
     }
 
     pub fn set_folders(&mut self, folders: run::Folders) {
@@ -227,7 +238,7 @@ impl AppState {
             inputs: self.inputs.clone(),
             recursive: true,
             include_videos: self.tools.videos(),
-            output: self.settings.output.clone(),
+            output: self.output().cloned(),
         };
         let cancel = CancelToken::new();
         let (send, result) = mpsc::channel();
@@ -1242,7 +1253,7 @@ impl AppState {
 
     fn output_button(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         let p = *Palette::of(ui);
-        let (shown, change) = match &self.settings.output {
+        let (shown, change) = match self.output() {
             Some(folder) => (
                 folder.file_name().map_or_else(
                     || folder.display().to_string(),
@@ -1259,7 +1270,7 @@ impl AppState {
             button = button.right_text(egui::RichText::new(change).color(p.secondary));
         }
         let mut response = ui.add(button);
-        if let Some(folder) = &self.settings.output {
+        if let Some(folder) = self.output() {
             response = response.on_hover_text(folder.display().to_string());
         }
         if response.clicked()
@@ -1547,7 +1558,7 @@ impl AppState {
             Some("start-scanning")
         } else if self.found.as_ref().is_none_or(|f| f.files.is_empty()) {
             Some("start-needs-files")
-        } else if self.settings.output.is_none() {
+        } else if self.output().is_none() {
             Some("start-needs-output")
         } else if self.tools.ort_library.is_none() {
             Some("start-needs-runtime")
@@ -1557,7 +1568,7 @@ impl AppState {
     }
 
     fn start_run(&mut self, ctx: &egui::Context) {
-        let (Some(found), Some(output)) = (&self.found, &self.settings.output) else {
+        let (Some(found), Some(output)) = (&self.found, self.output().cloned()) else {
             return;
         };
         let request = run::Request {
@@ -1570,7 +1581,7 @@ impl AppState {
         match run::start(request, ctx) {
             Ok(running) => {
                 self.running = Some(running);
-                self.board = Some(Board::new(Instant::now(), output.clone()));
+                self.board = Some(Board::new(Instant::now(), output));
             }
             Err(e) => self.notices.push(e.to_string()),
         }
