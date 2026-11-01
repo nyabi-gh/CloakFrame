@@ -22,7 +22,7 @@ has FFmpeg, so both mask photos only ([plan](RUST_PORT_PLAN.md) 10.1):
 
 On a pull request that changes the packaging, and when run by hand, the workflow only builds
 them, and installs, opens and uninstalls the Windows app. On a `v*` tag it also signs the
-update package, drafts the pre-release and, after a second approval, publishes the update feed.
+update package and drafts the pre-release. Publishing the draft publishes the update feed.
 
 1. Set the workspace version in `Cargo.toml` to the preview version, such as
    `2.0.0-preview.1`. The macOS bundle versions take its numbers only (`2.0.0`).
@@ -35,14 +35,14 @@ update package, drafts the pre-release and, after a second approval, publishes t
    git push origin v2.0.0-preview.1
    ```
 
-4. Approve "Sign the update package". The workflow then drafts the pre-release with the zip
-   and the installer.
+4. The workflow signs the update package and drafts the pre-release with the zip and the
+   installer. Neither step waits for an approval (decision 2026-11-01).
 5. Download both from the draft, open them as the notes describe, and publish the draft.
-6. Approve "Publish the update feed". It fails while the draft is unpublished; re-run it
-   after publishing. It uploads the package and its `.sig` to the `updates` pre-release, and
-   then `releases.win.json`, which installed apps read
+6. Publishing starts [publish-feed.yml](../.github/workflows/publish-feed.yml). It takes the
+   signed package from the tag's release run, uploads it and its `.sig` to the `updates`
+   pre-release, and then `releases.win.json`, which installed apps read
    ([M7_UPDATES](M7_UPDATES.md)). Every version goes to the one `win` channel, so an installed
-   preview updates to the next one. GitHub drops a deployment left unapproved for 30 days.
+   preview updates to the next one. If it fails, re-run it from the Actions tab.
 
 A pre-release never becomes the latest release, so the README download links keep
 pointing at 1.12.1 until 2.0 is stable.
@@ -70,11 +70,10 @@ workflow on any branch could read, and no 1.x release follows 1.12.1, so they ar
   needs ([M7_UPDATES](M7_UPDATES.md)).
   [sign_updates.py](../tools/package/sign_updates.py) signs the full packages a feed lists.
 - Store every signing secret in the `release` environment, never in the repository.
-  Environment protection, which limits deployments to `v*` tags and requires a reviewer,
-  applies only to environment secrets; a repository secret can be read by a workflow
-  pushed to any branch. Only the signing and publishing jobs declare
-  `environment: release`; the build jobs, which run third-party tools, reference no
-  secret. Public keys are not secret and are repository variables.
+  Environment protection, which limits deployments to `v*` tags, applies only to
+  environment secrets; a repository secret can be read by a workflow pushed to any
+  branch. Only the signing job declares `environment: release`; the build jobs, which run
+  third-party tools, reference no secret. Public keys are not secret and are repository variables.
 
 The Velopack update key pair, and the public half for the variable:
 

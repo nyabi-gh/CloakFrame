@@ -25,7 +25,7 @@ close it. Check the caller and the full scope before recording a change of state
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
   app checks, downloads and installs an update only when the pinned key signed it, and a
   release build does not build without the key ([record](M7_UPDATES.md)). The release
-  workflow signs the Windows package and, after a second approval, publishes the feed;
+  workflow signs the Windows package, and publishing the drafted release publishes the feed;
   2.0.0-preview.1 went out through it ([record](M7_RELEASE.md#첫-릴리스2026-11-01)). It
   still needs an installed preview updating to the next one from that feed, Sparkle on
   macOS, and a run on Linux.

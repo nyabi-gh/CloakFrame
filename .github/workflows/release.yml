@@ -1,9 +1,9 @@
 name: Release
 
 # Builds the macOS preview zip and the Windows installer. On a v* tag it also signs the update
-# package in the `release` environment, drafts the pre-release, and, after a second approval once
-# the maintainer has checked and published the draft, puts the update feed on the `updates`
-# release (docs/RELEASING.md). Elsewhere it only builds and checks the packages.
+# package in the `release` environment and drafts the pre-release; publishing the draft puts the
+# update feed on the `updates` release (publish-feed.yml, docs/RELEASING.md). Elsewhere it only
+# builds and checks the packages.
 on:
   push:
     tags: ["v*"]
@@ -193,42 +193,3 @@ jobs:
         run: |
           gh release create "$GITHUB_REF_NAME" "$RUNNER_TEMP"/dist/* --draft --prerelease --verify-tag \
             --title "CloakFrame $VERSION" --notes-file docs/PREVIEW_NOTES.md
-
-  # Installed apps take the feed as soon as it changes, so it goes up only after the maintainer
-  # has published the draft and approves this job.
-  publish-updates:
-    name: Publish the update feed
-    needs: [sign-updates, draft]
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    environment: release
-    permissions:
-      contents: write
-    steps:
-      - name: Check that the release is published
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if [ "$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json isDraft --jq .isDraft)" != false ]; then
-            echo "::error::Publish the $GITHUB_REF_NAME draft first, then re-run this job"
-            exit 1
-          fi
-
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-        with:
-          name: windows-feed-signed
-          path: ${{ runner.temp }}/feed
-
-      # The feed goes last, so that it never lists a package that is not there yet.
-      - name: Upload to the updates release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          if ! gh release view updates -R "$GITHUB_REPOSITORY" > /dev/null; then
-            gh release create updates -R "$GITHUB_REPOSITORY" --prerelease --target "$GITHUB_SHA" \
-              --title "Update feed" --notes "The feed CloakFrame 2 reads for updates. Download the app from the releases above."
-          fi
-          cd "$RUNNER_TEMP/feed"
-          gh release upload updates -R "$GITHUB_REPOSITORY" --clobber *.nupkg *.nupkg.sig
-          gh release upload updates -R "$GITHUB_REPOSITORY" --clobber releases.win.json

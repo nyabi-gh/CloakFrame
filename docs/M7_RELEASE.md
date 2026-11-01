@@ -5,9 +5,10 @@
 ## 결정(2026-10-30, 메인테이너가 추천대로)
 
 - **workflow 하나:** `preview.yml`을 `release.yml`로 바꾸고 macOS zip과 Windows 설치본을 한 초안에 올린다. Linux 설치본·DMG도 이 파일에 더한다.
-- **feed는 두 번째 승인 뒤:** 설치된 앱은 feed가 바뀌는 즉시 받으므로, 초안을 확인하고 게시한 뒤 "Publish the update feed" job을 따로 승인해야 `updates` 릴리스가 바뀐다. 그 job은 릴리스가 아직 초안이면 실패한다.
+- **feed는 두 번째 승인 뒤(아래 "승인 없음"으로 바뀜):** 설치된 앱은 feed가 바뀌는 즉시 받으므로, 초안을 확인하고 게시한 뒤 "Publish the update feed" job을 따로 승인해야 `updates` 릴리스가 바뀐다. 그 job은 릴리스가 아직 초안이면 실패한다.
 - **portable zip은 올리지 않는다:** 지원하고 시험할 형태를 설치본 하나로 줄인다.
 - **preview.1에 Windows를 더한다:** `preview.yml`이 만든 macOS만의 초안은 지우고 새 workflow로 다시 만든다.
+- **승인 없음(2026-11-01):** 첫 릴리스 뒤 메인테이너가 승인 두 번이 번거롭다고 해서 없앴다. `release` environment에서 필수 검토자를 빼고 `v*` 태그 규칙만 둔다. 이 저장소에 태그를 푸시할 수 있는 사람은 메인테이너뿐이라, 서명 키는 여전히 메인테이너가 푸시한 태그의 실행만 읽는다. feed는 `release.yml`의 job 대신 `publish-feed.yml`이 릴리스가 게시될 때 올린다. 게시가 곧 확인이므로 "초안을 게시한 뒤에만 feed"라는 순서는 그대로다. workflow 토큰으로 게시한 릴리스는 workflow를 시작하지 않으므로 사람이 게시한 릴리스만 feed를 바꾼다.
 - **Authenticode 없음:** 비용 때문에 Windows 설치본은 서명하지 않는다. SmartScreen이 처음 실행에서 경고한다.
 
 함께 정한 것(질문하지 않음):
