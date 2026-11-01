@@ -1128,13 +1128,9 @@ impl AppState {
                 egui::vec2(how_label_width(ui, tr), style::BUTTON_HEIGHT),
                 egui::Label::new(egui::RichText::new(&label).color(p.secondary)),
             );
-            ui.spacing_mut().slider_width =
-                ui.available_width() - 16.0 - ui.spacing().item_spacing.x;
+            let width = ui.available_width() - 16.0 - ui.spacing().item_spacing.x;
             let value = &mut self.settings.mosaic_strength;
-            let slider = ui.add(
-                egui::Slider::new(value, MosaicStrength::MIN..=MosaicStrength::MAX)
-                    .show_value(false),
-            );
+            let slider = style::slider(ui, value, MosaicStrength::MIN..=MosaicStrength::MAX, width);
             let shown = *value;
             slider.widget_info(|| egui::WidgetInfo::slider(true, f64::from(shown), &label));
             ui.label(shown.to_string());
@@ -1300,9 +1296,8 @@ impl AppState {
         sheet_field(ui, &tr.get("sensitivity"), |ui| {
             advanced.sensitivity = advanced.sensitivity.clamp(1, 5);
             ui.horizontal(|ui| {
-                ui.spacing_mut().slider_width = ui.available_width() - 90.0;
-                let slider = ui
-                    .add(egui::Slider::new(&mut advanced.sensitivity, 1..=5).show_value(false))
+                let width = ui.available_width() - 90.0;
+                let slider = style::slider(ui, &mut advanced.sensitivity, 1..=5, width)
                     .on_hover_text(tr.with(
                         "sensitivity-hint",
                         &[(
@@ -1349,10 +1344,12 @@ impl AppState {
             VideoQuality::SpaceSaver => "video-quality-space-saver",
         };
         sheet_field(ui, &tr.get("video-quality"), |ui| {
-            egui::ComboBox::from_id_salt("video-quality")
-                .width(220.0)
-                .selected_text(tr.get(quality(advanced.video_quality)))
-                .show_ui(ui, |ui| {
+            style::select(
+                ui,
+                "video-quality",
+                220.0,
+                tr.get(quality(advanced.video_quality)),
+                |ui| {
                     for q in [
                         VideoQuality::High,
                         VideoQuality::Balanced,
@@ -1360,31 +1357,35 @@ impl AppState {
                     ] {
                         ui.selectable_value(&mut advanced.video_quality, q, tr.get(quality(q)));
                     }
-                })
-                .response
-                .on_hover_text(tr.get("video-quality-hint"))
-                .widget_info(|| {
-                    egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-quality"))
-                });
+                },
+            )
+            .response
+            .on_hover_text(tr.get("video-quality-hint"))
+            .widget_info(|| {
+                egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-quality"))
+            });
         });
         let codec = |c: VideoCodec| match c {
             VideoCodec::H264 => "video-codec-h264",
             VideoCodec::Hevc => "video-codec-hevc",
         };
         sheet_field(ui, &tr.get("video-codec"), |ui| {
-            egui::ComboBox::from_id_salt("video-codec")
-                .width(220.0)
-                .selected_text(tr.get(codec(advanced.video_codec)))
-                .show_ui(ui, |ui| {
+            style::select(
+                ui,
+                "video-codec",
+                220.0,
+                tr.get(codec(advanced.video_codec)),
+                |ui| {
                     for c in [VideoCodec::H264, VideoCodec::Hevc] {
                         ui.selectable_value(&mut advanced.video_codec, c, tr.get(codec(c)));
                     }
-                })
-                .response
-                .on_hover_text(tr.get("video-codec-hint"))
-                .widget_info(|| {
-                    egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-codec"))
-                });
+                },
+            )
+            .response
+            .on_hover_text(tr.get("video-codec-hint"))
+            .widget_info(|| {
+                egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-codec"))
+            });
         });
         sheet_field(ui, "", |ui| {
             ui.add(style::Check::new(

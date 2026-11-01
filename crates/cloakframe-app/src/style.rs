@@ -221,10 +221,13 @@ impl egui::Widget for Check<'_> {
             let radius = visuals
                 .corner_radius
                 .at_most((0.3 * box_size).round() as u8);
+            // An empty box is hollow: a grey fill reads as a box that cannot be ticked.
             let (fill, stroke) = if checked {
                 (p.text, Stroke::new(1.0, p.text))
+            } else if response.hovered() {
+                (p.window, Stroke::new(1.0, p.secondary))
             } else {
-                (visuals.bg_fill, visuals.bg_stroke)
+                (p.window, Stroke::new(1.0, p.border))
             };
             let painter = ui.painter();
             painter.rect(frame, radius, fill, stroke, egui::StrokeKind::Inside);
@@ -469,70 +472,145 @@ pub fn link(ui: &mut egui::Ui, text: &str) -> egui::Response {
     response
 }
 
-/// One choice of several, side by side in one bordered box, as the masking method is chosen.
-/// Each part is a selectable button, so a screen reader hears which is chosen.
+/// One choice of several, side by side in equal parts of a recessed track, as the masking method
+/// is chosen. The chosen part is a raised tab rather than a filled one, so it does not weigh as
+/// much as the screen's primary button. Each part is a selectable button, so a screen reader
+/// hears which is chosen.
 pub fn segmented<T: PartialEq + Copy>(
     ui: &mut egui::Ui,
     value: &mut T,
     parts: &[(T, String)],
 ) -> bool {
+    const INSET: f32 = 2.0;
     let p = Palette::of(ui);
     let before = *value;
     let width = ui.available_width();
     let (rect, _) = ui.allocate_exact_size(egui::vec2(width, BUTTON_HEIGHT), egui::Sense::hover());
-    let part_width = width / parts.len() as f32;
+    ui.painter().rect_filled(rect, BUTTON_RADIUS, p.sidebar);
+    let inner = rect.shrink(INSET);
+    let part_width = inner.width() / parts.len() as f32;
     for (i, (choice, text)) in parts.iter().enumerate() {
         let part = egui::Rect::from_min_size(
-            rect.min + egui::vec2(part_width * i as f32, 0.0),
-            egui::vec2(part_width, BUTTON_HEIGHT),
+            inner.min + egui::vec2(part_width * i as f32, 0.0),
+            egui::vec2(part_width, inner.height()),
         );
-        let chosen = *value == *choice;
         let response = ui.interact(
             part,
             ui.make_persistent_id(("segment", i)),
             egui::Sense::click(),
         );
-        response.widget_info(|| {
-            egui::WidgetInfo::selected(egui::Role::RadioButton, ui.is_enabled(), chosen, text)
-        });
         if response.clicked() {
             *value = *choice;
         }
-        let (fill, color) = if *value == *choice {
-            (p.text, p.on_primary)
+        let chosen = *value == *choice;
+        response.widget_info(|| {
+            egui::WidgetInfo::selected(egui::Role::RadioButton, ui.is_enabled(), chosen, text)
+        });
+        let radius = BUTTON_RADIUS - INSET as u8;
+        let (font, color) = if chosen {
+            ui.painter().rect(
+                part,
+                radius,
+                p.window,
+                Stroke::new(1.0, p.border),
+                egui::StrokeKind::Inside,
+            );
+            (medium(13.0), p.text)
         } else if response.hovered() {
-            (p.sidebar, p.body)
+            (FontId::proportional(13.0), p.text)
         } else {
-            (p.window, p.body)
+            (FontId::proportional(13.0), p.body)
         };
-        let corner = |left: bool, right: bool| CornerRadius {
-            nw: if left { BUTTON_RADIUS } else { 0 },
-            sw: if left { BUTTON_RADIUS } else { 0 },
-            ne: if right { BUTTON_RADIUS } else { 0 },
-            se: if right { BUTTON_RADIUS } else { 0 },
-        };
-        let radius = corner(i == 0, i + 1 == parts.len());
-        ui.painter().rect_filled(part, radius, fill);
         ui.painter().text(
             part.center(),
             egui::Align2::CENTER_CENTER,
             text,
-            FontId::proportional(13.0),
+            font,
             color,
         );
-        if i > 0 {
-            ui.painter()
-                .vline(part.left(), part.y_range(), Stroke::new(1.0, p.border));
-        }
         focus_ring(ui, &response);
     }
-    ui.painter().rect_stroke(
-        rect,
-        BUTTON_RADIUS,
-        Stroke::new(1.0, p.border),
-        egui::StrokeKind::Inside,
-    );
     *value != before
+}
+
+/// A whole-number slider `width` wide: a thin rail filled up to a hollow round handle, drawn as
+/// the design does instead of egui's own, whose rail and handle share one fill. egui still
+/// handles the dragging, the keys and what a screen reader can set.
+pub fn slider(
+    ui: &mut egui::Ui,
+    value: &mut u8,
+    range: std::ops::RangeInclusive<u8>,
+    width: f32,
+) -> egui::Response {
+    const HEIGHT: f32 = 18.0;
+    const RAIL: f32 = 4.0;
+    let p = *Palette::of(ui);
+    let rail = ui.painter().add(egui::Shape::Noop);
+    let response = ui
+        .scope(|ui| {
+            let spacing = ui.spacing_mut();
+            spacing.slider_width = width;
+            spacing.interact_size.y = HEIGHT;
+            spacing.slider_rail_height = 0.0;
+            let handle = Stroke::new(2.0, p.text);
+            let widgets = &mut ui.visuals_mut().widgets;
+            for (state, expansion) in [
+                (&mut widgets.inactive, 0.0),
+                (&mut widgets.hovered, 1.0),
+                (&mut widgets.active, 1.0),
+            ] {
+                state.bg_fill = p.window;
+                state.fg_stroke = handle;
+                state.expansion = expansion;
+            }
+            ui.add(
+                egui::Slider::new(&mut *value, range.clone())
+                    .show_value(false)
+                    .trailing_fill(false)
+                    .handle_shape(egui::style::HandleShape::Circle),
+            )
+        })
+        .inner;
+    let rect = response.rect;
+    // Where egui puts the handle: its centre travels the rail inset by its radius.
+    let travel = rect.x_range().shrink(rect.height() / 2.5);
+    let (low, high) = (f32::from(*range.start()), f32::from(*range.end()));
+    let at = egui::lerp(travel, (f32::from(*value) - low) / (high - low).max(1.0));
+    let track = egui::Rect::from_center_size(rect.center(), egui::vec2(rect.width(), RAIL));
+    let filled = egui::Rect::from_min_max(track.min, egui::pos2(at, track.max.y));
+    ui.painter().set(
+        rail,
+        egui::Shape::Vec(vec![
+            egui::Shape::rect_filled(track, RAIL / 2.0, p.separator),
+            egui::Shape::rect_filled(filled, RAIL / 2.0, p.text),
+        ]),
+    );
+    focus_ring(ui, &response);
+    response
+}
+
+/// A drop-down list `width` wide whose arrow is a stroked chevron like the other icons, not
+/// egui's filled triangle.
+pub fn select<R>(
+    ui: &mut egui::Ui,
+    id: &str,
+    width: f32,
+    selected: impl Into<egui::WidgetText>,
+    add: impl FnOnce(&mut egui::Ui) -> R,
+) -> egui::InnerResponse<Option<R>> {
+    let p = *Palette::of(ui);
+    egui::ComboBox::from_id_salt(id)
+        .width(width)
+        .selected_text(selected)
+        .icon(move |ui, rect, _, _| {
+            let rect = egui::Rect::from_center_size(rect.center(), egui::Vec2::splat(10.0));
+            let at = |x: f32, y: f32| rect.min + egui::vec2(x * rect.width(), y * rect.height());
+            ui.painter().add(egui::Shape::line(
+                vec![at(0.2, 0.35), at(0.5, 0.65), at(0.8, 0.35)],
+                Stroke::new(1.5, p.secondary),
+            ));
+        })
+        .show_ui(ui, add)
 }
 
 /// An entry of the sidebar: a row `height` tall that is filled when it is the screen shown.
