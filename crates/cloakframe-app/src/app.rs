@@ -1103,12 +1103,8 @@ impl AppState {
     }
 
     fn shape(&mut self, ui: &mut egui::Ui, tr: &Translator) {
-        let p = *Palette::of(ui);
-        ui.horizontal(|ui| {
-            ui.add_sized(
-                egui::vec2(how_label_width(ui, tr), style::BUTTON_HEIGHT),
-                egui::Label::new(egui::RichText::new(tr.get("shape")).color(p.secondary)),
-            );
+        let label_width = how_label_width(ui, tr);
+        style::field(ui, label_width, &tr.get("shape"), |ui| {
             let shapes = [
                 (Shape::Rectangle, tr.get("shape-rectangle")),
                 (Shape::Ellipse, tr.get("shape-ellipse")),
@@ -1121,19 +1117,23 @@ impl AppState {
 
     fn strength(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         use cloakframe_core::mask::MosaicStrength;
-        let p = *Palette::of(ui);
-        ui.horizontal(|ui| {
-            let label = tr.get("strength");
-            ui.add_sized(
-                egui::vec2(how_label_width(ui, tr), style::BUTTON_HEIGHT),
-                egui::Label::new(egui::RichText::new(&label).color(p.secondary)),
-            );
-            let width = ui.available_width() - 16.0 - ui.spacing().item_spacing.x;
-            let value = &mut self.settings.mosaic_strength;
-            let slider = style::slider(ui, value, MosaicStrength::MIN..=MosaicStrength::MAX, width);
-            let shown = *value;
-            slider.widget_info(|| egui::WidgetInfo::slider(true, f64::from(shown), &label));
-            ui.label(shown.to_string());
+        let label = tr.get("strength");
+        let label_width = how_label_width(ui, tr);
+        style::field(ui, label_width, &label, |ui| {
+            // The slider is shorter than the label's cell; a line of the cell's height centres
+            // both on one line.
+            let line = egui::vec2(ui.available_width(), style::BUTTON_HEIGHT);
+            let centered = egui::Layout::left_to_right(egui::Align::Center);
+            ui.allocate_ui_with_layout(line, centered, |ui| {
+                ui.set_min_height(style::BUTTON_HEIGHT);
+                let width = ui.available_width() - 16.0 - ui.spacing().item_spacing.x;
+                let value = &mut self.settings.mosaic_strength;
+                let slider =
+                    style::slider(ui, value, MosaicStrength::MIN..=MosaicStrength::MAX, width);
+                let shown = *value;
+                slider.widget_info(|| egui::WidgetInfo::slider(true, f64::from(shown), &label));
+                ui.label(shown.to_string());
+            });
         });
     }
 
@@ -1399,12 +1399,12 @@ impl AppState {
                 .on_hover_text(tr.get("gpu-hint"));
         });
         sheet_section(ui, &tr.get("models-title"));
-        self.models.rows(ui, tr);
+        sheet_field(ui, "", |ui| self.models.rows(ui, tr));
         if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
             sheet_section(ui, &tr.get("gpu-pack-title"));
             let restart = crate::run::loaded_accelerator()
                 .is_some_and(|a| a != Some(cloakframe_engine::detect::runtime::Backend::Cuda));
-            self.gpu_pack.rows(ui, tr, restart);
+            sheet_field(ui, "", |ui| self.gpu_pack.rows(ui, tr, restart));
         }
     }
 
@@ -1975,21 +1975,7 @@ fn sheet_section(ui: &mut egui::Ui, title: &str) {
 
 /// A row of the sheet: its name in a column of its own, the controls beside it.
 fn sheet_field(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui)) {
-    let p = *Palette::of(ui);
-    ui.horizontal_top(|ui| {
-        ui.allocate_ui_with_layout(
-            egui::vec2(150.0, style::BUTTON_HEIGHT),
-            egui::Layout::left_to_right(egui::Align::Center),
-            |ui| {
-                ui.set_min_size(egui::vec2(150.0, style::BUTTON_HEIGHT));
-                ui.label(egui::RichText::new(label).color(p.body));
-            },
-        );
-        ui.vertical(|ui| {
-            ui.set_width(ui.available_width());
-            add(ui);
-        });
-    });
+    style::field(ui, 150.0, label, add);
     ui.add_space(4.0);
 }
 

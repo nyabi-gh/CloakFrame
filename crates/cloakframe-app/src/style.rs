@@ -286,14 +286,31 @@ pub fn medium(size: f32) -> FontId {
     FontId::new(size, fonts::medium())
 }
 
-/// A group's title in the settings panel and the sheet: small, bold, grey.
+/// A group's title in the settings panel and the sheet: the body size in the main text colour
+/// and Medium, so it stands above the grey row labels under it.
 pub fn group_title(ui: &mut egui::Ui, text: &str) {
     let p = Palette::of(ui);
-    ui.label(
-        egui::RichText::new(text)
-            .font(medium(12.0))
-            .color(p.secondary),
-    );
+    ui.label(egui::RichText::new(text).font(medium(13.0)).color(p.text));
+}
+
+/// A row with its name in a column `label_width` wide and its controls beside it, so the
+/// controls of every row start at one place even when a row has no name.
+pub fn field(ui: &mut egui::Ui, label_width: f32, label: &str, add: impl FnOnce(&mut egui::Ui)) {
+    let p = Palette::of(ui);
+    ui.horizontal_top(|ui| {
+        ui.allocate_ui_with_layout(
+            egui::vec2(label_width, BUTTON_HEIGHT),
+            egui::Layout::left_to_right(egui::Align::Center),
+            |ui| {
+                ui.set_min_size(egui::vec2(label_width, BUTTON_HEIGHT));
+                ui.label(egui::RichText::new(label).color(p.body));
+            },
+        );
+        ui.vertical(|ui| {
+            ui.set_width(ui.available_width());
+            add(ui);
+        });
+    });
 }
 
 /// One group of the settings panel, with the faint line under it.
