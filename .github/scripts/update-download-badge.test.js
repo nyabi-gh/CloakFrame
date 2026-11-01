@@ -4,11 +4,12 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 
+const updateDownloadBadge = require('./update-download-badge.js')
 const {
   badgePayload,
   distributionDownloadTotal,
   isDistributionAsset,
-} = require('./update-download-badge.js')
+} = updateDownloadBadge
 
 test('includes user downloads and full updater packages', () =>
 {
@@ -79,4 +80,43 @@ test('sums public distribution assets only', () =>
   ]
   assert.equal(distributionDownloadTotal(releases), 30)
   assert.equal(JSON.parse(badgePayload(30)).message, '30')
+})
+
+test('writes the badge from this repository\'s releases', async () =>
+{
+  const listed = []
+  const written = []
+  const github = {
+    paginate: async (_method, { owner, repo }) =>
+    {
+      listed.push(`${owner}/${repo}`)
+      return [
+        {
+          draft: false,
+          assets: [{ name: 'CloakFrame-2.0.0-Windows-x64-Setup.exe', download_count: 4 }],
+        },
+      ]
+    },
+    rest: {
+      repos: {
+        listReleases: {},
+        getContent: async () =>
+        {
+          throw Object.assign(new Error('Not Found'), { status: 404 })
+        },
+        createOrUpdateFileContents: async request => written.push(request),
+      },
+      git: {
+        getRef: async () => ({}),
+      },
+    },
+  }
+  const context = { repo: { owner: 'nyabi-gh', repo: 'CloakFrame' }, sha: 'abc' }
+  const core = { info: () => {} }
+
+  await updateDownloadBadge({ github, context, core })
+
+  assert.deepEqual(listed, ['nyabi-gh/CloakFrame'])
+  assert.equal(written.length, 1)
+  assert.equal(JSON.parse(Buffer.from(written[0].content, 'base64').toString('utf8')).message, '4')
 })

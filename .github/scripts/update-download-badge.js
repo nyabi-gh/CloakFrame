@@ -87,10 +87,7 @@ async function listReleases(github, owner, repo)
 
 async function updateDownloadBadge({ github, context, core })
 {
-  const releases = [
-    ...await listReleases(github, context.repo.owner, context.repo.repo),
-    ...await listReleases(github, context.repo.owner, updatesRepository),
-  ]
+  const releases = await listReleases(github, context.repo.owner, context.repo.repo)
   const total = distributionDownloadTotal(releases)
   const nextContent = badgePayload(total)
 
