@@ -9,6 +9,7 @@ function isDistributionAsset(name)
   return /\.dmg$/i.test(name)
     || /Setup\.exe$/i.test(name)
     || /-windows-x64\.zip$/i.test(name)
+    || /-macOS-arm64\.zip$/i.test(name)
     || /\.AppImage$/i.test(name)
     || /-full\.nupkg$/i.test(name)
 }

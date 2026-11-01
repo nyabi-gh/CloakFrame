@@ -20,6 +20,7 @@ test('includes user downloads and full updater packages', () =>
     'CloakFrame-macOS-arm64.dmg',
     'CloakFrame-Windows-x64-Setup.exe',
     'CloakFrame-1.10.2-windows-x64.zip',
+    'CloakFrame-Preview-2.0.0-preview.1-macOS-arm64.zip',
     'CloakFrame-Linux-x86_64.AppImage',
     'CloakFrame-1.10.2-x86_64.AppImage',
     'CloakFrame-1.11.0-full.nupkg',
