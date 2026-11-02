@@ -419,10 +419,11 @@ impl ReviewScreen {
             .show(ui, |ui| match &stored.media {
                 StoredMedia::Photo { detections, .. } => {
                     if let Some(draft) = self.review.drafts.get_mut(&item) {
-                        let hint_height = 34.0;
-                        let size = ui.available_size() - egui::vec2(0.0, hint_height);
+                        let whole = ui.max_rect();
+                        let (top, bottom) =
+                            whole.split_top_bottom_at_y(whole.bottom() - footer_height(ui.ctx()));
                         let keys = ui
-                            .allocate_ui(size, |ui| {
+                            .scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
                                 canvas(
                                     ui,
                                     tr,
@@ -437,7 +438,9 @@ impl ReviewScreen {
                         if let Some(step) = keys {
                             asked.go = Some(step);
                         }
-                        hint(ui, tr, &mut editor.help);
+                        ui.scope_builder(egui::UiBuilder::new().max_rect(bottom), |ui| {
+                            hint(ui, tr, &mut editor.help);
+                        });
                     }
                 }
                 StoredMedia::Video { tracks, .. } => {
@@ -822,8 +825,7 @@ fn inspector(
 ) {
     let p = *Palette::of(ui);
     let whole = ui.max_rect();
-    let measured = ui.scope_id().with("footer height");
-    let footer_height = ui.data(|d| d.get_temp::<f32>(measured)).unwrap_or(96.0);
+    let footer_height = footer_height(ui.ctx());
     let (top, bottom) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
     ui.scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
         egui::ScrollArea::vertical()
@@ -850,9 +852,20 @@ fn inspector(
     );
     // The footer's height is known once it is drawn; the next frame gives it that room.
     if (footer.inner - footer_height).abs() > 0.5 {
-        ui.data_mut(|d| d.insert_temp(measured, footer.inner));
+        ui.data_mut(|d| d.insert_temp(footer_height_id(), footer.inner));
         ui.ctx().request_repaint();
     }
+}
+
+/// The inspector's footer and the hint line under the photo share one height, so the line over
+/// them runs across the window.
+fn footer_height_id() -> egui::Id {
+    egui::Id::unique("review footer height")
+}
+
+fn footer_height(ctx: &egui::Context) -> f32 {
+    ctx.data(|d| d.get_temp::<f32>(footer_height_id()))
+        .unwrap_or(96.0)
 }
 
 fn groups(
@@ -1792,6 +1805,11 @@ fn cycle(draft: &Draft, detections: usize, forward: bool) -> Option<Pick> {
 /// The line under the photo: what the pointer does, and the way to every shortcut.
 fn hint(ui: &mut egui::Ui, tr: &Translator, help: &mut bool) {
     let p = *Palette::of(ui);
+    ui.painter().hline(
+        ui.max_rect().x_range(),
+        ui.max_rect().top(),
+        egui::Stroke::new(1.0, p.faint_line),
+    );
     ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
         let text = tr.get("editor-hint");
         let shortcuts = tr.get("editor-shortcuts");

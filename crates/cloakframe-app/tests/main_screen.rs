@@ -729,11 +729,19 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
         .click();
     harness.run_traced();
     harness.get_by_label("Nothing to mask");
+    let approve = harness.get_by_role_and_label(Role::Button, "Approve and Save");
+    assert!(!approve.accesskit_node().is_disabled());
+    // The hint under the photo sits in a band as tall as the footer beside it, level with its
+    // button.
+    let hint = harness
+        .get_by_label(
+            "Click to mask or unmask · Drag to add an area · Hold Space to see the result",
+        )
+        .rect();
     assert!(
-        !harness
-            .get_by_role_and_label(Role::Button, "Approve and Save")
-            .accesskit_node()
-            .is_disabled()
+        (hint.center().y - approve.rect().center().y).abs() <= 1.0,
+        "the hint at {hint:?} is not level with Approve and Save at {:?}",
+        approve.rect()
     );
     harness.get_by_role_and_label(Role::Button, "Next").click();
     harness.step();
