@@ -1714,14 +1714,11 @@ impl AppState {
         }
         let mut act = run_summary(ui, board, tr);
         let details = egui::Id::unique("run-details");
-        let open =
-            egui::collapsing_header::CollapsingState::load_with_default_open(&ctx, details, false)
-                .is_open();
-        let reserve = if open {
-            DETAILS_OPEN_HEIGHT
-        } else {
-            DETAILS_HEIGHT
-        };
+        // The details' height as the last frame drew them, folded or not.
+        let details_height = details.with("height");
+        let reserve = ctx
+            .data(|d| d.get_temp::<f32>(details_height))
+            .unwrap_or(0.0);
         let progress = board
             .progress
             .as_ref()
@@ -1769,7 +1766,13 @@ impl AppState {
                     }
                 });
             });
+        let list_bottom = ui.min_rect().bottom();
         run_details(ui, board, tr, details);
+        let needed = ui.min_rect().bottom() - list_bottom;
+        if (needed - reserve).abs() >= 0.5 {
+            ctx.data_mut(|d| d.insert_temp(details_height, needed));
+            ctx.request_discard("run details measured");
+        }
         self.run_act(act, &ctx);
     }
 
@@ -2185,9 +2188,6 @@ pub fn log_line(board: &Board, at: Duration, logged: &Logged, tr: &Translator) -
 const ROW_HEIGHT: f32 = 52.0;
 /// The engine updates a run's progress without a message that would draw the window again.
 const PROGRESS_REDRAW: Duration = Duration::from_millis(250);
-/// The room the run's folded details take below its list, and the room they take unfolded.
-const DETAILS_HEIGHT: f32 = 40.0;
-const DETAILS_OPEN_HEIGHT: f32 = 300.0;
 
 #[derive(Clone, Copy, PartialEq)]
 enum ToolbarButton {

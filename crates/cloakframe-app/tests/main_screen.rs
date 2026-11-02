@@ -546,10 +546,21 @@ fn start_runs_the_engine_and_shows_the_result() {
     harness
         .get_by_role_and_label(Role::ListItem, "lena.jpg, Saved, 1 face")
         .get_by_role_and_label(Role::Button, "Show in Folder");
+    // The details keep their 10 point margin above the window's bottom, folded and unfolded.
+    let bottom = harness.ctx.content_rect().shrink(8.0).bottom() - 10.0;
+    let folded = harness.get_by_label("Details").rect();
+    assert!(
+        folded.bottom() <= bottom + 0.5,
+        "the folded details at {folded:?} run past {bottom}"
+    );
     harness.get_by_label("Details").click();
     harness.run_traced();
     let log = harness.get_by_role_and_label(Role::List, "Details");
-    log.get_by_label_contains("lena.jpg  Saved");
+    let unfolded = log.get_by_label_contains("lena.jpg  Saved").rect();
+    assert!(
+        unfolded.bottom() <= bottom + 0.5,
+        "the unfolded details at {unfolded:?} run past {bottom}"
+    );
     harness
         .get_by_role_and_label(Role::Button, "New Task")
         .click();
