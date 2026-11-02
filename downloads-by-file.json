@@ -1,0 +1,437 @@
+[
+  {
+    "release": "updates",
+    "name": "CloakFrameApp-2.0.0-preview.1-full.nupkg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.0.0",
+    "name": "FaceVeil-1.0.0-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.0.0",
+    "name": "FaceVeil-1.0.0-windows-x64.zip",
+    "downloads": 3
+  },
+  {
+    "release": "v1.1.0",
+    "name": "FaceVeil-1.1.0-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.1.0",
+    "name": "FaceVeil-1.1.0-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.1.1",
+    "name": "FaceVeil-1.1.1-arm64.dmg",
+    "downloads": 3
+  },
+  {
+    "release": "v1.1.1",
+    "name": "FaceVeil-1.1.1-windows-x64.zip",
+    "downloads": 3
+  },
+  {
+    "release": "v1.1.2",
+    "name": "FaceVeil-1.1.2-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.1.2",
+    "name": "FaceVeil-1.1.2-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.10.0",
+    "name": "Redactly-1.10.0-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.10.0",
+    "name": "Redactly-1.10.0-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.10.0",
+    "name": "Redactly-1.10.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.10.1",
+    "name": "Redactly-1.10.1-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.10.1",
+    "name": "Redactly-1.10.1-windows-x64.zip",
+    "downloads": 3
+  },
+  {
+    "release": "v1.10.1",
+    "name": "Redactly-1.10.1-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.10.2",
+    "name": "CloakFrame-1.10.2-arm64.dmg",
+    "downloads": 7
+  },
+  {
+    "release": "v1.10.2",
+    "name": "CloakFrame-1.10.2-windows-x64.zip",
+    "downloads": 7
+  },
+  {
+    "release": "v1.10.2",
+    "name": "CloakFrame-1.10.2-x86_64.AppImage",
+    "downloads": 3
+  },
+  {
+    "release": "v1.11.0",
+    "name": "CloakFrame-1.11.0-full.nupkg",
+    "downloads": 4
+  },
+  {
+    "release": "v1.11.0",
+    "name": "CloakFrame-1.11.0-linux-full.nupkg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.11.0",
+    "name": "CloakFrame-Linux-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.11.0",
+    "name": "CloakFrame-macOS-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.11.0",
+    "name": "CloakFrame-Windows-x64-Setup.exe",
+    "downloads": 37
+  },
+  {
+    "release": "v1.11.1",
+    "name": "CloakFrame-1.11.1-full.nupkg",
+    "downloads": 10
+  },
+  {
+    "release": "v1.11.1",
+    "name": "CloakFrame-1.11.1-linux-full.nupkg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.11.1",
+    "name": "CloakFrame-Linux-x86_64.AppImage",
+    "downloads": 5
+  },
+  {
+    "release": "v1.11.1",
+    "name": "CloakFrame-macOS-arm64.dmg",
+    "downloads": 11
+  },
+  {
+    "release": "v1.11.1",
+    "name": "CloakFrame-Windows-x64-Setup.exe",
+    "downloads": 46
+  },
+  {
+    "release": "v1.11.2",
+    "name": "CloakFrame-1.11.2-full.nupkg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.11.2",
+    "name": "CloakFrame-1.11.2-linux-full.nupkg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.11.2",
+    "name": "CloakFrame-Linux-x86_64.AppImage",
+    "downloads": 3
+  },
+  {
+    "release": "v1.11.2",
+    "name": "CloakFrame-macOS-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.11.2",
+    "name": "CloakFrame-Windows-x64-Setup.exe",
+    "downloads": 17
+  },
+  {
+    "release": "v1.11.3",
+    "name": "CloakFrame-1.11.3-full.nupkg",
+    "downloads": 5
+  },
+  {
+    "release": "v1.11.3",
+    "name": "CloakFrame-1.11.3-linux-full.nupkg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.11.3",
+    "name": "CloakFrame-Linux-x86_64.AppImage",
+    "downloads": 2
+  },
+  {
+    "release": "v1.11.3",
+    "name": "CloakFrame-macOS-arm64.dmg",
+    "downloads": 3
+  },
+  {
+    "release": "v1.11.3",
+    "name": "CloakFrame-Windows-x64-Setup.exe",
+    "downloads": 4
+  },
+  {
+    "release": "v1.12.0",
+    "name": "CloakFrame-1.12.0-full.nupkg",
+    "downloads": 9
+  },
+  {
+    "release": "v1.12.0",
+    "name": "CloakFrame-1.12.0-linux-full.nupkg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.12.0",
+    "name": "CloakFrame-1.12.0-Linux-x86_64.AppImage",
+    "downloads": 3
+  },
+  {
+    "release": "v1.12.0",
+    "name": "CloakFrame-1.12.0-macOS-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.12.0",
+    "name": "CloakFrame-1.12.0-Windows-x64-Setup.exe",
+    "downloads": 2
+  },
+  {
+    "release": "v1.12.1",
+    "name": "CloakFrame-1.12.1-Linux-x86_64.AppImage",
+    "downloads": 35
+  },
+  {
+    "release": "v1.12.1",
+    "name": "CloakFrame-1.12.1-macOS-arm64.dmg",
+    "downloads": 9
+  },
+  {
+    "release": "v1.12.1",
+    "name": "CloakFrame-1.12.1-Windows-x64-Setup.exe",
+    "downloads": 17
+  },
+  {
+    "release": "v1.2.0",
+    "name": "FaceVeil-1.2.0-arm64.dmg",
+    "downloads": 3
+  },
+  {
+    "release": "v1.2.0",
+    "name": "FaceVeil-1.2.0-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.2.0",
+    "name": "FaceVeil-1.2.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.3.0",
+    "name": "FaceVeil-1.3.0-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.3.0",
+    "name": "FaceVeil-1.3.0-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.3.0",
+    "name": "FaceVeil-1.3.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.4.0",
+    "name": "Redactly-1.4.0-arm64.dmg",
+    "downloads": 4
+  },
+  {
+    "release": "v1.4.0",
+    "name": "Redactly-1.4.0-windows-x64.zip",
+    "downloads": 9
+  },
+  {
+    "release": "v1.4.0",
+    "name": "Redactly-1.4.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.5.0",
+    "name": "Redactly-1.5.0-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.5.0",
+    "name": "Redactly-1.5.0-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.5.0",
+    "name": "Redactly-1.5.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.5.1",
+    "name": "Redactly-1.5.1-arm64.dmg",
+    "downloads": 5
+  },
+  {
+    "release": "v1.5.1",
+    "name": "Redactly-1.5.1-windows-x64.zip",
+    "downloads": 8
+  },
+  {
+    "release": "v1.5.1",
+    "name": "Redactly-1.5.1-x86_64.AppImage",
+    "downloads": 2
+  },
+  {
+    "release": "v1.6.0",
+    "name": "Redactly-1.6.0-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.6.0",
+    "name": "Redactly-1.6.0-windows-x64.zip",
+    "downloads": 2
+  },
+  {
+    "release": "v1.6.0",
+    "name": "Redactly-1.6.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.6.1",
+    "name": "Redactly-1.6.1-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.6.1",
+    "name": "Redactly-1.6.1-windows-x64.zip",
+    "downloads": 2
+  },
+  {
+    "release": "v1.6.1",
+    "name": "Redactly-1.6.1-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.7.0",
+    "name": "Redactly-1.7.0-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.7.0",
+    "name": "Redactly-1.7.0-windows-x64.zip",
+    "downloads": 1
+  },
+  {
+    "release": "v1.7.0",
+    "name": "Redactly-1.7.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.7.1",
+    "name": "Redactly-1.7.1-arm64.dmg",
+    "downloads": 2
+  },
+  {
+    "release": "v1.7.1",
+    "name": "Redactly-1.7.1-windows-x64.zip",
+    "downloads": 2
+  },
+  {
+    "release": "v1.7.1",
+    "name": "Redactly-1.7.1-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.8.0",
+    "name": "Redactly-1.8.0-arm64.dmg",
+    "downloads": 7
+  },
+  {
+    "release": "v1.8.0",
+    "name": "Redactly-1.8.0-windows-x64.zip",
+    "downloads": 8
+  },
+  {
+    "release": "v1.8.0",
+    "name": "Redactly-1.8.0-x86_64.AppImage",
+    "downloads": 2
+  },
+  {
+    "release": "v1.8.1",
+    "name": "Redactly-1.8.1-arm64.dmg",
+    "downloads": 1
+  },
+  {
+    "release": "v1.8.1",
+    "name": "Redactly-1.8.1-windows-x64.zip",
+    "downloads": 3
+  },
+  {
+    "release": "v1.8.1",
+    "name": "Redactly-1.8.1-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.9.0",
+    "name": "Redactly-1.9.0-arm64.dmg",
+    "downloads": 3
+  },
+  {
+    "release": "v1.9.0",
+    "name": "Redactly-1.9.0-windows-x64.zip",
+    "downloads": 2
+  },
+  {
+    "release": "v1.9.0",
+    "name": "Redactly-1.9.0-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v1.9.1",
+    "name": "Redactly-1.9.1-arm64.dmg",
+    "downloads": 4
+  },
+  {
+    "release": "v1.9.1",
+    "name": "Redactly-1.9.1-windows-x64.zip",
+    "downloads": 9
+  },
+  {
+    "release": "v1.9.1",
+    "name": "Redactly-1.9.1-x86_64.AppImage",
+    "downloads": 1
+  },
+  {
+    "release": "v2.0.0-preview.1",
+    "name": "CloakFrame-2.0.0-preview.1-Windows-x64-Setup.exe",
+    "downloads": 2
+  },
+  {
+    "release": "v2.0.0-preview.1",
+    "name": "CloakFrame-Preview-2.0.0-preview.1-macOS-arm64.zip",
+    "downloads": 1
+  }
+]
