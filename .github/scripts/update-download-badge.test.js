@@ -7,6 +7,7 @@ const test = require('node:test')
 const updateDownloadBadge = require('./update-download-badge.js')
 const {
   badgePayload,
+  countsPayload,
   distributionDownloadTotal,
   isDistributionAsset,
 } = updateDownloadBadge
@@ -83,7 +84,31 @@ test('sums public distribution assets only', () =>
   assert.equal(JSON.parse(badgePayload(30)).message, '30')
 })
 
-test('writes the badge from this repository\'s releases', async () =>
+test('lists each counted file by release, leaving out drafts and updater metadata', () =>
+{
+  const releases = [
+    {
+      tag_name: 'v1.12.1',
+      draft: false,
+      assets: [
+        { name: 'CloakFrame-1.12.1-Windows-x64-Setup.exe', download_count: 17 },
+        { name: 'CloakFrame-1.12.1-Linux-x86_64.AppImage', download_count: 35 },
+        { name: 'releases.win.json', download_count: 74 },
+      ],
+    },
+    {
+      tag_name: 'v2.0.0-preview.2',
+      draft: true,
+      assets: [{ name: 'CloakFrame-2.0.0-preview.2-Windows-x64-Setup.exe', download_count: 0 }],
+    },
+  ]
+  assert.deepEqual(JSON.parse(countsPayload(releases)), [
+    { release: 'v1.12.1', name: 'CloakFrame-1.12.1-Linux-x86_64.AppImage', downloads: 35 },
+    { release: 'v1.12.1', name: 'CloakFrame-1.12.1-Windows-x64-Setup.exe', downloads: 17 },
+  ])
+})
+
+function fakeGitHub(files)
 {
   const listed = []
   const written = []
@@ -93,6 +118,7 @@ test('writes the badge from this repository\'s releases', async () =>
       listed.push(`${owner}/${repo}`)
       return [
         {
+          tag_name: 'v2.0.0',
           draft: false,
           assets: [{ name: 'CloakFrame-2.0.0-Windows-x64-Setup.exe', download_count: 4 }],
         },
@@ -101,9 +127,13 @@ test('writes the badge from this repository\'s releases', async () =>
     rest: {
       repos: {
         listReleases: {},
-        getContent: async () =>
+        getContent: async ({ path }) =>
         {
-          throw Object.assign(new Error('Not Found'), { status: 404 })
+          if (!(path in files))
+          {
+            throw Object.assign(new Error('Not Found'), { status: 404 })
+          }
+          return { data: { content: Buffer.from(files[path]).toString('base64'), sha: path } }
         },
         createOrUpdateFileContents: async request => written.push(request),
       },
@@ -112,12 +142,37 @@ test('writes the badge from this repository\'s releases', async () =>
       },
     },
   }
-  const context = { repo: { owner: 'nyabi-gh', repo: 'CloakFrame' }, sha: 'abc' }
-  const core = { info: () => {} }
+  return { github, listed, written }
+}
+
+const context = { repo: { owner: 'nyabi-gh', repo: 'CloakFrame' }, sha: 'abc' }
+const core = { info: () => {} }
+
+test('writes the badge and the counts by file from this repository\'s releases', async () =>
+{
+  const { github, listed, written } = fakeGitHub({})
 
   await updateDownloadBadge({ github, context, core })
 
   assert.deepEqual(listed, ['nyabi-gh/CloakFrame'])
-  assert.equal(written.length, 1)
-  assert.equal(JSON.parse(Buffer.from(written[0].content, 'base64').toString('utf8')).message, '4')
+  const read = path => JSON.parse(Buffer.from(
+    written.find(request => request.path === path).content, 'base64').toString('utf8'))
+  assert.equal(written.length, 2)
+  assert.equal(read('downloads.json').message, '4')
+  assert.deepEqual(read('downloads-by-file.json'), [
+    { release: 'v2.0.0', name: 'CloakFrame-2.0.0-Windows-x64-Setup.exe', downloads: 4 },
+  ])
+})
+
+test('writes nothing when the counts have not changed', async () =>
+{
+  const { github: first, written: before } = fakeGitHub({})
+  await updateDownloadBadge({ github: first, context, core })
+  const files = Object.fromEntries(before.map(request =>
+    [request.path, Buffer.from(request.content, 'base64').toString('utf8')]))
+
+  const { github, written } = fakeGitHub(files)
+  await updateDownloadBadge({ github, context, core })
+
+  assert.deepEqual(written, [])
 })
