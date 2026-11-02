@@ -252,21 +252,26 @@ fn the_theme_menu_changes_the_colours() {
     }
 }
 
-/// Every text the last frame drew, with the rectangle it is laid out in.
-fn drawn_texts(harness: &Harness<'_, AppState>) -> Vec<(String, egui::Rect)> {
-    fn walk(shape: &egui::Shape, texts: &mut Vec<(String, egui::Rect)>) {
+/// Every text the last frame drew, with the rectangle it is laid out in and the rectangle it is
+/// cut to.
+fn drawn_texts(harness: &Harness<'_, AppState>) -> Vec<(String, egui::Rect, egui::Rect)> {
+    fn walk(
+        shape: &egui::Shape,
+        clip: egui::Rect,
+        texts: &mut Vec<(String, egui::Rect, egui::Rect)>,
+    ) {
         match shape {
             egui::Shape::Text(text) => {
                 let laid_out = text.galley.rect.translate(text.pos.to_vec2());
-                texts.push((text.galley.text().to_owned(), laid_out));
+                texts.push((text.galley.text().to_owned(), laid_out, clip));
             }
-            egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| walk(s, texts)),
+            egui::Shape::Vec(shapes) => shapes.iter().for_each(|s| walk(s, clip, texts)),
             _ => {}
         }
     }
     let mut texts = Vec::new();
     for clipped in &harness.output().shapes {
-        walk(&clipped.shape, &mut texts);
+        walk(&clipped.shape, clipped.clip_rect, &mut texts);
     }
     texts
 }
@@ -294,9 +299,21 @@ fn every_language_fits_the_settings_panel() {
         let margins = panel.shrink2(egui::vec2(20.0, 0.0));
         let texts: Vec<_> = drawn_texts(&harness)
             .into_iter()
-            .filter(|(text, rect)| !text.trim().is_empty() && panel.contains(rect.center()))
+            .filter(|(text, rect, _)| !text.trim().is_empty() && panel.contains(rect.center()))
             .collect();
         assert!(texts.len() > 10, "{language:?}: {texts:?}");
+        // At the window's first size nothing has to be scrolled to, such as the output folder
+        // under the Advanced Options line.
+        for (text, rect, clip) in &texts {
+            assert!(
+                clip.expand(0.5).contains_rect(*rect),
+                "{language:?}: {text:?} at {rect:?} is cut off at {clip:?}"
+            );
+        }
+        let texts: Vec<_> = texts
+            .into_iter()
+            .map(|(text, rect, _)| (text, rect))
+            .collect();
         for (text, rect) in &texts {
             assert!(
                 margins.expand(0.5).x_range().contains(rect.left())
@@ -335,6 +352,43 @@ fn every_language_fits_the_settings_panel() {
             }
         }
     }
+}
+
+/// In a shorter window the sample photo gives up height so that the output folder stays above
+/// the Advanced Options line, and takes it back when the window grows again.
+#[test]
+fn the_sample_photo_gives_way_to_the_output_folder() {
+    let settings = Settings {
+        method: Method::Mosaic,
+        ..Settings::default()
+    };
+    let mut harness = harness(Language::En, settings);
+    harness.run_traced();
+    let photo = |harness: &Harness<'_, AppState>| {
+        harness
+            .get_by_role_and_label(Role::Image, "Anonymization style preview")
+            .rect()
+            .height()
+    };
+    let tall = photo(&harness);
+
+    harness.set_size(egui::vec2(1100.0, 720.0));
+    harness.run_traced();
+    let short = photo(&harness);
+    assert!(short < tall, "the photo keeps {short} of {tall}");
+    let window = harness.ctx.content_rect().shrink(8.0);
+    let footer_top = window.bottom() - 48.0;
+    let folder = harness
+        .get_by_role_and_label(Role::Button, "Choose…")
+        .rect();
+    assert!(
+        folder.bottom() <= footer_top + 0.5,
+        "the output folder at {folder:?} runs under the line at {footer_top}"
+    );
+
+    harness.set_size(egui::vec2(1100.0, 760.0));
+    harness.run_traced();
+    assert_eq!(photo(&harness), tall);
 }
 
 /// The shape is chosen next to the method, for every method, and runs take it.

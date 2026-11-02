@@ -40,6 +40,8 @@ use crate::wording;
 
 /// The sample photo's height over its width in the settings panel.
 const SAMPLE_ASPECT: f32 = 146.0 / 260.0;
+/// The sample photo's height below which it stops giving up room and the panel scrolls instead.
+const SAMPLE_MIN_HEIGHT: f32 = 64.0;
 const APP_ICON: &[u8] = include_bytes!("../../../assets/icons/cloakframe.png");
 const DIALOG_WIDTH: f32 = 600.0;
 /// The least room left above and below the advanced options dialog.
@@ -128,6 +130,9 @@ pub struct AppState {
     pub discarding: Option<SessionId>,
     pub quit: Quit,
     sample: Sample,
+    /// The most height the sample photo may take so that the settings panel fits, from the last
+    /// frame; None until measured.
+    sample_room: Option<f32>,
     /// The advanced options dialog, where the detection models are too, is open.
     pub dialog_open: bool,
     /// How much of the run is done, drawn as a line under the toolbar.
@@ -169,6 +174,7 @@ impl AppState {
             discarding: None,
             quit: Quit::No,
             sample: Sample::new(),
+            sample_room: None,
             dialog_open: false,
             progress_line: None,
             icon: None,
@@ -1078,7 +1084,8 @@ impl AppState {
         let whole = ui.max_rect();
         let footer_height = 48.0;
         let (top, footer) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
-        region(ui, top, |ui| {
+        let mut sample = (0.0, 0.0);
+        let scroll = region(ui, top, |ui| {
             egui::ScrollArea::vertical()
                 .id_salt("settings")
                 .auto_shrink(false)
@@ -1108,7 +1115,7 @@ impl AppState {
                         if self.settings.method == Method::Mosaic {
                             self.strength(ui, &tr);
                         }
-                        self.sample_preview(ui);
+                        sample = self.sample_preview(ui);
                     });
                     style::group(ui, |ui| {
                         ui.add(style::Check::new(
@@ -1120,8 +1127,9 @@ impl AppState {
                         style::group_title(ui, &tr.get("output-folder"));
                         self.output_button(ui, &tr);
                     });
-                });
+                })
         });
+        self.fit_sample(ui.ctx(), &scroll, sample);
         region(ui, footer, |ui| {
             ui.painter().hline(
                 footer.x_range(),
@@ -1187,12 +1195,17 @@ impl AppState {
     }
 
     /// What a run with the settings as they are would make of the sample photo, cut to the
-    /// panel's width around the face.
-    fn sample_preview(&mut self, ui: &mut egui::Ui) {
+    /// panel's width around the face and, where the panel is short, to the room it has. Returns
+    /// the height drawn and the height it would have with room to spare.
+    fn sample_preview(&mut self, ui: &mut egui::Ui) -> (f32, f32) {
         let options = run::RunOptions::of(&self.settings);
         let texture = self.sample.texture(ui.ctx(), &options);
         let width = ui.available_width();
-        let size = egui::vec2(width, (width * SAMPLE_ASPECT).round());
+        let natural = (width * SAMPLE_ASPECT).round();
+        let height = self.sample_room.map_or(natural, |room| {
+            room.min(natural).max(SAMPLE_MIN_HEIGHT).floor()
+        });
+        let size = egui::vec2(width, height);
         let shown = size.y / size.x;
         let top = 0.1 * (1.0 - shown);
         let image = egui::Image::new((texture.id(), size))
@@ -1203,6 +1216,25 @@ impl AppState {
             .corner_radius(style::THUMBNAIL_RADIUS)
             .alt_text(self.tr.get("sample-alt"));
         ui.add(image);
+        (height, natural)
+    }
+
+    /// Gives the sample photo the panel's spare height, or takes from it what the panel runs
+    /// over, so the output folder stays in view; the frame is redone when the photo's height
+    /// changes, so a change of the window or the rows never shows a frame that runs over.
+    fn fit_sample<R>(
+        &mut self,
+        ctx: &egui::Context,
+        scroll: &egui::scroll_area::ScrollAreaOutput<R>,
+        (drawn, natural): (f32, f32),
+    ) {
+        let over = scroll.content_size.y - scroll.inner_rect.height();
+        let room = drawn - over;
+        self.sample_room = Some(room);
+        let next = room.min(natural).max(SAMPLE_MIN_HEIGHT).floor();
+        if (next - drawn).abs() >= 1.0 {
+            ctx.request_discard("sample photo fitted to the settings panel");
+        }
     }
 
     fn output_button(&mut self, ui: &mut egui::Ui, tr: &Translator) {
