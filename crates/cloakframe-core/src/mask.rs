@@ -110,6 +110,20 @@ pub struct MaskStyle {
     pub mosaic_strength: MosaicStrength,
 }
 
+impl MaskStyle {
+    /// The padding of the area the mask is drawn over. An ellipse's takes (√2 − 1) / 2 more, so
+    /// the ellipse grows by `padding` from the smallest one that contains the box instead of
+    /// leaving the box's corners outside it (a custom image ignores the shape).
+    fn area_padding(&self) -> f32 {
+        let enclosing = (std::f32::consts::SQRT_2 - 1.0) / 2.0;
+        if self.shape == Shape::Ellipse && self.method != Method::CustomImage {
+            self.padding.ratio() + enclosing
+        } else {
+            self.padding.ratio()
+        }
+    }
+}
+
 impl Default for MaskStyle {
     /// A solid fill is the default (plan 5).
     fn default() -> Self {
@@ -182,7 +196,7 @@ impl MosaicGrid {
         if width == 0 || height == 0 {
             return Self::MIN_CELL;
         }
-        let grown = grown_region(bbox, style.padding.ratio());
+        let grown = grown_region(bbox, style.area_padding());
         let short = u32::try_from(grown.short()).unwrap_or(u32::MAX);
         short
             .div_ceil(u32::from(style.mosaic_strength.cells()))
@@ -467,8 +481,8 @@ fn render_one<S: Sample>(
         return;
     }
     let (width, height) = (plane.width, plane.height);
-    let padded = padded_region(&region.bbox, style.padding.ratio(), width, height);
-    let grown = grown_region(&region.bbox, style.padding.ratio());
+    let padded = padded_region(&region.bbox, style.area_padding(), width, height);
+    let grown = grown_region(&region.bbox, style.area_padding());
     let detected = padded_region(&region.bbox, 0.0, width, height);
 
     if style.method == Method::CustomImage {
@@ -1254,12 +1268,17 @@ mod tests {
             }
 
             // The other methods take the same weights: inside the box each one gives exactly
-            // what its hard rectangle over the same padded region gives.
+            // what its hard rectangle over the same area gives.
             let overlay = Overlay::new(2, 1, vec![255, 0, 0, 255, 0, 0, 255, 255]).unwrap();
             let source: Vec<u8> = (0..w * h * 3).map(|i| (i * 7 % 251) as u8).collect();
             for method in [Method::Mosaic, Method::Blur, Method::CustomImage] {
                 let shaped = style(method, s.shape, s.padding.ratio(), s.soft_edges);
-                let hard = style(method, Shape::Rectangle, s.padding.ratio(), false);
+                let hard = MaskStyle {
+                    shape: Shape::Rectangle,
+                    padding: Padding(shaped.area_padding()),
+                    soft_edges: false,
+                    ..shaped
+                };
                 let mut got = source.clone();
                 let mut want = source.clone();
                 for (px, st) in [(&mut got, &shaped), (&mut want, &hard)] {
@@ -1280,6 +1299,35 @@ mod tests {
                         .max()
                         .unwrap_or(0);
                     assert!(diff <= tolerance, "{bbox:?} {shaped:?}: {diff}");
+                }
+            }
+        }
+    }
+
+    /// The ellipse alone contains the box at every coverage, so the always-masked box never
+    /// shows square corners outside it.
+    #[test]
+    fn an_ellipse_contains_the_detected_box() {
+        for padding in [
+            Padding::NARROW,
+            Padding::default(),
+            Padding::WIDE,
+            Padding(0.0),
+        ] {
+            for (w, h) in [(24.0, 24.0), (40.0, 52.0), (61.5, 33.25), (9.0, 120.0)] {
+                let bbox = rect(300.0, 300.0, w, h);
+                let s = MaskStyle {
+                    shape: Shape::Ellipse,
+                    padding,
+                    ..MaskStyle::default()
+                };
+                let area = padded_region(&bbox, s.area_padding(), 1000, 1000);
+                let ellipse = EllipseMask::new(area);
+                let detected = padded_region(&bbox, 0.0, 1000, 1000);
+                for y in detected.y..detected.bottom() {
+                    for x in detected.x..detected.right() {
+                        assert!(ellipse.covers(x, y), "{padding:?} {bbox:?} ({x}, {y})");
+                    }
                 }
             }
         }

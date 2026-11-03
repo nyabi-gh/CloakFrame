@@ -121,9 +121,10 @@ mod tests {
         }
     }
 
-    /// An ellipse leaves some of what a rectangle masks around the face, for every method.
+    /// An ellipse leaves the corners a rectangle masks and reaches past its sides (it contains
+    /// the face's box), for every method.
     #[test]
-    fn an_ellipse_masks_less_than_a_rectangle() {
+    fn an_ellipse_masks_other_pixels_than_a_rectangle() {
         let sample = Sample::new();
         for method in [Method::Fill, Method::Mosaic, Method::Blur] {
             let masked = |shape| {
@@ -132,24 +133,15 @@ mod tests {
                     ..options(true, method, 8)
                 })
             };
-            let changed = |image: &RgbImage| {
-                image
-                    .pixels()
-                    .zip(sample.photo.pixels())
-                    .filter(|(a, b)| a != b)
-                    .count()
-            };
             let (rectangle, ellipse) = (masked(Shape::Rectangle), masked(Shape::Ellipse));
-            assert!(changed(&ellipse) > 2000, "{method:?}");
-            assert!(changed(&ellipse) < changed(&rectangle), "{method:?}");
             let original = &sample.photo;
-            assert!(
-                rectangle
-                    .enumerate_pixels()
-                    .any(|(x, y, p)| p != original.get_pixel(x, y)
-                        && ellipse.get_pixel(x, y) == original.get_pixel(x, y)),
-                "{method:?}"
-            );
+            let only = |a: &RgbImage, b: &RgbImage| {
+                a.enumerate_pixels().any(|(x, y, p)| {
+                    p != original.get_pixel(x, y) && b.get_pixel(x, y) == original.get_pixel(x, y)
+                })
+            };
+            assert!(only(&rectangle, &ellipse), "{method:?}");
+            assert!(only(&ellipse, &rectangle), "{method:?}");
         }
     }
 
