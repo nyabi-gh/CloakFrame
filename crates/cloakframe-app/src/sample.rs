@@ -145,6 +145,31 @@ mod tests {
         }
     }
 
+    /// A blur fades into the photo past the padded face, so it does not stand apart from it; a
+    /// mosaic stops there.
+    #[test]
+    fn only_a_blur_has_a_soft_edge() {
+        let sample = Sample::new();
+        let face = face();
+        let padding = Coverage::Standard.padding().ratio();
+        let (pad_x, pad_y) = (face.width() * padding, face.height() * padding);
+        let padded = |x: u32, y: u32| {
+            let (x, y) = (x as f32, y as f32);
+            x >= (face.x() - pad_x).floor() - 1.0
+                && x <= (face.right() + pad_x).ceil()
+                && y >= (face.y() - pad_y).floor() - 1.0
+                && y <= (face.bottom() + pad_y).ceil()
+        };
+        let reaches_past = |method| {
+            let masked = sample.masked(&options(true, method, 8));
+            masked
+                .enumerate_pixels()
+                .any(|(x, y, p)| !padded(x, y) && p != sample.photo.get_pixel(x, y))
+        };
+        assert!(reaches_past(Method::Blur));
+        assert!(!reaches_past(Method::Mosaic));
+    }
+
     /// The preview shows each coverage: a wider one masks more around the face.
     #[test]
     fn a_wider_coverage_masks_more() {

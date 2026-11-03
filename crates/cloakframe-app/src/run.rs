@@ -224,6 +224,9 @@ impl RunOptions {
                 Shape::Ellipse => MaskShape::Ellipse,
             },
             padding: self.coverage.padding(),
+            // A blur with a hard edge stands apart from the photo around it; the ramp lies
+            // outside the detected box, which stays fully masked.
+            soft_edges: self.method == Method::Blur,
             ..MaskStyle::default()
         };
         if let Ok(strength) = MosaicStrength::new(self.mosaic_strength) {
