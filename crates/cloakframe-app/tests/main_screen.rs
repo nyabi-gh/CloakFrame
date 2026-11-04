@@ -279,6 +279,56 @@ fn the_theme_menu_changes_the_colours() {
     }
 }
 
+/// The advanced options also choose the language and the theme; the window takes them at once
+/// and they are saved.
+#[test]
+fn the_advanced_options_choose_the_language_and_theme() {
+    use cloakframe_app::settings::{SettingsFile, Theme};
+    let dir = Dir::new("general");
+    let path = dir.0.join("settings.toml");
+    let (file, settings, _) = SettingsFile::load(&path);
+    let state = AppState::new(
+        Settings {
+            language: Some(Language::En),
+            ..settings
+        },
+        Some(file),
+        Vec::new(),
+    );
+    let mut harness = Harness::builder()
+        .with_size(egui::vec2(1100.0, 760.0))
+        .with_context_setup(|ctx| ctx.set_fonts(fonts::definitions(Language::En)))
+        .build_ui_state(
+            |ui, state: &mut AppState| {
+                state.ui(ui);
+                support::record(ui.ctx());
+            },
+            state,
+        );
+    harness.run_traced();
+    harness.get_by_label("Advanced Options…").click();
+    harness.run_traced();
+
+    harness
+        .get_by_role_and_label(Role::ComboBox, "Language")
+        .click();
+    harness.run_traced();
+    harness.get_by_label("한국어").click();
+    harness.run_traced();
+    assert_eq!(harness.state().settings.language, Some(Language::Ko));
+    harness.get_by_role_and_label(Role::Dialog, "고급 옵션");
+
+    harness.get_by_label("다크").click();
+    harness.run_traced();
+    assert_eq!(harness.state().settings.theme, Theme::Dark);
+    assert_eq!(harness.ctx.theme(), egui::Theme::Dark);
+
+    let (_, saved, notices) = SettingsFile::load(&path);
+    assert!(notices.is_empty(), "{notices:?}");
+    assert_eq!(saved.language, Some(Language::Ko));
+    assert_eq!(saved.theme, Theme::Dark);
+}
+
 /// Every text the last frame drew, with the rectangle it is laid out in and the rectangle it is
 /// cut to.
 fn drawn_texts(harness: &Harness<'_, AppState>) -> Vec<(String, egui::Rect, egui::Rect)> {

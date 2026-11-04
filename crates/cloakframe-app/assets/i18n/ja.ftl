@@ -390,7 +390,7 @@ video-codec-hint = 再エンコードする動画のコーデックです。HEVC
 gpu = GPU アクセラレーションを使用
 gpu-hint = 利用できる場合は、検出モデルと動画のエンコードを GPU で実行します。次回の実行から有効になります。
 ## needs review
-advanced-next-run = 次回の実行から有効になります。確認はその実行の設定で保存します。
+advanced-next-run = 検出・写真・動画の設定は次回の実行から有効になります。確認はその実行の設定で保存します。
 ## 1.12.1
 sample-title = プレビュー
 sample-alt = 匿名化スタイルのプレビュー
@@ -423,6 +423,7 @@ skipped-part-no-extension = 拡張子のないファイル { $count } 件
 skipped-part-unreadable = 読み込めないファイル { $count } 件
 change-folder = 変更…
 advanced-open = 詳細オプション…
+advanced-general = 一般
 advanced-detection = 検出
 advanced-photos = 写真
 advanced-videos = 動画

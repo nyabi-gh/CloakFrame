@@ -347,7 +347,7 @@ video-codec-hevc = HEVC (용량 절약)
 video-codec-hint = 다시 인코딩되는 동영상의 코덱입니다. HEVC는 파일이 더 작지만 오래된 기기에서 재생되지 않을 수 있습니다.
 gpu = GPU 가속 사용
 gpu-hint = 가능한 경우 탐지 모델과 비디오 인코딩을 GPU에서 실행합니다. 다음 실행부터 적용됩니다.
-advanced-next-run = 다음 실행부터 적용됩니다. 검토는 그 실행이 쓴 설정으로 저장합니다.
+advanced-next-run = 감지·사진·동영상 설정은 다음 실행부터 적용됩니다. 검토는 그 실행이 쓴 설정으로 저장합니다.
 sample-title = 미리보기
 sample-alt = 처리 결과 미리보기
 
@@ -376,6 +376,7 @@ skipped-part-no-extension = 확장자 없는 파일 { $count }개
 skipped-part-unreadable = 읽을 수 없는 파일 { $count }개
 change-folder = 변경…
 advanced-open = 고급 옵션…
+advanced-general = 일반
 advanced-detection = 감지
 advanced-photos = 사진
 advanced-videos = 동영상

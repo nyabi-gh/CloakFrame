@@ -422,7 +422,7 @@ video-codec-hevc = HEVC (smaller files)
 video-codec-hint = Codec for re-encoded videos. HEVC produces smaller files but may not play on older devices.
 gpu = Use GPU acceleration
 gpu-hint = Runs detection models and video encoding on the GPU when available. Applies from the next run.
-advanced-next-run = These apply from the next run; a review saves with the settings its run used.
+advanced-next-run = Detection, photo and video settings apply from the next run; a review saves with the settings its run used.
 sample-title = Preview
 sample-alt = Anonymization style preview
 
@@ -460,6 +460,7 @@ skipped-part-no-extension = { $count } without an extension
 skipped-part-unreadable = { $count } unreadable
 change-folder = Change…
 advanced-open = Advanced Options…
+advanced-general = General
 advanced-detection = Detection
 advanced-photos = Photos
 advanced-videos = Videos

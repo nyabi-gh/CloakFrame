@@ -284,7 +284,6 @@ impl AppState {
     fn set_language(&mut self, choice: Option<Language>) {
         self.settings.language = choice;
         self.tr = Rc::new(Translator::new(choice.unwrap_or_else(Language::of_system)));
-        self.save_settings();
     }
 
     /// Fonts for the current language. New fonts take effect from the next frame, so the window
@@ -795,7 +794,10 @@ impl AppState {
                 ctx.set_theme(theme_preference(theme));
                 ctx.request_repaint();
             }
-            Command::Language(choice) => self.set_language(choice),
+            Command::Language(choice) => {
+                self.set_language(choice);
+                self.save_settings();
+            }
         }
     }
 
@@ -1417,6 +1419,41 @@ impl AppState {
     fn advanced(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         let p = *Palette::of(ui);
         let hint = |text: String| egui::RichText::new(text).size(12.0).color(p.secondary);
+        dialog_section(ui, &tr.get("advanced-general"));
+        dialog_field(ui, &tr.get("language"), |ui| {
+            let name = |language: Option<Language>| {
+                language.map_or_else(|| tr.get("language-system"), |l| l.name().into())
+            };
+            let mut choice = self.settings.language;
+            style::select(ui, "language", 220.0, name(choice), |ui| {
+                for language in std::iter::once(None).chain(Language::ALL.map(Some)) {
+                    ui.selectable_value(&mut choice, language, name(language));
+                }
+            })
+            .response
+            .widget_info(|| {
+                egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("language"))
+            });
+            if choice != self.settings.language {
+                self.set_language(choice);
+                ui.ctx().request_repaint();
+            }
+        });
+        dialog_field(ui, &tr.get("theme"), |ui| {
+            let themes = [
+                (Theme::System, tr.get("theme-system")),
+                (Theme::Light, tr.get("theme-light")),
+                (Theme::Dark, tr.get("theme-dark")),
+            ];
+            let changed = ui
+                .push_id("theme", |ui| {
+                    style::segmented(ui, &mut self.settings.theme, &themes)
+                })
+                .inner;
+            if changed {
+                ui.ctx().request_repaint();
+            }
+        });
         let faces = self.settings.faces;
         let advanced = &mut self.settings.advanced;
         dialog_section(ui, &tr.get("advanced-detection"));
@@ -1964,6 +2001,7 @@ impl AppState {
         }
         if choice != current {
             self.set_language(choice);
+            self.save_settings();
         }
     }
 }
