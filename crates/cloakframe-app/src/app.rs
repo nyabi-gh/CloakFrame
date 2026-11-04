@@ -1361,8 +1361,16 @@ impl AppState {
                     egui::Frame::NONE
                         .inner_margin(egui::Margin::symmetric(24, 14))
                         .show(ui, |ui| {
+                            // The note may wrap, and Done is centred on it as the last frame
+                            // laid it out.
+                            let note_height = egui::Id::unique("advanced note height");
+                            let row_height = ui
+                                .ctx()
+                                .data(|d| d.get_temp::<f32>(note_height))
+                                .unwrap_or(0.0)
+                                .max(style::BUTTON_HEIGHT);
                             ui.allocate_ui_with_layout(
-                                egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                                egui::vec2(ui.available_width(), row_height),
                                 egui::Layout::right_to_left(egui::Align::Center),
                                 |ui| {
                                     if style::primary(ui, &tr.get("done"), true).clicked() {
@@ -1370,10 +1378,10 @@ impl AppState {
                                     }
                                     ui.add_space(16.0);
                                     ui.allocate_ui_with_layout(
-                                        egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                                        egui::vec2(ui.available_width(), row_height),
                                         egui::Layout::left_to_right(egui::Align::Center),
                                         |ui| {
-                                            ui.add(
+                                            let note = ui.add(
                                                 egui::Label::new(
                                                     egui::RichText::new(
                                                         tr.get("advanced-next-run"),
@@ -1383,6 +1391,17 @@ impl AppState {
                                                 )
                                                 .wrap(),
                                             );
+                                            let measured = note.rect.height();
+                                            ui.ctx()
+                                                .data_mut(|d| d.insert_temp(note_height, measured));
+                                            if (measured.max(style::BUTTON_HEIGHT) - row_height)
+                                                .abs()
+                                                >= 0.5
+                                            {
+                                                ui.ctx().request_discard(
+                                                    "the note under the advanced options measured",
+                                                );
+                                            }
                                         },
                                     );
                                 },

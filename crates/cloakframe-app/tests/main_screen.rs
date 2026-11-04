@@ -308,6 +308,16 @@ fn the_advanced_options_choose_the_language_and_theme() {
     harness.run_traced();
     harness.get_by_label("Advanced Options…").click();
     harness.run_traced();
+    let (_, note, _) = drawn_texts(&harness)
+        .into_iter()
+        .find(|(text, _, _)| text.contains("apply from the next run"))
+        .expect("the note under the advanced options");
+    let done = harness.get_by_role_and_label(Role::Button, "Done").rect();
+    assert!(note.height() > done.height(), "the note wraps: {note:?}");
+    assert!(
+        (note.center().y - done.center().y).abs() < 1.0,
+        "Done {done:?} is centred on the note {note:?}"
+    );
 
     harness
         .get_by_role_and_label(Role::ComboBox, "Language")
