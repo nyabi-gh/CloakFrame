@@ -93,19 +93,16 @@ jobs:
         run: |
           lib=$(${{ matrix.python }} -I tools/fetch_native.py ${{ matrix.runtime }} "$RUNNER_TEMP/native")
           ffmpeg=$(${{ matrix.python }} -I tools/fetch_native.py ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")
-          # macOS has ffprobe as its own artifact; the other builds carry it next to ffmpeg.
-          if [ "${{ matrix.platform }}" = macos-arm64 ]; then
-            ffprobe=$(${{ matrix.python }} -I tools/fetch_native.py ffprobe ${{ matrix.platform }} "$RUNNER_TEMP/native")
-          else
-            ffprobe="${ffmpeg%ffmpeg*}ffprobe${ffmpeg##*ffmpeg}"
-          fi
+          ffprobe="${ffmpeg%ffmpeg*}ffprobe${ffmpeg##*ffmpeg}"
+          # The engine runs the FFmpeg the packages bundle, which has only what the engine reads;
+          # the tests make their inputs with a third-party FFmpeg that has every component
+          # (docs/M7_FFMPEG.md).
+          test_ffmpeg=$(${{ matrix.python }} -I tools/fetch_native.py test-ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")
           assets=$(${{ matrix.python }} -I tools/fetch_test_assets.py "$RUNNER_TEMP/cloakframe-test-assets")
           echo "CLOAKFRAME_ORT_LIBRARY=$lib" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_FFMPEG=$ffmpeg" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_FFPROBE=$ffprobe" >> "$GITHUB_ENV"
-          # The tests make their inputs with an FFmpeg that has every component; the pinned build
-          # has them all until tools/ffmpeg's build replaces it for the engine (docs/M7_FFMPEG.md).
-          echo "CLOAKFRAME_TEST_FFMPEG=$ffmpeg" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_TEST_FFMPEG=$test_ffmpeg" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_TEST_ASSETS=$assets" >> "$GITHUB_ENV"
 
       # tests/windows_fat32.rs: camera cards are FAT32, which has no 128-bit file IDs.

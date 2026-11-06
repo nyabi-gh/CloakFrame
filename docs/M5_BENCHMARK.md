@@ -96,7 +96,7 @@ track 수와 gap(얼굴): 거리 72·3곳 / 69·0 / 146·0, 도로 61·3곳 / 65
 ## 재현
 
 ```bash
-clips=$(python3 -I tools/benchmark/video_fetch.py "$CLOAKFRAME_FFMPEG" ~/.cache/cloakframe-video-benchmark)
+clips=$(python3 -I tools/benchmark/video_fetch.py "$CLOAKFRAME_TEST_FFMPEG" ~/.cache/cloakframe-video-benchmark)
 tools/benchmark/run_legacy_video.sh "$CLOAKFRAME_TEST_ASSETS" "$CLOAKFRAME_FFMPEG" "$CLOAKFRAME_FFPROBE" "$clips" <작업 폴더>
 tools/benchmark/record_video.sh "$CLOAKFRAME_ORT_LIBRARY" "$CLOAKFRAME_TEST_ASSETS" "$CLOAKFRAME_FFMPEG" "$CLOAKFRAME_FFPROBE" "$clips"
 # 다시 추적과 평가(CI와 같음)

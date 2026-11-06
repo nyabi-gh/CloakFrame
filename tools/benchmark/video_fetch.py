@@ -4,9 +4,10 @@ Usage: python -I tools/benchmark/video_fetch.py <ffmpeg> <dest dir>
 
 Each clip of tests/fixtures/benchmark/video/manifest.json comes from the first `bytes` of a
 Wikimedia Commons file (a WebM's start decodes on its own), cut by stream copy or, for a source
-1.12.1 and the engine refuse (HLG), encoded again with BT.709 tags. The cut needs the pinned FFmpeg
-(9.0.2, tools/fetch_native.py) to give the recorded bytes. Sources and clips already in <dest dir>
-with the right hash are kept. Prints the absolute path of <dest dir>.
+1.12.1 and the engine refuse (HLG), encoded again with BT.709 tags. The cut needs the test FFmpeg
+(`test-ffmpeg` in manifests/native.toml, as CLOAKFRAME_TEST_FFMPEG) to give the recorded bytes; the
+bundled build has another x264. Sources and clips already in <dest dir> with the right hash are
+kept. Prints the absolute path of <dest dir>.
 """
 
 import hashlib
@@ -69,7 +70,7 @@ def fetch(ffmpeg: str, clip: dict, dest: Path) -> None:
         download(clip["source"]["url"], clip["source"]["bytes"], source)
         verified(source, clip["source"]["sha256"], clip["source"]["url"])
     cut(ffmpeg, source, clip, out)
-    verified(out, clip["sha256"], f"the cut of {clip['name']} (is FFmpeg 9.0.2?)")
+    verified(out, clip["sha256"], f"the cut of {clip['name']} (is it the test FFmpeg?)")
 
 
 def main() -> None:

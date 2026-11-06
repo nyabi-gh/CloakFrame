@@ -171,7 +171,7 @@ jobs:
           echo "BUILD=$RUNNER_TEMP/$name" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_FFMPEG=$RUNNER_TEMP/$name/ffmpeg$exe" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_FFPROBE=$RUNNER_TEMP/$name/ffprobe$exe" >> "$GITHUB_ENV"
-          echo "CLOAKFRAME_TEST_FFMPEG=$(${{ matrix.python }} -I tools/fetch_native.py ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_TEST_FFMPEG=$(${{ matrix.python }} -I tools/fetch_native.py test-ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
 
       - name: Check
         run: tools/ffmpeg/check.sh ${{ matrix.platform }} "$BUILD"

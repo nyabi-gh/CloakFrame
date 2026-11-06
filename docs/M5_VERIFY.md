@@ -185,7 +185,7 @@ runner(코어 3–4개)에서는 release에서도 spin 차이가 runner 편차 �
 ## 재현
 
 ```bash
-clips=$(python3 -I tools/benchmark/video_fetch.py "$CLOAKFRAME_FFMPEG" ~/.cache/cloakframe-video-benchmark)
+clips=$(python3 -I tools/benchmark/video_fetch.py "$CLOAKFRAME_TEST_FFMPEG" ~/.cache/cloakframe-video-benchmark)
 tools/benchmark/video_speed.sh "$CLOAKFRAME_ORT_LIBRARY" "$CLOAKFRAME_TEST_ASSETS" "$CLOAKFRAME_FFMPEG" "$CLOAKFRAME_FFPROBE" "$clips" <작업 폴더> 3
 ```
 
