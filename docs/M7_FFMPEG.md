@@ -95,10 +95,31 @@
   - cache는 브랜치마다 따로라 PR의 cache를 태그 실행이 쓰지 못한다. 태그 실행은 소스 묶음 job에서 한 번 upstream에 닿는다. 거기서 끊기면 그 job만 다시 돌린다.
 - 지금 태그는 릴리스를 만들지 않았으니 지우고, 고친 main에 같은 이름으로 다시 단다. 빌드 내용은 그대로라 revision은 1로 둔다.
 
+## 병합(2026-11-06, PR #100)
+
+- **CI:** `5d054ee`에서 CI(run 42214542334)와 FFmpeg workflow(run 42214542127)가 통과했다. 세 빌드 job 모두 소스 묶음을 풀어 묶음의 스크립트로 오프라인 빌드했고, upstream에서 받은 것은 소스 묶음 job뿐이었다.
+- **시간:** Windows apt 설치는 13초(전에는 25초에서 45분 넘게까지)였다. 빌드는 Windows 6분 20초, Linux 4분 15초, macOS 2분 30초.
+- 메인테이너 "fast-forward"로 main = `5d054ee`. #99 뒤 main push CI(run 42189495589)도 `fa692d3`에서 통과했다.
+
+## 게시(2026-11-06)
+
+릴리스가 없던 태그 `ffmpeg-9.0.2-1`(`fa692d3`)을 지우고 `5d054ee`에 다시 달았다(run 42217214136). 모든 job이 통과해, pre-release `CloakFrame-FFmpeg-9.0.2-1`이 12:34 UTC에 게시됐다. Latest는 1.12.1 그대로다.
+
+| 파일 | 바이트 | SHA-256 |
+| --- | --- | --- |
+| `CloakFrame-FFmpeg-9.0.2-1-macos-arm64.tar.xz` | 6,742,724 | `e83d87db006c0bf9a176fc7adfdab2ab4a542450d6e7c4dd083f51fbef287258` |
+| `CloakFrame-FFmpeg-9.0.2-1-linux-x86_64.tar.xz` | 8,949,876 | `3da24fbe766302eb2f398d957938b5596f051e375af6a854776d0b30f4921e72` |
+| `CloakFrame-FFmpeg-9.0.2-1-windows-x64.tar.xz` | 9,646,092 | `e57b63eb17e2ffdbe5627e9ae7e537f2e81a56e745bf5df44cfeb335cc0e2cae` |
+| `CloakFrame-FFmpeg-9.0.2-1-source.tar` | 27,832,320 | `61423fd99d866169236644d9d4aafbb7eef1bdae92f58aee49b405d5782f032b` |
+
+- 올라간 파일을 받아 `SHA256SUMS.txt`와 해시가 맞는 것을 확인했다.
+- 게시된 소스 묶음은 main에서 이 Mac으로 만든 묶음과 바이트까지 같다.
+- macOS 묶음을 풀어 이 Mac에서 `check.sh`가 통과했다.
+
 ## 남은 것
 
-- 병합 뒤 태그 `ffmpeg-9.0.2-1`로 고정 릴리스를 게시하고, 다음 PR에서 할 것:
-  - `native.toml`에 고정하고 `CLOAKFRAME_FFMPEG`를 우리 빌드로 바꾸며, 제3자 빌드는 시험 전용 항목으로 옮긴다.
+- 다음 PR(`m7-ffmpeg-bundle`)에서 할 것:
+  - 위 표의 URL·해시를 `native.toml`에 고정하고 `CLOAKFRAME_FFMPEG`를 우리 빌드로 바꾸며, 제3자 빌드는 시험 전용 항목으로 옮긴다(`ci.yml`, `video-throughput.yml`, CONTRIBUTING, 벤치마크 도구의 클립 자르기).
   - macOS 번들과 Windows 설치본에 넣고, release workflow가 소스 묶음을 함께 올린다.
   - THIRD_PARTY_NOTICES에 FFmpeg, x264, x265, NVENC 헤더, libvpl, mingw-w64 런타임을 넣는다.
   - PREVIEW_NOTES·README의 "사진만"을 고친다.
