@@ -26,9 +26,9 @@ close it. Check the caller and the full scope before recording a change of state
   app checks, downloads and installs an update only when the pinned key signed it, and a
   release build does not build without the key ([record](M7_UPDATES.md)). The release
   workflow signs the Windows package, and publishing the drafted release publishes the feed;
-  2.0.0-preview.1 went out through it ([record](M7_RELEASE.md#첫-릴리스2026-11-01)). It
-  still needs an installed preview updating to the next one from that feed, Sparkle on
-  macOS, and a run on Linux.
+  2.0.0-preview.1 and preview.2 went out through it
+  ([record](M7_RELEASE.md#두-번째-릴리스2026-11-02)). It still needs an installed preview
+  updating to the next one from that feed, Sparkle on macOS, and a run on Linux.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
   ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,
@@ -48,8 +48,10 @@ close it. Check the caller and the full scope before recording a change of state
   steps were agreed on 2026-11-01 and merged on 2026-11-02 in this order: #88 controls, #89
   group hierarchy and row alignment, #90 the advanced options as a centered dialog, #91 button
   levels, #92 list columns, timeline bars, sidebar header and Korean wording. The run list's
-  details no longer run past the window's bottom (`run-details`). Still open: the maintainer's
-  look at the app. Record in [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
+  details no longer run past the window's bottom (`run-details`). Later feedback, one PR each:
+  #96 the review hint, #97 ellipse corners and a soft blur edge, #98 language and theme
+  in Advanced Options. Still open: the maintainer's look at the app, and #98 in the Windows app.
+  Record in [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
 - **Comparison with 1.12.1.** Detection quality and speed, long runs, and Windows DML on
   NVIDIA, Intel and AMD hardware.
 - **Real operating systems.** Translations, keyboard, screen readers (including Windows

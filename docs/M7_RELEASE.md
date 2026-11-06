@@ -43,8 +43,16 @@
 - `updates` 릴리스에 `CloakFrameApp-2.0.0-preview.1-full.nupkg`(sha256 `8f3037a0…547a7e9`), `.sig`, `releases.win.json`이 이 순서로 올라갔다. 올라간 파일을 받아 SHA-256이 feed와 같고 서명이 저장소 변수 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다.
 - 릴리스는 pre-release로 게시했고 Latest는 1.12.1 그대로다.
 
+## 두 번째 릴리스(2026-11-02)
+
+#95가 판을 `2.0.0-preview.2`로 올리고 PREVIEW_NOTES에 "Since preview.1" 문단을 더한 뒤, main `903d9f3`에 `v2.0.0-preview.2`를 태그했다(run 41407100782). 승인을 없앤 뒤의 첫 릴리스다.
+
+- Version, macOS zip, Windows 설치본, 서명, 초안 job이 첫 시도에 통과했다. 초안에는 `CloakFrame-2.0.0-preview.2-Windows-x64-Setup.exe`(50,683,444바이트)와 `CloakFrame-Preview-2.0.0-preview.2-macOS-arm64.zip`(35,155,431바이트)이 올라갔다.
+- 초안을 게시하자 `publish-feed.yml`(run 41409223940)이 `updates` 릴리스에 `CloakFrameApp-2.0.0-preview.2-full.nupkg`(43,108,404바이트, sha256 `32505ff4…c6b1434`)와 `.sig`를 올리고 `releases.win.json`을 preview.2 하나로 바꿨다. 2026-11-06에 올라간 파일을 받아 SHA-256이 feed와 같고 서명이 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다.
+- 2026-11-06 기준으로 preview.2 패키지가 feed에서 한 번 받아졌지만, 설치된 preview.1이 실제로 preview.2가 됐는지는 기록이 없다.
+
 ## 남은 것
 
 - Linux release job을 만들 때 nasm을 소스로 빌드할지 Ubuntu 패키지를 쓸지 정한다.
-- 설치된 preview.1이 preview.2를 이 feed로 받는 것.
+- 설치된 preview.1이 preview.2를 이 feed로 받는 것(위 "두 번째 릴리스").
 - Linux 설치본·AppImage, DMG·Sparkle, 1903 VM.
