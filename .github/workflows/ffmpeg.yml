@@ -6,6 +6,11 @@ name: FFmpeg
 # the builds and their corresponding source on a pre-release of that name, whose files
 # native.toml then pins. The archives are .tar.xz so that the download badge, which counts the
 # packages people install, leaves them out.
+#
+# Only the source job downloads the pinned sources, once per run and kept in a cache between
+# runs; the builds are made offline from the corresponding source it bundles, with the bundle's
+# own scripts. ffmpeg.org has reset runners' connections, and every job fetching for itself
+# met that more often (docs/M7_FFMPEG.md).
 on:
   pull_request:
     branches: [main]
@@ -22,8 +27,42 @@ permissions:
   contents: read
 
 jobs:
+  source:
+    name: Corresponding source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Name the build
+        id: name
+        run: |
+          version=$(python3 -I -c 'import tomllib; print(next(a["version"] for a in tomllib.load(open("manifests/native.toml", "rb"))["artifact"] if a["id"] == "ffmpeg-source"))')
+          echo "name=CloakFrame-FFmpeg-$version-$(cat tools/ffmpeg/revision)" >> "$GITHUB_OUTPUT"
+
+      # The archives are checked against native.toml's hashes whether they come from the cache
+      # or from upstream.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/downloads
+          key: ffmpeg-sources-${{ hashFiles('manifests/native.toml') }}
+
+      - name: Bundle
+        env:
+          CLOAKFRAME_NATIVE_CACHE: ${{ runner.temp }}/downloads
+        run: python3 -I tools/ffmpeg/source_bundle.py "$RUNNER_TEMP/source"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ffmpeg-source
+          path: ${{ runner.temp }}/source/*.tar
+          if-no-files-found: error
+
   build:
     name: Build (${{ matrix.platform }})
+    needs: source
     strategy:
       fail-fast: false
       matrix:
@@ -32,58 +71,64 @@ jobs:
             os: macos-15
           - platform: linux-x86_64
             os: ubuntu-24.04
+            packages: nasm
+          # The mingw-w64 metapackage also brings the i686 and win32 toolchains, four times the
+          # download, which a slow mirror stretched past the job's time limit.
           - platform: windows-x64
             os: ubuntu-24.04
+            packages: nasm gcc-mingw-w64-x86-64-posix g++-mingw-w64-x86-64-posix
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45
-    outputs:
-      name: ${{ steps.name.outputs.name }}
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
 
+      # The Ubuntu runner already has CMake and pkg-config.
       - name: Install the build tools (Ubuntu)
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y nasm cmake pkg-config ${{ matrix.platform == 'windows-x64' && 'mingw-w64' || '' }}
+          sudo apt-get install -y --no-install-recommends ${{ matrix.packages }}
 
       - name: Install the build tools (macOS)
         if: runner.os == 'macOS'
         run: command -v pkg-config || brew install pkgconf
 
-      - name: Name the build
-        id: name
-        run: |
-          version=$(python3 -I -c 'import tomllib; print(next(a["version"] for a in tomllib.load(open("manifests/native.toml", "rb"))["artifact"] if a["id"] == "ffmpeg-source"))')
-          echo "name=CloakFrame-FFmpeg-$version-$(cat tools/ffmpeg/revision)" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ffmpeg-source
+          path: ${{ runner.temp }}
 
-      - name: Build
+      - name: Build from the corresponding source
         env:
-          NAME: ${{ steps.name.outputs.name }}-${{ matrix.platform }}
-        run: tools/ffmpeg/build.sh ${{ matrix.platform }} "$RUNNER_TEMP/$NAME"
+          NAME: ${{ needs.source.outputs.name }}
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          tar -xf "$RUNNER_TEMP/$NAME-source.tar" -C "$RUNNER_TEMP"
+          source=$RUNNER_TEMP/$NAME-source
+          CLOAKFRAME_NATIVE_CACHE=$source/sources "$source/tools/ffmpeg/build.sh" "$PLATFORM" "$RUNNER_TEMP/$NAME-$PLATFORM"
 
       # The Windows build is checked on Windows by the next job.
       - name: Check
         if: matrix.platform != 'windows-x64'
         env:
-          NAME: ${{ steps.name.outputs.name }}-${{ matrix.platform }}
+          NAME: ${{ needs.source.outputs.name }}-${{ matrix.platform }}
         run: tools/ffmpeg/check.sh ${{ matrix.platform }} "$RUNNER_TEMP/$NAME"
 
       # Artifacts drop Unix file modes, a tar keeps them.
       - name: Pack
         env:
-          NAME: ${{ steps.name.outputs.name }}-${{ matrix.platform }}
+          NAME: ${{ needs.source.outputs.name }}-${{ matrix.platform }}
         run: tar -C "$RUNNER_TEMP" -cJf "$RUNNER_TEMP/$NAME.tar.xz" "$NAME"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: ffmpeg-${{ matrix.platform }}
-          path: ${{ runner.temp }}/${{ steps.name.outputs.name }}-${{ matrix.platform }}.tar.xz
+          path: ${{ runner.temp }}/${{ needs.source.outputs.name }}-${{ matrix.platform }}.tar.xz
           if-no-files-found: error
 
   test:
     name: Check and test (${{ matrix.platform }})
-    needs: build
+    needs: [source, build]
     strategy:
       fail-fast: false
       matrix:
@@ -117,7 +162,7 @@ jobs:
       # FFmpeg, which has the lavfi sources and encoders the new build leaves out.
       - name: Unpack the build and fetch the test FFmpeg
         env:
-          NAME: ${{ needs.build.outputs.name }}-${{ matrix.platform }}
+          NAME: ${{ needs.source.outputs.name }}-${{ matrix.platform }}
         run: |
           name=$NAME
           ${{ matrix.python }} -I -c 'import sys, tarfile; tarfile.open(sys.argv[1]).extractall(sys.argv[2], filter="data")' \
@@ -137,22 +182,6 @@ jobs:
             --test media_verify --test media_process --test media_probe --test video_analysis \
             --test video_export
 
-  source:
-    name: Corresponding source
-    runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
-
-      - name: Bundle
-        run: python3 -I tools/ffmpeg/source_bundle.py "$RUNNER_TEMP/source"
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
-        with:
-          name: ffmpeg-source
-          path: ${{ runner.temp }}/source/*.tar
-          if-no-files-found: error
-
   publish:
     name: Publish
     if: startsWith(github.ref, 'refs/tags/ffmpeg-')
@@ -164,7 +193,7 @@ jobs:
     steps:
       - name: Match the tag to the build
         env:
-          NAME: ${{ needs.build.outputs.name }}
+          NAME: ${{ needs.source.outputs.name }}
         run: |
           expected="ffmpeg-${NAME#CloakFrame-FFmpeg-}"
           if [ "$GITHUB_REF_NAME" != "$expected" ]; then
@@ -181,7 +210,7 @@ jobs:
       - name: Publish the pre-release
         env:
           GH_TOKEN: ${{ github.token }}
-          NAME: ${{ needs.build.outputs.name }}
+          NAME: ${{ needs.source.outputs.name }}
         run: |
           cd "$RUNNER_TEMP/release"
           sha256sum -- * > SHA256SUMS.txt

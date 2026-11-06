@@ -87,6 +87,13 @@
 
 - **macOS:** x265를 설치한 직후 ffmpeg.org에서 소스를 받다 TLS 연결이 끊겼다. 다른 runner에서 같은 실패가 두 번째였다. 빌드 job 셋과 소스 묶음 job이 실행마다 각자 upstream에서 받으니, ffmpeg.org가 가끔 끊는 연결을 매번 맞을 수 있다.
 - **Windows:** apt가 멈춘 것이 아니라 Ubuntu 미러가 초당 수십 KB로 느렸다(cmake 11 MB에 5분). 게다가 `mingw-w64` 메타 패키지는 i686과 win32 변형까지 받고, runner에 이미 있는 cmake·pkg-config도 apt로 다시 받았다. 컨테이너에서 잰 받을 양은 그 목록이 307 MB, nasm과 x86_64 posix 컴파일러만이면 81.5 MB다.
+- **고친 것(`m7-ffmpeg-ci`, 메인테이너가 추천대로):**
+  - 소스는 소스 묶음 job만 받는다. 받은 파일은 `actions/cache`(키는 `native.toml`의 해시)에 남기고, cache에서 꺼낸 것도 해시를 확인한다.
+  - 빌드 job들은 그 묶음을 풀어 묶음 안의 스크립트로 네트워크 없이 빌드한다. 그래서 게시하는 바이너리가 함께 게시하는 대응 소스에서 만들어졌다는 것도 보장된다.
+  - apt로는 nasm과, Windows는 x86_64 posix 컴파일러만 설치한다. CMake와 pkg-config는 runner에 이미 있다.
+  - 컨테이너에서 이 패키지들만 설치하고 `unshare --net`으로 네트워크를 끊은 채 묶음으로 Windows 빌드를 해, 같은 결과를 확인했다.
+  - cache는 브랜치마다 따로라 PR의 cache를 태그 실행이 쓰지 못한다. 태그 실행은 소스 묶음 job에서 한 번 upstream에 닿는다. 거기서 끊기면 그 job만 다시 돌린다.
+- 지금 태그는 릴리스를 만들지 않았으니 지우고, 고친 main에 같은 이름으로 다시 단다. 빌드 내용은 그대로라 revision은 1로 둔다.
 
 ## 남은 것
 
