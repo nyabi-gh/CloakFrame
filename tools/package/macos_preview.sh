@@ -1,25 +1,26 @@
 #!/usr/bin/env bash
 # Plan M6 stage 5: the macOS arm64 preview, an ad-hoc signed app in a zip. It is not notarized;
-# the DMG, signing and notarization are M7's. The app finds ONNX Runtime next to its executable
-# (crates/cloakframe-app/src/tools.rs). Its name and identifier differ from 1.12.1's so that both
-# can sit in Applications while the preview is tried.
+# the DMG, signing and notarization are M7's. The app finds ONNX Runtime, ffmpeg and ffprobe next
+# to its executable (crates/cloakframe-app/src/tools.rs). Its name and identifier differ from
+# 1.12.1's so that both can sit in Applications while the preview is tried.
 #
-# The preview takes photos only. The FFmpeg builds in manifests/native.toml are GPL and their
-# corresponding source cannot be had (the macOS one fetches x264's master when it is built), so
-# FFmpeg waits for M7's own build (plan 10.1).
+# ffmpeg and ffprobe are the build tools/ffmpeg makes, as manifests/native.toml pins it. It is
+# GPL-2.0-or-later, so its licenses and build information go in Resources/FFmpeg, and the release
+# carries its corresponding source (plan 10.1).
 #
 # The notices of the Rust crates linked into the app are made here by cargo-about
 # (tools/about), which has to be installed. ONNX Runtime's license and its own third-party
 # notices come from its release archive, beside the lib folder that holds the library.
 #
-# Usage: macos_preview.sh <version> <cloakframe> <libonnxruntime.dylib> <out>
+# Usage: macos_preview.sh <version> <cloakframe> <libonnxruntime.dylib> <ffmpeg> <out>
 # Writes <out>/CloakFrame-Preview-<version>-macOS-arm64.zip and prints its path.
 set -euo pipefail
 
 version=$1
 exe=$2
 ort=$3
-out=$4
+ffmpeg_dir=$(cd "$(dirname "$4")" && pwd)
+out=$5
 root=$(cd "$(dirname "$0")/../.." && pwd)
 
 # CFBundleShortVersionString and CFBundleVersion take numbers only: 2.0.0-preview.1 is 2.0.0
@@ -29,10 +30,12 @@ ort_root=$(cd "$(dirname "$ort")/.." && pwd)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 app="$work/CloakFrame Preview.app"
-mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources/FFmpeg"
 
 cp "$exe" "$app/Contents/MacOS/cloakframe"
 cp "$ort" "$app/Contents/MacOS/libonnxruntime.dylib"
+cp "$ffmpeg_dir/ffmpeg" "$ffmpeg_dir/ffprobe" "$app/Contents/MacOS/"
+cp "$ffmpeg_dir/BUILDINFO.txt" "$ffmpeg_dir"/licenses/* "$app/Contents/Resources/FFmpeg/"
 cp "$root/assets/icons/CloakFrame.icns" "$app/Contents/Resources/CloakFrame.icns"
 cp "$root/LICENSE" "$root/THIRD_PARTY_NOTICES.txt" "$app/Contents/Resources/"
 cp "$ort_root/LICENSE" "$app/Contents/Resources/ONNXRUNTIME_LICENSE.txt"
@@ -83,10 +86,14 @@ cat >"$app/Contents/Info.plist" <<EOF
 EOF
 plutil -lint "$app/Contents/Info.plist" >/dev/null
 
-# Inside out, as codesign wants: the library first, then the app, which seals it.
-codesign --force --sign - --timestamp=none "$app/Contents/MacOS/libonnxruntime.dylib"
+# Inside out, as codesign wants: the library and the tools first, then the app, which seals them.
+for code in libonnxruntime.dylib ffmpeg ffprobe; do
+    codesign --force --sign - --timestamp=none "$app/Contents/MacOS/$code"
+done
 codesign --force --sign - --timestamp=none "$app"
 codesign --verify --strict --deep "$app"
+"$app/Contents/MacOS/ffmpeg" -hide_banner -version >/dev/null
+"$app/Contents/MacOS/ffprobe" -hide_banner -version >/dev/null
 
 mkdir -p "$out"
 zip="$(cd "$out" && pwd)/CloakFrame-Preview-$version-macOS-arm64.zip"

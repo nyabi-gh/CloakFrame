@@ -1,9 +1,10 @@
 name: Release
 
 # Builds the macOS preview zip and the Windows installer. On a v* tag it also signs the update
-# package in the `release` environment and drafts the pre-release; publishing the draft puts the
-# update feed on the `updates` release (publish-feed.yml, docs/RELEASING.md). Elsewhere it only
-# builds and checks the packages.
+# package in the `release` environment and drafts the pre-release with the corresponding source of
+# the FFmpeg the packages bundle (plan 10.1); publishing the draft puts the update feed on the
+# `updates` release (publish-feed.yml, docs/RELEASING.md). Elsewhere it only builds and checks the
+# packages.
 on:
   push:
     tags: ["v*"]
@@ -66,13 +67,15 @@ jobs:
       - name: Install cargo-about
         run: cargo install cargo-about --version "$CARGO_ABOUT" --features cli --locked
 
-      - name: Fetch ONNX Runtime
-        run: echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+      - name: Fetch ONNX Runtime and FFmpeg
+        run: |
+          echo "ORT=$(python3 -I tools/fetch_native.py onnxruntime macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+          echo "FFMPEG=$(python3 -I tools/fetch_native.py ffmpeg macos-arm64 "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
 
       - name: Package
         env:
           VERSION: ${{ needs.version.outputs.version }}
-        run: tools/package/macos_preview.sh "$VERSION" target/release/cloakframe "$ORT" "$RUNNER_TEMP/dist"
+        run: tools/package/macos_preview.sh "$VERSION" target/release/cloakframe "$ORT" "$FFMPEG" "$RUNNER_TEMP/dist"
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -103,6 +106,11 @@ jobs:
         run: |
           $installed = "$env:LOCALAPPDATA/CloakFrameApp"
           Start-Process -Wait "$env:RUNNER_TEMP/windows/CloakFrameApp-win-Setup.exe" -ArgumentList '--silent'
+          foreach ($tool in 'ffmpeg', 'ffprobe') {
+            $version = & "$installed/current/$tool.exe" -hide_banner -version
+            if ($LASTEXITCODE -ne 0) { throw "the installed $tool.exe exited with $LASTEXITCODE" }
+            $version[0]
+          }
           tools/ci/app_window.ps1 "$installed/current/cloakframe.exe" "$env:RUNNER_TEMP/app-window"
           Start-Process -Wait "$installed/Update.exe" -ArgumentList '--uninstall', '--silent'
           if (Test-Path "$installed/current") { throw "uninstalling left $installed/current" }
@@ -185,6 +193,13 @@ jobs:
         with:
           name: windows-installer
           path: ${{ runner.temp }}/dist
+
+      # Under the name it has on the FFmpeg pre-release, without the hash fetch_native.py adds.
+      - name: Fetch the FFmpeg source
+        run: |
+          archive=$(python3 -I tools/fetch_native.py --archive ffmpeg-corresponding-source linux-x86_64 "$RUNNER_TEMP/native")
+          name=${archive##*/}
+          cp "$archive" "$RUNNER_TEMP/dist/${name#*-}"
 
       - name: Draft
         env:
