@@ -16,7 +16,7 @@ use cloakframe_engine::media::encode::{
 };
 use cloakframe_engine::media::process::ToolCommand;
 use cloakframe_engine::media::source;
-use common::{TestDir, fixtures, required_env};
+use common::{TestDir, fixtures, required_env, test_ffmpeg};
 use serde_json::Value;
 
 fn ffmpeg() -> PathBuf {
@@ -109,7 +109,7 @@ fn seconds(value: &Value) -> f64 {
 
 /// The audio as decoded by FFmpeg (edit lists applied), mono at 48 kHz.
 fn samples(path: &Path) -> Vec<i16> {
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.input_file(path)
         .args(["-map", "0:a:0", "-ac", "1", "-ar", "48000", "-f", "s16le"])
         .output_pipe();
@@ -259,7 +259,7 @@ fn audio_that_starts_early_is_cut_at_the_videos_start() {
 fn the_audio_is_cut_from_the_videos_start_when_the_container_starts_elsewhere() {
     let dir = TestDir::new();
     let source = dir.path().join("offset.mp4");
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",
@@ -297,7 +297,7 @@ fn the_audio_is_cut_from_the_videos_start_when_the_container_starts_elsewhere() 
 fn audio_long_before_the_video_is_dropped_but_for_the_decoders_packets() {
     let dir = TestDir::new();
     let audio = dir.path().join("clicks.m4a");
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",
@@ -309,7 +309,7 @@ fn audio_long_before_the_video_is_dropped_but_for_the_decoders_packets() {
     .output_file(&audio);
     c.output(&CancelToken::new()).unwrap();
     let source = dir.path().join("late-video.mp4");
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-itsoffset",
         "1.5",
@@ -366,7 +366,7 @@ fn audio_long_before_the_video_is_dropped_but_for_the_decoders_packets() {
 fn webm_audio_is_reencoded_with_its_language() {
     let dir = TestDir::new();
     let source = dir.path().join("talk.webm");
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",
@@ -483,7 +483,7 @@ fn a_frame_of_another_size_is_refused() {
 fn encode_throughput_1080p() {
     let dir = TestDir::new();
     let path = dir.path().join("1080p.mp4");
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",

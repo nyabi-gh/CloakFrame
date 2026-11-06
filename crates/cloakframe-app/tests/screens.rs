@@ -56,7 +56,7 @@ impl egui::DroppedFile for Dropped {
 
 /// Twenty seconds of a photo panned and zoomed, so its faces move as in a street clip.
 fn clip(photo: &Path, path: &Path) {
-    let status = std::process::Command::new(required_env("CLOAKFRAME_FFMPEG"))
+    let status = std::process::Command::new(required_env("CLOAKFRAME_TEST_FFMPEG"))
         .args(["-v", "error", "-loop", "1", "-i"])
         .arg(photo)
         .args([

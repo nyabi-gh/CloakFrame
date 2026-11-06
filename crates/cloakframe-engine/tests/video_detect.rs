@@ -1,6 +1,6 @@
 //! A video's first pass with the pinned models. Needs `CLOAKFRAME_ORT_LIBRARY`,
-//! `CLOAKFRAME_TEST_ASSETS`, `ORT_DISABLE_TELEMETRY=1`, `CLOAKFRAME_FFMPEG` and
-//! `CLOAKFRAME_FFPROBE`.
+//! `CLOAKFRAME_TEST_ASSETS`, `ORT_DISABLE_TELEMETRY=1`, `CLOAKFRAME_FFMPEG`,
+//! `CLOAKFRAME_FFPROBE` and `CLOAKFRAME_TEST_FFMPEG`.
 
 mod common;
 
@@ -16,7 +16,7 @@ use cloakframe_engine::detect::runtime::OrtRuntime;
 use cloakframe_engine::media::source::{self, Source};
 use cloakframe_engine::model_files::ModelStore;
 use cloakframe_engine::video::analysis::{AnalysisSettings, first_pass};
-use common::{TestDir, required_env};
+use common::{TestDir, required_env, test_ffmpeg};
 
 fn runtime() -> &'static OrtRuntime {
     static RUNTIME: OnceLock<OrtRuntime> = OnceLock::new();
@@ -26,7 +26,7 @@ fn runtime() -> &'static OrtRuntime {
 /// Five seconds at 30 frames per second of a photo of people, at 1080p.
 fn clip(dir: &TestDir) -> PathBuf {
     let path = dir.path().join("people.mp4");
-    let status = std::process::Command::new(required_env("CLOAKFRAME_FFMPEG"))
+    let status = std::process::Command::new(test_ffmpeg())
         .args(["-v", "error", "-loop", "1", "-i"])
         .arg(required_env("CLOAKFRAME_TEST_ASSETS").join("messi5.jpg"))
         .args(["-vf", "scale=1920:1080,setsar=1", "-t", "5", "-r", "30"])

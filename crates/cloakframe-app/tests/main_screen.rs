@@ -1252,7 +1252,7 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     let ffmpeg = required_env("CLOAKFRAME_FFMPEG");
     let ffprobe = required_env("CLOAKFRAME_FFPROBE");
     let input = dir.0.join("clip.mp4");
-    let status = std::process::Command::new(&ffmpeg)
+    let status = std::process::Command::new(required_env("CLOAKFRAME_TEST_FFMPEG"))
         .args(["-v", "error", "-f", "lavfi", "-i"])
         .arg(
             "color=c=black:s=640x360:r=30:d=4[bg];color=c=white:s=60x60:r=30[sq];\
@@ -1645,7 +1645,7 @@ fn closing_during_a_run_asks_and_waits_for_the_run_to_stop() {
 /// A minute of video, which a run is still analysing when a test acts on it.
 fn long_clip(dir: &Dir) -> PathBuf {
     let path = dir.0.join("long.mp4");
-    let status = std::process::Command::new(required_env("CLOAKFRAME_FFMPEG"))
+    let status = std::process::Command::new(required_env("CLOAKFRAME_TEST_FFMPEG"))
         .args([
             "-v",
             "error",

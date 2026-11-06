@@ -13,7 +13,7 @@ use cloakframe_engine::detect::Rgb8Image;
 use cloakframe_engine::media::decode::{DecodeError, FrameReader, frame_size, source_frame};
 use cloakframe_engine::media::process::ToolCommand;
 use cloakframe_engine::media::source;
-use common::{TestDir, fixtures, frame_number, required_env};
+use common::{TestDir, fixtures, frame_number, required_env, test_ffmpeg};
 use sha2::{Digest, Sha256};
 
 fn ffmpeg() -> PathBuf {
@@ -97,7 +97,7 @@ fn the_variable_rate_output_shows_every_source_frame() {
 fn a_faster_stretch_after_the_first_seconds_keeps_every_frame() {
     let dir = TestDir::new();
     let path = dir.path().join("15-then-30.mp4");
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",
@@ -144,7 +144,7 @@ fn open_gops(dir: &TestDir) -> Vec<(&'static str, PathBuf)> {
     .into_iter()
     .map(|(codec, params)| {
         let path = dir.path().join(format!("{codec}-open-gop.mp4"));
-        let mut c = ToolCommand::ffmpeg(&ffmpeg());
+        let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
         c.args([
             "-f",
             "lavfi",
@@ -169,7 +169,7 @@ fn leading_pictures_the_decoder_drops_are_not_listed() {
     let dir = TestDir::new();
     for (codec, whole) in open_gops(&dir) {
         let cut = dir.path().join(format!("{codec}-cut.mp4"));
-        let mut c = ToolCommand::ffmpeg(&ffmpeg());
+        let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
         c.args(["-ss", "1"])
             .input_file(&whole)
             .args(["-c", "copy", "-use_editlist", "0"])
@@ -245,7 +245,7 @@ fn every_frame_of_open_gops_previews_and_plays_from_itself() {
 #[test]
 fn webm_without_a_duration_opens_from_its_frames() {
     let dir = TestDir::new();
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",
@@ -370,7 +370,7 @@ fn scaled_frames_are_the_same_on_every_cpu() {
 
 fn pattern(dir: &TestDir, name: &str, size: &str, seconds: u32) -> PathBuf {
     let path = dir.path().join(name);
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f",
         "lavfi",

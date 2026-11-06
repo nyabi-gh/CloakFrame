@@ -11,7 +11,7 @@ use cloakframe_core::timeline::{
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::media::probe::{ProbeError, Unsupported, probe};
 use cloakframe_engine::media::process::ToolCommand;
-use common::{TestDir, fixtures, required_env};
+use common::{TestDir, fixtures, required_env, test_ffmpeg};
 
 fn probed(path: &Path) -> Result<TimelineSpec, ProbeError> {
     probe(
@@ -98,7 +98,7 @@ fn colour_tags_come_from_the_source_or_the_height_rule() {
 /// Makes `name` with the pinned FFmpeg from a one-second test pattern and these output options.
 fn generated(dir: &TestDir, name: &str, inputs: &[&str], options: &[&str]) -> PathBuf {
     let path = dir.path().join(name);
-    let mut c = ToolCommand::ffmpeg(&required_env("CLOAKFRAME_FFMPEG"));
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     for input in inputs {
         c.args(["-f", "lavfi", "-i", input]);
     }
@@ -197,7 +197,7 @@ fn rotation_follows_what_ffmpeg_applies() {
     let plain = generated(&dir, "plain.mp4", &[PATTERN], &["-c:v", "libx264"]);
     let turned = |name: &str, options: &[&str]| {
         let path = dir.path().join(name);
-        let mut c = ToolCommand::ffmpeg(&required_env("CLOAKFRAME_FFMPEG"));
+        let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
         c.args(options)
             .input_file(&plain)
             .args(["-c", "copy"])

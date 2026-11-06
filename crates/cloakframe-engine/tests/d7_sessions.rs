@@ -5,7 +5,8 @@
 //! CLI (cli_models.rs).
 //!
 //! Needs `CLOAKFRAME_ORT_LIBRARY`, `CLOAKFRAME_TEST_ASSETS` and `ORT_DISABLE_TELEMETRY=1`, as
-//! detect_fixtures.rs does, and `CLOAKFRAME_FFMPEG` and `CLOAKFRAME_FFPROBE` for the video.
+//! detect_fixtures.rs does, and `CLOAKFRAME_FFMPEG`, `CLOAKFRAME_FFPROBE` and
+//! `CLOAKFRAME_TEST_FFMPEG` for the video.
 
 mod common;
 
@@ -25,7 +26,7 @@ use cloakframe_engine::photo::process::{PhotoProcessor, PhotoSettings};
 use cloakframe_engine::run::{Job, JobItem, Note, Start, start};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
-use common::{TestDir, required_env};
+use common::{TestDir, required_env, test_ffmpeg};
 
 const PHOTOS: [&str; 4] = ["astronaut.png", "lena.jpg", "messi5.jpg", "car_image.webp"];
 
@@ -96,7 +97,7 @@ fn photos_and_videos_share_the_sessions() {
     let out = TestDir::new();
     let folder = required_env("CLOAKFRAME_TEST_ASSETS");
     let video = out.path().join("lena.mp4");
-    let status = std::process::Command::new(required_env("CLOAKFRAME_FFMPEG"))
+    let status = std::process::Command::new(test_ffmpeg())
         .args(["-v", "error", "-loop", "1", "-i"])
         .arg(folder.join("lena.jpg"))
         .args([

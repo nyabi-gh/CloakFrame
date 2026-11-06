@@ -1,7 +1,7 @@
 //! A video's first pass, tracking and the second pass that masks what was tracked, through the
 //! video processor and the runner, with the pinned FFmpeg and a detector that finds the white
 //! square the test videos move across a black frame; and the publish gate of P-1 (video). Needs
-//! `CLOAKFRAME_FFMPEG` and `CLOAKFRAME_FFPROBE`.
+//! `CLOAKFRAME_FFMPEG`, `CLOAKFRAME_FFPROBE` and `CLOAKFRAME_TEST_FFMPEG`.
 
 mod common;
 
@@ -32,7 +32,7 @@ use cloakframe_engine::video::preview::PreviewError;
 use cloakframe_engine::video::process::{Analyzed, Tools, VideoProcessor, VideoSettings};
 use cloakframe_engine::video::record::{Detected, Record, TrackRegion};
 use cloakframe_engine::video::tracking::TrackSummary;
-use common::{TestDir, permit, required_env};
+use common::{TestDir, permit, required_env, test_ffmpeg};
 
 fn ffmpeg() -> PathBuf {
     required_env("CLOAKFRAME_FFMPEG")
@@ -43,7 +43,7 @@ fn ffprobe() -> PathBuf {
 }
 
 fn make(args: &[&str], output: &Path) {
-    let status = Command::new(ffmpeg())
+    let status = Command::new(test_ffmpeg())
         .args(["-v", "error", "-y"])
         .args(args)
         .arg(output)

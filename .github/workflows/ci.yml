@@ -103,6 +103,9 @@ jobs:
           echo "CLOAKFRAME_ORT_LIBRARY=$lib" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_FFMPEG=$ffmpeg" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_FFPROBE=$ffprobe" >> "$GITHUB_ENV"
+          # The tests make their inputs with an FFmpeg that has every component; the pinned build
+          # has them all until tools/ffmpeg's build replaces it for the engine (docs/M7_FFMPEG.md).
+          echo "CLOAKFRAME_TEST_FFMPEG=$ffmpeg" >> "$GITHUB_ENV"
           echo "CLOAKFRAME_TEST_ASSETS=$assets" >> "$GITHUB_ENV"
 
       # tests/windows_fat32.rs: camera cards are FAT32, which has no 128-bit file IDs.

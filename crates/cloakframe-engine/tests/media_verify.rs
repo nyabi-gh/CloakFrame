@@ -12,7 +12,7 @@ use cloakframe_engine::media::encode::{Destination, Encoder, FrameWriter, Output
 use cloakframe_engine::media::process::ToolCommand;
 use cloakframe_engine::media::source;
 use cloakframe_engine::media::verify::{self, Expected, VerifyError};
-use common::{TestDir, fixtures, required_env};
+use common::{TestDir, fixtures, required_env, test_ffmpeg};
 
 fn ffmpeg() -> PathBuf {
     required_env("CLOAKFRAME_FFMPEG")
@@ -121,7 +121,7 @@ fn an_output_with_metadata_is_refused() {
     let clean = dir.path().join("clean.mp4");
     let expected = export(&clean, |n| n);
     let tagged = dir.path().join("tagged.mp4");
-    let mut command = ToolCommand::ffmpeg(&ffmpeg());
+    let mut command = ToolCommand::ffmpeg(&test_ffmpeg());
     command
         .input_file(&clean)
         .args(["-map", "0", "-c", "copy"])

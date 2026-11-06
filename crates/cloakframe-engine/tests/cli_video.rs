@@ -5,8 +5,8 @@
 //! fixed mask; a video held for review, kept in a session and resumed from it with the
 //! reviewer's edits; and the options videos need.
 //!
-//! Needs `CLOAKFRAME_FFMPEG`, `CLOAKFRAME_FFPROBE`, `CLOAKFRAME_ORT_LIBRARY` and
-//! `CLOAKFRAME_TEST_ASSETS`, and the `synthetic` feature.
+//! Needs `CLOAKFRAME_FFMPEG`, `CLOAKFRAME_FFPROBE`, `CLOAKFRAME_TEST_FFMPEG`,
+//! `CLOAKFRAME_ORT_LIBRARY` and `CLOAKFRAME_TEST_ASSETS`, and the `synthetic` feature.
 #![cfg(feature = "synthetic")]
 
 mod common;
@@ -19,7 +19,7 @@ use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::detect::Rgb8Image;
 use cloakframe_engine::media::decode::{FrameReader, frame_size};
 use cloakframe_engine::media::source;
-use common::{TestDir, fixtures, required_env};
+use common::{TestDir, fixtures, required_env, test_ffmpeg};
 
 fn ffmpeg() -> PathBuf {
     required_env("CLOAKFRAME_FFMPEG")
@@ -259,7 +259,7 @@ fn the_ellipse_shape_masks_photos_and_videos() {
 fn a_face_the_model_finds_in_a_video_is_masked() {
     let f = Fixture::new();
     let video = f.root.join("in/astronaut.mp4");
-    let status = Command::new(ffmpeg())
+    let status = Command::new(test_ffmpeg())
         .args(["-v", "error", "-loop", "1", "-i"])
         .arg(required_env("CLOAKFRAME_TEST_ASSETS").join("astronaut.png"))
         .args([
@@ -545,7 +545,7 @@ fn a_manual_track_resolves_a_gap_only_over_all_of_its_frames() {
 fn records_a_killed_run_left_go_with_the_next_run() {
     let f = Fixture::new();
     let long = f.root.join("in/long.mp4");
-    let status = Command::new(ffmpeg())
+    let status = Command::new(test_ffmpeg())
         .args(["-v", "error", "-f", "lavfi"])
         .args(["-i", "testsrc2=s=640x360:r=30:d=120"])
         .args([

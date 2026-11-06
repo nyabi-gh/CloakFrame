@@ -68,6 +68,13 @@ pub fn required_env(name: &str) -> PathBuf {
         .unwrap_or_else(|| panic!("{name} is not set (see CONTRIBUTING.md)"))
 }
 
+/// The FFmpeg a test makes its inputs with and decodes outputs with to measure them. The bundled
+/// build the engine runs (`CLOAKFRAME_FFMPEG`) reads only what the engine takes, not the lavfi
+/// sources, WAV, TS and VP8/VP9 encoders the tests start from (docs/M7_FFMPEG.md).
+pub fn test_ffmpeg() -> PathBuf {
+    required_env("CLOAKFRAME_TEST_FFMPEG")
+}
+
 /// Through libjpeg-turbo for JPEG, which this build's `image` does not decode.
 pub fn rgb_of(bytes: &[u8]) -> RgbImage {
     if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {

@@ -9,7 +9,7 @@ use std::time::{Duration, Instant};
 
 use cloakframe_engine::cancel::CancelToken;
 use cloakframe_engine::media::process::{ToolCommand, ToolError};
-use common::{TestDir, required_env};
+use common::{TestDir, required_env, test_ffmpeg};
 
 fn ffmpeg() -> PathBuf {
     required_env("CLOAKFRAME_FFMPEG")
@@ -25,7 +25,7 @@ fn test_source(seconds: Option<u32>) -> ToolCommand {
         Some(s) => format!("testsrc=size=64x48:rate=10:duration={s}"),
         None => "testsrc=size=64x48:rate=10".into(),
     };
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args([
         "-f", "lavfi", "-i", &source, "-f", "rawvideo", "-pix_fmt", "bgr24",
     ])
@@ -145,7 +145,7 @@ fn frames_go_through_stdin_and_come_back_on_stdout() {
 }
 
 fn write_tone(path: &Path) {
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.args(["-f", "lavfi", "-i", "sine=frequency=440:duration=0.5"])
         .output_file(path);
     c.output(&CancelToken::new()).unwrap();
@@ -153,7 +153,9 @@ fn write_tone(path: &Path) {
 
 /// A playlist inside a local file must not make the tool open anything but local files. FFmpeg's
 /// own HLS default already refuses network segments of a local playlist but allows `data:`, so a
-/// `data:` segment shows that this whitelist is the one in force.
+/// `data:` segment shows that this whitelist is the one in force. The bundled build has neither
+/// HLS nor any protocol but file and pipe (tools/ffmpeg/check.sh), so this runs the test FFmpeg,
+/// a build with all of them, as a development build pointed at another FFmpeg would.
 #[test]
 fn inputs_open_only_local_files() {
     let dir = TestDir::new();
@@ -165,7 +167,7 @@ fn inputs_open_only_local_files() {
         "#EXTM3U\n#EXT-X-TARGETDURATION:1\n#EXTINF:1,\ndata:,segment.ts\n#EXT-X-ENDLIST\n",
     )
     .unwrap();
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.input_file(&playlist).args(["-f", "null"]).output_pipe();
     match c.output(&CancelToken::new()) {
         Err(ToolError::Failed { stderr, .. }) => {
@@ -177,7 +179,7 @@ fn inputs_open_only_local_files() {
         other => panic!("{other:?}"),
     }
 
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.input_file(&local).args(["-f", "null"]).output_pipe();
     c.output(&CancelToken::new()).unwrap();
 }
@@ -185,7 +187,7 @@ fn inputs_open_only_local_files() {
 #[test]
 fn ffprobe_reports_on_a_local_file() {
     let dir = TestDir::new();
-    let tone = dir.path().join("tone.wav");
+    let tone = dir.path().join("tone.m4a");
     write_tone(&tone);
     let mut c = ToolCommand::ffprobe(&ffprobe());
     c.args([

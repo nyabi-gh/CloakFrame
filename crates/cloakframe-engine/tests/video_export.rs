@@ -30,7 +30,7 @@ use cloakframe_engine::media::source::{self, Source};
 use cloakframe_engine::run::{self, Job, JobItem, Note, Start};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
-use common::{TestDir, fixtures, frame_number, numbered_frame, required_env};
+use common::{TestDir, fixtures, frame_number, numbered_frame, required_env, test_ffmpeg};
 
 fn ffmpeg() -> PathBuf {
     required_env("CLOAKFRAME_FFMPEG")
@@ -126,7 +126,7 @@ impl Recipe {
     /// The source, and when its clicks are from the video's start.
     fn make(&self, dir: &Path) -> (PathBuf, Vec<f64>) {
         let video = dir.join(format!("{}-video.{}", self.name, self.container));
-        let mut c = ToolCommand::ffmpeg(&ffmpeg());
+        let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
         c.args(["-f", "rawvideo", "-pix_fmt", "rgb24"])
             .args(["-s", &format!("{}x{}", SIZE.0, SIZE.1)])
             .args(["-framerate", self.rate])
@@ -155,7 +155,7 @@ impl Recipe {
         write_clicks(&wav, self.audio_rate, seconds, &in_wav);
 
         let path = dir.join(format!("{}.{}", self.name, self.container));
-        let mut c = ToolCommand::ffmpeg(&ffmpeg());
+        let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
         if self.audio_lead > 0.0 {
             c.args(["-itsoffset", &self.audio_lead.to_string()]);
         }
@@ -202,7 +202,7 @@ fn write_clicks(path: &Path, rate: u32, seconds: f64, at: &[f64]) {
 /// When each click starts, in seconds from the start FFmpeg gives the file (its earliest
 /// stream), with sound that starts later padded from there. Clicks are at least 0.1 s apart.
 fn clicks(path: &Path) -> Vec<f64> {
-    let mut c = ToolCommand::ffmpeg(&ffmpeg());
+    let mut c = ToolCommand::ffmpeg(&test_ffmpeg());
     c.input_file(path)
         .args(["-map", "0:a:0", "-af", "aresample=async=1:first_pts=0"])
         .args(["-ac", "1", "-ar", "48000", "-f", "s16le"])
