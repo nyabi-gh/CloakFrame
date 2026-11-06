@@ -47,10 +47,14 @@ export CLOAKFRAME_ORT_LIBRARY=$(python3 -I tools/fetch_native.py onnxruntime mac
 export CLOAKFRAME_TEST_ASSETS=$(python3 -I tools/fetch_test_assets.py ~/.cache/cloakframe-test-assets)
 export CLOAKFRAME_FFMPEG=$(python3 -I tools/fetch_native.py ffmpeg macos-arm64 ~/.cache/cloakframe-native)
 export CLOAKFRAME_FFPROBE=$(python3 -I tools/fetch_native.py ffprobe macos-arm64 ~/.cache/cloakframe-native)
+export CLOAKFRAME_TEST_FFMPEG=$CLOAKFRAME_FFMPEG
 export ORT_DISABLE_TELEMETRY=1
 ```
 
-Without them those tests fail rather than skip.
+Without them those tests fail rather than skip. The engine runs `CLOAKFRAME_FFMPEG`; the tests
+make their inputs and measure outputs with `CLOAKFRAME_TEST_FFMPEG`, which needs lavfi, libvpx
+and libopus. The FFmpeg that CloakFrame bundles has only what the engine reads
+([tools/ffmpeg](tools/ffmpeg), [record](docs/M7_FFMPEG.md)), so it cannot be the test FFmpeg.
 
 On Windows the tests also need a folder on a FAT32 volume, as on a camera SD
 card, in `CLOAKFRAME_FAT32_DIR`. CI makes one from a VHD with `diskpart` (see

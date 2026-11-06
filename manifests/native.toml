@@ -10,6 +10,7 @@
 #   download  사용자가 받기로 하면 앱이 내려받고 해시로 확인한다(저장소·패키지에 넣지 않음). 모델의 URL·해시·
 #             크기·license·source는 engine model_files::MODEL_FILES와, Linux GPU 묶음의 URL·해시·크기는
 #             engine gpu_pack::ARCHIVES와 같은지 시험한다
+#   source    번들하는 바이너리를 직접 빌드할 소스(tools/ffmpeg). 받은 파일 그대로 대응 소스 묶음에 넣는다
 
 schema = 1
 
@@ -114,6 +115,79 @@ source = "https://github.com/FFmpeg/FFmpeg/tree/2a571b6068"
 use = "bundle"
 status = "m4"
 evidence = "docs/M4_PROCESS.md"
+
+[[artifact]]
+id = "ffmpeg-source"
+platform = "macos-arm64, windows-x64, linux-x86_64"
+version = "9.0.2"
+url = "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz"
+sha256 = "8c3850283eb25fa026482078a04051e0be17347b09ef81a0849bec15a96e002e"
+# 압축을 푼 소스 폴더
+library = "ffmpeg-9.0.2"
+# --enable-gpl과 x264·x265로 GPL-2.0-or-later. --enable-version3는 켜지 않는다.
+license = "GPL-2.0-or-later"
+# ffmpeg-9.0.2.tar.xz.asc가 FFmpeg 릴리스 키 FCF986EA15E6E293A5644F10B4322F04D67658D8로 검증됨(2026-11-06)
+source = "https://ffmpeg.org/releases/ffmpeg-9.0.2.tar.xz"
+use = "source"
+status = "m7"
+evidence = "docs/M7_FFMPEG.md"
+
+[[artifact]]
+id = "x264-source"
+platform = "macos-arm64, windows-x64, linux-x86_64"
+version = "b35605ace3ddf7c1a5d67a2eb553f034aef41d55"
+# VideoLAN은 x264 릴리스 tarball을 내지 않는다. stable 브랜치 커밋의 GitLab 압축 파일을 해시로 고정한다.
+url = "https://code.videolan.org/videolan/x264/-/archive/b35605ace3ddf7c1a5d67a2eb553f034aef41d55/x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55.tar.bz2"
+sha256 = "6eeb82934e69fd51e043bd8c5b0d152839638d1ce7aa4eea65a3fedcf83ff224"
+library = "x264-b35605ace3ddf7c1a5d67a2eb553f034aef41d55"
+license = "GPL-2.0-or-later"
+source = "https://code.videolan.org/videolan/x264/-/tree/b35605ace3ddf7c1a5d67a2eb553f034aef41d55"
+use = "source"
+status = "m7"
+evidence = "docs/M7_FFMPEG.md"
+
+[[artifact]]
+id = "x265-source"
+platform = "macos-arm64, windows-x64, linux-x86_64"
+version = "4.2"
+# bitbucket.org/multicoreware/x265_git/downloads의 같은 파일과 해시가 같다(2026-11-06).
+url = "https://download.videolan.org/pub/videolan/x265/x265_4.2.tar.gz"
+sha256 = "40b1ea0453e0309f0eba934e0ddf533f8f6295966679e8894e8f1c1c8d5e1210"
+library = "x265_4.2"
+license = "GPL-2.0-or-later"
+source = "https://bitbucket.org/multicoreware/x265_git/src/4.2/"
+use = "source"
+status = "m7"
+evidence = "docs/M7_FFMPEG.md"
+
+[[artifact]]
+id = "nv-codec-headers-source"
+platform = "windows-x64, linux-x86_64"
+version = "12.1.14.0"
+# NVENC 헤더(코드는 실행 중 드라이버에서 불러온다). 12.1은 드라이버 Windows 531.61·Linux 530.41.03 이상으로
+# FFmpeg 9.0이 받는 판 중 가장 넓은 드라이버를 지원한다. 더 새 헤더는 더 새 드라이버를 요구한다.
+url = "https://github.com/FFmpeg/nv-codec-headers/releases/download/n12.1.14.0/nv-codec-headers-12.1.14.0.tar.gz"
+sha256 = "62b30ab37e4e9be0d0c5b37b8fee4b094e38e570984d56e1135a6b6c2c164c9f"
+library = "nv-codec-headers-12.1.14.0"
+license = "MIT"
+source = "https://github.com/FFmpeg/nv-codec-headers/tree/n12.1.14.0"
+use = "source"
+status = "m7"
+evidence = "docs/M7_FFMPEG.md"
+
+[[artifact]]
+id = "libvpl-source"
+platform = "windows-x64"
+version = "2.17.0"
+# QSV 인코더의 dispatcher. 정적 링크하고, Intel 드라이버의 런타임을 실행 중 찾는다.
+url = "https://github.com/intel/libvpl/archive/refs/tags/v2.17.0.tar.gz"
+sha256 = "4de3e2faf1e8307fb282e4a43f443191810f6a6b0a484fffa7995ba1c814c6ec"
+library = "libvpl-2.17.0"
+license = "MIT"
+source = "https://github.com/intel/libvpl/tree/v2.17.0"
+use = "source"
+status = "m7"
+evidence = "docs/M7_FFMPEG.md"
 
 [[artifact]]
 id = "sparkle"

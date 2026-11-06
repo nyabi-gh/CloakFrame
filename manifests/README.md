@@ -11,5 +11,6 @@ Rust 재작성이 쓰는 외부 구성 요소의 정확한 버전과 출처다. 
 - 값을 바꿀 때는 근거 기록(`evidence`)을 함께 갱신한다. ORT·Windows ML을 바꾸면 세 OS의 `api-N`, 감지 fixture 비교, 텔레메트리 감시를 다시 돌린다(계획 3장).
 - `use = "build"` 항목(libjpeg-turbo, libwebp)은 crate가 담은 C 소스를 빌드해 정적 링크하므로 따로 내려받지 않는다. URL·해시는 그 crate 파일이다.
 - `use = "tool"` 항목(vpk)은 패키지를 만드는 도구이고 그 안의 실행 파일 일부가 설치본에 들어간다.
+- `use = "source"` 항목(FFmpeg, x264, x265, NVENC 헤더, libvpl)은 [`tools/ffmpeg`](../tools/ffmpeg)가 FFmpeg를 빌드하는 소스다. 받은 파일을 그대로 대응 소스 묶음에 넣는다([기록](../docs/M7_FFMPEG.md)).
 - [`tools/fetch_native.py`](../tools/fetch_native.py) `<id> <platform> <dest>`가 항목을 해시로 받아 풀고 `library` 경로를 출력한다. CI의 engine 시험(`ci.yml`)과 ORT workflow가 쓴다.
 - 2026-10-17에 `native.toml`의 모든 URL을, 2026-10-18에 추가한 두 crate 파일을 내려받아 SHA-256이 적힌 값과 같음을 확인했다.

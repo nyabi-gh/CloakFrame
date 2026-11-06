@@ -1,0 +1,190 @@
+name: FFmpeg
+
+# The ffmpeg and ffprobe that CloakFrame bundles, built by tools/ffmpeg from the sources pinned
+# in manifests/native.toml (plan 10.1, docs/M7_FFMPEG.md). A pull request that changes the build
+# builds, checks and tests it on the three systems. A tag ffmpeg-<version>-<revision> also puts
+# the builds and their corresponding source on a pre-release of that name, whose files
+# native.toml then pins. The archives are .tar.xz so that the download badge, which counts the
+# packages people install, leaves them out.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/ffmpeg.yml
+      - tools/ffmpeg/**
+      - tools/fetch_native.py
+      - manifests/native.toml
+  push:
+    tags: ["ffmpeg-*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            os: macos-15
+          - platform: linux-x86_64
+            os: ubuntu-24.04
+          - platform: windows-x64
+            os: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    outputs:
+      name: ${{ steps.name.outputs.name }}
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install the build tools (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm cmake pkg-config ${{ matrix.platform == 'windows-x64' && 'mingw-w64' || '' }}
+
+      - name: Install the build tools (macOS)
+        if: runner.os == 'macOS'
+        run: command -v pkg-config || brew install pkgconf
+
+      - name: Name the build
+        id: name
+        run: |
+          version=$(python3 -I -c 'import tomllib; print(next(a["version"] for a in tomllib.load(open("manifests/native.toml", "rb"))["artifact"] if a["id"] == "ffmpeg-source"))')
+          echo "name=CloakFrame-FFmpeg-$version-$(cat tools/ffmpeg/revision)" >> "$GITHUB_OUTPUT"
+
+      - name: Build
+        env:
+          NAME: ${{ steps.name.outputs.name }}-${{ matrix.platform }}
+        run: tools/ffmpeg/build.sh ${{ matrix.platform }} "$RUNNER_TEMP/$NAME"
+
+      # The Windows build is checked on Windows by the next job.
+      - name: Check
+        if: matrix.platform != 'windows-x64'
+        env:
+          NAME: ${{ steps.name.outputs.name }}-${{ matrix.platform }}
+        run: tools/ffmpeg/check.sh ${{ matrix.platform }} "$RUNNER_TEMP/$NAME"
+
+      # Artifacts drop Unix file modes, a tar keeps them.
+      - name: Pack
+        env:
+          NAME: ${{ steps.name.outputs.name }}-${{ matrix.platform }}
+        run: tar -C "$RUNNER_TEMP" -cJf "$RUNNER_TEMP/$NAME.tar.xz" "$NAME"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ffmpeg-${{ matrix.platform }}
+          path: ${{ runner.temp }}/${{ steps.name.outputs.name }}-${{ matrix.platform }}.tar.xz
+          if-no-files-found: error
+
+  test:
+    name: Check and test (${{ matrix.platform }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-arm64
+            os: macos-15
+            python: python3
+          - platform: linux-x86_64
+            os: ubuntu-24.04
+            python: python3
+          - platform: windows-x64
+            os: windows-2025
+            python: python
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: ffmpeg-${{ matrix.platform }}
+          path: ${{ runner.temp }}
+
+      # The engine runs the new build; the tests make their inputs with the pinned third-party
+      # FFmpeg, which has the lavfi sources and encoders the new build leaves out.
+      - name: Unpack the build and fetch the test FFmpeg
+        env:
+          NAME: ${{ needs.build.outputs.name }}-${{ matrix.platform }}
+        run: |
+          name=$NAME
+          ${{ matrix.python }} -I -c 'import sys, tarfile; tarfile.open(sys.argv[1]).extractall(sys.argv[2], filter="data")' \
+            "$RUNNER_TEMP/$name.tar.xz" "$RUNNER_TEMP"
+          exe=$([ "${{ matrix.platform }}" = windows-x64 ] && echo .exe || true)
+          echo "BUILD=$RUNNER_TEMP/$name" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_FFMPEG=$RUNNER_TEMP/$name/ffmpeg$exe" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_FFPROBE=$RUNNER_TEMP/$name/ffprobe$exe" >> "$GITHUB_ENV"
+          echo "CLOAKFRAME_TEST_FFMPEG=$(${{ matrix.python }} -I tools/fetch_native.py ffmpeg ${{ matrix.platform }} "$RUNNER_TEMP/native")" >> "$GITHUB_ENV"
+
+      - name: Check
+        run: tools/ffmpeg/check.sh ${{ matrix.platform }} "$BUILD"
+
+      - name: Test the engine's video paths
+        run: |
+          cargo test -p cloakframe-engine --locked --test media_decode --test media_encode \
+            --test media_verify --test media_process --test media_probe --test video_analysis \
+            --test video_export
+
+  source:
+    name: Corresponding source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Bundle
+        run: python3 -I tools/ffmpeg/source_bundle.py "$RUNNER_TEMP/source"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: ffmpeg-source
+          path: ${{ runner.temp }}/source/*.tar
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    if: startsWith(github.ref, 'refs/tags/ffmpeg-')
+    needs: [build, test, source]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Match the tag to the build
+        env:
+          NAME: ${{ needs.build.outputs.name }}
+        run: |
+          expected="ffmpeg-${NAME#CloakFrame-FFmpeg-}"
+          if [ "$GITHUB_REF_NAME" != "$expected" ]; then
+            echo "::error::The tag is $GITHUB_REF_NAME, but native.toml and tools/ffmpeg/revision make $expected"
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: ffmpeg-*
+          path: ${{ runner.temp }}/release
+          merge-multiple: true
+
+      - name: Publish the pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NAME: ${{ needs.build.outputs.name }}
+        run: |
+          cd "$RUNNER_TEMP/release"
+          sha256sum -- * > SHA256SUMS.txt
+          gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --prerelease --verify-tag \
+            --title "$NAME" --notes "The ffmpeg and ffprobe that CloakFrame packages bundle, built by tools/ffmpeg at $GITHUB_SHA from the sources pinned in manifests/native.toml (docs/M7_FFMPEG.md). Not an app release. FFmpeg built this way is licensed under the GNU General Public License, version 2 or later; $NAME-source.tar is its corresponding source, with the scripts that build it." \
+            -- *

@@ -1,9 +1,10 @@
 """Download one artifact from manifests/native.toml, verify its SHA-256 and unpack it.
 
-Usage: python -I tools/fetch_native.py <id> <platform> <dest dir>
+Usage: python -I tools/fetch_native.py [--archive] <id> <platform> <dest dir>
 
 Prints the absolute path of the artifact's `library` entry (or of the unpacked folder when it has
-none). Downloads are cached in <dest dir> by hash, so a second call does not fetch again.
+none). With --archive it prints the path of the downloaded file instead and unpacks nothing.
+Downloads are cached in <dest dir> by hash, so a second call does not fetch again.
 """
 
 import hashlib
@@ -17,10 +18,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def main() -> None:
-    if len(sys.argv) != 4:
-        raise SystemExit(__doc__)
-    wanted, platform, dest = sys.argv[1], sys.argv[2], Path(sys.argv[3]).resolve()
+def fetch(wanted: str, platform: str, dest: Path, archive_only: bool = False) -> Path:
+    """The `library` path of the unpacked artifact, or the downloaded file with archive_only."""
+    dest = dest.resolve()
     manifest = tomllib.loads((ROOT / "manifests" / "native.toml").read_text(encoding="utf-8"))
     matches = [
         a for a in manifest["artifact"]
@@ -43,13 +43,15 @@ def main() -> None:
     if digest != artifact["sha256"]:
         archive.unlink()
         raise SystemExit(f"SHA-256 mismatch for {artifact['url']}: {digest}")
+    if archive_only:
+        return archive
 
     unpacked = dest / f"{wanted}-{platform}-{artifact['version']}"
     if not unpacked.exists():
         staging = unpacked.with_name(unpacked.name + ".part")
         staging.mkdir()
         name = archive.name
-        if name.endswith((".tgz", ".tar.gz", ".tar.xz")):
+        if name.endswith((".tgz", ".tar.gz", ".tar.xz", ".tar.bz2")):
             with tarfile.open(archive) as tar:
                 tar.extractall(staging, filter="data")
         elif name.endswith((".zip", ".nupkg")):
@@ -68,7 +70,17 @@ def main() -> None:
     library = unpacked / artifact["library"] if "library" in artifact else unpacked
     if not library.exists():
         raise SystemExit(f"{library} is not in the archive")
-    print(library)
+    return library
+
+
+def main() -> None:
+    args = sys.argv[1:]
+    archive_only = args[:1] == ["--archive"]
+    if archive_only:
+        args = args[1:]
+    if len(args) != 3:
+        raise SystemExit(__doc__)
+    print(fetch(args[0], args[1], Path(args[2]), archive_only))
 
 
 if __name__ == "__main__":
