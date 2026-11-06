@@ -1,4 +1,4 @@
-A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 15 or later) and Windows 10 version 1903 or later (x64). It is not the stable release. It masks photos only: FFmpeg, which videos need, is not included yet, so videos are left out.
+A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 15 or later) and Windows 10 version 1903 or later (x64). It is not the stable release. It masks photos and videos (MP4, MOV, M4V and WebM in H.264, HEVC, VP8 or VP9, 8-bit SDR). Video support is new in this preview: play each result to the end before sharing it.
 
 **macOS:** unzip, move "CloakFrame Preview" to Applications and open it. The app is not notarized, so macOS blocks its first open; open System Settings > Privacy & Security and choose "Open Anyway". The macOS preview does not update itself.
 
@@ -6,7 +6,9 @@ A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 
 
 **Coming from 1.x:** CloakFrame 1.x does not update to 2, so install the preview as a new app. It sits next to CloakFrame 1.12.1, which keeps its settings and keeps working. The preview starts with its own default settings, since settings from 1.12.1 are not carried over, and uses the detection models 1.12.1 already downloaded.
 
-**Since preview.1:** the panel has a Coverage row (narrow, standard or wide) that sets how far each mask reaches past the detected face or plate, and the CLI takes `--coverage`. Until an output folder is picked, results go to CloakFrame in the Pictures folder, as in 1.12.1, so Start no longer waits for a folder. The notice that videos were left out shows only when there were videos. The controls, buttons and alignment were redrawn to one design, and Advanced Options opens as a dialog in the middle of the window.
+**Since preview.2:** videos are masked. The preview includes ffmpeg and ffprobe, built for CloakFrame from FFmpeg 9.0.2 with x264 and x265 and only what CloakFrame reads; they are licensed under the GNU General Public License, version 2 or later, and their corresponding source is CloakFrame-FFmpeg-9.0.2-1-source.tar in this release. A video keeps its sound unless Remove audio from videos is on in Advanced Options; one whose sound is in a rare old format, such as QDesign or QCELP, stops before it is analyzed and says to remove the audio. Encoding uses VideoToolbox on macOS and NVIDIA or Intel hardware on Windows where it works, and the CPU otherwise.
+
+**Since preview.1:** the panel has a Coverage row (narrow, standard or wide) that sets how far each mask reaches past the detected face or plate, and the CLI takes `--coverage`. Until an output folder is picked, results go to CloakFrame in the Pictures folder, as in 1.12.1, so Start no longer waits for a folder. The controls, buttons and alignment were redrawn to one design, and Advanced Options opens as a dialog in the middle of the window.
 
 **Detection models** are downloaded from the Detection models section of Advanced Options, each after its terms are accepted.
 
