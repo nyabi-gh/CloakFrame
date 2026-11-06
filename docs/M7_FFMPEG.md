@@ -80,5 +80,7 @@
   - macOS 번들과 Windows 설치본에 넣고, release workflow가 소스 묶음을 함께 올린다.
   - THIRD_PARTY_NOTICES에 FFmpeg, x264, x265, NVENC 헤더, libvpl, mingw-w64 런타임을 넣는다.
   - PREVIEW_NOTES·README의 "사진만"을 고친다.
+  - 위 오디오 디코더 밖의 코덱(옛 QuickTime의 QDM2, 휴대폰의 QCELP 등)은 다시 인코드할 수 없어 항목이 실패할 것으로 본다(확인 안 함). 1.12.1의 전체 빌드와 다른 동작이니 시험으로 확인하고 CHANGES_FROM_1.12에 적는다.
+- 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.
 - 메인테이너 Windows PC(RTX 5080, Intel 내장 GPU)에서 NVENC·QSV로 실제 인코드.
 - ROADMAP의 "Video in releases"는 영상이 든 릴리스가 나가야 닫는다.

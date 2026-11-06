@@ -47,6 +47,31 @@ update package and drafts the pre-release. Publishing the draft publishes the up
 A pre-release never becomes the latest release, so the README download links keep
 pointing at 1.12.1 until 2.0 is stable.
 
+## FFmpeg builds
+
+The packages are to bundle an ffmpeg and ffprobe that [tools/ffmpeg](../tools/ffmpeg) builds
+from the sources `manifests/native.toml` pins (`use = "source"`), with only what the engine
+uses ([M7_FFMPEG](M7_FFMPEG.md)). The builds are published once per FFmpeg build, not with
+every app release, as a pre-release named `ffmpeg-<FFmpeg version>-<revision>` that holds a
+`.tar.xz` per platform, the corresponding source and `SHA256SUMS.txt`.
+[ffmpeg.yml](../.github/workflows/ffmpeg.yml) builds, checks and tests them on every pull
+request that changes the build.
+
+1. Change the pinned sources or `tools/ffmpeg`. For a new build of the same FFmpeg version,
+   raise the number in `tools/ffmpeg/revision`; for a new FFmpeg version, set it back to 1.
+2. Merge it with a green `ffmpeg.yml`, then tag that commit on `main` and push the tag. The
+   publish job checks that the tag matches the version and revision:
+
+   ```bash
+   git tag ffmpeg-9.0.2-1 origin/main
+   git push origin ffmpeg-9.0.2-1
+   ```
+
+3. Pin the published archives in `native.toml` in a pull request of their own.
+
+FFmpeg built this way is GPL-2.0-or-later. Every app release that carries it also carries the
+source archive from that pre-release (plan 10.1).
+
 ## Signing keys
 
 CloakFrame 2 does not update from 1.x (plan 0.1), so it does not trust the 1.x update
