@@ -58,9 +58,11 @@ uses ([M7_FFMPEG](M7_FFMPEG.md)). The builds are published once per FFmpeg build
 every app release, as a pre-release named `ffmpeg-<FFmpeg version>-<revision>` that holds a
 `.tar.xz` per platform, the corresponding source and `SHA256SUMS.txt`.
 [ffmpeg.yml](../.github/workflows/ffmpeg.yml) builds, checks and tests them on every pull
-request that changes the build. Its source job alone downloads the sources and bundles them;
-the build jobs work offline from that bundle, so what is published is built from the source
-published beside it. If upstream resets the source job's download, re-run that job.
+request that changes the build. Its source job alone downloads the sources and bundles them,
+taking those of the published build from its corresponding source and only new ones from
+upstream; the build jobs work offline from that bundle, so what is published is built from the
+source published beside it. If upstream resets the source job's download of a new source,
+re-run that job.
 
 1. Change the pinned sources or `tools/ffmpeg`. For a new build of the same FFmpeg version,
    raise the number in `tools/ffmpeg/revision`; for a new FFmpeg version, set it back to 1.

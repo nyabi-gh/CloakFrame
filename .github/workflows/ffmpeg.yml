@@ -7,10 +7,11 @@ name: FFmpeg
 # native.toml then pins. The archives are .tar.xz so that the download badge, which counts the
 # packages people install, leaves them out.
 #
-# Only the source job downloads the pinned sources, once per run and kept in a cache between
-# runs; the builds are made offline from the corresponding source it bundles, with the bundle's
-# own scripts. ffmpeg.org has reset runners' connections, and every job fetching for itself
-# met that more often (docs/M7_FFMPEG.md).
+# Only the source job downloads the pinned sources: those of the published build from its
+# corresponding source on GitHub, and only new ones from upstream, kept in a cache between runs
+# of a branch. The builds are made offline from the corresponding source it bundles, with the
+# bundle's own scripts. ffmpeg.org has reset and timed out runners' connections, and every job
+# or new branch fetching from it met that (docs/M7_FFMPEG.md).
 on:
   pull_request:
     branches: [main]
@@ -48,6 +49,14 @@ jobs:
         with:
           path: ${{ runner.temp }}/downloads
           key: ffmpeg-sources-${{ hashFiles('manifests/native.toml') }}
+
+      # The published corresponding source holds the upstream archives unchanged, under the names
+      # the bundle looks them up by.
+      - name: Take the sources of the published build
+        run: |
+          published=$(python3 -I tools/fetch_native.py --archive ffmpeg-corresponding-source linux-x86_64 "$RUNNER_TEMP/published")
+          mkdir -p "$RUNNER_TEMP/downloads"
+          tar -xf "$published" -C "$RUNNER_TEMP/downloads" --strip-components=2 --wildcards '*/sources/*'
 
       - name: Bundle
         env:

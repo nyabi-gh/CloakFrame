@@ -169,6 +169,13 @@ THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-late
 - `macos_preview.sh`로 release 앱의 zip을 만들어 풀었다. `codesign --verify --strict --deep`이 통과했고, 번들 안의 ffmpeg·ffprobe는 ad-hoc 서명이며 실행된다. zip은 44.4 MB다(preview.1은 34.9 MB).
 - Windows 설치본, 릴리스 초안의 소스 첨부, `updates`로 올리는 단계는 이 Mac에서 돌리지 못했다. 설치본은 이 PR의 `release.yml`이 만들고 설치해 ffmpeg.exe·ffprobe.exe를 실행해 본다.
 
+### PR CI의 소스 job(2026-11-06)
+
+- PR #101의 FFmpeg workflow(run 42223898512)에서 소스 묶음 job이 두 번 실패했다. 첫 시도는 ffmpeg.org 연결 시간 초과(Errno 110), 메인테이너 승인으로 다시 돌린 둘째 시도는 연결 끊김(Errno 104)이었다. 같은 시각 이 Mac에서도 ffmpeg.org는 여섯 번 중 세 번 20–30초 안에 응답하지 않았다.
+- 이 PR은 소스를 바꾸지 않았는데도 upstream에서 받았다. cache 키가 `native.toml` 전체의 해시라 이 PR에서 달라졌고, 있던 cache는 PR #100과 태그의 ref에 있어 이 PR이 읽을 수 없었다. 이 workflow는 main push에서 돌지 않아 main의 cache도 없다. 키를 소스 항목만으로 좁혀도 새 ref마다 처음에는 받아야 한다.
+- **고친 것:** 소스 job이 먼저 `native.toml`에 고정한 게시 대응 소스 묶음(GitHub 릴리스)을 받아 그 안의 upstream 원본을 받은 파일 자리에 푼다. 원본은 묶을 때 `native.toml`의 해시로 다시 확인되고, 바뀐 소스만 upstream에서 받는다. 다음 revision의 태그 실행도 바뀌지 않은 소스는 ffmpeg.org에 닿지 않는다.
+- 확인: 네트워크를 끊은 컨테이너(GNU tar 1.35)에서 이 단계와 `source_bundle.py`가 묶음을 만들었고, 원본·스크립트는 게시된 묶음과 바이트가 같다(다른 것은 바뀐 `native.toml`뿐).
+
 ## 남은 것
 
 - 이 PR의 CI. `native.toml`이 바뀌어 `ffmpeg.yml`·`release.yml`도 돈다.
