@@ -1,6 +1,8 @@
-# The Windows x64 Velopack installer (plan 10). Photos only until FFmpeg is built from source
-# (plan 10.1). Needs Rust, Python, cargo-about, the .NET 10 runtime and the Windows SDK's rc.exe,
-# and CLOAKFRAME2_UPDATE_PUBLIC_KEY, the update key the app pins (P-7).
+# The Windows x64 Velopack installer (plan 10). Needs Rust, Python, cargo-about, the .NET 10
+# runtime and the Windows SDK's rc.exe, and CLOAKFRAME2_UPDATE_PUBLIC_KEY, the update key the app
+# pins (P-7). ffmpeg.exe and ffprobe.exe are the build tools/ffmpeg makes, beside the app, with
+# their GPL-2.0-or-later licenses and build information in FFmpeg\; the release carries their
+# corresponding source (plan 10.1).
 #
 # Usage: tools/package/windows.ps1 <out>
 # Writes the installer, the portable zip, the full package and releases.win.json to <out> and
@@ -30,6 +32,7 @@ if ([Text.Encoding]::ASCII.GetString([IO.File]::ReadAllBytes($exe)) -match 'VCRU
 
 $ort = python -I "$root/tools/fetch_native.py" windows-ml windows-x64 $native
 $ortRoot = Resolve-Path "$(Split-Path $ort)/../../.."
+$ffmpegRoot = Split-Path (python -I "$root/tools/fetch_native.py" ffmpeg windows-x64 $native)
 $vpkRoot = python -I "$root/tools/fetch_native.py" vpk windows-x64 $native
 
 $stage = Join-Path ([IO.Path]::GetTempPath()) "cloakframe-package-$PID"
@@ -37,6 +40,9 @@ Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
 New-Item -ItemType Directory $stage | Out-Null
 try {
     Copy-Item $exe, $ort, "$(Split-Path $ort)/DirectML.dll" $stage
+    Copy-Item "$ffmpegRoot/ffmpeg.exe", "$ffmpegRoot/ffprobe.exe" $stage
+    New-Item -ItemType Directory "$stage/FFmpeg" | Out-Null
+    Copy-Item "$ffmpegRoot/BUILDINFO.txt", "$ffmpegRoot/licenses/*" "$stage/FFmpeg"
     Copy-Item "$root/LICENSE", "$root/THIRD_PARTY_NOTICES.txt" $stage
     Copy-Item "$ortRoot/license.txt" "$stage/WINDOWS_ML_LICENSE.txt"
     Copy-Item "$ortRoot/ThirdPartyNotices.txt" "$stage/WINDOWS_ML_THIRD_PARTY_NOTICES.txt"

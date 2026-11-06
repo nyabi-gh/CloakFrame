@@ -16,6 +16,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use cloakframe_core::detection::{Detection, ModelId, Thresholds};
 use cloakframe_core::geometry::Rect;
@@ -27,7 +28,7 @@ use cloakframe_engine::media::decode::{FrameReader, frame_size};
 use cloakframe_engine::media::encode::OutputCodec;
 use cloakframe_engine::media::process::ToolCommand;
 use cloakframe_engine::media::source::{self, Source};
-use cloakframe_engine::run::{self, Job, JobItem, Note, Start};
+use cloakframe_engine::run::{self, FailureKind, ItemOutcome, Job, JobItem, Note, Start};
 use cloakframe_engine::video::analysis::AnalysisSettings;
 use cloakframe_engine::video::process::{Tools, VideoProcessor, VideoSettings};
 use common::{TestDir, fixtures, frame_number, numbered_frame, required_env, test_ffmpeg};
@@ -263,6 +264,30 @@ fn export(input: &Path, name: &str, codec: OutputCodec, hardware_encode: bool) -
 }
 
 fn export_with(input: &Path, name: &str, settings: VideoSettings) -> PathBuf {
+    let outcome = run_with(input, name, settings, Box::new(Corner));
+    assert_eq!(
+        outcome.state,
+        ItemState::Published(PublishBasis::AutomaticUnreviewed),
+        "{name}: {:?}",
+        outcome.failure
+    );
+    assert!(
+        outcome.notes.contains(&Note::Tracked {
+            faces: 1,
+            plates: 0
+        }),
+        "{name}: {:?}",
+        outcome.notes
+    );
+    outcome.destination
+}
+
+fn run_with(
+    input: &Path,
+    name: &str,
+    settings: VideoSettings,
+    detector: Box<dyn Detector>,
+) -> ItemOutcome {
     let destination = input
         .parent()
         .unwrap()
@@ -288,24 +313,9 @@ fn export_with(input: &Path, name: &str, settings: VideoSettings) -> PathBuf {
         settings,
         input.parent().unwrap().join("records"),
     ));
-    let detector = DetectorHandle::spawn(Box::new(Corner)).unwrap();
-    let report = run::start(job, processor, detector).unwrap().wait();
-    let outcome = &report.items[0];
-    assert_eq!(
-        outcome.state,
-        ItemState::Published(PublishBasis::AutomaticUnreviewed),
-        "{name}: {:?}",
-        outcome.failure
-    );
-    assert!(
-        outcome.notes.contains(&Note::Tracked {
-            faces: 1,
-            plates: 0
-        }),
-        "{name}: {:?}",
-        outcome.notes
-    );
-    destination
+    let detector = DetectorHandle::spawn(detector).unwrap();
+    let mut report = run::start(job, processor, detector).unwrap().wait();
+    report.items.remove(0)
 }
 
 /// The frames: output frame `n` is the analysis pass's `shown_at(n)` with the mask over it, at
@@ -427,6 +437,60 @@ fn removed_audio_leaves_the_frames() {
     };
     let output = export_with(&input, "no-sound", settings);
     check_frames("without sound", &input, &output);
+    assert!(opened(&output).spec.audio.is_empty());
+}
+
+/// [`Corner`], counting the frames it is given.
+struct Counted(Arc<AtomicUsize>);
+
+impl Detector for Counted {
+    fn detect(&mut self, image: &Rgb8Image, thresholds: &Thresholds) -> Result<Found, DetectError> {
+        self.0.fetch_add(1, Ordering::Relaxed);
+        Corner.detect(image, thresholds)
+    }
+}
+
+/// The bundled FFmpeg decodes only the sound its inputs carry (tools/ffmpeg/components.sh), not
+/// ADPCM MS. Kept, such sound fails the item before its first pass rather than when the output is
+/// encoded, saying that removing the audio processes it; removed, the video is exported.
+#[test]
+fn sound_ffmpeg_cannot_decode_fails_before_the_first_pass() {
+    let dir = TestDir::new();
+    let recipe = Recipe {
+        container: "mov",
+        audio_codec: "adpcm_ms",
+        ..Recipe::new("adpcm-ms")
+    };
+    let (input, _) = recipe.make(dir.path());
+    assert_eq!(opened(&input).spec.audio[0].codec, "adpcm_ms");
+    let settings = VideoSettings {
+        analysis: AnalysisSettings {
+            tiles: false,
+            ..AnalysisSettings::default()
+        },
+        ..VideoSettings::default()
+    };
+
+    let frames = Arc::new(AtomicUsize::new(0));
+    let kept = run_with(
+        &input,
+        "kept",
+        settings.clone(),
+        Box::new(Counted(frames.clone())),
+    );
+    assert_eq!(kept.state, ItemState::Failed);
+    let failure = kept.failure.unwrap();
+    assert_eq!(failure.kind, FailureKind::UnreadableAudio, "{failure}");
+    assert!(failure.reason.contains("adpcm_ms"), "{failure}");
+    assert_eq!(frames.load(Ordering::Relaxed), 0);
+    assert!(!kept.destination.exists());
+
+    let removed = VideoSettings {
+        remove_audio: true,
+        ..settings
+    };
+    let output = export_with(&input, "removed", removed);
+    check_frames("without its sound", &input, &output);
     assert!(opened(&output).spec.audio.is_empty());
 }
 

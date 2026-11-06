@@ -95,14 +95,91 @@
   - cache는 브랜치마다 따로라 PR의 cache를 태그 실행이 쓰지 못한다. 태그 실행은 소스 묶음 job에서 한 번 upstream에 닿는다. 거기서 끊기면 그 job만 다시 돌린다.
 - 지금 태그는 릴리스를 만들지 않았으니 지우고, 고친 main에 같은 이름으로 다시 단다. 빌드 내용은 그대로라 revision은 1로 둔다.
 
+## 병합(2026-11-06, PR #100)
+
+- **CI:** `5d054ee`에서 CI(run 42214542334)와 FFmpeg workflow(run 42214542127)가 통과했다. 세 빌드 job 모두 소스 묶음을 풀어 묶음의 스크립트로 오프라인 빌드했고, upstream에서 받은 것은 소스 묶음 job뿐이었다.
+- **시간:** Windows apt 설치는 13초(전에는 25초에서 45분 넘게까지)였다. 빌드는 Windows 6분 20초, Linux 4분 15초, macOS 2분 30초.
+- 메인테이너 "fast-forward"로 main = `5d054ee`. #99 뒤 main push CI(run 42189495589)도 `fa692d3`에서 통과했다.
+
+## 게시(2026-11-06)
+
+릴리스가 없던 태그 `ffmpeg-9.0.2-1`(`fa692d3`)을 지우고 `5d054ee`에 다시 달았다(run 42217214136). 모든 job이 통과해, pre-release `CloakFrame-FFmpeg-9.0.2-1`이 12:34 UTC에 게시됐다. Latest는 1.12.1 그대로다.
+
+| 파일 | 바이트 | SHA-256 |
+| --- | --- | --- |
+| `CloakFrame-FFmpeg-9.0.2-1-macos-arm64.tar.xz` | 6,742,724 | `e83d87db006c0bf9a176fc7adfdab2ab4a542450d6e7c4dd083f51fbef287258` |
+| `CloakFrame-FFmpeg-9.0.2-1-linux-x86_64.tar.xz` | 8,949,876 | `3da24fbe766302eb2f398d957938b5596f051e375af6a854776d0b30f4921e72` |
+| `CloakFrame-FFmpeg-9.0.2-1-windows-x64.tar.xz` | 9,646,092 | `e57b63eb17e2ffdbe5627e9ae7e537f2e81a56e745bf5df44cfeb335cc0e2cae` |
+| `CloakFrame-FFmpeg-9.0.2-1-source.tar` | 27,832,320 | `61423fd99d866169236644d9d4aafbb7eef1bdae92f58aee49b405d5782f032b` |
+
+- 올라간 파일을 받아 `SHA256SUMS.txt`와 해시가 맞는 것을 확인했다.
+- 게시된 소스 묶음은 main에서 이 Mac으로 만든 묶음과 바이트까지 같다.
+- macOS 묶음을 풀어 이 Mac에서 `check.sh`가 통과했다.
+
+## 패키지에 넣기(2026-11-06, `m7-ffmpeg-bundle`)
+
+위 게시 묶음을 `native.toml`에 고정하고 macOS 번들과 Windows 설치본에 넣었다. 영상은 이 PR부터 패키지에서 가려진다.
+
+### 결정(2026-11-06, 메인테이너)
+
+- **구성 밖 오디오(추천대로):** 항목을 분석 전에 실패시키고 "오디오 제거"를 켜면 처리된다고 알린다. 빌드는 그대로 작게 둔다. 아래 "구성 밖 오디오" 절.
+- **`updates` 릴리스의 소스(추천대로):** 업데이트 패키지(nupkg)도 FFmpeg를 담아 `updates` 릴리스에서 내려받으니, 대응 소스 묶음을 거기에도 올린다.
+- **순서:** 영상이 든 preview.3를 먼저 내고, 메인테이너 Windows PC의 NVENC·QSV 확인은 그 다음에 한다(추천은 반대 순서였다).
+
+### 고정과 시험
+
+- `native.toml`의 `ffmpeg`(`use = "bundle"`)는 이제 세 OS 모두 게시 묶음이다. ffprobe·`BUILDINFO.txt`·`licenses/`가 ffmpeg 옆에 있어 macOS용 ffprobe 항목이 따로 없다. 대응 소스 묶음은 `ffmpeg-corresponding-source`(`use = "attach"`, 새 값)다.
+- 제3자 빌드는 `test-ffmpeg`(`use = "test"`, 새 값)로 옮겼다. 시험이 입력을 만들고 출력을 재는 데만 쓴다. macOS 제3자 ffprobe는 쓰는 곳이 없어 뺐다.
+- `ci.yml`과 `video-throughput.yml`은 엔진에 우리 빌드를, `CLOAKFRAME_TEST_FFMPEG`에 `test-ffmpeg`를 준다. `ffmpeg.yml` 시험 job도 `test-ffmpeg`를 받는다. CONTRIBUTING의 변수 예도 같다.
+- 영상 벤치마크 클립(`tools/benchmark/video_fetch.py`)은 시험용 FFmpeg로 자른다. 다시 인코드한 클립의 해시는 그 빌드의 x264 출력이고, 우리 빌드의 x264는 다른 판이다.
+
+### 패키지
+
+- **macOS:** `Contents/MacOS`에 ffmpeg·ffprobe를 두고 dylib과 함께 ad-hoc 서명한 뒤 앱을 서명한다. 라이선스와 `BUILDINFO.txt`는 `Contents/Resources/FFmpeg`. 서명 뒤 번들 안의 ffmpeg·ffprobe가 실행되는지 본다.
+- **Windows:** 앱 폴더에 ffmpeg.exe·ffprobe.exe, `FFmpeg\`에 라이선스와 `BUILDINFO.txt`. `release.yml`은 설치한 뒤 설치된 ffmpeg.exe·ffprobe.exe를 실행해 본다.
+- **릴리스:** `release.yml`의 초안 job이 `ffmpeg-corresponding-source`를 해시로 받아 FFmpeg pre-release의 이름 그대로(`CloakFrame-FFmpeg-9.0.2-1-source.tar`) 첨부한다. `publish-feed.yml`은 게시된 릴리스의 `*-source.tar`를 받아 nupkg보다 먼저 `updates`에 올린다. 둘 다 태그·게시 때만 도는 단계라 PR CI로는 확인하지 못한다. 다운로드 배지는 `-source.tar`를 세지 않는다.
+
+### 고지
+
+THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-later, 대응 소스가 있는 곳, FFmpeg·x264·x265의 저작권 줄, NVENC 헤더와 libvpl의 MIT 전문, MinGW-w64 런타임 고지, GPL-2.0 전문. 정보 창이 이 파일을 보여 준다.
+
+- **MinGW-w64 런타임:** Windows ffmpeg.exe에 winpthreads가 정적으로 들어 있다(바이너리에 `mingw-w64-libraries/winpthreads/src/rwlock.c` 문자열). 고지 원문은 빌드에 쓴 Ubuntu 24.04 소스 패키지 mingw-w64 11.0.1의 `COPYING.MinGW-w64-runtime.txt`와 winpthreads `COPYING`을 그대로 넣었다. libgcc·libstdc++는 GCC Runtime Library Exception이라 그 사실만 적었다.
+- 런타임과 컴파일러 라이브러리의 소스는 대응 소스 묶음에 넣지 않았다. 컴파일러와 함께 배포되는 구성 요소로 보았고(GPLv2 3조의 예외), 판은 고지에 적었다. 법률 검토는 하지 않았다.
+
+### 구성 밖 오디오
+
+엔진은 AAC·MP3·AC-3·E-AC-3·ALAC를 복사하고 나머지를 AAC로 다시 인코드한다. 복사하는 오디오도 출력 검사에서 디코드한다. 우리 빌드에 디코더가 없는 오디오를 실험했다.
+
+| 입력(MOV, 시험용 FFmpeg로 만듦) | ffprobe(우리 빌드) | ffmpeg 디코드(우리 빌드) |
+| --- | --- | --- |
+| iLBC(`ilbc_at`), Nellymoser, ADPCM MS | 코덱 이름을 알아봄 | "Decoding requested, but no decoder found" |
+| PCM의 `stsd` 네 글자를 `QDM2`·`QDMC`로 바꾼 파일 | `qdm2`·`qdmc` | 같은 오류 |
+| 같은 방법의 `Qclp`·`MAC3` | demuxer가 "unaligned chunk"로 거부 | (열리지 않음) |
+
+- 마지막 줄은 실제 QCELP·MACE 파일이 아니라 PCM 자리에 넣은 가짜라서 거부된 것이다. 실제 파일로는 확인하지 않았다.
+- 고치기 전 엔진은 첫 패스(분석)를 마치고, 검토가 필요하면 검토까지 마친 뒤 내보낼 때 "cannot encode the video: ffmpeg failed … no decoder found for: qdm2"로 실패했다(앱 문구 "The output could not be encoded.").
+- **고친 것:** 오디오를 남기는 설정이면 분석 전에 `ffmpeg -codecs`로 디코드할 수 있는 오디오 코덱을 읽어(이 Mac에서 10 ms 안) 남길 오디오가 모두 들어 있는지 본다. 없으면 새 실패 종류 `UnreadableAudio`로 실패하고, 앱은 "이 영상의 오디오는 CloakFrame이 읽을 수 없는 형식입니다. 소리 없이 처리하려면 고급 옵션에서 '영상에서 오디오 제거'를 켜세요."(영·일 같은 뜻)를 보인다. 빌드에 고정 목록을 두지 않고 실행하는 FFmpeg에 묻는다.
+- **시험:** `video_export.rs` `sound_ffmpeg_cannot_decode_fails_before_the_first_pass`가 ADPCM MS 오디오의 MOV로, 오디오를 남기면 감지기가 프레임을 하나도 받지 않고 `UnreadableAudio`로 실패하며 "오디오 제거"면 내보내지는 것을 본다. 확인 호출을 빼면 `Encode`로 실패하는 것을 확인했다. `-codecs` 목록 읽기는 단위 시험이 따로 본다.
+- 1.12.1과 다른 동작이라 [CHANGES_FROM_1.12](CHANGES_FROM_1.12.md)에 적었다.
+
+### 확인
+
+- 이 Mac에서 엔진 FFmpeg를 게시된 macOS 묶음으로, 시험 FFmpeg를 `test-ffmpeg`로 두고 `cargo test --workspace --all-features` 607개가 통과했다(무시 5개). fmt와 clippy 두 조합도 통과했다.
+- `fetch_native.py`로 macOS `ffmpeg`, `test-ffmpeg`, `ffmpeg-corresponding-source`를 받아 해시가 맞는 것을 확인했다.
+- `macos_preview.sh`로 release 앱의 zip을 만들어 풀었다. `codesign --verify --strict --deep`이 통과했고, 번들 안의 ffmpeg·ffprobe는 ad-hoc 서명이며 실행된다. zip은 44.4 MB다(preview.1은 34.9 MB).
+- Windows 설치본, 릴리스 초안의 소스 첨부, `updates`로 올리는 단계는 이 Mac에서 돌리지 못했다. 설치본은 이 PR의 `release.yml`이 만들고 설치해 ffmpeg.exe·ffprobe.exe를 실행해 본다.
+
+### PR CI의 소스 job(2026-11-06)
+
+- PR #101의 FFmpeg workflow(run 42223898512)에서 소스 묶음 job이 두 번 실패했다. 첫 시도는 ffmpeg.org 연결 시간 초과(Errno 110), 메인테이너 승인으로 다시 돌린 둘째 시도는 연결 끊김(Errno 104)이었다. 같은 시각 이 Mac에서도 ffmpeg.org는 여섯 번 중 세 번 20–30초 안에 응답하지 않았다.
+- 이 PR은 소스를 바꾸지 않았는데도 upstream에서 받았다. cache 키가 `native.toml` 전체의 해시라 이 PR에서 달라졌고, 있던 cache는 PR #100과 태그의 ref에 있어 이 PR이 읽을 수 없었다. 이 workflow는 main push에서 돌지 않아 main의 cache도 없다. 키를 소스 항목만으로 좁혀도 새 ref마다 처음에는 받아야 한다.
+- **고친 것:** 소스 job이 먼저 `native.toml`에 고정한 게시 대응 소스 묶음(GitHub 릴리스)을 받아 그 안의 upstream 원본을 받은 파일 자리에 푼다. 원본은 묶을 때 `native.toml`의 해시로 다시 확인되고, 바뀐 소스만 upstream에서 받는다. 다음 revision의 태그 실행도 바뀌지 않은 소스는 ffmpeg.org에 닿지 않는다.
+- 확인: 네트워크를 끊은 컨테이너(GNU tar 1.35)에서 이 단계와 `source_bundle.py`가 묶음을 만들었고, 원본·스크립트는 게시된 묶음과 바이트가 같다(다른 것은 바뀐 `native.toml`뿐).
+
 ## 남은 것
 
-- 병합 뒤 태그 `ffmpeg-9.0.2-1`로 고정 릴리스를 게시하고, 다음 PR에서 할 것:
-  - `native.toml`에 고정하고 `CLOAKFRAME_FFMPEG`를 우리 빌드로 바꾸며, 제3자 빌드는 시험 전용 항목으로 옮긴다.
-  - macOS 번들과 Windows 설치본에 넣고, release workflow가 소스 묶음을 함께 올린다.
-  - THIRD_PARTY_NOTICES에 FFmpeg, x264, x265, NVENC 헤더, libvpl, mingw-w64 런타임을 넣는다.
-  - PREVIEW_NOTES·README의 "사진만"을 고친다.
-  - 위 오디오 디코더 밖의 코덱(옛 QuickTime의 QDM2, 휴대폰의 QCELP 등)은 다시 인코드할 수 없어 항목이 실패할 것으로 본다(확인 안 함). 1.12.1의 전체 빌드와 다른 동작이니 시험으로 확인하고 CHANGES_FROM_1.12에 적는다.
-- 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.
+- 이 PR의 CI. `native.toml`이 바뀌어 `ffmpeg.yml`·`release.yml`도 돈다.
+- 영상이 든 preview.3. 그때 받은 zip을 Gatekeeper가 막은 앱으로 열어 번들 안의 ffmpeg·ffprobe가 따로 막히지 않는지 본다(로컬 zip에는 격리 속성이 없어 여기서는 확인할 수 없다).
 - 메인테이너 Windows PC(RTX 5080, Intel 내장 GPU)에서 NVENC·QSV로 실제 인코드.
+- 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.
 - ROADMAP의 "Video in releases"는 영상이 든 릴리스가 나가야 닫는다.

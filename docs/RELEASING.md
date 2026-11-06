@@ -11,8 +11,8 @@ are in this file's history: `git show 78bff36:docs/RELEASING.md`.
 
 ## Preview
 
-The [release workflow](../.github/workflows/release.yml) builds two packages, neither of which
-has FFmpeg, so both mask photos only ([plan](RUST_PORT_PLAN.md) 10.1):
+The [release workflow](../.github/workflows/release.yml) builds two packages, each with the
+ffmpeg and ffprobe that `native.toml` pins (see [FFmpeg builds](#ffmpeg-builds)):
 
 - The macOS arm64 app in a zip ([macos_preview.sh](../tools/package/macos_preview.sh)),
   ad-hoc signed and not notarized.
@@ -21,8 +21,9 @@ has FFmpeg, so both mask photos only ([plan](RUST_PORT_PLAN.md) 10.1):
   run. The portable zip vpk also writes is not released.
 
 On a pull request that changes the packaging, and when run by hand, the workflow only builds
-them, and installs, opens and uninstalls the Windows app. On a `v*` tag it also signs the
-update package and drafts the pre-release. Publishing the draft publishes the update feed.
+them, and installs, opens and uninstalls the Windows app, running its ffmpeg and ffprobe. On a
+`v*` tag it also signs the update package and drafts the pre-release. Publishing the draft
+publishes the update feed.
 
 1. Set the workspace version in `Cargo.toml` to the preview version, such as
    `2.0.0-preview.1`. The macOS bundle versions take its numbers only (`2.0.0`).
@@ -35,12 +36,14 @@ update package and drafts the pre-release. Publishing the draft publishes the up
    git push origin v2.0.0-preview.1
    ```
 
-4. The workflow signs the update package and drafts the pre-release with the zip and the
-   installer. Neither step waits for an approval (decision 2026-11-01).
+4. The workflow signs the update package and drafts the pre-release with the zip, the
+   installer and the corresponding source of their FFmpeg, under the name it has on its
+   FFmpeg pre-release. Neither step waits for an approval (decision 2026-11-01).
 5. Download both from the draft, open them as the notes describe, and publish the draft.
 6. Publishing starts [publish-feed.yml](../.github/workflows/publish-feed.yml). It takes the
-   signed package from the tag's release run, uploads it and its `.sig` to the `updates`
-   pre-release, and then `releases.win.json`, which installed apps read
+   signed package from the tag's release run, uploads the release's FFmpeg source, the package
+   and its `.sig` to the `updates` pre-release, and then `releases.win.json`, which installed
+   apps read
    ([M7_UPDATES](M7_UPDATES.md)). Every version goes to the one `win` channel, so an installed
    preview updates to the next one. If it fails, re-run it from the Actions tab.
 
@@ -49,15 +52,17 @@ pointing at 1.12.1 until 2.0 is stable.
 
 ## FFmpeg builds
 
-The packages are to bundle an ffmpeg and ffprobe that [tools/ffmpeg](../tools/ffmpeg) builds
+The packages bundle an ffmpeg and ffprobe that [tools/ffmpeg](../tools/ffmpeg) builds
 from the sources `manifests/native.toml` pins (`use = "source"`), with only what the engine
 uses ([M7_FFMPEG](M7_FFMPEG.md)). The builds are published once per FFmpeg build, not with
 every app release, as a pre-release named `ffmpeg-<FFmpeg version>-<revision>` that holds a
 `.tar.xz` per platform, the corresponding source and `SHA256SUMS.txt`.
 [ffmpeg.yml](../.github/workflows/ffmpeg.yml) builds, checks and tests them on every pull
-request that changes the build. Its source job alone downloads the sources and bundles them;
-the build jobs work offline from that bundle, so what is published is built from the source
-published beside it. If upstream resets the source job's download, re-run that job.
+request that changes the build. Its source job alone downloads the sources and bundles them,
+taking those of the published build from its corresponding source and only new ones from
+upstream; the build jobs work offline from that bundle, so what is published is built from the
+source published beside it. If upstream resets the source job's download of a new source,
+re-run that job.
 
 1. Change the pinned sources or `tools/ffmpeg`. For a new build of the same FFmpeg version,
    raise the number in `tools/ffmpeg/revision`; for a new FFmpeg version, set it back to 1.
@@ -69,10 +74,13 @@ published beside it. If upstream resets the source job's download, re-run that j
    git push origin ffmpeg-9.0.2-1
    ```
 
-3. Pin the published archives in `native.toml` in a pull request of their own.
+3. Pin the published archives in `native.toml`: each platform's `ffmpeg` (`use = "bundle"`)
+   and the source archive, `ffmpeg-corresponding-source` (`use = "attach"`). The
+   third-party builds under `test-ffmpeg` stay; the tests make their inputs with them.
 
 FFmpeg built this way is GPL-2.0-or-later. Every app release that carries it also carries the
-source archive from that pre-release (plan 10.1).
+source archive from that pre-release, and so does the `updates` release, which serves the
+update packages (plan 10.1).
 
 ## Signing keys
 

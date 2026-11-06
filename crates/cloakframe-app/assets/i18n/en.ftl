@@ -348,6 +348,7 @@ run-failed-no-data-folder = There is no app data folder for this user.
 failure-unsupported = This file's format or content is not one CloakFrame processes.
 failure-too-large = This file is larger than CloakFrame processes at once.
 failure-unreadable = The file cannot be read; it may be damaged.
+failure-unreadable-audio = This video's sound is in a format CloakFrame cannot read. To process it without sound, turn on Remove audio from videos in Advanced Options.
 failure-source-changed = The file changed or went away while it was processed; run it again.
 failure-name-taken = A file of the output's name appeared during the run, and was not replaced.
 failure-output = The output cannot be written to the output folder.

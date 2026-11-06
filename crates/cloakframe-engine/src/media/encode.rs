@@ -2,6 +2,7 @@
 //! description (D1), padded to an even size (P-5) and with the source's audio cut to the video's
 //! interval.
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::fs::File;
 use std::io::{self, Write};
@@ -262,6 +263,30 @@ const AUDIO_PREROLL_SECONDS: f64 = 0.25;
 /// Codecs MP4 carries that 1.12.1 copied; the rest become AAC at 192 kb/s.
 const COPIED_AUDIO: [&str; 5] = ["aac", "mp3", "ac3", "eac3", "alac"];
 
+/// The audio codecs `ffmpeg` decodes. Kept sound is decoded whether it is copied or not, to check
+/// the output, and the bundled build decodes only what the inputs carry
+/// (tools/ffmpeg/components.sh).
+pub fn audio_decoders(ffmpeg: &Path, cancel: &CancelToken) -> Result<BTreeSet<String>, ToolError> {
+    let mut command = ToolCommand::ffmpeg(ffmpeg);
+    command.arg("-codecs");
+    let list = command.output(cancel)?;
+    Ok(decoded_audio(&String::from_utf8_lossy(&list)))
+}
+
+/// The names in `-codecs` lines whose flags, after the legend's dashes, start `D.A`: decoding
+/// supported, audio.
+fn decoded_audio(list: &str) -> BTreeSet<String> {
+    list.lines()
+        .skip_while(|line| !line.trim_start().starts_with("---"))
+        .skip(1)
+        .filter_map(|line| {
+            let mut words = line.split_whitespace();
+            let (flags, name) = (words.next()?.as_bytes(), words.next()?);
+            (flags.len() == 6 && flags[0] == b'D' && flags[2] == b'A').then(|| name.to_owned())
+        })
+        .collect()
+}
+
 #[derive(Clone, Copy)]
 pub enum Destination<'a> {
     /// A new file, made here; an existing one is never replaced.
@@ -505,6 +530,24 @@ fn output_filter(spec: &TimelineSpec) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn audio_decoders_are_the_decoded_audio_codecs_in_the_list() {
+        let list = "Codecs:
+ D..... = Decoding supported
+ ..A... = Audio codec
+ -------
+ DEV.LS h264                 H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10 (encoders: libx264)
+ DEA.L. aac                  AAC (Advanced Audio Coding)
+ ..AIL. adpcm_ms             ADPCM Microsoft
+ D.AIL. mp3                  MP3 (MPEG audio layer 3) (decoders: mp3float)
+ .EA... pcm_s16le            PCM signed 16-bit little-endian
+";
+        assert_eq!(
+            decoded_audio(list),
+            BTreeSet::from(["aac".to_owned(), "mp3".to_owned()])
+        );
+    }
 
     #[test]
     fn odd_sides_repeat_their_last_column_and_row() {
