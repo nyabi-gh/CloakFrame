@@ -36,6 +36,10 @@ close it. Check the caller and the full scope before recording a change of state
   measured and left out.
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
   source can be published; until then releases mask photos only (plan 10.1).
+  [`tools/ffmpeg`](../tools/ffmpeg) builds only what the engine uses from the sources pinned in
+  `native.toml`, and `ffmpeg.yml` puts the builds and their source on a pre-release
+  ([record](M7_FFMPEG.md)). It still needs that pre-release, the packages to carry it, the
+  source with each release, and NVENC and QSV on real hardware.
 - **Notices and terms.** An SBOM and the native manifest with each release. The Microsoft
   license terms for the Windows ML runtime are in THIRD_PARTY_NOTICES, which the package
   and the About window carry; the installer shows no consent page (decision 2026-11-01,
