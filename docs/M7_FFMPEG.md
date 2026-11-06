@@ -72,9 +72,24 @@
 - **최소 macOS:** `MACOSX_DEPLOYMENT_TARGET`이 `make`를 돌리는 셸에 없으면 바이너리의 최소 OS가 빌드한 OS(27.2)가 된다. configure에 `-mmacosx-version-min=15.0`을 준다.
 - **configure 실패:** `build.sh`는 FFmpeg configure가 실패하면 `ffbuild/config.log` 끝을 출력한다. 임시 폴더는 지워지므로 CI에서 원인을 보려면 이 출력이 필요하다.
 
+## 병합(2026-11-06, PR #99)
+
+- **CI:** `fa692d3`에서 6개 workflow가 통과했다(CI run 42182700651, FFmpeg run 42182700559). 탐지 벤치마크 기본 설정 얼굴 재현율은 87.9%로 기록과 같다. CI의 1080p 파이프(아직 제3자 빌드)는 디코드 macOS runner 184 fps·Linux 174·Windows 102, 인코드(libx264 `medium`) 86·153·83이었다.
+- **FFmpeg workflow:** 빌드는 macOS 3분 반, Linux 5분, Windows 7분. 세 OS 모두 `check.sh`가 통과했고, 우리 빌드를 엔진 FFmpeg로 쓴 영상 시험 72개가 통과했다. Windows 빌드는 Windows Server 2025 runner에서 처음 실행됐다.
+- **실패와 재실행:**
+  - 첫 push `f9bd64d`: Windows 빌드가 ffmpeg.org에서 소스를 받다 TLS 연결이 끊겨 실패했다(`Connection reset by peer`).
+  - `fa692d3`: Windows 빌드의 apt 설치가 45분 제한에 걸렸다. 메인테이너 승인으로 그 job만 다시 돌려 통과했다.
+- 메인테이너 "fast-forward"로 main = `fa692d3`.
+
+## 첫 태그 실행(2026-11-06)
+
+`ffmpeg-9.0.2-1`을 `fa692d3`에 달았지만(run 42210180882) 게시하지 못하고 취소했다. 실패한 job이 있어 Publish job은 돌지 않았고, 릴리스는 만들어지지 않았다.
+
+- **macOS:** x265를 설치한 직후 ffmpeg.org에서 소스를 받다 TLS 연결이 끊겼다. 다른 runner에서 같은 실패가 두 번째였다. 빌드 job 셋과 소스 묶음 job이 실행마다 각자 upstream에서 받으니, ffmpeg.org가 가끔 끊는 연결을 매번 맞을 수 있다.
+- **Windows:** apt가 멈춘 것이 아니라 Ubuntu 미러가 초당 수십 KB로 느렸다(cmake 11 MB에 5분). 게다가 `mingw-w64` 메타 패키지는 i686과 win32 변형까지 받고, runner에 이미 있는 cmake·pkg-config도 apt로 다시 받았다. 컨테이너에서 잰 받을 양은 그 목록이 307 MB, nasm과 x86_64 posix 컴파일러만이면 81.5 MB다.
+
 ## 남은 것
 
-- 이 PR에서 `ffmpeg.yml`이 세 OS에서 빌드·점검·엔진 시험을 통과하는 것. Windows 빌드는 여기서 처음 실행된다.
 - 병합 뒤 태그 `ffmpeg-9.0.2-1`로 고정 릴리스를 게시하고, 다음 PR에서 할 것:
   - `native.toml`에 고정하고 `CLOAKFRAME_FFMPEG`를 우리 빌드로 바꾸며, 제3자 빌드는 시험 전용 항목으로 옮긴다.
   - macOS 번들과 Windows 설치본에 넣고, release workflow가 소스 묶음을 함께 올린다.
