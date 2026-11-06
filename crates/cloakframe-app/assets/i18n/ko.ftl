@@ -285,6 +285,7 @@ run-failed-no-data-folder = 이 사용자의 앱 데이터 폴더가 없습니�
 failure-unsupported = CloakFrame이 처리하지 않는 형식이나 내용의 파일입니다.
 failure-too-large = CloakFrame이 한 번에 처리할 수 있는 것보다 큰 파일입니다.
 failure-unreadable = 파일을 읽을 수 없습니다. 손상되었을 수 있습니다.
+failure-unreadable-audio = 이 영상의 오디오는 CloakFrame이 읽을 수 없는 형식입니다. 소리 없이 처리하려면 고급 옵션에서 '영상에서 오디오 제거'를 켜세요.
 failure-source-changed = 처리하는 동안 파일이 바뀌었거나 사라졌습니다. 다시 실행하세요.
 failure-name-taken = 실행 중에 출력과 같은 이름의 파일이 생겨 덮어쓰지 않았습니다.
 failure-output = 출력 폴더에 결과를 쓸 수 없습니다.

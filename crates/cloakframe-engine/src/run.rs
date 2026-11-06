@@ -29,6 +29,8 @@ pub enum FailureKind {
     TooLarge,
     /// The source cannot be read or decoded.
     Unreadable,
+    /// The video's sound is in a codec the FFmpeg cannot decode, which removing the audio avoids.
+    UnreadableAudio,
     /// The source changed or went away during the run or since its analysis.
     SourceChanged,
     /// Something took the output name during the run; it is not replaced.

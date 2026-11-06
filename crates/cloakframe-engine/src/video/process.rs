@@ -30,7 +30,8 @@ use crate::detect::Rgb8Image;
 use crate::identity::{SourceStamp, file_digest};
 use crate::media::decode::{DecodeError, FrameReader, frame_size};
 use crate::media::encode::{
-    Destination, EncodeError, Encoder, Encoders, FrameWriter, OutputCodec, Quality, encoded_size,
+    Destination, EncodeError, Encoder, Encoders, FrameWriter, OutputCodec, Quality, audio_decoders,
+    encoded_size,
 };
 use crate::media::source::{self, Source};
 use crate::media::verify::{self, Expected, VerifyError};
@@ -121,6 +122,10 @@ pub enum VideoError {
         mask: usize,
         size: (u32, u32),
     },
+    /// Sound the output keeps in a codec the FFmpeg does not decode.
+    AudioNotDecoded {
+        codec: String,
+    },
 }
 
 impl fmt::Display for VideoError {
@@ -141,6 +146,10 @@ impl fmt::Display for VideoError {
                 size.0,
                 size.1
             ),
+            Self::AudioNotDecoded { codec } => write!(
+                f,
+                "the video's sound ({codec}) cannot be decoded; remove the audio to process it"
+            ),
         }
     }
 }
@@ -153,6 +162,7 @@ impl Classify for VideoError {
             Self::ChangedWhileProcessing | Self::ChangedSinceAnalysis => FailureKind::SourceChanged,
             Self::NameTaken => FailureKind::NameTaken,
             Self::NotAnalyzed | Self::MaskOutside { .. } => FailureKind::Other,
+            Self::AudioNotDecoded { .. } => FailureKind::UnreadableAudio,
         }
     }
 }
@@ -620,6 +630,32 @@ impl VideoProcessor {
         Ok(output)
     }
 
+    /// Before the first pass, so that sound the second could not encode fails the item before the
+    /// work of analysis and review.
+    fn decodes_the_kept_audio(
+        &self,
+        ctx: &ItemContext<'_>,
+        source: &Source,
+    ) -> Result<(), StepError> {
+        if self.settings.remove_audio || source.spec.audio.is_empty() {
+            return Ok(());
+        }
+        let decoded = audio_decoders(&self.tools.ffmpeg, ctx.cancel).map_err(|e| {
+            failed_unless_cancelled(ctx, StepError::failed(e.kind_or(FailureKind::Other), e))
+        })?;
+        match source
+            .spec
+            .audio
+            .iter()
+            .find(|a| !decoded.contains(&a.codec))
+        {
+            Some(audio) => Err(failed(VideoError::AudioNotDecoded {
+                codec: audio.codec.clone(),
+            })),
+            None => Ok(()),
+        }
+    }
+
     pub(super) fn regions(&self, (width, height): (u32, u32)) -> Result<Vec<Region>, VideoError> {
         self.settings
             .masks
@@ -749,6 +785,7 @@ impl ItemProcessor for VideoProcessor {
             .map_err(|e| failed_unless_cancelled(ctx, e))?;
         unchanged(ctx, before)?;
         self.regions(source.spec.display_size()).map_err(failed)?;
+        self.decodes_the_kept_audio(ctx, &source)?;
         let mut records = ItemRecords::create(&self.records, ctx.item)
             .map_err(|e| StepError::failed(FailureKind::Other, e))?;
         let ((first, tracked), input) =

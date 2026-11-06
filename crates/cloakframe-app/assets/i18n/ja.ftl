@@ -318,6 +318,7 @@ run-failed-no-data-folder = このユーザーのアプリデータフォルダ�
 failure-unsupported = CloakFrame が処理しない形式または内容のファイルです。
 failure-too-large = CloakFrame が一度に処理できる大きさを超えるファイルです。
 failure-unreadable = ファイルを読み込めません。破損している可能性があります。
+failure-unreadable-audio = この動画の音声は CloakFrame が読み込めない形式です。音声なしで処理するには、詳細オプションの「動画から音声を削除」をオンにしてください。
 failure-source-changed = 処理中にファイルが変更されたか、なくなりました。もう一度実行してください。
 failure-name-taken = 実行中に出力と同じ名前のファイルができたため、上書きしませんでした。
 failure-output = 保存先に出力を書き込めません。
