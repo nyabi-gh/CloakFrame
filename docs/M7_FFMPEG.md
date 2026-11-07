@@ -167,7 +167,7 @@ THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-late
 - 이 Mac에서 엔진 FFmpeg를 게시된 macOS 묶음으로, 시험 FFmpeg를 `test-ffmpeg`로 두고 `cargo test --workspace --all-features` 607개가 통과했다(무시 5개). fmt와 clippy 두 조합도 통과했다.
 - `fetch_native.py`로 macOS `ffmpeg`, `test-ffmpeg`, `ffmpeg-corresponding-source`를 받아 해시가 맞는 것을 확인했다.
 - `macos_preview.sh`로 release 앱의 zip을 만들어 풀었다. `codesign --verify --strict --deep`이 통과했고, 번들 안의 ffmpeg·ffprobe는 ad-hoc 서명이며 실행된다. zip은 44.4 MB다(preview.1은 34.9 MB).
-- Windows 설치본, 릴리스 초안의 소스 첨부, `updates`로 올리는 단계는 이 Mac에서 돌리지 못했다. 설치본은 이 PR의 `release.yml`이 만들고 설치해 ffmpeg.exe·ffprobe.exe를 실행해 본다.
+- Windows 설치본은 이 Mac에서 만들 수 없어 PR CI로 확인했다(아래 "PR CI" 절). 릴리스 초안의 소스 첨부와 `updates`로 올리는 단계는 태그·게시 때만 돈다.
 
 ### PR CI의 소스 job(2026-11-06)
 
@@ -176,9 +176,16 @@ THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-late
 - **고친 것:** 소스 job이 먼저 `native.toml`에 고정한 게시 대응 소스 묶음(GitHub 릴리스)을 받아 그 안의 upstream 원본을 받은 파일 자리에 푼다. 원본은 묶을 때 `native.toml`의 해시로 다시 확인되고, 바뀐 소스만 upstream에서 받는다. 다음 revision의 태그 실행도 바뀌지 않은 소스는 ffmpeg.org에 닿지 않는다.
 - 확인: 네트워크를 끊은 컨테이너(GNU tar 1.35)에서 이 단계와 `source_bundle.py`가 묶음을 만들었고, 원본·스크립트는 게시된 묶음과 바이트가 같다(다른 것은 바뀐 `native.toml`뿐).
 
+### PR CI(2026-11-06–07, `0633595`)
+
+- **통과:** FFmpeg workflow(run 42226261312)는 소스 job이 게시 묶음에서 원본을 꺼내 10초 만에 끝났고, 세 OS 빌드와 점검·엔진 영상 시험이 통과했다. Release(run 42226261256)는 macOS zip과 Windows 설치본을 만들었고, 설치한 ffmpeg.exe·ffprobe.exe가 `9.0.2-cloakframe1`로 실행됐으며 앱 창이 열리고 제거됐다. CI의 Test(macOS·Ubuntu), 영상 처리량, 탐지 벤치마크, ORT 비교도 통과했다.
+- **실패(코드와 무관, 외부 받기):**
+  - Format, lint and licenses: `apt-get install nasm`이 20분 동안 끝나지 않아 job 제한 시간에 취소됐다(첫 시도, 11-06).
+  - Test (windows-2025): 시험 전 네이티브 파일 받기 단계에서 `HTTP Error 503: Service Unavailable`. 첫 시도(11-06 13:32)와 메인테이너 승인으로 그 job만 다시 돌린 둘째 시도(11-07 12:37) 모두 4초 만에 같은 곳에서 실패했다. 같은 단계가 3d36050(run 42223898518)에서는 7초 만에 통과했고, 그 뒤 바뀐 것은 `ffmpeg.yml`과 문서뿐이다. `fetch_native.py`가 실패한 URL을 출력하지 않아 nuget·GitHub 릴리스·gyan.dev 중 어느 곳의 503인지 모른다. 이 Mac에서는 셋 다 정상 응답했다.
+
 ## 남은 것
 
-- 이 PR의 CI. `native.toml`이 바뀌어 `ffmpeg.yml`·`release.yml`도 돈다.
+- 이 PR의 CI: Windows 시험의 503이 어느 서버인지 보이도록 `fetch_native.py`가 실패한 URL을 내게 하고 원인을 본다. Format job은 apt가 멈춘 것이라 다시 돌리면 된다(승인 뒤).
 - 영상이 든 preview.3. 그때 받은 zip을 Gatekeeper가 막은 앱으로 열어 번들 안의 ffmpeg·ffprobe가 따로 막히지 않는지 본다(로컬 zip에는 격리 속성이 없어 여기서는 확인할 수 없다).
 - 메인테이너 Windows PC(RTX 5080, Intel 내장 GPU)에서 NVENC·QSV로 실제 인코드.
 - 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.
