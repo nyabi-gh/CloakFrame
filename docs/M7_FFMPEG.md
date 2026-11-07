@@ -183,9 +183,15 @@ THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-late
   - Format, lint and licenses: `apt-get install nasm`이 20분 동안 끝나지 않아 job 제한 시간에 취소됐다(첫 시도, 11-06).
   - Test (windows-2025): 시험 전 네이티브 파일 받기 단계에서 `HTTP Error 503: Service Unavailable`. 첫 시도(11-06 13:32)와 메인테이너 승인으로 그 job만 다시 돌린 둘째 시도(11-07 12:37) 모두 4초 만에 같은 곳에서 실패했다. 같은 단계가 3d36050(run 42223898518)에서는 7초 만에 통과했고, 그 뒤 바뀐 것은 `ffmpeg.yml`과 문서뿐이다. `fetch_native.py`가 실패한 URL을 출력하지 않아 nuget·GitHub 릴리스·gyan.dev 중 어느 곳의 503인지 모른다. 이 Mac에서는 셋 다 정상 응답했다.
 
+### PR CI 녹색과 병합(2026-11-07, PR #101)
+
+- `614abfd` push의 CI(run 42382343605)에서도 Test (windows-2025)가 받기 단계에서 5초 만에 같은 503으로 실패했다. 이 Mac에서는 그 단계가 받는 세 URL(nuget의 Windows ML, 게시 FFmpeg 묶음, gyan.dev의 `test-ffmpeg`)이 모두 200이었다.
+- `7a7fe11`에서 `fetch_native.py`가 받기에 실패하면 `Downloading <URL> failed: <오류>`로 끝나게 했다(httpbin 503으로 확인). 그 push의 CI(run 42382627428)에서는 같은 단계가 통과해 503이 다시 나지 않았고, **어느 서버였는지는 아직 모른다.** 다시 나면 로그의 URL로 원인을 본다. Format, lint and licenses의 `apt-get install nasm`도 이번에는 멈추지 않았다(2분 10초).
+- `7a7fe11`에서 CI·FFmpeg(run 42382627420)·Release(run 42382627498)·처리량·벤치마크·ORT가 모두 통과했다(태그 전용 job 셋은 건너뜀). 메인테이너 "fast-forward"로 main = `7a7fe11`, PR #101은 merged.
+- 이 세션의 Auto-fix는 앱이 "이 세션이 연 PR이 아니다"로 켜지 못하게 했다.
+
 ## 남은 것
 
-- 이 PR의 CI: Windows 시험의 503이 어느 서버인지 보이도록 `fetch_native.py`가 실패한 URL을 내게 하고 원인을 본다. Format job은 apt가 멈춘 것이라 다시 돌리면 된다(승인 뒤).
 - 영상이 든 preview.3. 그때 받은 zip을 Gatekeeper가 막은 앱으로 열어 번들 안의 ffmpeg·ffprobe가 따로 막히지 않는지 본다(로컬 zip에는 격리 속성이 없어 여기서는 확인할 수 없다).
 - 메인테이너 Windows PC(RTX 5080, Intel 내장 GPU)에서 NVENC·QSV로 실제 인코드.
 - 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.
