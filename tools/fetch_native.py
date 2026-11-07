@@ -11,6 +11,7 @@ import hashlib
 import sys
 import tarfile
 import tomllib
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -35,9 +36,12 @@ def fetch(wanted: str, platform: str, dest: Path, archive_only: bool = False) ->
     if not archive.exists():
         partial = archive.with_suffix(archive.suffix + ".part")
         request = urllib.request.Request(artifact["url"], headers={"User-Agent": "cloakframe-ci"})
-        with urllib.request.urlopen(request, timeout=300) as response, partial.open("wb") as out:
-            while chunk := response.read(1 << 20):
-                out.write(chunk)
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response, partial.open("wb") as out:
+                while chunk := response.read(1 << 20):
+                    out.write(chunk)
+        except urllib.error.URLError as error:
+            raise SystemExit(f"Downloading {artifact['url']} failed: {error}") from error
         partial.replace(archive)
     digest = hashlib.sha256(archive.read_bytes()).hexdigest()
     if digest != artifact["sha256"]:
