@@ -10,6 +10,11 @@
     "downloads": 1
   },
   {
+    "release": "updates",
+    "name": "CloakFrameApp-2.0.0-preview.3-full.nupkg",
+    "downloads": 1
+  },
+  {
     "release": "v1.0.0",
     "name": "FaceVeil-1.0.0-arm64.dmg",
     "downloads": 2
@@ -452,11 +457,11 @@
   {
     "release": "v2.0.0-preview.3",
     "name": "CloakFrame-2.0.0-preview.3-Windows-x64-Setup.exe",
-    "downloads": 0
+    "downloads": 1
   },
   {
     "release": "v2.0.0-preview.3",
     "name": "CloakFrame-Preview-2.0.0-preview.3-macOS-arm64.zip",
-    "downloads": 0
+    "downloads": 1
   }
 ]
