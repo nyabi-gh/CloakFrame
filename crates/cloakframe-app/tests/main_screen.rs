@@ -93,17 +93,21 @@ fn harness(language: Language, settings: Settings) -> Harness<'static, AppState>
         )
 }
 
-fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
+fn start_drop(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
     for path in paths {
         harness
             .input_mut()
             .dropped_files
             .push(Arc::new(Dropped(path.clone())));
     }
+    harness.step();
+}
+
+fn drop_files(harness: &mut Harness<'_, AppState>, paths: &[PathBuf]) {
     // One frame takes the drop and starts the scan, whose spinner repaints until it ends. It also
     // reads the saved sessions where the folders changed since. The next frame lays out what was
     // found and asks for its thumbnails.
-    harness.step();
+    start_drop(harness, paths);
     harness.state_mut().wait_for_scan();
     harness.state_mut().wait_for_sessions();
     harness.step();
@@ -1977,46 +1981,47 @@ fn the_words_of_a_sidebar_row_press_it() {
     harness.get_by_role_and_label(Role::Dialog, "Settings");
 }
 
+fn found_names(harness: &Harness<'_, AppState>) -> Vec<String> {
+    let found = harness.state().found.as_ref();
+    let mut names: Vec<String> = found.map_or_else(Vec::new, |f| {
+        f.files
+            .iter()
+            .map(|file| {
+                file.path
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned()
+            })
+            .collect()
+    });
+    names.sort();
+    names
+}
+
 /// One file can leave a list a folder brought it into; a later scan keeps it out until the user
 /// adds that file itself.
 #[test]
 fn one_file_leaves_the_list_and_stays_out() {
     let dir = Dir::new("remove");
     let other = Dir::new("remove-other");
-    let names = |harness: &Harness<'_, AppState>| -> Vec<String> {
-        let found = harness.state().found.as_ref();
-        let mut names: Vec<String> = found.map_or_else(Vec::new, |f| {
-            f.files
-                .iter()
-                .map(|file| {
-                    file.path
-                        .file_name()
-                        .unwrap()
-                        .to_string_lossy()
-                        .into_owned()
-                })
-                .collect()
-        });
-        names.sort();
-        names
-    };
     let a = dir.file("a.jpg");
     dir.file("b.jpg");
     let mut harness = harness(Language::En, Settings::default());
     drop_files(&mut harness, std::slice::from_ref(&dir.0));
-    assert_eq!(names(&harness), ["a.jpg", "b.jpg"]);
+    assert_eq!(found_names(&harness), ["a.jpg", "b.jpg"]);
 
     harness
         .get_by_role_and_label(Role::Button, "Remove a.jpg")
         .click();
     harness.run_traced();
-    assert_eq!(names(&harness), ["b.jpg"]);
+    assert_eq!(found_names(&harness), ["b.jpg"]);
 
     drop_files(&mut harness, &[other.file("c.jpg")]);
-    assert_eq!(names(&harness), ["b.jpg", "c.jpg"]);
+    assert_eq!(found_names(&harness), ["b.jpg", "c.jpg"]);
 
     drop_files(&mut harness, &[a]);
-    assert_eq!(names(&harness), ["a.jpg", "b.jpg", "c.jpg"]);
+    assert_eq!(found_names(&harness), ["a.jpg", "b.jpg", "c.jpg"]);
 
     for name in ["a.jpg", "b.jpg", "c.jpg"] {
         harness
@@ -2027,4 +2032,89 @@ fn one_file_leaves_the_list_and_stays_out() {
     assert!(harness.state().found.is_none());
     assert!(harness.state().inputs.is_empty());
     harness.get_by_label("Choose Folder…");
+}
+
+/// A file added by itself stays out as well, though a folder in the list would find it again.
+#[test]
+fn a_file_added_by_itself_stays_out_too() {
+    let dir = Dir::new("remove-itself");
+    let other = Dir::new("remove-itself-other");
+    let a = dir.file("a.jpg");
+    dir.file("b.jpg");
+    let mut harness = harness(Language::En, Settings::default());
+    drop_files(&mut harness, &[dir.0.clone(), a.clone()]);
+    assert_eq!(found_names(&harness), ["a.jpg", "b.jpg"]);
+
+    harness
+        .get_by_role_and_label(Role::Button, "Remove a.jpg")
+        .click();
+    harness.run_traced();
+    assert_eq!(found_names(&harness), ["b.jpg"]);
+
+    drop_files(&mut harness, &[other.file("c.jpg")]);
+    assert_eq!(found_names(&harness), ["b.jpg", "c.jpg"]);
+
+    drop_files(&mut harness, &[a]);
+    assert_eq!(found_names(&harness), ["a.jpg", "b.jpg", "c.jpg"]);
+}
+
+/// The scan already running was asked for the file before it left.
+#[test]
+fn a_running_scan_does_not_bring_back_a_file_that_left() {
+    let dir = Dir::new("remove-running");
+    let other = Dir::new("remove-running-other");
+    let a = dir.file("a.jpg");
+    let b = dir.file("b.jpg");
+    let mut harness = harness(Language::En, Settings::default());
+    drop_files(&mut harness, &[a.clone(), b]);
+
+    start_drop(&mut harness, &[other.file("c.jpg")]);
+    harness.state_mut().remove_input(&a);
+    harness.state_mut().wait_for_scan();
+    assert_eq!(found_names(&harness), ["b.jpg", "c.jpg"]);
+}
+
+/// The last file shown can leave while a scan runs, and what that scan finds still counts.
+#[test]
+fn taking_out_the_last_file_shown_keeps_the_running_scan() {
+    let dir = Dir::new("remove-last");
+    let a = dir.file("a.jpg");
+    let b = dir.file("b.jpg");
+    let mut harness = harness(Language::En, Settings::default());
+    drop_files(&mut harness, std::slice::from_ref(&a));
+
+    start_drop(&mut harness, std::slice::from_ref(&b));
+    harness.state_mut().remove_input(&a);
+    harness.state_mut().wait_for_scan();
+    assert_eq!(found_names(&harness), ["b.jpg"]);
+    assert_eq!(harness.state().inputs, [b]);
+}
+
+/// A folder left in the list could not be added again, as adding it would change nothing.
+#[test]
+fn a_scan_that_finds_only_what_left_starts_the_list_over() {
+    let dir = Dir::new("remove-over");
+    let empty = Dir::new("remove-over-empty");
+    let a = dir.file("a.jpg");
+    let mut harness = harness(Language::En, Settings::default());
+    drop_files(&mut harness, std::slice::from_ref(&dir.0));
+
+    start_drop(&mut harness, std::slice::from_ref(&empty.0));
+    harness.state_mut().remove_input(&a);
+    harness.state_mut().wait_for_scan();
+    assert!(harness.state().found.is_none());
+    assert!(harness.state().inputs.is_empty());
+
+    drop_files(&mut harness, std::slice::from_ref(&dir.0));
+    assert_eq!(found_names(&harness), ["a.jpg"]);
+}
+
+/// With nothing to process the result is still what says which files were passed over.
+#[test]
+fn a_scan_that_finds_nothing_keeps_its_result() {
+    let dir = Dir::new("nothing");
+    let mut harness = harness(Language::En, Settings::default());
+    drop_files(&mut harness, &[dir.file("notes.txt")]);
+    assert_eq!(harness.state().found.as_ref().unwrap().skipped["txt"], 1);
+    assert_eq!(harness.state().inputs.len(), 1);
 }

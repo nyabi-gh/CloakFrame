@@ -252,25 +252,28 @@ impl AppState {
         }
     }
 
-    /// Takes one file out of the list; with the last one the list starts over.
+    /// Takes one file out of the list; with the last one the list starts over, unless a scan is
+    /// still running and may find more.
     pub fn remove_input(&mut self, path: &Path) {
+        self.inputs.retain(|input| input != path);
+        self.removed.insert(path.to_path_buf());
         if let Some(found) = &mut self.found {
             found.files.retain(|f| f.path != path);
-            if found.files.is_empty() {
+            if found.files.is_empty() && self.scanning.is_none() {
                 self.clear_inputs();
-                return;
             }
-        }
-        if self.inputs.iter().any(|input| input == path) {
-            self.inputs.retain(|input| input != path);
-        } else {
-            self.removed.insert(path.to_path_buf());
         }
     }
 
     fn take_found(&mut self, mut found: ScanResult) {
+        let scanned = found.files.len();
         found.files.retain(|f| !self.removed.contains(&f.path));
-        self.found = Some(found);
+        // A scan that found nothing keeps its result, which says what it passed over.
+        if scanned > 0 && found.files.is_empty() {
+            self.clear_inputs();
+        } else {
+            self.found = Some(found);
+        }
     }
 
     pub fn clear_inputs(&mut self) {
