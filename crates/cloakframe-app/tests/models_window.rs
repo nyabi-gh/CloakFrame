@@ -6,7 +6,7 @@ use cloakframe_app::app::{AppState, Command};
 use cloakframe_app::fonts;
 use cloakframe_app::i18n::Language;
 use cloakframe_app::models::Models;
-use cloakframe_app::settings::Settings;
+use cloakframe_app::settings::{FaceModel, Settings};
 use cloakframe_core::detection::ModelId;
 use cloakframe_engine::model_files::download::{Body, Fetch, FetchError};
 use cloakframe_engine::model_files::{MODEL_FILES, ModelStore, Status, model_file};
@@ -142,4 +142,37 @@ fn a_different_file_in_a_models_place_is_named_as_such() {
     settle(&mut harness);
     assert_eq!(status(&harness, ModelId::YuNet), Status::Different);
     harness.get_by_label_contains("is not this model");
+}
+
+/// A model the task needs is offered on the main screen, and Start waits for it instead of
+/// starting a run that fails.
+#[test]
+fn a_missing_model_is_offered_before_start() {
+    let folder =
+        Dir(std::env::temp_dir().join(format!("cloakframe-models-needed-{}", std::process::id())));
+    let _ = std::fs::remove_dir_all(&folder.0);
+    std::fs::create_dir_all(&folder.0).unwrap();
+    let photo = folder.0.join("photo.jpg");
+    std::fs::write(&photo, b"x").unwrap();
+    let mut harness = harness(&folder);
+    harness.state_mut().settings.plates = false;
+    harness.state_mut().settings.advanced.face_model = FaceModel::Fast;
+    let ctx = harness.ctx.clone();
+    harness.state_mut().add_inputs([photo], &ctx);
+    harness.state_mut().wait_for_scan();
+    settle(&mut harness);
+
+    harness.get_by_label("Download the detection models this task needs.");
+    assert_eq!(harness.state().start_blocker(), Some("start-needs-models"));
+    assert_eq!(harness.get_all_by_label("Download").count(), 1);
+
+    harness.get_by_label("Download").click();
+    settle(&mut harness);
+    assert_eq!(status(&harness, ModelId::YuNet), Status::Present);
+    assert!(
+        harness
+            .query_by_label("Download the detection models this task needs.")
+            .is_none()
+    );
+    assert_ne!(harness.state().start_blocker(), Some("start-needs-models"));
 }

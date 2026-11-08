@@ -179,15 +179,37 @@ impl Models {
         }
     }
 
-    /// One row per model, for the advanced options dialog: its name and size, whether it is here,
-    /// and its terms, which are accepted before a model they limit can be downloaded.
+    /// The check found this model not usable; false until it has looked.
+    pub fn is_missing(&self, model: ModelId) -> bool {
+        self.statuses
+            .get(&model)
+            .is_some_and(|status| !matches!(status, Ok(Status::Present)))
+    }
+
+    /// Every model's row and the folder they are kept in, for the settings dialog.
     pub fn rows(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        let all: Vec<ModelId> = MODEL_FILES.iter().map(|f| f.model).collect();
+        self.rows_of(ui, tr, &all);
+        if let Some(folder) = &self.folder {
+            let path = folder.display().to_string();
+            let p = Palette::of(ui);
+            ui.label(
+                egui::RichText::new(tr.with("models-folder", &[("path", FluentValue::from(path))]))
+                    .size(12.0)
+                    .color(p.secondary),
+            );
+        }
+    }
+
+    /// One row per model of `only`: its name and size, whether it is here, and its terms, which
+    /// are accepted before a model they limit can be downloaded.
+    pub fn rows_of(&mut self, ui: &mut egui::Ui, tr: &Translator, only: &[ModelId]) {
         let p = Palette::of(ui);
         let small = |text: String| egui::RichText::new(text).size(12.0).color(p.secondary);
         let ctx = ui.ctx().clone();
         let mut start = None;
         let mut stop = None;
-        for file in &MODEL_FILES {
+        for file in MODEL_FILES.iter().filter(|f| only.contains(&f.model)) {
             let model = file.model;
             let size = tr.with(
                 "model-size",
@@ -268,12 +290,6 @@ impl Models {
                 );
             }
             ui.add_space(6.0);
-        }
-        if let Some(folder) = &self.folder {
-            let path = folder.display().to_string();
-            ui.label(small(
-                tr.with("models-folder", &[("path", FluentValue::from(path))]),
-            ));
         }
         if let Some(model) = start {
             self.start_download(model, &ctx);

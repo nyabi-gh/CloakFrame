@@ -9,13 +9,13 @@ use eframe::egui;
 #[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
     egui::MenuBar::new().ui(ui, |ui| {
-        let (file, add_files, add_folder, models, quit, help, about, check, on_start) = {
+        let (file, add_files, add_folder, settings, quit, help, about, check, on_start) = {
             let tr = state.tr();
             (
                 tr.get("menu-file"),
                 tr.get("add-files"),
                 tr.get("add-folder"),
-                tr.get("models-open"),
+                tr.get("settings-open"),
                 tr.get("menu-file-quit"),
                 tr.get("menu-help"),
                 tr.get("menu-app-about"),
@@ -30,8 +30,8 @@ pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
             if ui.button(add_folder).clicked() {
                 state.command(Command::AddFolder);
             }
-            if ui.button(models).clicked() {
-                state.command(Command::Models);
+            if ui.button(settings).clicked() {
+                state.command(Command::Settings);
             }
             ui.separator();
             if ui.button(quit).clicked() {
@@ -101,6 +101,14 @@ pub mod native {
         MenuItem::with_id(id, text, true, key.map(|(m, c)| Accelerator::new(m, c)))
     }
 
+    fn settings_item(tr: &Translator) -> MenuItem {
+        item(
+            "settings",
+            tr.get("settings-open"),
+            Some((CMD_OR_CTRL, Code::Comma)),
+        )
+    }
+
     pub fn build(ctx: &egui::Context, tr: &Translator) -> Result<NativeMenu, muda::Error> {
         let menu = Menu::new();
         #[cfg(target_os = "macos")]
@@ -108,6 +116,8 @@ pub mod native {
             let app = Submenu::new(tr.get("app-name"), true);
             app.append_items(&[
                 &item("about", tr.get("menu-app-about"), None),
+                &PredefinedMenuItem::separator(),
+                &settings_item(tr),
                 &PredefinedMenuItem::separator(),
                 &PredefinedMenuItem::services(None),
                 &PredefinedMenuItem::separator(),
@@ -135,11 +145,11 @@ pub mod native {
                 tr.get("add-folder"),
                 Some((CMD_OR_CTRL | Modifiers::SHIFT, Code::KeyO)),
             ),
-            &PredefinedMenuItem::separator(),
-            &item("models", tr.get("models-open"), None),
         ])?;
         #[cfg(target_os = "windows")]
         file.append_items(&[
+            &PredefinedMenuItem::separator(),
+            &settings_item(tr),
             &PredefinedMenuItem::separator(),
             &item("quit", tr.get("menu-file-quit"), None),
         ])?;
@@ -276,7 +286,7 @@ pub mod native {
                     "quit" => commands.push(Command::Quit),
                     "add_files" => commands.push(Command::AddFiles),
                     "add_folder" => commands.push(Command::AddFolder),
-                    "models" => commands.push(Command::Models),
+                    "settings" => commands.push(Command::Settings),
                     "check_updates" => commands.push(Command::CheckUpdates),
                     "updates_on_start" => {
                         let on = self

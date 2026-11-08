@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, mpsc};
 use std::time::{Duration, Instant, SystemTime};
 
+use cloakframe_core::detection::ModelId;
 use cloakframe_core::detection::{KindThresholds, Thresholds};
 use cloakframe_core::item::{ItemId, ItemState, ReviewMode};
 use cloakframe_core::mask::{MaskStyle, Method as MaskMethod, MosaicStrength, Shape as MaskShape};
@@ -241,6 +242,12 @@ impl RunOptions {
             FaceModel::Fast => EngineFaceModel::YuNet,
         });
         DetectionModels::new(face, self.plates).map_err(other)
+    }
+
+    /// The model files a run with these options loads.
+    pub fn required_models(&self) -> Vec<ModelId> {
+        self.models()
+            .map_or_else(|_| Vec::new(), |m| m.ids().collect())
     }
 
     /// The models' thresholds with the sensitivity's score for both kinds.

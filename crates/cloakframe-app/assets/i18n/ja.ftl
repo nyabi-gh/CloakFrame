@@ -199,7 +199,6 @@ editor-position = { $count } 件中 { $at } 件目
 editor-failed = 保存できませんでした: { $error }
 editor-detections = 検出 { $count } 件のうち { $masked } 件を隠す
 editor-problems = 解決する問題
-editor-no-problems = 問題は見つかりませんでした。
 editor-problem-open = 未解決
 editor-problem-covered = 隠して解決
 editor-problem-dismissed = 隠すものなし
@@ -318,7 +317,7 @@ run-failed-no-data-folder = このユーザーのアプリデータフォルダ�
 failure-unsupported = CloakFrame が処理しない形式または内容のファイルです。
 failure-too-large = CloakFrame が一度に処理できる大きさを超えるファイルです。
 failure-unreadable = ファイルを読み込めません。破損している可能性があります。
-failure-unreadable-audio = この動画の音声は CloakFrame が読み込めない形式です。音声なしで処理するには、詳細オプションの「動画から音声を削除」をオンにしてください。
+failure-unreadable-audio = この動画の音声は CloakFrame が読み込めない形式です。音声なしで処理するには、設定の「動画から音声を削除」をオンにしてください。
 failure-source-changed = 処理中にファイルが変更されたか、なくなりました。もう一度実行してください。
 failure-name-taken = 実行中に出力と同じ名前のファイルができたため、上書きしませんでした。
 failure-output = 保存先に出力を書き込めません。
@@ -353,7 +352,6 @@ run-note-left-out-not-analyzed = { $name } は確認待ちにできません。�
 run-note-left-out-changed = { $name } は確認待ちにできません。分析後に変更されたか、なくなりました。
 
 ## 1.12.1
-advanced = 詳細オプション
 ## needs review
 face-model = 顔モデル
 ## 1.12.1
@@ -391,7 +389,6 @@ video-codec-hint = 再エンコードする動画のコーデックです。HEVC
 gpu = GPU アクセラレーションを使用
 gpu-hint = 利用できる場合は、検出モデルと動画のエンコードを GPU で実行します。次回の実行から有効になります。
 ## needs review
-advanced-next-run = 検出・写真・動画の設定は次回の実行から有効になります。確認はその実行の設定で保存します。
 ## 1.12.1
 sample-title = プレビュー
 sample-alt = 匿名化スタイルのプレビュー
@@ -423,11 +420,6 @@ skipped-part-type = { $extension } { $count } 件（対応していない形式�
 skipped-part-no-extension = 拡張子のないファイル { $count } 件
 skipped-part-unreadable = 読み込めないファイル { $count } 件
 change-folder = 変更…
-advanced-open = 詳細オプション…
-advanced-general = 一般
-advanced-detection = 検出
-advanced-photos = 写真
-advanced-videos = 動画
 done = 完了
 session-unreadable-short = 読み込めません
 running = 処理中
@@ -466,3 +458,20 @@ gpu-pack-terms = これらのファイルには NVIDIA の条件が適用され�
 gpu-pack-remove = 削除
 gpu-pack-damaged = GPU パックが不完全なため使いません: { $reason }。もう一度ダウンロードすると修復します。
 gpu-pack-restart = GPU パックを使うには CloakFrame を再起動してください。
+
+## needs review
+settings-title = 設定
+settings-open = 設定…
+settings-next-run = 検出と出力の設定は次回の実行から適用されます。
+settings-tab-general = 一般
+settings-tab-detection = 検出
+settings-tab-output = 出力
+settings-photos = 写真
+settings-videos = 動画
+choose-input-folder = フォルダーを選択…
+found-remove = { $name } を外す
+models-needed = この作業に必要な検出モデルをダウンロードしてください。
+start-needs-models = 先に検出モデルをダウンロードしてください。
+output-group = 保存
+result-title-review = 確認待ち
+editor-back = 一覧

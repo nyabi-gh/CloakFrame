@@ -236,7 +236,8 @@ impl ReviewScreen {
             ui,
             egui::Rect::from_x_y_ranges(title_left + 14.0..=bar.right(), bar.y_range()),
             |ui| {
-                if style::plain(ui, format!("‹ {folder}")).clicked() {
+                let back = style::plain(ui, format!("‹ {}", tr.get("editor-back")));
+                if back.on_hover_text(folder).clicked() {
                     go = Some(Go::Queue);
                 }
                 ui.add_space(4.0);
@@ -879,7 +880,9 @@ fn groups(
     let Some(draft) = review.drafts.get_mut(&stored.item) else {
         return;
     };
-    style::group(ui, |ui| problems(ui, tr, editor, draft, stored, open));
+    if !draft.problems().is_empty() {
+        style::group(ui, |ui| problems(ui, tr, editor, draft, stored, open));
+    }
     match &stored.media {
         StoredMedia::Photo { detections, .. } => {
             style::group(ui, |ui| detection_list(ui, tr, draft, detections, open));
@@ -950,10 +953,6 @@ fn problems(
     let p = *Palette::of(ui);
     let title = tr.get("editor-problems");
     style::group_title(ui, &title);
-    if draft.problems().is_empty() {
-        ui.label(egui::RichText::new(tr.get("editor-no-problems")).color(p.body));
-        return;
-    }
     let video = video_length(&stored.media);
     let mut resolve = None;
     let problems = draft.problems().to_vec();

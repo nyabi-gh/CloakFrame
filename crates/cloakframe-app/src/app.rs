@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::mpsc;
@@ -12,6 +12,7 @@ use cloakframe_engine::session::{SessionError, SessionId};
 use eframe::egui;
 use fluent_bundle::FluentValue;
 
+use cloakframe_core::detection::ModelId;
 use cloakframe_core::item::{ItemId, ItemState, PublishBasis};
 
 use crate::a11y;
@@ -43,9 +44,13 @@ const SAMPLE_ASPECT: f32 = 146.0 / 260.0;
 /// The sample photo's height below which it stops giving up room and the panel scrolls instead.
 const SAMPLE_MIN_HEIGHT: f32 = 64.0;
 const APP_ICON: &[u8] = include_bytes!("../../../assets/icons/cloakframe.png");
-const DIALOG_WIDTH: f32 = 600.0;
-/// The least room left above and below the advanced options dialog.
+const DIALOG_WIDTH: f32 = 720.0;
+const DIALOG_MAX_HEIGHT: f32 = 620.0;
+const DIALOG_TABS_WIDTH: f32 = 164.0;
+/// The least room left above and below the settings dialog.
 const DIALOG_MARGIN: f32 = 40.0;
+/// As tall as the review's footer, whose primary button sits at the same place.
+const PANEL_FOOTER_HEIGHT: f32 = 64.0;
 const DIALOG_RADIUS: u8 = 10;
 
 /// The words of the sensitivity slider's steps, least sensitive first.
@@ -62,6 +67,8 @@ const SENSITIVITY_LEVELS: [&str; 5] = [
 pub enum Command {
     AddFiles,
     AddFolder,
+    Settings,
+    /// The settings at their models, for what is missing a model.
     Models,
     About,
     CheckUpdates,
@@ -71,6 +78,15 @@ pub enum Command {
     Theme(Theme),
     /// None follows the system's language.
     Language(Option<Language>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum SettingsTab {
+    #[default]
+    General,
+    Detection,
+    Output,
+    Models,
 }
 
 /// Closing the window while a run works: the run is cancelled first, so the items it holds for
@@ -102,6 +118,8 @@ pub struct AppState {
     file: Option<SettingsFile>,
     notices: Vec<String>,
     pub inputs: Vec<PathBuf>,
+    /// Files the user took out of the list that a folder in `inputs` would bring back.
+    removed: BTreeSet<PathBuf>,
     scanning: Option<Scanning>,
     pub found: Option<ScanResult>,
     pub about_open: bool,
@@ -117,6 +135,7 @@ pub struct AppState {
     running: Option<Running>,
     thumbnails: Option<Thumbnails>,
     pub models: Models,
+    models_checked: bool,
     /// The Linux GPU pack, shown on Linux x86_64 only.
     pub gpu_pack: GpuPackRow,
     pub updates: Updates,
@@ -135,8 +154,9 @@ pub struct AppState {
     /// The most height the sample photo may take so that the settings panel fits, from the last
     /// frame; None until measured.
     sample_room: Option<f32>,
-    /// The advanced options dialog, where the detection models are too, is open.
+    /// The settings dialog is open.
     pub dialog_open: bool,
+    pub settings_tab: SettingsTab,
     /// How much of the run is done, drawn as a line under the toolbar.
     progress_line: Option<f32>,
     /// The app's icon at the head of the sidebar, made on first use.
@@ -155,6 +175,7 @@ impl AppState {
             file,
             notices,
             inputs: Vec::new(),
+            removed: BTreeSet::new(),
             scanning: None,
             found: None,
             about_open: false,
@@ -167,6 +188,7 @@ impl AppState {
             running: None,
             thumbnails: None,
             models: Models::new(None, false),
+            models_checked: false,
             gpu_pack: GpuPackRow::new(None),
             updates: Updates::unavailable(String::new()),
             updates_started: false,
@@ -179,6 +201,7 @@ impl AppState {
             sample: Sample::new(),
             sample_room: None,
             dialog_open: false,
+            settings_tab: SettingsTab::default(),
             progress_line: None,
             icon: None,
         }
@@ -200,6 +223,7 @@ impl AppState {
 
     pub fn set_folders(&mut self, folders: run::Folders) {
         self.models = Models::new(folders.models.clone(), folders.app_models);
+        self.models_checked = false;
         self.gpu_pack = GpuPackRow::new(folders.gpu_pack());
         self.sessions = SavedSessions::new(folders.clone());
         self.sessions_read = false;
@@ -216,18 +240,42 @@ impl AppState {
 
     pub fn add_inputs(&mut self, paths: impl IntoIterator<Item = PathBuf>, ctx: &egui::Context) {
         let before = self.inputs.len();
+        let mut restored = false;
         for path in paths {
+            restored |= self.removed.remove(&path);
             if !self.inputs.contains(&path) {
                 self.inputs.push(path);
             }
         }
-        if self.inputs.len() != before {
+        if self.inputs.len() != before || restored {
             self.rescan(ctx);
         }
     }
 
+    /// Takes one file out of the list; with the last one the list starts over.
+    pub fn remove_input(&mut self, path: &Path) {
+        if let Some(found) = &mut self.found {
+            found.files.retain(|f| f.path != path);
+            if found.files.is_empty() {
+                self.clear_inputs();
+                return;
+            }
+        }
+        if self.inputs.iter().any(|input| input == path) {
+            self.inputs.retain(|input| input != path);
+        } else {
+            self.removed.insert(path.to_path_buf());
+        }
+    }
+
+    fn take_found(&mut self, mut found: ScanResult) {
+        found.files.retain(|f| !self.removed.contains(&f.path));
+        self.found = Some(found);
+    }
+
     pub fn clear_inputs(&mut self) {
         self.inputs.clear();
+        self.removed.clear();
         self.scanning = None;
         self.found = None;
         self.thumbnails = None;
@@ -262,7 +310,7 @@ impl AppState {
         if let Some(scanning) = self.scanning.take()
             && let Ok(found) = scanning.result.recv()
         {
-            self.found = Some(found);
+            self.take_found(found);
         }
     }
 
@@ -306,7 +354,7 @@ impl AppState {
         if let Some(scanning) = &self.scanning
             && let Ok(found) = scanning.result.try_recv()
         {
-            self.found = Some(found);
+            self.take_found(found);
             self.scanning = None;
         }
         self.take_run_messages();
@@ -333,6 +381,10 @@ impl AppState {
             self.sessions_read = true;
             self.sessions.reload(&ctx);
         }
+        if !self.models_checked {
+            self.models_checked = true;
+            self.models.check(&ctx);
+        }
         if !self.updates_started {
             self.updates_started = true;
             if self.settings.check_updates {
@@ -347,7 +399,7 @@ impl AppState {
             .frame(egui::Frame::NONE)
             .show(ui, |ui| self.window(ui));
         crate::about::window(&ctx, self);
-        self.advanced_dialog(&ctx);
+        self.settings_dialog(&ctx);
         self.discard_dialog(&ctx);
         self.quit_dialog(&ctx);
     }
@@ -535,19 +587,21 @@ impl AppState {
         }
     }
 
-    /// Add…, Remove All and Start, laid out left to right so that Tab reaches them in that order.
+    /// Add… once there are files, where the empty middle no longer offers it, and Remove All.
     fn main_actions(&mut self, ui: &mut egui::Ui, bar: egui::Rect) {
-        let (add, clear, start) = (
-            self.tr.get("add"),
-            self.tr.get("clear-list"),
-            self.tr.get("start"),
-        );
+        let (add, clear) = (self.tr.get("add"), self.tr.get("clear-list"));
         let has_inputs = !self.inputs.is_empty();
-        let mut widths = vec![style::button_width(ui, &add, false)];
+        let has_files = self.found.as_ref().is_some_and(|f| !f.files.is_empty());
+        let mut widths = Vec::new();
+        if has_files {
+            widths.push(style::button_width(ui, &add, false));
+        }
         if has_inputs {
             widths.push(style::button_width(ui, &clear, false));
         }
-        widths.push(style::button_width(ui, &start, true));
+        if widths.is_empty() {
+            return;
+        }
         let spacing = ui.spacing().item_spacing.x;
         let width = widths.iter().sum::<f32>() + spacing * (widths.len() - 1) as f32;
         let right = bar.right() - 14.0;
@@ -561,35 +615,53 @@ impl AppState {
                     self.tr.get("add-menu-files"),
                     self.tr.get("add-menu-folder"),
                 );
-                let button = egui::Button::new(add)
-                    .frame_when_inactive(false)
-                    .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
-                    .corner_radius(style::BUTTON_RADIUS);
-                egui::containers::menu::MenuButton::from_button(button).ui(ui, |ui| {
-                    if ui.button(files).clicked() {
-                        self.command(Command::AddFiles);
-                    }
-                    if ui.button(folder).clicked() {
-                        self.command(Command::AddFolder);
-                    }
-                });
+                if has_files {
+                    let button = egui::Button::new(add)
+                        .frame_when_inactive(false)
+                        .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
+                        .corner_radius(style::BUTTON_RADIUS);
+                    egui::containers::menu::MenuButton::from_button(button).ui(ui, |ui| {
+                        if ui.button(files).clicked() {
+                            self.command(Command::AddFiles);
+                        }
+                        if ui.button(folder).clicked() {
+                            self.command(Command::AddFolder);
+                        }
+                    });
+                }
                 if has_inputs && style::plain(ui, clear).clicked() {
                     self.clear_inputs();
-                }
-                let blocker = self.start_blocker();
-                let response = style::primary(ui, &start, blocker.is_none());
-                if response.clicked() {
-                    self.start_run(ui.ctx());
-                }
-                if let Some(why) = blocker {
-                    response.on_disabled_hover_text(self.tr.get(why));
                 }
             },
         );
     }
 
-    /// The new task or the run, then the reviews earlier runs left (plan 6, M6 scope ②).
+    /// The sidebar's list above, and the way to the settings at its foot.
     fn sidebar(&mut self, ui: &mut egui::Ui) {
+        const FOOT: f32 = 46.0;
+        let whole = ui.max_rect();
+        let (list, foot) = whole.split_top_bottom_at_y(whole.bottom() - FOOT);
+        region(ui, list, |ui| self.sidebar_list(ui));
+        region(ui, foot, |ui| {
+            let label = self.tr.get("settings-title");
+            egui::Frame::NONE
+                .inner_margin(egui::Margin::symmetric(10, 8))
+                .show(ui, |ui| {
+                    let item = style::sidebar_item(ui, false, &label, 30.0, |ui, p| {
+                        let (icon, _) =
+                            ui.allocate_exact_size(egui::vec2(16.0, 16.0), egui::Sense::hover());
+                        style::icon::settings(ui.painter(), icon, p.body);
+                        ui.label(egui::RichText::new(&label).color(p.body));
+                    });
+                    if item.clicked() {
+                        self.command(Command::Settings);
+                    }
+                });
+        });
+    }
+
+    /// The new task or the run, then the reviews earlier runs left (plan 6, M6 scope ②).
+    fn sidebar_list(&mut self, ui: &mut egui::Ui) {
         let p = *Palette::of(ui);
         let tr = &self.tr;
         let mut act = None;
@@ -598,7 +670,9 @@ impl AppState {
             .show(ui, |ui| {
                 ui.spacing_mut().item_spacing.y = 1.0;
                 let label = match &self.board {
-                    Some(board) if board.is_over() => tr.get("result-title"),
+                    Some(board) if board.is_over() => {
+                        tr.get(result_title(board, &self.sessions, self.review.as_ref()))
+                    }
                     Some(_) => tr.get("running"),
                     None => tr.get("new-task"),
                 };
@@ -772,11 +846,8 @@ impl AppState {
                     self.add_inputs(folders, ctx);
                 }
             }
-            Command::Models => {
-                self.dialog_open = true;
-                self.models.check(ctx);
-                self.gpu_pack.check();
-            }
+            Command::Settings => self.open_settings(None, ctx),
+            Command::Models => self.open_settings(Some(SettingsTab::Models), ctx),
             Command::About => self.about_open = true,
             Command::CheckUpdates => self.updates.check(true, ctx),
             Command::CheckUpdatesOnStart(on) => {
@@ -799,6 +870,15 @@ impl AppState {
                 self.save_settings();
             }
         }
+    }
+
+    fn open_settings(&mut self, tab: Option<SettingsTab>, ctx: &egui::Context) {
+        self.dialog_open = true;
+        if let Some(tab) = tab {
+            self.settings_tab = tab;
+        }
+        self.models.check(ctx);
+        self.gpu_pack.check();
     }
 
     /// The files to process, or where to drop them; under them, what is left out and why Start
@@ -839,6 +919,7 @@ impl AppState {
                 for notice in &self.notices {
                     ui.colored_label(p.needs_review, notice);
                 }
+                self.models_needed(ui);
                 if self.found.as_ref().is_some_and(|f| !f.files.is_empty()) {
                     self.file_grid(ui, &ctx);
                 } else {
@@ -907,8 +988,9 @@ impl AppState {
             lines.push((egui::RichText::new(text).color(p.secondary), None));
         }
         let has_files = self.found.as_ref().is_some_and(|f| !f.files.is_empty());
-        // Without faces or plates the panel says so beside the boxes.
-        let shown_beside = |why: &&str| *why == "models-need-one";
+        // Without faces or plates the panel says so beside the boxes, and a missing model has its
+        // band above the files.
+        let shown_beside = |why: &&str| matches!(*why, "models-need-one" | "start-needs-models");
         if let Some(why) = self
             .start_blocker()
             .filter(|why| has_files && !shown_beside(why))
@@ -916,6 +998,40 @@ impl AppState {
             lines.push((egui::RichText::new(tr.get(why)).color(p.text), None));
         }
         lines
+    }
+
+    /// The models this run would need and does not have, with their terms and a way to get
+    /// them, before Start rather than as a run that fails.
+    fn models_needed(&mut self, ui: &mut egui::Ui) {
+        let missing = self.missing_models();
+        // The dialog lists every model itself, over this.
+        if missing.is_empty() || self.dialog_open {
+            return;
+        }
+        let p = *Palette::of(ui);
+        let tr = self.tr.clone();
+        let band = egui::Frame::NONE
+            .fill(p.sidebar)
+            .inner_margin(egui::Margin::symmetric(24, 14))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                style::group_title(ui, &tr.get("models-needed"));
+                ui.add_space(4.0);
+                self.models.rows_of(ui, &tr, &missing);
+            });
+        ui.painter().hline(
+            band.response.rect.x_range(),
+            band.response.rect.bottom(),
+            egui::Stroke::new(1.0, p.separator),
+        );
+    }
+
+    fn missing_models(&self) -> Vec<ModelId> {
+        run::RunOptions::of(&self.settings)
+            .required_models()
+            .into_iter()
+            .filter(|model| self.models.is_missing(*model))
+            .collect()
     }
 
     fn drop_here(&mut self, ui: &mut egui::Ui, ctx: &egui::Context) {
@@ -927,7 +1043,7 @@ impl AppState {
         } else {
             self.tr.get("drop-hint")
         };
-        let rect = ui.max_rect();
+        let rect = ui.available_rect_before_wrap();
         if hovering > 0 {
             ui.painter().rect_stroke(
                 rect.shrink(12.0),
@@ -947,13 +1063,27 @@ impl AppState {
                 ui.spacing_mut().item_spacing.y = 10.0;
                 ui.label(egui::RichText::new(hint).size(15.0).color(p.body));
                 ui.horizontal(|ui| {
-                    let (or, choose) = (self.tr.get("drop-or"), self.tr.get("choose-files"));
-                    let width = style::text_width(ui, &or) + style::text_width(ui, &choose) + 4.0;
+                    let (or, files, folder) = (
+                        self.tr.get("drop-or"),
+                        self.tr.get("choose-files"),
+                        self.tr.get("choose-input-folder"),
+                    );
+                    const DOT: &str = "·";
+                    let spacing = 4.0;
+                    let width = [or.as_str(), files.as_str(), DOT, folder.as_str()]
+                        .map(|text| style::text_width(ui, text))
+                        .iter()
+                        .sum::<f32>()
+                        + 3.0 * spacing;
                     ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
-                    ui.spacing_mut().item_spacing.x = 4.0;
+                    ui.spacing_mut().item_spacing.x = spacing;
                     ui.label(egui::RichText::new(or).color(p.secondary));
-                    if style::link(ui, &choose).clicked() {
+                    if style::link(ui, &files).clicked() {
                         self.command(Command::AddFiles);
+                    }
+                    ui.label(egui::RichText::new(DOT).color(p.secondary));
+                    if style::link(ui, &folder).clicked() {
+                        self.command(Command::AddFolder);
                     }
                 });
                 if self.scanning.is_some() {
@@ -989,6 +1119,7 @@ impl AppState {
         let thumbnails = &mut self.thumbnails;
         let tr = &self.tr;
         let list = tr.get("found-list");
+        let mut remove = None;
         egui::ScrollArea::vertical()
             .id_salt("files")
             .auto_shrink(false)
@@ -1043,13 +1174,20 @@ impl AppState {
                                         &described,
                                     )
                                 });
-                                if !ui.is_rect_visible(rect) {
-                                    continue;
-                                }
                                 let picture = egui::Rect::from_min_size(
                                     rect.min,
                                     egui::vec2(cell, picture_height),
                                 );
+                                let out = remove_button(ui, i, picture, &name, tr);
+                                if out.gained_focus() {
+                                    out.scroll_to_me(None);
+                                }
+                                if out.clicked() {
+                                    remove = Some(file.path.clone());
+                                }
+                                if !ui.is_rect_visible(rect) {
+                                    continue;
+                                }
                                 let shown = thumbnails
                                     .as_mut()
                                     .and_then(|t| t.get(&file.path, file.kind).flatten());
@@ -1085,21 +1223,26 @@ impl AppState {
                                     galley,
                                     p.text,
                                 );
+                                if ui.rect_contains_pointer(rect) || out.has_focus() {
+                                    paint_remove_button(ui, &out);
+                                }
                             }
                         });
                     });
             });
+        if let Some(path) = remove {
+            self.remove_input(&path);
+        }
     }
 
-    /// What to hide and how, whether to review, where to save, and the way to the advanced
-    /// options.
+    /// What to hide and how, where to save and whether to review first, and Start at the foot,
+    /// where the review has its approve button.
     fn settings_panel(&mut self, ui: &mut egui::Ui) {
         let before = self.settings.clone();
         let tr = self.tr.clone();
         let p = *Palette::of(ui);
         let whole = ui.max_rect();
-        let footer_height = 48.0;
-        let (top, footer) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
+        let (top, footer) = whole.split_top_bottom_at_y(whole.bottom() - PANEL_FOOTER_HEIGHT);
         let mut sample = (0.0, 0.0);
         let scroll = region(ui, top, |ui| {
             egui::ScrollArea::vertical()
@@ -1134,14 +1277,12 @@ impl AppState {
                         sample = self.sample_preview(ui);
                     });
                     style::group(ui, |ui| {
+                        style::group_title(ui, &tr.get("output-group"));
+                        self.output_button(ui, &tr);
                         ui.add(style::Check::new(
                             &mut self.settings.review,
                             tr.get("review-first"),
                         ));
-                    });
-                    style::group(ui, |ui| {
-                        style::group_title(ui, &tr.get("output-folder"));
-                        self.output_button(ui, &tr);
                     });
                 })
         });
@@ -1152,12 +1293,23 @@ impl AppState {
                 footer.top(),
                 egui::Stroke::new(1.0, p.faint_line),
             );
-            ui.horizontal_centered(|ui| {
-                ui.add_space(20.0);
-                if style::outlined(ui, tr.get("advanced-open")).clicked() {
-                    self.command(Command::Models);
-                }
-            });
+            egui::Frame::NONE
+                .inner_margin(egui::Margin::symmetric(20, 16))
+                .show(ui, |ui| {
+                    // A button lays its words out by the layout it is in: top-down puts them left.
+                    ui.horizontal(|ui| {
+                        let start = tr.get("start");
+                        let blocker = self.start_blocker();
+                        let size = egui::vec2(ui.available_width(), 32.0);
+                        let response = style::primary_sized(ui, &start, blocker.is_none(), size);
+                        if response.clicked() {
+                            self.start_run(ui.ctx());
+                        }
+                        if let Some(why) = blocker {
+                            response.on_disabled_hover_text(tr.get(why));
+                        }
+                    });
+                });
         });
         if self.settings != before {
             self.save_settings();
@@ -1286,9 +1438,9 @@ impl AppState {
         }
     }
 
-    /// The advanced options, in a dialog in the middle of the window over a darkened backdrop. Its
-    /// title and its Done line stay put while the options between them scroll.
-    fn advanced_dialog(&mut self, ctx: &egui::Context) {
+    /// The settings, in a dialog in the middle of the window over a darkened backdrop, one tab at
+    /// a time. Its title and its Done line stay put while the tab between them scrolls.
+    fn settings_dialog(&mut self, ctx: &egui::Context) {
         if !self.dialog_open {
             return;
         }
@@ -1302,7 +1454,7 @@ impl AppState {
                 egui::Color32::from_rgba_unmultiplied(24, 24, 27, 71),
             )
         };
-        let id = egui::Id::unique("advanced");
+        let id = egui::Id::unique("settings");
         let frame = egui::Frame::NONE
             .fill(p.window)
             .stroke(egui::Stroke::new(1.0, p.border))
@@ -1313,7 +1465,8 @@ impl AppState {
                 spread: 0,
                 color: egui::Color32::from_black_alpha(46),
             });
-        let height = (ctx.content_rect().height() - 2.0 * DIALOG_MARGIN).max(240.0);
+        let height =
+            (ctx.content_rect().height() - 2.0 * DIALOG_MARGIN).clamp(240.0, DIALOG_MAX_HEIGHT);
         let line = egui::Stroke::new(1.0, p.faint_line);
         let mut done = false;
         let modal = egui::Modal::new(id)
@@ -1323,7 +1476,7 @@ impl AppState {
                 ui.set_width(DIALOG_WIDTH);
                 let top = ui.cursor().top();
                 ui.spacing_mut().item_spacing.y = 0.0;
-                let label = tr.get("advanced");
+                let label = tr.get("settings-title");
                 ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
                     node.set_role(egui::accesskit::Role::Dialog);
                     node.set_label(label.as_str());
@@ -1361,68 +1514,58 @@ impl AppState {
                     egui::Frame::NONE
                         .inner_margin(egui::Margin::symmetric(24, 14))
                         .show(ui, |ui| {
-                            // The note may wrap, and Done is centred on it as the last frame
-                            // laid it out.
-                            let note_height = egui::Id::unique("advanced note height");
-                            let row_height = ui
-                                .ctx()
-                                .data(|d| d.get_temp::<f32>(note_height))
-                                .unwrap_or(0.0)
-                                .max(style::BUTTON_HEIGHT);
                             ui.allocate_ui_with_layout(
-                                egui::vec2(ui.available_width(), row_height),
+                                egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
                                 egui::Layout::right_to_left(egui::Align::Center),
                                 |ui| {
                                     if style::primary(ui, &tr.get("done"), true).clicked() {
                                         done = true;
                                     }
                                     ui.add_space(16.0);
-                                    ui.allocate_ui_with_layout(
-                                        egui::vec2(ui.available_width(), row_height),
-                                        egui::Layout::left_to_right(egui::Align::Center),
-                                        |ui| {
-                                            let note = ui.add(
-                                                egui::Label::new(
+                                    if self.settings_tab != SettingsTab::Models {
+                                        ui.with_layout(
+                                            egui::Layout::left_to_right(egui::Align::Center),
+                                            |ui| {
+                                                ui.label(
                                                     egui::RichText::new(
-                                                        tr.get("advanced-next-run"),
+                                                        tr.get("settings-next-run"),
                                                     )
                                                     .size(12.0)
                                                     .color(p.secondary),
-                                                )
-                                                .wrap(),
-                                            );
-                                            let measured = note.rect.height();
-                                            ui.ctx()
-                                                .data_mut(|d| d.insert_temp(note_height, measured));
-                                            if (measured.max(style::BUTTON_HEIGHT) - row_height)
-                                                .abs()
-                                                >= 0.5
-                                            {
-                                                ui.ctx().request_discard(
-                                                    "the note under the advanced options measured",
                                                 );
-                                            }
-                                        },
-                                    );
+                                            },
+                                        );
+                                    }
                                 },
                             );
                         });
                     ui.painter()
                         .hline(ui.max_rect().x_range(), ui.min_rect().top(), line);
-                    ui.with_layout(egui::Layout::top_down(egui::Align::Min), |ui| {
+                    let middle = ui.available_rect_before_wrap();
+                    let (tabs, pane) =
+                        middle.split_left_right_at_x(middle.left() + DIALOG_TABS_WIDTH);
+                    ui.painter().rect_filled(tabs, 0.0, p.sidebar);
+                    ui.painter().vline(tabs.right(), tabs.y_range(), line);
+                    region(ui, tabs, |ui| self.settings_tabs(ui, &tr));
+                    region(ui, pane, |ui| {
                         ui.spacing_mut().item_spacing.y = 6.0;
                         egui::ScrollArea::vertical()
-                            .id_salt("advanced")
+                            .id_salt(("settings", self.settings_tab))
                             .auto_shrink(false)
                             .show(ui, |ui| {
                                 egui::Frame::NONE
                                     .inner_margin(egui::Margin {
                                         left: 24,
                                         right: 24,
-                                        top: 4,
+                                        top: 16,
                                         bottom: 20,
                                     })
-                                    .show(ui, |ui| self.advanced(ui, &tr));
+                                    .show(ui, |ui| match self.settings_tab {
+                                        SettingsTab::General => self.general_settings(ui, &tr),
+                                        SettingsTab::Detection => self.detection_settings(ui, &tr),
+                                        SettingsTab::Output => self.output_settings(ui, &tr),
+                                        SettingsTab::Models => self.model_settings(ui, &tr),
+                                    });
                             });
                     });
                 });
@@ -1435,10 +1578,30 @@ impl AppState {
         }
     }
 
-    fn advanced(&mut self, ui: &mut egui::Ui, tr: &Translator) {
-        let p = *Palette::of(ui);
-        let hint = |text: String| egui::RichText::new(text).size(12.0).color(p.secondary);
-        dialog_section(ui, &tr.get("advanced-general"));
+    fn settings_tabs(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        egui::Frame::NONE
+            .inner_margin(egui::Margin::symmetric(10, 10))
+            .show(ui, |ui| {
+                ui.spacing_mut().item_spacing.y = 1.0;
+                for (tab, key) in [
+                    (SettingsTab::General, "settings-tab-general"),
+                    (SettingsTab::Detection, "settings-tab-detection"),
+                    (SettingsTab::Output, "settings-tab-output"),
+                    (SettingsTab::Models, "models-title"),
+                ] {
+                    let label = tr.get(key);
+                    let selected = self.settings_tab == tab;
+                    let item = style::sidebar_item(ui, selected, &label, 30.0, |ui, p| {
+                        ui.label(sidebar_text(&label, selected, p));
+                    });
+                    if item.clicked() {
+                        self.settings_tab = tab;
+                    }
+                }
+            });
+    }
+
+    fn general_settings(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         dialog_field(ui, &tr.get("language"), |ui| {
             let name = |language: Option<Language>| {
                 language.map_or_else(|| tr.get("language-system"), |l| l.name().into())
@@ -1473,9 +1636,17 @@ impl AppState {
                 ui.ctx().request_repaint();
             }
         });
+        ui.add_space(6.0);
+        ui.add(style::Check::new(
+            &mut self.settings.advanced.gpu,
+            tr.get("gpu"),
+        ));
+        dialog_hint(ui, tr.get("gpu-hint"));
+    }
+
+    fn detection_settings(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         let faces = self.settings.faces;
         let advanced = &mut self.settings.advanced;
-        dialog_section(ui, &tr.get("advanced-detection"));
         dialog_field(ui, &tr.get("face-model"), |ui| {
             ui.add_enabled_ui(faces, |ui| {
                 let models = [
@@ -1512,26 +1683,28 @@ impl AppState {
                 ui.label(level);
             });
         });
-        dialog_field(ui, "", |ui| {
-            ui.add(style::Check::new(&mut advanced.tiles, tr.get("tiles")));
-            ui.add(egui::Label::new(hint(tr.get("tiles-hint"))).wrap());
+        ui.add_space(6.0);
+        ui.add(style::Check::new(&mut advanced.tiles, tr.get("tiles")));
+        dialog_hint(ui, tr.get("tiles-hint"));
+    }
+
+    fn output_settings(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        let advanced = &mut self.settings.advanced;
+        style::group_title(ui, &tr.get("settings-photos"));
+        ui.add_space(2.0);
+        ui.add(style::Check::new(
+            &mut advanced.keep_metadata,
+            tr.get("keep-metadata"),
+        ))
+        .on_hover_text(tr.get("keep-metadata-hint"));
+        ui.horizontal(|ui| {
+            ui.add_space(DIALOG_HINT_INDENT);
+            ui.add_enabled(
+                advanced.keep_metadata,
+                style::Check::new(&mut advanced.keep_gps, tr.get("keep-gps")),
+            );
         });
-        dialog_section(ui, &tr.get("advanced-photos"));
-        dialog_field(ui, "", |ui| {
-            ui.add(style::Check::new(
-                &mut advanced.keep_metadata,
-                tr.get("keep-metadata"),
-            ))
-            .on_hover_text(tr.get("keep-metadata-hint"));
-            ui.horizontal(|ui| {
-                ui.add_space(23.0);
-                ui.add_enabled(
-                    advanced.keep_metadata,
-                    style::Check::new(&mut advanced.keep_gps, tr.get("keep-gps")),
-                );
-            });
-        });
-        dialog_section(ui, &tr.get("advanced-videos"));
+        dialog_section(ui, &tr.get("settings-videos"));
         let quality = |q: VideoQuality| match q {
             VideoQuality::High => "video-quality-high",
             VideoQuality::Balanced => "video-quality-balanced",
@@ -1581,24 +1754,21 @@ impl AppState {
                 egui::WidgetInfo::labeled(egui::Role::ComboBox, true, tr.get("video-codec"))
             });
         });
-        dialog_field(ui, "", |ui| {
-            ui.add(style::Check::new(
-                &mut advanced.remove_audio,
-                tr.get("remove-audio"),
-            ));
-            ui.add(egui::Label::new(hint(tr.get("remove-audio-hint"))).wrap());
-        });
-        dialog_field(ui, "", |ui| {
-            ui.add(style::Check::new(&mut advanced.gpu, tr.get("gpu")))
-                .on_hover_text(tr.get("gpu-hint"));
-        });
-        dialog_section(ui, &tr.get("models-title"));
-        dialog_field(ui, "", |ui| self.models.rows(ui, tr));
+        ui.add_space(6.0);
+        ui.add(style::Check::new(
+            &mut advanced.remove_audio,
+            tr.get("remove-audio"),
+        ));
+        dialog_hint(ui, tr.get("remove-audio-hint"));
+    }
+
+    fn model_settings(&mut self, ui: &mut egui::Ui, tr: &Translator) {
+        self.models.rows(ui, tr);
         if cfg!(all(target_os = "linux", target_arch = "x86_64")) {
             dialog_section(ui, &tr.get("gpu-pack-title"));
             let restart = crate::run::loaded_accelerator()
                 .is_some_and(|a| a != Some(cloakframe_engine::detect::runtime::Backend::Cuda));
-            dialog_field(ui, "", |ui| self.gpu_pack.rows(ui, tr, restart));
+            self.gpu_pack.rows(ui, tr, restart);
         }
     }
 
@@ -1614,6 +1784,8 @@ impl AppState {
             Some("start-scanning")
         } else if self.found.as_ref().is_none_or(|f| f.files.is_empty()) {
             Some("start-needs-files")
+        } else if !self.missing_models().is_empty() {
+            Some("start-needs-models")
         } else if self.output().is_none() {
             Some("start-needs-output")
         } else if self.tools.ort_library.is_none() {
@@ -1876,7 +2048,10 @@ impl AppState {
                     ],
                 )
             });
-            return (tr.get("result-title"), detail);
+            return (
+                tr.get(result_title(board, &self.sessions, self.review.as_ref())),
+                detail,
+            );
         }
         if board.progress.is_none() {
             return (tr.get("running"), None);
@@ -2164,7 +2339,65 @@ fn duration_badge(ui: &egui::Ui, picture: egui::Rect, seconds: f64) {
     );
 }
 
-/// A heading of the advanced options dialog.
+/// The button that takes one file out of the list. Every file has one so that Tab reaches it;
+/// [`paint_remove_button`] shows it only where the pointer or the focus is.
+fn remove_button(
+    ui: &mut egui::Ui,
+    index: usize,
+    picture: egui::Rect,
+    name: &str,
+    tr: &Translator,
+) -> egui::Response {
+    const SIZE: f32 = 22.0;
+    let rect = egui::Rect::from_min_size(
+        egui::pos2(picture.right() - SIZE - 5.0, picture.top() + 5.0),
+        egui::vec2(SIZE, SIZE),
+    );
+    let response = ui.interact(
+        rect,
+        ui.make_persistent_id(("remove file", index)),
+        egui::Sense::click(),
+    );
+    let label = tr.with("found-remove", &[("name", FluentValue::from(name))]);
+    response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &label));
+    response.on_hover_text(label)
+}
+
+fn paint_remove_button(ui: &egui::Ui, response: &egui::Response) {
+    let alpha = if response.hovered() { 230 } else { 178 };
+    ui.painter().rect_filled(
+        response.rect,
+        style::BUTTON_RADIUS,
+        egui::Color32::from_black_alpha(alpha),
+    );
+    style::icon::close(
+        ui.painter(),
+        response.rect.shrink(5.0),
+        egui::Color32::WHITE,
+    );
+    style::focus_ring(ui, response);
+}
+
+/// What a finished run is called: its session stays listed while its items wait for the user.
+/// The list is read again only when the review closes, so an open review that is done counts.
+fn result_title(
+    board: &Board,
+    sessions: &SavedSessions,
+    review: Option<&ReviewScreen>,
+) -> &'static str {
+    let session = board.finished.as_ref().and_then(|f| f.session.as_ref());
+    let waiting = session.is_some_and(|id| {
+        sessions.list.iter().any(|saved| saved.id == *id)
+            && !review.is_some_and(|r| r.review.id == *id && r.review.is_done())
+    });
+    if waiting {
+        "result-title-review"
+    } else {
+        "result-title"
+    }
+}
+
+/// A heading inside a tab of the settings dialog.
 fn dialog_section(ui: &mut egui::Ui, title: &str) {
     ui.add_space(12.0);
     style::group_title(ui, title);
@@ -2173,8 +2406,26 @@ fn dialog_section(ui: &mut egui::Ui, title: &str) {
 
 /// A row of the dialog: its name in a column of its own, the controls beside it.
 fn dialog_field(ui: &mut egui::Ui, label: &str, add: impl FnOnce(&mut egui::Ui)) {
-    style::field(ui, 150.0, label, add);
+    style::field(ui, 120.0, label, add);
     ui.add_space(4.0);
+}
+
+/// The width of a check box and its gap, by which what belongs to it is set in.
+const DIALOG_HINT_INDENT: f32 = 23.0;
+
+/// What the check box above it does.
+fn dialog_hint(ui: &mut egui::Ui, text: String) {
+    let p = Palette::of(ui);
+    egui::Frame::NONE
+        .inner_margin(egui::Margin {
+            left: DIALOG_HINT_INDENT as i8,
+            ..Default::default()
+        })
+        .show(ui, |ui| {
+            ui.add(
+                egui::Label::new(egui::RichText::new(text).size(12.0).color(p.secondary)).wrap(),
+            );
+        });
 }
 
 fn describe(tr: &Translator, notice: &Notice) -> String {

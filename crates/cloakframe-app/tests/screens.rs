@@ -187,10 +187,22 @@ fn every_screen_in_both_themes_and_every_language() {
     pictures.take(&mut harness, "12-shape-ellipse", true);
     harness.state_mut().0.settings.shape = Shape::Rectangle;
 
-    let advanced = harness.state().0.tr().get("advanced-open");
-    harness.get_by_label(&advanced).click();
+    let settings = harness.state().0.tr().get("settings-title");
+    harness
+        .get_by_role_and_label(Role::Button, &settings)
+        .click();
     harness.run_traced();
-    pictures.take(&mut harness, "03-advanced", true);
+    pictures.take(&mut harness, "03-settings-general", true);
+    for (key, picture) in [
+        ("settings-tab-detection", "03-settings-detection"),
+        ("settings-tab-output", "03-settings-output"),
+        ("models-title", "03-settings-models"),
+    ] {
+        let tab = harness.state().0.tr().get(key);
+        harness.get_by_role_and_label(Role::Button, &tab).click();
+        harness.run_traced();
+        pictures.take(&mut harness, picture, true);
+    }
     let done = harness.state().0.tr().get("done");
     harness.get_by_role_and_label(Role::Button, &done).click();
     harness.run_traced();

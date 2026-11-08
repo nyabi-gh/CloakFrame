@@ -286,7 +286,7 @@ pub fn medium(size: f32) -> FontId {
     FontId::new(size, fonts::medium())
 }
 
-/// A group's title in the settings panel and the advanced options: the body size in the main text colour
+/// A group's title in the settings panel and the settings dialog: the body size in the main text colour
 /// and Medium, so it stands above the grey row labels under it.
 pub fn group_title(ui: &mut egui::Ui, text: &str) {
     let p = Palette::of(ui);
@@ -682,7 +682,7 @@ pub fn status_ring(ui: &mut egui::Ui, color: Color32) {
         .circle_stroke(rect.center(), 2.75, Stroke::new(1.5, color));
 }
 
-fn focus_ring(ui: &egui::Ui, response: &egui::Response) {
+pub fn focus_ring(ui: &egui::Ui, response: &egui::Response) {
     if response.has_focus() {
         let p = Palette::of(ui);
         ui.painter().rect_stroke(
@@ -772,6 +772,23 @@ pub mod icon {
         let stroke = Stroke::new(1.5, color);
         painter.line_segment([at(rect, 0.25, 0.25), at(rect, 0.75, 0.75)], stroke);
         painter.line_segment([at(rect, 0.75, 0.25), at(rect, 0.25, 0.75)], stroke);
+    }
+
+    /// A gear.
+    pub fn settings(painter: &Painter, rect: Rect, color: Color32) {
+        let stroke = Stroke::new(1.5, color);
+        let center = rect.center();
+        let radius = rect.width() / 2.0;
+        painter.circle_stroke(center, radius * 0.28, stroke);
+        painter.circle_stroke(center, radius * 0.62, stroke);
+        for i in 0..8 {
+            let angle = std::f32::consts::TAU * i as f32 / 8.0;
+            let out = vec2(angle.cos(), angle.sin());
+            painter.line_segment(
+                [center + out * radius * 0.62, center + out * radius],
+                stroke,
+            );
+        }
     }
 
     /// A bin.

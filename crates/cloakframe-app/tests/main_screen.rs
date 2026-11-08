@@ -279,10 +279,10 @@ fn the_theme_menu_changes_the_colours() {
     }
 }
 
-/// The advanced options also choose the language and the theme; the window takes them at once
-/// and they are saved.
+/// The settings also choose the language and the theme; the window takes them at once and they
+/// are saved.
 #[test]
-fn the_advanced_options_choose_the_language_and_theme() {
+fn the_settings_choose_the_language_and_theme() {
     use cloakframe_app::settings::{SettingsFile, Theme};
     let dir = Dir::new("general");
     let path = dir.0.join("settings.toml");
@@ -306,14 +306,15 @@ fn the_advanced_options_choose_the_language_and_theme() {
             state,
         );
     harness.run_traced();
-    harness.get_by_label("Advanced Options…").click();
+    harness
+        .get_by_role_and_label(Role::Button, "Settings")
+        .click();
     harness.run_traced();
     let (_, note, _) = drawn_texts(&harness)
         .into_iter()
         .find(|(text, _, _)| text.contains("apply from the next run"))
-        .expect("the note under the advanced options");
+        .expect("the note under the settings");
     let done = harness.get_by_role_and_label(Role::Button, "Done").rect();
-    assert!(note.height() > done.height(), "the note wraps: {note:?}");
     assert!(
         (note.center().y - done.center().y).abs() < 1.0,
         "Done {done:?} is centred on the note {note:?}"
@@ -326,7 +327,7 @@ fn the_advanced_options_choose_the_language_and_theme() {
     harness.get_by_label("한국어").click();
     harness.run_traced();
     assert_eq!(harness.state().settings.language, Some(Language::Ko));
-    harness.get_by_role_and_label(Role::Dialog, "고급 옵션");
+    harness.get_by_role_and_label(Role::Dialog, "설정");
 
     harness.get_by_label("다크").click();
     harness.run_traced();
@@ -390,7 +391,7 @@ fn every_language_fits_the_settings_panel() {
             .collect();
         assert!(texts.len() > 10, "{language:?}: {texts:?}");
         // At the window's first size nothing has to be scrolled to, such as the output folder
-        // under the Advanced Options line.
+        // under the Start line.
         for (text, rect, clip) in &texts {
             assert!(
                 clip.expand(0.5).contains_rect(*rect),
@@ -442,7 +443,7 @@ fn every_language_fits_the_settings_panel() {
 }
 
 /// In a shorter window the sample photo gives up height so that the output folder stays above
-/// the Advanced Options line, and takes it back when the window grows again.
+/// the Start line, and takes it back when the window grows again.
 #[test]
 fn the_sample_photo_gives_way_to_the_output_folder() {
     let settings = Settings {
@@ -825,7 +826,9 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.run_traced();
     harness.get_by_label("The original changed or is gone; run it again");
     harness.get_by_label("3 of 3");
-    harness.get_by_role_and_label(Role::Button, "‹ out").click();
+    harness
+        .get_by_role_and_label(Role::Button, "‹ List")
+        .click();
     harness.run_traced();
     harness.get_by_label("gone.jpg, Original changed");
     harness.get_by_label("photo.jpg, To review");
@@ -1797,7 +1800,7 @@ fn tab_order(harness: &mut Harness<'_, AppState>) -> Vec<String> {
 }
 
 /// Tab goes through the window as it reads: the toolbar, the sidebar, the middle, then the
-/// settings panel down to the advanced options.
+/// settings panel down to the output folder.
 #[test]
 fn tab_follows_the_screen_from_top_to_bottom() {
     let mut harness = harness(Language::En, Settings::default());
@@ -1809,17 +1812,17 @@ fn tab_follows_the_screen_from_top_to_bottom() {
             .position(|l| l == label)
             .unwrap_or_else(|| panic!("{label} is not in {order:?}"))
     };
-    assert!(at("Add…") < at("New Task"), "{order:?}");
-    assert!(at("New Task") < at("Choose Files…"), "{order:?}");
-    assert!(at("Choose Files…") < at("Faces"), "{order:?}");
+    assert!(at("New Task") < at("Settings"), "{order:?}");
+    assert!(at("Settings") < at("Choose Files…"), "{order:?}");
+    assert!(at("Choose Files…") < at("Choose Folder…"), "{order:?}");
+    assert!(at("Choose Folder…") < at("Faces"), "{order:?}");
     assert!(at("Faces") < at("Choose…"), "{order:?}");
-    assert!(at("Choose…") < at("Advanced Options…"), "{order:?}");
 }
 
-/// The advanced options are in a dialog, and what is chosen in them is saved and runs with the
-/// next run's options.
+/// The settings are in a dialog, and what is chosen in them is saved and runs with the next run's
+/// options.
 #[test]
-fn advanced_options_are_saved_and_run_with() {
+fn settings_are_saved_and_run_with() {
     use cloakframe_app::settings::{Advanced, FaceModel, SettingsFile, VideoCodec};
     let dir = Dir::new("advanced");
     let path = dir.0.join("settings.toml");
@@ -1846,7 +1849,13 @@ fn advanced_options_are_saved_and_run_with() {
     assert!(harness.query_by_label("Remove audio from videos").is_none());
     harness.get_by_role_and_label(Role::Image, "Anonymization style preview");
 
-    harness.get_by_label("Advanced Options…").click();
+    harness
+        .get_by_role_and_label(Role::Button, "Settings")
+        .click();
+    harness.run_traced();
+    harness
+        .get_by_role_and_label(Role::Button, "Detection")
+        .click();
     harness.run_traced();
     harness.get_by_label("Fast  ·  YuNet").click();
     harness
@@ -1857,6 +1866,10 @@ fn advanced_options_are_saved_and_run_with() {
     assert_eq!(slider.value().as_deref(), Some("Highest"));
     harness
         .get_by_label("Look for small faces in tiles")
+        .click();
+    harness.run_traced();
+    harness
+        .get_by_role_and_label(Role::Button, "Output")
         .click();
     harness.run_traced();
     // The location is kept only with the rest of the metadata.
@@ -1902,7 +1915,13 @@ fn advanced_options_are_saved_and_run_with() {
     assert!(!harness.state().dialog_open);
     harness.get_by_label("Faces").click();
     harness.run_traced();
-    harness.get_by_label("Advanced Options…").click();
+    harness
+        .get_by_role_and_label(Role::Button, "Settings")
+        .click();
+    harness.run_traced();
+    harness
+        .get_by_role_and_label(Role::Button, "Detection")
+        .click();
     harness.run_traced();
     assert!(
         harness
@@ -1915,10 +1934,85 @@ fn advanced_options_are_saved_and_run_with() {
     harness.get_by_role_and_label(Role::Button, "Close").click();
     harness.run_traced();
     assert!(!harness.state().dialog_open);
-    harness.get_by_label("Advanced Options…").click();
+    harness
+        .get_by_role_and_label(Role::Button, "Settings")
+        .click();
     harness.run_traced();
-    harness.get_by_role_and_label(Role::Dialog, "Advanced Options");
+    harness.get_by_role_and_label(Role::Dialog, "Settings");
     harness.key_press(egui::Key::Escape);
     harness.run_traced();
     assert!(!harness.state().dialog_open);
+}
+
+/// The middle offers files and folders while it is empty; Add… takes over once it is not, and
+/// Start stays at the foot of the panel.
+#[test]
+fn add_comes_with_the_files_and_start_is_at_the_panels_foot() {
+    let dir = Dir::new("add");
+    let files = [dir.file("a.jpg")];
+    let mut harness = harness(Language::En, Settings::default());
+    harness.run_traced();
+    assert!(harness.query_by_label("Add…").is_none());
+    harness.get_by_label("Choose Files…");
+    harness.get_by_label("Choose Folder…");
+
+    drop_files(&mut harness, &files);
+    harness.get_by_label("Add…");
+    assert!(harness.query_by_label("Choose Folder…").is_none());
+    let window = harness.ctx.content_rect();
+    let start = harness.get_by_role_and_label(Role::Button, "Start").rect();
+    assert!(window.bottom() - start.bottom() <= 24.0, "{start:?}");
+    assert!(start.width() > 200.0, "{start:?}");
+}
+
+/// One file can leave a list a folder brought it into; a later scan keeps it out until the user
+/// adds that file itself.
+#[test]
+fn one_file_leaves_the_list_and_stays_out() {
+    let dir = Dir::new("remove");
+    let other = Dir::new("remove-other");
+    let names = |harness: &Harness<'_, AppState>| -> Vec<String> {
+        let found = harness.state().found.as_ref();
+        let mut names: Vec<String> = found.map_or_else(Vec::new, |f| {
+            f.files
+                .iter()
+                .map(|file| {
+                    file.path
+                        .file_name()
+                        .unwrap()
+                        .to_string_lossy()
+                        .into_owned()
+                })
+                .collect()
+        });
+        names.sort();
+        names
+    };
+    let a = dir.file("a.jpg");
+    dir.file("b.jpg");
+    let mut harness = harness(Language::En, Settings::default());
+    drop_files(&mut harness, std::slice::from_ref(&dir.0));
+    assert_eq!(names(&harness), ["a.jpg", "b.jpg"]);
+
+    harness
+        .get_by_role_and_label(Role::Button, "Remove a.jpg")
+        .click();
+    harness.run_traced();
+    assert_eq!(names(&harness), ["b.jpg"]);
+
+    drop_files(&mut harness, &[other.file("c.jpg")]);
+    assert_eq!(names(&harness), ["b.jpg", "c.jpg"]);
+
+    drop_files(&mut harness, &[a]);
+    assert_eq!(names(&harness), ["a.jpg", "b.jpg", "c.jpg"]);
+
+    for name in ["a.jpg", "b.jpg", "c.jpg"] {
+        harness
+            .get_by_role_and_label(Role::Button, &format!("Remove {name}"))
+            .click();
+        harness.run_traced();
+    }
+    assert!(harness.state().found.is_none());
+    assert!(harness.state().inputs.is_empty());
+    harness.get_by_label("Choose Folder…");
 }
