@@ -63,7 +63,10 @@ close it. Check the caller and the full scope before recording a change of state
   levels, #92 list columns, timeline bars, sidebar header and Korean wording. The run list's
   details no longer run past the window's bottom (`run-details`). Later feedback, one PR each:
   #96 the review hint, #97 ellipse corners and a soft blur edge, #98 language and theme
-  in Advanced Options. Still open: the maintainer's look at the app, and #98 in the Windows app.
+  in Advanced Options. The maintainer's review of the layout on 2026-11-08 (`ui-settings`) turned
+  Advanced Options into Settings with tabs at the sidebar's foot and moved Start to the panel's
+  foot. Still open: the maintainer's look at the app, and #98 and the native Settings menu item
+  in the Windows app.
   Record in [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
 - **Comparison with 1.12.1.** Detection quality and speed, long runs, and Windows DML on
   NVIDIA, Intel and AMD hardware.
@@ -82,7 +85,7 @@ close it. Check the caller and the full scope before recording a change of state
   the saved settings and sessions, and the app do not. Add them together, design first
   ([M6_UX](M6_UX.md), decision 2026-10-27).
 - **CLI options.** The CLI cannot remove audio or set the sensitivity, which the app's
-  advanced options can (plan 12: every flow in the UI and the CLI).
+  settings can (plan 12: every flow in the UI and the CLI).
 - **EXIF fuzz target.** Plan 9.1 fuzzes the EXIF reader and the ffprobe parsers; only the
   ffprobe targets exist ([M4_PROBE](M4_PROBE.md)).
 - **Low-severity review items.** The lists under "낮음" in [M0_M6_REVIEW](M0_M6_REVIEW.md) and
