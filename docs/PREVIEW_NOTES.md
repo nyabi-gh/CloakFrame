@@ -10,6 +10,6 @@ A preview of CloakFrame 2, rewritten in Rust, for macOS on Apple silicon (macOS 
 
 **Since preview.1:** the panel has a Coverage row (narrow, standard or wide) that sets how far each mask reaches past the detected face or plate, and the CLI takes `--coverage`. Until an output folder is picked, results go to CloakFrame in the Pictures folder, as in 1.12.1, so Start no longer waits for a folder. The controls, buttons and alignment were redrawn to one design, and Advanced Options opens as a dialog in the middle of the window.
 
-**Detection models** are downloaded from the Detection models section of Advanced Options, each after its terms are accepted.
+**Detection models** are downloaded from the Detection models tab of Settings, each after its terms are accepted.
 
 What changed from 1.12.1 is listed in [CHANGES_FROM_1.12.md](https://github.com/nyabi-gh/CloakFrame/blob/main/docs/CHANGES_FROM_1.12.md). Please report problems as issues, with the graphics line from the About window.
