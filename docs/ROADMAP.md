@@ -27,8 +27,8 @@ close it. Check the caller and the full scope before recording a change of state
   release build does not build without the key ([record](M7_UPDATES.md)). The release
   workflow signs the Windows package, and publishing the drafted release publishes the feed;
   2.0.0-preview.1 to preview.3 went out through it
-  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)). It still needs an installed preview
-  updating to the next one from that feed, Sparkle on macOS, and a run on Linux.
+  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)), and an installed preview.1 updated
+  to preview.3 from that feed on Windows. It still needs Sparkle on macOS and a run on Linux.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
   ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,
