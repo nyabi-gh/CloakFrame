@@ -194,7 +194,37 @@ THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-late
 
 - 2.0.0-preview.3가 우리 FFmpeg 9.0.2-1을 담아 나갔고, 릴리스와 `updates` 릴리스에 대응 소스가 올라갔다. 받은 macOS zip은 앱을 허용한 뒤 번들 안의 ffmpeg·ffprobe가 따로 막히지 않고 VideoToolbox로 인코드했다([기록](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)).
 
+## 실기기 하드웨어 인코드(2026-11-08, `m7-hw-encode`)
+
+메인테이너 Windows PC([사양](M7_ACCELERATORS.md#장치와-방법), NVIDIA 드라이버 617.42)에서 우리 Windows 묶음(`fetch_native.py ffmpeg windows-x64`, `9.0.2-cloakframe1`)을 엔진 FFmpeg로 썼다. M7_ACCELERATORS의 확인은 제3자 gyan 빌드와 spike 브랜치의 강제 변수로 한 것이었다.
+
+### QSV에 닿는 방법(메인테이너가 추천대로)
+
+`Encoders::pick`은 NVENC를 먼저 시험하므로 이 PC에서는 QSV가 골라지지 않는다. 엔진에 시험용 훅을 넣지 않고, 실행 환경에 `CUDA_VISIBLE_DEVICES=-1`을 줬다. 그러면 NVENC의 시험 인코드가 `cuInit(0) failed -> CUDA_ERROR_NO_DEVICE`로 실패하고 `pick`이 실제로 QSV로 넘어간다. NVIDIA GPU가 없는 Intel PC가 타는 경로와 같다.
+
+### 결과
+
+| 확인 | NVENC(RTX 5080) | QSV(Intel 내장, CUDA 숨김) |
+| --- | --- | --- |
+| `pick`이 고른 것 | `h264_nvenc`, `hevc_nvenc` | `h264_qsv`, `hevc_qsv` |
+| D1 세 영상(bt709 tv·pc 1080p, bt601 tv 480p), H.264·HEVC | 색 태그 네 개가 원본과 같고 중앙 화소 차 3 이내 | 같음 |
+| CLI `run --videos`, 1080p 4초·AAC, H.264·HEVC | 게시, exit 0 | 게시, exit 0(`--gpu off`, 아래 DirectML 절) |
+
+- D1 확인은 새 무시되는 시험 `media_encode::hardware_encoders_keep_the_sources_colour_description`이다. 그 OS의 하드웨어 후보(Windows·Linux NVENC·QSV, macOS VideoToolbox)를 이름으로 만들어 소프트웨어 시험과 같은 D1 검사를 하고, 시험 인코드에 실패한 후보는 이유와 함께 건너뛴다. 처음에 `pick`이 무엇을 고르는지 출력한다. `--include-ignored --nocapture`로 돌린다.
+- CLI 출력 네 개 모두 120프레임·AAC 오디오·원본 태그(`yuvj420p`, pc, bt470bg)가 남았고, x264·x265의 SEI 문자열이 없어 하드웨어 인코더의 출력이다(같은 입력의 `--hardware-encode off` 출력에는 x264 SEI가 있다). 얼굴이 가려진 것을 프레임을 뽑아 확인했다.
+- 같은 설정(엔진 FFmpeg 우리 빌드, `CLOAKFRAME_TEST_FFMPEG` 제3자 빌드)으로 엔진 영상 시험 `media_*`·`video_*`·`d7_sessions` 76개가 통과했다(`cli_video`는 이 시험 묶음에서 0개). 여기서 `hardware_off_picks_software_and_any_pick_encodes`는 NVENC를, CUDA를 숨기면 QSV를 골라 인코드했다.
+- **인코드 도중 하드웨어 실패 뒤 소프트웨어 재시도:** 시험 인코드는 같은 크기·필터로 하므로, 시험은 통과하고 본 인코드만 실패하는 상황을 실제 GPU로 자연스럽게 만들 방법이 없었다. 메인테이너 결정으로 `video/process.rs`의 `encode_with_fallback` 단위 시험 넷에 맡긴다. 실기기에서 본 것은 `pick`이 실패한 후보(NVENC)를 건너뛰고 다음 후보로 가는 것까지다.
+
+### DirectML이 CUDA를 숨기면 죽음
+
+- CUDA를 숨긴 채 CLI를 GPU 감지(기본)로 돌리면 아무것도 출력하지 않고 access violation(0xC0000005)으로 끝났다. 사진 하나도 같다. `CUDA_VISIBLE_DEVICES`가 `-1`이나 `1`(없는 번호)이면 죽고, `0`이거나 `--gpu off`면 정상이다. `detect_fixtures`도 같은 변수로 같이 죽는다.
+- PyPI의 `onnxruntime-directml` 1.24.4로 우리 코드 없이 재현했다: 같은 변수에서 DirectML 세션을 장치 0(RTX 5080)에 만들면 생성 중에 죽고, 장치 1(Intel)은 정상이며, 장치 0도 DML 옵션 `disable_metacommands=true`면 정상이다. NVIDIA 드라이버가 DirectML에 주는 metacommand가 CUDA를 숨긴 프로세스에서 죽는 것으로 보인다.
+- 사용자가 다른 ML 도구 때문에 이 변수를 전역으로 두면 앱이 시작해 첫 GPU 세션을 만들 때 죽는다. **결정(2026-11-08, 메인테이너가 추천대로):** 기록만 하고 엔진에서 피하지 않는다. 원인이 드라이버에 있고, 엔진에서 피하려면 이 변수를 보고 metacommand를 끄는 우회가 된다.
+
+### 설치된 앱
+
+설치돼 있던 preview.1이 실제 feed로 preview.3를 받았고([기록](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)), 업데이트된 앱이 번들 ffmpeg로 같은 1080p 영상을 기본 설정(H.264 고품질, GPU 켬, 블러·타원)으로 8초 만에 저장했다. 출력은 하드웨어 인코드(x264 SEI 없음), 120프레임, AAC, 원본 색 태그였고, "자세히"에 소프트웨어로 다시 인코드했다는 줄이 없었다.
+
 ## 남은 것
 
-- 메인테이너 Windows PC(RTX 5080, Intel 내장 GPU)에서 NVENC·QSV로 실제 인코드.
 - 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.

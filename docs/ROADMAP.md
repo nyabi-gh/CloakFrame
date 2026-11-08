@@ -43,8 +43,12 @@ close it. Check the caller and the full scope before recording a change of state
   release carry their source ([record](M7_FFMPEG.md#패키지에-넣기2026-11-06-m7-ffmpeg-bundle),
   merged in #101).
   2.0.0-preview.3 is the first release with video
-  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)). It still needs NVENC and QSV on
-  real hardware.
+  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)). On the maintainer's PC our build
+  encodes on NVENC and QSV with the source's colour kept, and an installed preview.1 updated
+  to preview.3 and saved a video
+  ([record](M7_FFMPEG.md#실기기-하드웨어-인코드2026-11-08-m7-hw-encode)). Left to the driver
+  (decision 2026-11-08): a DirectML session on an NVIDIA GPU crashes when
+  `CUDA_VISIBLE_DEVICES` hides it, reproduced without CloakFrame.
 - **Notices and terms.** An SBOM and the native manifest with each release. The Microsoft
   license terms for the Windows ML runtime are in THIRD_PARTY_NOTICES, which the package
   and the About window carry; the installer shows no consent page (decision 2026-11-01,

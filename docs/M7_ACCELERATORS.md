@@ -54,6 +54,7 @@ p50(ms)은 astronaut / crowd. 세션은 두 번째 생성 시간(첫 생성은 �
 - 엔진의 고르기(`Encoders::pick`)가 이 PC에서 `h264_nvenc`·`hevc_nvenc`를 골랐고 그 출력이 정상이었다.
 - NVENC(H.264·HEVC)와 QSV(Intel Graphics, H.264·HEVC) 모두 `D1` 세 영상(bt709 tv·pc 1080p, bt601 tv 480p)에서 색 태그 네 개가 원본과 같고 중앙 화소가 3 이내였다. M4에서 장치가 없어 남긴 확인이다.
 - AMF(AMD)와 VAAPI는 장치가 없어 시험하지 않았다.
+- 2026-11-08에 우리 FFmpeg 빌드로 다시 확인했다(QSV는 `CUDA_VISIBLE_DEVICES=-1`로 `pick`이 고르게 함). 그때 CUDA를 숨긴 프로세스에서 NVIDIA GPU의 DirectML 세션이 죽는 것을 찾았다([기록](M7_FFMPEG.md#실기기-하드웨어-인코드2026-11-08-m7-hw-encode)).
 
 ## 판단
 
