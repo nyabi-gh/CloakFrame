@@ -142,18 +142,82 @@ fn assert_near(got: &[f64], want: &[f64], tolerance: f64, what: &str) {
     }
 }
 
+const D1_SOURCES: [&str; 3] = [
+    "D1/bt709-tv-1080p.mp4",
+    "D1/bt709-pc-1080p.mp4",
+    "D1/bt601-tv-480p.mp4",
+];
+
 /// D1 `output_tags_equal_source` and `center_rgb`.
 #[test]
 fn the_output_keeps_the_sources_colour_description() {
+    assert_colour_kept(software());
+}
+
+/// D1 on each hardware encoder this OS may pick, which CI runners have no device for. One that
+/// cannot encode here is reported and skipped; to reach QSV behind NVENC on a PC with both,
+/// run with `CUDA_VISIBLE_DEVICES=-1` to see what `pick` takes then. Run with
+/// `--ignored --nocapture`.
+#[test]
+#[ignore = "needs encoder hardware"]
+fn hardware_encoders_keep_the_sources_colour_description() {
+    let names: &[&'static str] = if cfg!(target_os = "macos") {
+        &["h264_videotoolbox", "hevc_videotoolbox"]
+    } else {
+        &["h264_nvenc", "hevc_nvenc", "h264_qsv", "hevc_qsv"]
+    };
+    let (spec, _) = opened(&defect(D1_SOURCES[0]));
+    for codec in [OutputCodec::H264, OutputCodec::Hevc] {
+        let picked = Encoders::new(true)
+            .pick(&ffmpeg(), codec, &spec, &CancelToken::new())
+            .unwrap();
+        println!("pick {codec:?}: {}", picked.name);
+    }
+    for &name in names {
+        let encoder = Encoder {
+            name,
+            hardware: true,
+        };
+        if let Err(e) = encode_black_frames(encoder, &spec) {
+            println!("{name}: skipped, {e}");
+            continue;
+        }
+        assert_colour_kept(encoder);
+        println!("{name}: colour kept");
+    }
+}
+
+fn encode_black_frames(encoder: Encoder, spec: &TimelineSpec) -> Result<(), EncodeError> {
+    let frames = 3;
+    let mut writer = FrameWriter::start(
+        &ffmpeg(),
+        encoder,
+        Quality::Balanced,
+        spec,
+        frames,
+        None,
+        Destination::Discard,
+        &CancelToken::new(),
+    )?;
+    let (width, height) = spec.display_size();
+    let black = Rgb8Image {
+        width,
+        height,
+        data: vec![0; width as usize * height as usize * 3],
+    };
+    for _ in 0..frames {
+        writer.write(&black)?;
+    }
+    writer.finish()
+}
+
+fn assert_colour_kept(encoder: Encoder) {
     let dir = TestDir::new();
-    for name in [
-        "D1/bt709-tv-1080p.mp4",
-        "D1/bt709-pc-1080p.mp4",
-        "D1/bt601-tv-480p.mp4",
-    ] {
-        let source = defect(name);
+    for source_name in D1_SOURCES {
+        let source = defect(source_name);
+        let name = format!("{source_name} ({})", encoder.name);
         let out = dir.path().join(source.file_name().unwrap());
-        export(&source, &out, software());
+        export(&source, &out, encoder);
         let fields = "stream=codec_type,color_space,color_primaries,color_transfer,color_range";
         let tags = |path: &Path| {
             let report = probe_json(path, fields);
