@@ -51,8 +51,17 @@
 - 초안을 게시하자 `publish-feed.yml`(run 41409223940)이 `updates` 릴리스에 `CloakFrameApp-2.0.0-preview.2-full.nupkg`(43,108,404바이트, sha256 `32505ff4…c6b1434`)와 `.sig`를 올리고 `releases.win.json`을 preview.2 하나로 바꿨다. 2026-11-06에 올라간 파일을 받아 SHA-256이 feed와 같고 서명이 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다.
 - 2026-11-06 기준으로 preview.2 패키지가 feed에서 한 번 받아졌지만, 설치된 preview.1이 실제로 preview.2가 됐는지는 기록이 없다.
 
+## 세 번째 릴리스(2026-11-08, 영상)
+
+#102가 #101 병합을 기록하고 판을 `2.0.0-preview.3`로 올린 뒤, 메인테이너 "fast-forward"로 main `59b2bed`에 `v2.0.0-preview.3`를 태그했다(run 42394032536). FFmpeg 9.0.2-1을 담은 첫 릴리스다.
+
+- Version, macOS zip, Windows 설치본, 서명, 초안 job이 첫 시도에 통과했다. 초안에는 `CloakFrame-2.0.0-preview.3-Windows-x64-Setup.exe`(63,893,227바이트), `CloakFrame-Preview-2.0.0-preview.3-macOS-arm64.zip`(44,977,532바이트), `CloakFrame-FFmpeg-9.0.2-1-source.tar`(27,832,320바이트)가 올라갔다.
+- **Gatekeeper:** 초안의 zip을 받아 브라우저처럼 `com.apple.quarantine`을 붙이고 Archive Utility로 풀자 앱 번들과 `Contents/MacOS/ffmpeg`·`ffprobe`에 격리 속성이 이어졌다. `codesign --verify --deep --strict`는 통과, `spctl -a -t exec`는 앱과 ffmpeg 모두 거부했고 앱은 처음 열 때 막혔다(공증 없는 ad-hoc 서명이라 예상대로). 메인테이너가 시스템 설정에서 "그래도 열기"로 허용하자 번들과 ffmpeg의 플래그가 `0083`에서 `00c3`(사용자 허용)으로 바뀌었고, 앱이 번들 안 ffprobe·ffmpeg로 영상 두 개(fixture `D1/bt709-tv-1080p.mp4`, `P-5/odd-641x361-audio-longer.mp4`)를 분석·검토한 뒤 저장했다. 결과는 `h264_videotoolbox` H.264, 프레임 수 원본과 같음(15, 60), 두 번째는 642×362로 짝수 맞춤, 1초 더 길던 소리는 영상 길이(2.0초 AAC)로 잘림. 번들 안 실행 파일이 따로 막히는 일은 없었다.
+- 초안을 게시하자 `publish-feed.yml`(run 42446641493)이 `updates` 릴리스에 FFmpeg 대응 소스, `CloakFrameApp-2.0.0-preview.3-full.nupkg`(56,318,187바이트, sha256 `ae846ef5…45bff96`)와 `.sig`를 올리고 `releases.win.json`을 preview.3 하나로 바꿨다. 올라간 파일을 받아 SHA-256이 feed와 같고 서명이 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다.
+- 설치된 앱이 preview.3로 실제 업데이트되는지는 아직 확인하지 않았다.
+
 ## 남은 것
 
 - Linux release job을 만들 때 nasm을 소스로 빌드할지 Ubuntu 패키지를 쓸지 정한다.
-- 설치된 preview.1이 preview.2를 이 feed로 받는 것(위 "두 번째 릴리스").
+- 설치된 이전 preview가 이 feed로 다음 판(이제 preview.3)을 받는 것.
 - Linux 설치본·AppImage, DMG·Sparkle, 1903 VM.

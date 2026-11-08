@@ -26,8 +26,8 @@ close it. Check the caller and the full scope before recording a change of state
   app checks, downloads and installs an update only when the pinned key signed it, and a
   release build does not build without the key ([record](M7_UPDATES.md)). The release
   workflow signs the Windows package, and publishing the drafted release publishes the feed;
-  2.0.0-preview.1 and preview.2 went out through it
-  ([record](M7_RELEASE.md#두-번째-릴리스2026-11-02)). It still needs an installed preview
+  2.0.0-preview.1 to preview.3 went out through it
+  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)). It still needs an installed preview
   updating to the next one from that feed, Sparkle on macOS, and a run on Linux.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
@@ -35,14 +35,16 @@ close it. Check the caller and the full scope before recording a change of state
   and a legal look at offering NVIDIA's terms this way. The Windows ML catalog providers were
   measured and left out.
 - **Video in releases.** Build FFmpeg from pinned source tarballs so its corresponding
-  source can be published; until then releases mask photos only (plan 10.1).
+  source can be published (plan 10.1).
   [`tools/ffmpeg`](../tools/ffmpeg) builds only what the engine uses from the sources pinned in
   `native.toml`, and `ffmpeg.yml` put the builds and their source on the pre-release
   `ffmpeg-9.0.2-1` ([record](M7_FFMPEG.md#게시2026-11-06)). `native.toml` pins them, the macOS
   and Windows packages carry them with their notices, and each release and the `updates`
   release carry their source ([record](M7_FFMPEG.md#패키지에-넣기2026-11-06-m7-ffmpeg-bundle),
   merged in #101).
-  It still needs a release with video (preview.3) and NVENC and QSV on real hardware.
+  2.0.0-preview.3 is the first release with video
+  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)). It still needs NVENC and QSV on
+  real hardware.
 - **Notices and terms.** An SBOM and the native manifest with each release. The Microsoft
   license terms for the Windows ML runtime are in THIRD_PARTY_NOTICES, which the package
   and the About window carry; the installer shows no consent page (decision 2026-11-01,

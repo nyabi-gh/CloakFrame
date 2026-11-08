@@ -190,9 +190,11 @@ THIRD_PARTY_NOTICES에 FFmpeg 절을 넣었다: 번들 방식과 GPL-2.0-or-late
 - `7a7fe11`에서 CI·FFmpeg(run 42382627420)·Release(run 42382627498)·처리량·벤치마크·ORT가 모두 통과했다(태그 전용 job 셋은 건너뜀). 메인테이너 "fast-forward"로 main = `7a7fe11`, PR #101은 merged.
 - 이 세션의 Auto-fix는 앱이 "이 세션이 연 PR이 아니다"로 켜지 못하게 했다.
 
+## 영상이 든 첫 릴리스(2026-11-08)
+
+- 2.0.0-preview.3가 우리 FFmpeg 9.0.2-1을 담아 나갔고, 릴리스와 `updates` 릴리스에 대응 소스가 올라갔다. 받은 macOS zip은 앱을 허용한 뒤 번들 안의 ffmpeg·ffprobe가 따로 막히지 않고 VideoToolbox로 인코드했다([기록](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)).
+
 ## 남은 것
 
-- 영상이 든 preview.3. 그때 받은 zip을 Gatekeeper가 막은 앱으로 열어 번들 안의 ffmpeg·ffprobe가 따로 막히지 않는지 본다(로컬 zip에는 격리 속성이 없어 여기서는 확인할 수 없다).
 - 메인테이너 Windows PC(RTX 5080, Intel 내장 GPU)에서 NVENC·QSV로 실제 인코드.
 - 고정 릴리스를 내는 절차는 [RELEASING](RELEASING.md#ffmpeg-builds)에 있다.
-- ROADMAP의 "Video in releases"는 영상이 든 릴리스가 나가야 닫는다.
