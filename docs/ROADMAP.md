@@ -65,7 +65,7 @@ close it. Check the caller and the full scope before recording a change of state
   levels, #92 list columns, timeline bars, sidebar header and Korean wording. The run list's
   details no longer run past the window's bottom (`run-details`). Later feedback, one PR each:
   #96 the review hint, #97 ellipse corners and a soft blur edge, #98 language and theme
-  in Advanced Options. The maintainer's review of the layout on 2026-11-08 (#104, not merged yet) turned
+  in Advanced Options. The maintainer's review of the layout on 2026-11-08 (#104) turned
   Advanced Options into Settings with tabs at the sidebar's foot and moved Start to the panel's
   foot. Still open: the maintainer's look at the app, and #98 and the native Settings menu item
   in the Windows app.
