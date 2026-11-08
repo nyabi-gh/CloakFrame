@@ -1965,6 +1965,18 @@ fn add_comes_with_the_files_and_start_is_at_the_panels_foot() {
     assert!(start.width() > 200.0, "{start:?}");
 }
 
+/// A sidebar row is pressed on its words as well as beside them.
+#[test]
+fn the_words_of_a_sidebar_row_press_it() {
+    let mut harness = harness(Language::En, Settings::default());
+    harness.run_traced();
+    harness
+        .get_by_role_and_label(Role::Label, "Settings")
+        .click();
+    harness.run_traced();
+    harness.get_by_role_and_label(Role::Dialog, "Settings");
+}
+
 /// One file can leave a list a folder brought it into; a later scan keeps it out until the user
 /// adds that file itself.
 #[test]

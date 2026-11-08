@@ -663,7 +663,11 @@ pub fn sidebar_item(
         egui::UiBuilder::new()
             .max_rect(rect.shrink2(egui::vec2(8.0, 4.0)))
             .layout(egui::Layout::left_to_right(egui::Align::Center)),
-        |ui| add(ui, p),
+        |ui| {
+            // A selectable label would take the press on its words from the row under it.
+            ui.style_mut().interaction.selectable_labels = false;
+            add(ui, p);
+        },
     );
     focus_ring(ui, &response);
     response

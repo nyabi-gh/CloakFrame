@@ -1120,6 +1120,8 @@ fn added_list(ui: &mut egui::Ui, tr: &Translator, draft: &mut Draft, open: bool)
                     .max_rect(rect)
                     .layout(egui::Layout::left_to_right(egui::Align::Center)),
                 |ui| {
+                    // A selectable label would take the press on its words from the row.
+                    ui.style_mut().interaction.selectable_labels = false;
                     ui.label(&name);
                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                         ui.add_enabled_ui(open, |ui| {
