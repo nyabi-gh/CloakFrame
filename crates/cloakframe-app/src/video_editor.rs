@@ -72,6 +72,8 @@ pub struct VideoEditor {
     regions: Option<(FrameIndex, Vec<TrackRegion>)>,
     lanes: Lanes,
     focus: bool,
+    /// The last frame drew the boxes, so a press can have been aimed at one.
+    boxes_drawn: bool,
 }
 
 impl VideoEditor {
@@ -86,6 +88,7 @@ impl VideoEditor {
             regions: None,
             lanes: Lanes::of(tracks),
             focus: true,
+            boxes_drawn: false,
         }
     }
 
@@ -304,16 +307,19 @@ pub(crate) fn ui(
             })
     };
     let view_now = *view;
+    let boxes_drawn = editor.boxes_drawn;
     if response.clicked_by(egui::PointerButton::Primary)
         && let Some(p) = response.interact_pointer_pos()
     {
         editor.clip.stop();
-        match hit(&view_now, p) {
-            Some(Pick::Track(id)) if open => {
-                draft.toggle_track(id);
-                draft.selected = Some(Pick::Track(id));
+        if boxes_drawn {
+            match hit(&view_now, p) {
+                Some(Pick::Track(id)) if open => {
+                    draft.toggle_track(id);
+                    draft.selected = Some(Pick::Track(id));
+                }
+                picked => draft.selected = picked,
             }
-            picked => draft.selected = picked,
         }
     }
     if response.drag_started()
@@ -321,7 +327,7 @@ pub(crate) fn ui(
     {
         editor.clip.stop();
         let middle = ui.input(|i| i.pointer.middle_down() || i.pointer.secondary_down());
-        editor.drag = Some(match hit(&view_now, p) {
+        editor.drag = Some(match hit(&view_now, p).filter(|_| boxes_drawn) {
             _ if middle || !open => Drag::Panning,
             Some(Pick::Manual(i)) => {
                 draft.selected = Some(Pick::Manual(i));
@@ -441,7 +447,8 @@ pub(crate) fn ui(
             ui.visuals().error_fg_color,
         );
     }
-    if showing_masked || editor.clip.playing {
+    editor.boxes_drawn = !showing_masked && !editor.clip.playing;
+    if !editor.boxes_drawn {
         if showing_masked {
             painter.text(
                 rect.left_top() + egui::vec2(8.0, 8.0),

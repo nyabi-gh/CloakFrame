@@ -1560,7 +1560,10 @@ fn canvas(
             })
     };
 
+    // The preview hides the boxes, so a press during it cannot have been aimed at one.
+    let boxes_drawn = !editor.previewing;
     if open
+        && boxes_drawn
         && response.clicked_by(egui::PointerButton::Primary)
         && let Some(at) = response.interact_pointer_pos()
     {
@@ -1576,7 +1579,7 @@ fn canvas(
         && let Some(at) = ui.input(|i| i.pointer.press_origin())
     {
         let middle = ui.input(|i| i.pointer.middle_down() || i.pointer.secondary_down());
-        editor.drag = Some(match hit(view, at, draft) {
+        editor.drag = Some(match hit(view, at, draft).filter(|_| boxes_drawn) {
             _ if middle || !open => Drag::Panning,
             Some(Pick::Added(i)) => {
                 draft.selected = Some(Pick::Added(i));

@@ -1067,6 +1067,18 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         .as_mut()
         .unwrap()
         .wait_for_picture(&ctx);
+    let selected = draft(&harness).selected;
+    harness.hover_at(on_screen(center.x, center.y));
+    harness.step();
+    harness.drag_at(on_screen(center.x, center.y));
+    harness.step();
+    harness.drop_at(on_screen(center.x, center.y));
+    harness.step();
+    assert!(
+        draft(&harness).is_excluded(0),
+        "the preview hides the boxes, so the click was not aimed at one"
+    );
+    assert_eq!(draft(&harness).selected, selected);
     harness.key_up(egui::Key::Space);
     harness.step();
     assert!(
@@ -1546,6 +1558,92 @@ fn the_video_editor_edits_tracks_covers_a_gap_and_saves_it() {
     harness.run_traced();
     assert!(at(&harness) > 60, "playback moved on");
     harness.get_by_role_and_label(Role::Button, "Play");
+
+    let play_a_frame = |h: &mut Harness<'_, AppState>| {
+        h.key_press(egui::Key::Space);
+        h.step();
+        let video = h
+            .state_mut()
+            .review
+            .as_mut()
+            .unwrap()
+            .editor
+            .as_mut()
+            .unwrap()
+            .video
+            .as_mut()
+            .unwrap();
+        assert!(video.clip.wait_for_playback(&ctx), "Space plays");
+        h.step();
+    };
+    let playing = |h: &Harness<'_, AppState>| {
+        let screen = h.state().review.as_ref().unwrap();
+        screen
+            .editor
+            .as_ref()
+            .unwrap()
+            .video
+            .as_ref()
+            .unwrap()
+            .clip
+            .playing
+    };
+    let click = |h: &mut Harness<'_, AppState>, at: egui::Pos2| {
+        h.hover_at(at);
+        h.step();
+        h.drag_at(at);
+        h.step();
+        h.drop_at(at);
+        h.step();
+    };
+
+    // Playback draws no boxes, so a press during it was not aimed at the drawn track here.
+    let drawn = draft(&harness).doc.video.added_tracks[0].clone();
+    play_a_frame(&mut harness);
+    let middle = drawn.rect_at(at(&harness)).unwrap().center();
+    let from = on_screen(middle.x, middle.y);
+    harness.hover_at(from);
+    harness.step();
+    harness.drag_at(from);
+    harness.step();
+    harness.hover_at(from + egui::vec2(20.0, 20.0));
+    harness.step();
+    harness.drop_at(from + egui::vec2(20.0, 20.0));
+    step(&mut harness);
+    let tracks = draft(&harness).doc.video.added_tracks;
+    assert_eq!(tracks[0], drawn, "a hidden box does not move");
+    assert_eq!(tracks.len(), 2, "the drag draws a new one");
+    harness.key_press(egui::Key::Delete);
+    step(&mut harness);
+
+    harness.key_press_modifiers(egui::Modifiers::SHIFT, egui::Key::ArrowRight);
+    step(&mut harness);
+    assert!(at(&harness) >= 80, "in track 2");
+    let selected = draft(&harness).selected;
+    play_a_frame(&mut harness);
+    assert!(playing(&harness));
+    let middle = square_at(at(&harness)).center();
+    click(&mut harness, on_screen(middle.x, middle.y));
+    assert!(!playing(&harness), "a click stops playback");
+    assert!(
+        !draft(&harness).is_track_excluded(2),
+        "and does no more: the track it landed on was not drawn"
+    );
+    assert_eq!(draft(&harness).selected, selected);
+    step(&mut harness);
+
+    harness.key_down(egui::Key::M);
+    step(&mut harness);
+    let middle = square_at(at(&harness)).center();
+    click(&mut harness, on_screen(middle.x, middle.y));
+    assert!(
+        !draft(&harness).is_track_excluded(2),
+        "M hides the boxes too"
+    );
+    assert_eq!(draft(&harness).selected, selected);
+    harness.key_up(egui::Key::M);
+    step(&mut harness);
+    harness.run_traced();
 
     harness.event(egui::Event::Text("?".to_owned()));
     harness.step();
