@@ -64,6 +64,11 @@ enum Drag {
     Panning,
 }
 
+/// How long an item is on screen before it can be approved. Approving opens the next item with
+/// its button under the pointer, and the second click of a double click, up to 500 ms later by
+/// Windows' default, must not approve that one unseen.
+const SECONDS_ON_SCREEN_TO_APPROVE: f64 = 0.5;
+
 pub struct Editor {
     pub item: ItemId,
     pub picture: Option<Picture>,
@@ -75,6 +80,8 @@ pub struct Editor {
     /// The document the masking preview was last made of, and its number.
     previewed: Option<(Doc, u64)>,
     focus: bool,
+    /// When the item came on screen, or turned out not to be able to.
+    shown_at: Option<f64>,
 }
 
 impl Editor {
@@ -96,7 +103,36 @@ impl Editor {
             drag: None,
             previewed: None,
             focus: true,
+            shown_at: None,
         }
+    }
+
+    fn finished_loading(&self) -> bool {
+        match (&self.picture, &self.video) {
+            (Some(picture), _) => !picture.is_loading(),
+            (None, Some(video)) => {
+                let clip = &video.clip;
+                clip.shown.is_some() || clip.error.is_some() || clip.frame_error.is_some()
+            }
+            (None, None) => true,
+        }
+    }
+
+    /// Whether the item has been on screen long enough to approve; if it is about to have been,
+    /// a repaint is asked for then.
+    fn can_approve(&mut self, ctx: &egui::Context) -> bool {
+        let now = ctx.input(|i| i.time);
+        if self.shown_at.is_none() && self.finished_loading() {
+            self.shown_at = Some(now);
+        }
+        let Some(shown_at) = self.shown_at else {
+            return false;
+        };
+        let left = shown_at + SECONDS_ON_SCREEN_TO_APPROVE - now;
+        if left > 0.0 {
+            ctx.request_repaint_after_secs(left as f32);
+        }
+        left <= 0.0
     }
 }
 
@@ -828,6 +864,7 @@ fn inspector(
     let whole = ui.max_rect();
     let footer_height = footer_height(ui.ctx());
     let (top, bottom) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
+    let can_approve = editor.can_approve(ui.ctx());
     ui.scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
         egui::ScrollArea::vertical()
             .id_salt("inspector")
@@ -840,7 +877,7 @@ fn inspector(
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.spacing_mut().item_spacing.y = 10.0;
-                footer(ui, tr, review, stored, open, asked);
+                footer(ui, tr, review, stored, open, can_approve, asked);
             })
             .response
             .rect
@@ -1146,6 +1183,7 @@ fn footer(
     review: &Review,
     stored: &SessionItem,
     open: bool,
+    can_approve: bool,
     asked: &mut Asked,
 ) {
     let p = *Palette::of(ui);
@@ -1212,7 +1250,7 @@ fn footer(
         let approve = style::primary_sized(
             ui,
             &tr.get("editor-approve"),
-            open && unresolved == 0,
+            open && unresolved == 0 && can_approve,
             egui::vec2(width, 32.0),
         );
         if approve.clicked() {

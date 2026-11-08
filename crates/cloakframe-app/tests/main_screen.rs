@@ -1151,6 +1151,31 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
     // The next photo opens while this one renders. The render's end repaints, so the harness
     // waits for it too before it settles.
     harness.step();
+    // The second click of a double click lands on the next photo's button, loaded or not.
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.step();
+    let approve = harness.get_by_role_and_label(Role::Button, "Approve and Save");
+    assert!(
+        approve.accesskit_node().is_disabled(),
+        "not yet, just after it opened"
+    );
+    approve.click();
+    harness.step();
+    assert!(
+        harness
+            .state()
+            .review
+            .as_ref()
+            .unwrap()
+            .review
+            .is_open(ItemId(1)),
+        "a double click decided a photo nobody had seen"
+    );
     harness
         .state_mut()
         .review
@@ -1166,6 +1191,16 @@ fn the_editor_decides_what_is_masked_and_saves_it() {
         "on to the next item"
     );
     harness.get_by_label("1 of 1");
+    for _ in 0..3 {
+        harness.step();
+    }
+    assert!(
+        !harness
+            .get_by_role_and_label(Role::Button, "Approve and Save")
+            .accesskit_node()
+            .is_disabled(),
+        "once it has been on screen for a moment"
+    );
 
     harness.get_by_role_and_label(Role::Button, "More").click();
     harness.run_traced();
