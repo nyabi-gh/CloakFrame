@@ -53,7 +53,9 @@ close it. Check the caller and the full scope before recording a change of state
   license terms for the Windows ML runtime are in THIRD_PARTY_NOTICES, which the package
   and the About window carry; the installer shows no consent page (decision 2026-11-01,
   plan 10.1).
-- **Model mirror** (plan 4.6).
+- **Model mirror** (plan 4.6). On 2026-11-08 GitHub answered HTTP 504 to release downloads for
+  a long stretch: the default face model, on one person's repository, could not be downloaded
+  from the app ([record](M6_UX.md#설정과-화면-배치-재검토2026-11-08-ui-settings)).
 
 ## Verification and stable (M8)
 
@@ -63,7 +65,7 @@ close it. Check the caller and the full scope before recording a change of state
   levels, #92 list columns, timeline bars, sidebar header and Korean wording. The run list's
   details no longer run past the window's bottom (`run-details`). Later feedback, one PR each:
   #96 the review hint, #97 ellipse corners and a soft blur edge, #98 language and theme
-  in Advanced Options. The maintainer's review of the layout on 2026-11-08 (`ui-settings`) turned
+  in Advanced Options. The maintainer's review of the layout on 2026-11-08 (#104, not merged yet) turned
   Advanced Options into Settings with tabs at the sidebar's foot and moved Start to the panel's
   foot. Still open: the maintainer's look at the app, and #98 and the native Settings menu item
   in the Windows app.
