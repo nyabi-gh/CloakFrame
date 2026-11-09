@@ -75,6 +75,19 @@ jobs:
       - name: Install Rust
         run: rustup toolchain install
 
+      # Only what the fetch scripts hash on every run: an unpacked folder that already exists is
+      # used as it is, so those are unpacked again from the checked archives.
+      - name: Cache the downloads
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/native/*.tgz
+            ${{ runner.temp }}/native/*.tar.xz
+            ${{ runner.temp }}/native/*.zip
+            ${{ runner.temp }}/native/*.nupkg
+            ${{ runner.temp }}/cloakframe-test-assets
+          key: ci-downloads-${{ matrix.platform }}-${{ hashFiles('manifests/native.toml', 'tests/fixtures/assets.json') }}
+
       # --all-features includes require-simd, which needs nasm for libjpeg-turbo on x86, so the
       # tests run the SIMD build the packages ship.
       - name: Install nasm (Linux)
