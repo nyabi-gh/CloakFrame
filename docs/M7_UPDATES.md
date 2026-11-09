@@ -50,6 +50,6 @@ Linux 경로(packages 폴더 바꾸기)는 2026-11-09에 GitHub runner에서 실
 
 ## 남은 것
 
-- 키 쌍은 2026-10-30에 만들어 등록했고, 서명과 feed 게시는 릴리스 workflow가 한다([M7_RELEASE](M7_RELEASE.md)). 첫 릴리스에서 그 job들이 실제로 돌아야 한다.
+- 키 쌍은 2026-10-30에 만들어 등록했고, 서명과 feed 게시는 릴리스 workflow가 한다([M7_RELEASE](M7_RELEASE.md)). 2026-11-01 첫 릴리스부터 그 job들이 돌았고, 2026-11-08에 설치된 preview.1이 실제 feed로 preview.3가 됐다.
 - macOS Sparkle(새 EdDSA 키, `SURequireSignedFeed`, `SUVerifyUpdateBeforeExtraction`).
 - Windows 10 1903 VM과 실제 Linux 데스크톱에서 업데이트.

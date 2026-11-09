@@ -46,6 +46,6 @@
 ## 남은 것
 
 - 깨끗한 Windows 10 1903 VM에서 설치·오프라인 실행·제거.
-- 업데이트(ROADMAP M7 "Updates"): 새 키로 서명한 feed, 다운그레이드 거부, 이 저장소의 `updates` 릴리스.
+- 1903 VM에서 업데이트. 업데이트 자체는 [M7_UPDATES](M7_UPDATES.md)와 [M7_RELEASE](M7_RELEASE.md)에 끝난 기록이 있다.
 - 릴리스 workflow의 Windows job은 [M7_RELEASE](M7_RELEASE.md).
 - Microsoft 약관 3b: 2026-11-01에 동의 화면 없이 THIRD_PARTY_NOTICES의 고지로 정했다(계획 10.1).

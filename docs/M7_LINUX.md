@@ -45,8 +45,14 @@ Velopack의 Linux 패키지는 AppImage 하나다. Windows처럼 Setup이 따로
 
 기본 창 크기(1100)에서 "다운로드했습니다" 줄이 가운데 칸보다 길어 "Restart Now"가 잘리고 "Later"가 패널 뒤로 숨었으며, 칸 전체가 넓어져 아래 내용도 밀렸다. OS와 관계없다. Windows의 실제 업데이트 확인(preview.3)은 UI Automation으로 버튼을 눌러 드러나지 않았다. 업데이트 줄을 `horizontal_wrapped`로 바꿨다. 재현 시험은 `the_update_bar_keeps_its_buttons_in_the_middle_column`이고 고치기 전에 실패했다(버튼 오른쪽 831.6, 패널 시작 812). 고친 뒤 실제 AppImage 화면에서 두 버튼이 다 보이는 것도 확인했다.
 
+## PR #106의 CI(2026-11-09)
+
+- `3819103`에서 Format·lint·라이선스는 통과했고, Test 3개(macOS·Ubuntu·Windows, run 42567642571)는 시험 전 받기 단계에서 GitHub 릴리스의 HTTP 504로 멈췄다. 코드와 무관하고 [11-08의 504](M6_UX.md#설정과-화면-배치-재검토2026-11-08-ui-settings)와 같은 현상이다. 그 결정대로 스크립트에 재시도를 넣지 않았다. 잠시 뒤 이 Mac에서 같은 주소는 200이었다.
+- 이 기록을 쓸 때 `release.yml`(run 42567642475)의 세 패키지 job은 진행 중이어서 Linux job의 첫 결과는 아직 없다.
+
 ## 남은 것
 
+- PR #106의 CI 통과와 병합. `release.yml`의 Linux job은 이 PR이 첫 실행이다. 서명·초안·feed의 Linux 경로는 다음 preview 태그에서 처음 돈다.
 - 실제 Linux 데스크톱(Wayland 포함)에서 실행과 업데이트. 지금까지는 runner의 Xvfb와 컨테이너다.
 - AppImage를 데스크톱에 등록하면 `.desktop`의 `StartupWMClass=CloakFrameApp`이 앱의 창 이름과 맞지 않아 작업 표시줄 아이콘이 묶이지 않을 수 있다. 앱은 app id와 창 아이콘을 정하지 않는다.
 - README의 preview 절은 Linux를 담은 릴리스를 낼 때 고친다.
