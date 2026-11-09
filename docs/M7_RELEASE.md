@@ -62,5 +62,4 @@
 
 ## 남은 것
 
-- Linux release job을 만들 때 nasm을 소스로 빌드할지 Ubuntu 패키지를 쓸지 정한다.
-- Linux 설치본·AppImage, DMG·Sparkle, 1903 VM.
+- DMG·Sparkle, 1903 VM. Linux AppImage는 [M7_LINUX](M7_LINUX.md).

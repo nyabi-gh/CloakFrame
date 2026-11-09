@@ -12,14 +12,17 @@ close it. Check the caller and the full scope before recording a change of state
 
 ## Packages and updates (M7)
 
-- **Installers.** Velopack installers for Windows and Linux plus an AppImage, and a DMG
+- **Installers.** A Velopack installer for Windows, a Velopack AppImage for Linux, and a DMG
   signed with Developer ID and notarized. Each installs, runs offline, updates and
   uninstalls on a clean minimum supported OS, including a Windows 10 1903 VM. The Windows
   installer ([`tools/package/windows.ps1`](../tools/package/windows.ps1)) installs and
   uninstalls beside 1.12.1 without touching it or `%LocalAppData%\CloakFrameData`
   ([record](M7_WINDOWS.md)). The release workflow builds it, installs, opens and uninstalls
   it, and releases it without Authenticode, so SmartScreen warns on its first run (decision
-  2026-10-30). It still needs the VM.
+  2026-10-30). It still needs the VM. [`tools/package/linux.sh`](../tools/package/linux.sh) builds
+  the AppImage, and the release workflow opens it and starts it on Ubuntu 24.04, Debian 13,
+  Fedora 43 and Arch ([record](M7_LINUX.md)). It still needs a real Linux desktop and its first
+  release.
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
@@ -28,7 +31,9 @@ close it. Check the caller and the full scope before recording a change of state
   workflow signs the Windows package, and publishing the drafted release publishes the feed;
   2.0.0-preview.1 to preview.3 went out through it
   ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)), and an installed preview.1 updated
-  to preview.3 from that feed on Windows. It still needs Sparkle on macOS and a run on Linux.
+  to preview.3 from that feed on Windows. On Linux an AppImage built with a test key updated in place on a GitHub runner and refused forged
+  feeds and packages ([record](M7_LINUX.md)); the release workflow signs its package and publishing
+  the draft publishes its feed. It still needs Sparkle on macOS and a real Linux desktop.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
   ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,

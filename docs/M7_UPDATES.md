@@ -46,10 +46,10 @@
 
 시험 뒤 설치를 제거하고 `CloakFrameData`를 지웠다. 시험 키는 scratchpad에만 있었다.
 
-Linux 경로(packages 폴더 바꾸기)는 컴파일만 CI에서 확인하고 실행해 보지 않았다. Linux Velopack 설치본이 아직 없다(ROADMAP "Installers").
+Linux 경로(packages 폴더 바꾸기)는 2026-11-09에 GitHub runner에서 실제 AppImage로 확인했다([M7_LINUX](M7_LINUX.md)).
 
 ## 남은 것
 
 - 키 쌍은 2026-10-30에 만들어 등록했고, 서명과 feed 게시는 릴리스 workflow가 한다([M7_RELEASE](M7_RELEASE.md)). 첫 릴리스에서 그 job들이 실제로 돌아야 한다.
 - macOS Sparkle(새 EdDSA 키, `SURequireSignedFeed`, `SUVerifyUpdateBeforeExtraction`).
-- Windows 10 1903 VM과 Linux 설치본에서 업데이트.
+- Windows 10 1903 VM과 실제 Linux 데스크톱에서 업데이트.

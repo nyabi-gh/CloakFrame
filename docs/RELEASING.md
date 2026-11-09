@@ -4,14 +4,14 @@ Maintainer notes for publishing CloakFrame 2. Contributors do not need any of th
 [CONTRIBUTING.md](../CONTRIBUTING.md) to build and test.
 
 CloakFrame 2 has no stable release yet. M7 of the [plan](RUST_PORT_PLAN.md) (8, 10) builds
-the installers, signing and the update feed; so far the releases are previews for macOS and
-Windows. The `release.yml` workflow that released 1.12.1 and earlier, with the CMake build
+the installers, signing and the update feed; so far the releases are previews for macOS,
+Windows and, from the next one, Linux. The `release.yml` workflow that released 1.12.1 and earlier, with the CMake build
 and the deleted `CloakFrame-updates` repository, is kept at the `v1.12.1` tag, and its notes
 are in this file's history: `git show 78bff36:docs/RELEASING.md`.
 
 ## Preview
 
-The [release workflow](../.github/workflows/release.yml) builds two packages, each with the
+The [release workflow](../.github/workflows/release.yml) builds three packages, each with the
 ffmpeg and ffprobe that `native.toml` pins (see [FFmpeg builds](#ffmpeg-builds)):
 
 - The macOS arm64 app in a zip ([macos_preview.sh](../tools/package/macos_preview.sh)),
@@ -19,10 +19,14 @@ ffmpeg and ffprobe that `native.toml` pins (see [FFmpeg builds](#ffmpeg-builds))
 - The Windows x64 Velopack installer ([windows.ps1](../tools/package/windows.ps1)). It is not
   Authenticode signed (decision 2026-10-30, no budget), so SmartScreen warns on its first
   run. The portable zip vpk also writes is not released.
+- The Linux x86_64 AppImage ([linux.sh](../tools/package/linux.sh)), which is Velopack's package
+  on Linux. Built on Ubuntu 24.04, so it runs where glibc is 2.39 or newer
+  ([M7_LINUX](M7_LINUX.md)).
 
 On a pull request that changes the packaging, and when run by hand, the workflow only builds
-them, and installs, opens and uninstalls the Windows app, running its ffmpeg and ffprobe. On a
-`v*` tag it also signs the update package and drafts the pre-release. Publishing the draft
+them, installs, opens and uninstalls the Windows app, running its ffmpeg and ffprobe, and opens
+the AppImage, there and on four other distributions. On a
+`v*` tag it also signs the update packages and drafts the pre-release. Publishing the draft
 publishes the update feed.
 
 1. Set the workspace version in `Cargo.toml` to the preview version, such as
@@ -36,16 +40,16 @@ publishes the update feed.
    git push origin v2.0.0-preview.1
    ```
 
-4. The workflow signs the update package and drafts the pre-release with the zip, the
-   installer and the corresponding source of their FFmpeg, under the name it has on its
+4. The workflow signs the update packages and drafts the pre-release with the zip, the
+   installer, the AppImage and the corresponding source of their FFmpeg, under the name it has on its
    FFmpeg pre-release. Neither step waits for an approval (decision 2026-11-01).
-5. Download both from the draft, open them as the notes describe, and publish the draft.
+5. Download the packages from the draft, open them as the notes describe, and publish the draft.
 6. Publishing starts [publish-feed.yml](../.github/workflows/publish-feed.yml). It takes the
-   signed package from the tag's release run, uploads the release's FFmpeg source, the package
-   and its `.sig` to the `updates` pre-release, and then `releases.win.json`, which installed
-   apps read
-   ([M7_UPDATES](M7_UPDATES.md)). Every version goes to the one `win` channel, so an installed
-   preview updates to the next one. If it fails, re-run it from the Actions tab.
+   signed packages from the tag's release run, uploads the release's FFmpeg source, the packages
+   and their `.sig` to the `updates` pre-release, and then `releases.win.json` and
+   `releases.linux.json`, which installed apps read
+   ([M7_UPDATES](M7_UPDATES.md)). Every version goes to the one channel of its platform, `win`
+   or `linux`, so an installed preview updates to the next one. If it fails, re-run it from the Actions tab.
 
 A pre-release never becomes the latest release, so the README download links keep
 pointing at 1.12.1 until 2.0 is stable.
