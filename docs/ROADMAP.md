@@ -67,8 +67,9 @@ close it. Check the caller and the full scope before recording a change of state
   #96 the review hint, #97 ellipse corners and a soft blur edge, #98 language and theme
   in Advanced Options. The maintainer's review of the layout on 2026-11-08 (#104) turned
   Advanced Options into Settings with tabs at the sidebar's foot and moved Start to the panel's
-  foot. Still open: the maintainer's look at the app, and #98 and the native Settings menu item
-  in the Windows app.
+  foot. #105 stopped editor clicks from acting on hidden boxes and on items not yet seen. Still
+  open: the maintainer's look at the app, and #98, the native Settings menu item and #105's
+  clicks in the Windows app.
   Record in [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
 - **Comparison with 1.12.1.** Detection quality and speed, long runs, and Windows DML on
   NVIDIA, Intel and AMD hardware.
