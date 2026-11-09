@@ -1,10 +1,10 @@
 name: Release
 
-# Builds the macOS preview zip and the Windows installer. On a v* tag it also signs the update
-# package in the `release` environment and drafts the pre-release with the corresponding source of
-# the FFmpeg the packages bundle (plan 10.1); publishing the draft puts the update feed on the
-# `updates` release (publish-feed.yml, docs/RELEASING.md). Elsewhere it only builds and checks the
-# packages.
+# Builds the macOS preview zip, the Windows installer and the Linux AppImage. On a v* tag it also
+# signs the update packages in the `release` environment and drafts the pre-release with the
+# corresponding source of the FFmpeg the packages bundle (plan 10.1); publishing the draft puts the
+# update feed on the `updates` release (publish-feed.yml, docs/RELEASING.md). Elsewhere it only
+# builds and checks the packages.
 on:
   push:
     tags: ["v*"]
@@ -14,6 +14,8 @@ on:
       - .github/workflows/release.yml
       - tools/package/**
       - tools/ci/app_window.ps1
+      - tools/ci/app_window.sh
+      - tools/ci/linux_launch.sh
       - manifests/native.toml
       - packaging/**
   workflow_dispatch:
@@ -146,9 +148,76 @@ jobs:
           path: ${{ runner.temp }}/feed/*
           if-no-files-found: error
 
+  linux:
+    name: Linux x86_64 AppImage
+    needs: version
+    # The AppImage runs only where glibc is at least as new as on this runner.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Install packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y nasm squashfs-tools fuse3 xvfb xdotool imagemagick x11-utils \
+            mesa-vulkan-drivers libxcursor1 libxrandr2 libxi6 libxkbcommon-x11-0 libgl1 libegl1
+
+      - name: Install Rust
+        run: rustup toolchain install
+
+      - name: Install cargo-about
+        run: cargo install cargo-about --version "$CARGO_ABOUT" --features cli --locked
+
+      - name: Package
+        env:
+          CLOAKFRAME2_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME2_UPDATE_PUBLIC_KEY }}
+        run: tools/package/linux.sh "$RUNNER_TEMP/linux"
+
+      - name: Open the AppImage
+        run: tools/ci/app_window.sh "$RUNNER_TEMP/linux/CloakFrameApp.AppImage" "$RUNNER_TEMP/app-window"
+
+      - name: Start the AppImage on other distributions
+        run: |
+          for image in ubuntu:24.04 debian:13 fedora:43 archlinux:latest; do
+            docker run --rm -v "$RUNNER_TEMP/linux:/package:ro" -v "$PWD/tools/ci:/ci:ro" "$image" \
+              bash /ci/linux_launch.sh /package/CloakFrameApp.AppImage
+          done
+
+      - name: Keep the app window screenshots
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: app-window-linux
+          path: |
+            ${{ runner.temp }}/app-window/*.png
+            ${{ runner.temp }}/app-window/*.log
+          if-no-files-found: ignore
+
+      - name: Sort the files
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          from=$RUNNER_TEMP/linux
+          mkdir "$RUNNER_TEMP/package" "$RUNNER_TEMP/feed"
+          cp "$from/CloakFrameApp.AppImage" "$RUNNER_TEMP/package/CloakFrame-$VERSION-Linux-x86_64.AppImage"
+          cp "$from/releases.linux.json" "$from/CloakFrameApp-$VERSION-linux-full.nupkg" "$RUNNER_TEMP/feed"
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-package
+          path: ${{ runner.temp }}/package/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-feed
+          path: ${{ runner.temp }}/feed/*
+          if-no-files-found: error
+
   sign-updates:
-    name: Sign the update package
-    needs: windows
+    name: Sign the update packages
+    needs: [windows, linux]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -161,11 +230,18 @@ jobs:
           name: windows-feed
           path: ${{ runner.temp }}/feed
 
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: linux-feed
+          path: ${{ runner.temp }}/feed-linux
+
       - name: Sign
         env:
           CLOAKFRAME2_UPDATE_PRIVATE_KEY: ${{ secrets.CLOAKFRAME2_UPDATE_PRIVATE_KEY }}
           CLOAKFRAME2_UPDATE_PUBLIC_KEY: ${{ vars.CLOAKFRAME2_UPDATE_PUBLIC_KEY }}
-        run: python3 -I tools/package/sign_updates.py "$RUNNER_TEMP/feed" win
+        run: |
+          python3 -I tools/package/sign_updates.py "$RUNNER_TEMP/feed" win
+          python3 -I tools/package/sign_updates.py "$RUNNER_TEMP/feed-linux" linux
 
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -173,9 +249,15 @@ jobs:
           path: ${{ runner.temp }}/feed/*
           if-no-files-found: error
 
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: linux-feed-signed
+          path: ${{ runner.temp }}/feed-linux/*
+          if-no-files-found: error
+
   draft:
     name: Draft the pre-release
-    needs: [version, macos, windows, sign-updates]
+    needs: [version, macos, windows, linux, sign-updates]
     if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -192,6 +274,11 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: windows-installer
+          path: ${{ runner.temp }}/dist
+
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: linux-package
           path: ${{ runner.temp }}/dist
 
       # Under the name it has on the FFmpeg pre-release, without the hash fetch_native.py adds.

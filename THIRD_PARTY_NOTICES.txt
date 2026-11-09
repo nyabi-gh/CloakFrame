@@ -877,6 +877,23 @@ consider it more useful to permit linking proprietary applications with the
 library.  If this is what you want to do, use the GNU Lesser General
 Public License instead of this License.
 ================================================================================
+AppImage type 2 runtime  (at the start of the Linux package; mounts and starts it)
+--------------------------------------------------------------------------------
+The Linux package is an AppImage. It begins with the AppImage type 2 runtime,
+as carried by Velopack's packaging tool vpk 1.2.161, a separate program that
+mounts the package and starts CloakFrame. CloakFrame's Apache License 2.0 does
+not apply to it. Its source and how to build it are at
+https://github.com/AppImage/type2-runtime
+
+The runtime itself is under the MIT License:
+  https://github.com/AppImage/type2-runtime/blob/main/LICENSE
+It contains, statically linked, under their own terms:
+  musl libc   https://git.musl-libc.org/cgit/musl/tree/COPYRIGHT
+  libfuse     GNU LGPL, https://github.com/libfuse/libfuse/blob/master/LGPL2.txt
+  squashfuse  https://github.com/vasi/squashfuse/blob/master/LICENSE
+  libzstd     https://github.com/facebook/zstd/blob/dev/LICENSE
+  zlib        https://zlib.net/zlib_license.html
+================================================================================
 libjpeg-turbo 3.1.0  (statically linked; JPEG decoding and encoding)
 --
 https://libjpeg-turbo.org/  Built from the source bundled in turbojpeg-sys 1.2.0.

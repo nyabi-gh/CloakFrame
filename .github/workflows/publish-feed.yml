@@ -22,7 +22,7 @@ jobs:
       contents: write
       actions: read
     steps:
-      - name: Download the signed package
+      - name: Download the signed packages
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name }}
@@ -34,9 +34,10 @@ jobs:
             exit 1
           fi
           gh run download "$run" -R "$GITHUB_REPOSITORY" -n windows-feed-signed -D "$RUNNER_TEMP/feed"
+          gh run download "$run" -R "$GITHUB_REPOSITORY" -n linux-feed-signed -D "$RUNNER_TEMP/feed"
           gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p '*-source.tar' -D "$RUNNER_TEMP/source"
 
-      # The feed goes last, so that it never lists a package that is not there yet.
+      # The feeds go last, so that they never list a package that is not there yet.
       - name: Upload to the updates release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -48,4 +49,4 @@ jobs:
           gh release upload updates -R "$GITHUB_REPOSITORY" --clobber "$RUNNER_TEMP"/source/*-source.tar
           cd "$RUNNER_TEMP/feed"
           gh release upload updates -R "$GITHUB_REPOSITORY" --clobber *.nupkg *.nupkg.sig
-          gh release upload updates -R "$GITHUB_REPOSITORY" --clobber releases.win.json
+          gh release upload updates -R "$GITHUB_REPOSITORY" --clobber releases.win.json releases.linux.json
