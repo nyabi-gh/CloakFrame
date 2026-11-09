@@ -9,6 +9,7 @@ Files already in <dest dir> with the right hash are not fetched again. Prints th
 import hashlib
 import json
 import sys
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -31,9 +32,12 @@ def main() -> None:
             continue
         partial = path.with_suffix(path.suffix + ".part")
         request = urllib.request.Request(asset["url"], headers={"User-Agent": "cloakframe-ci"})
-        with urllib.request.urlopen(request, timeout=300) as response, partial.open("wb") as out:
-            while chunk := response.read(1 << 20):
-                out.write(chunk)
+        try:
+            with urllib.request.urlopen(request, timeout=300) as response, partial.open("wb") as out:
+                while chunk := response.read(1 << 20):
+                    out.write(chunk)
+        except urllib.error.URLError as error:
+            raise SystemExit(f"Downloading {asset['url']} failed: {error}") from error
         digest = sha256(partial)
         if digest != asset["sha256"]:
             partial.unlink()
