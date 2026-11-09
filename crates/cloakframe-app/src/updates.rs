@@ -255,13 +255,13 @@ impl Updates {
         match &self.stage {
             Stage::Idle | Stage::Checking { asked: false } | Stage::Quitting => return,
             Stage::Checking { asked: true } => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.spinner();
                     ui.label(tr.get("update-checking"));
                 });
             }
             Stage::UpToDate => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.label(tr.with(
                         "update-none",
                         &[("version", FluentValue::from(env!("CARGO_PKG_VERSION")))],
@@ -272,7 +272,7 @@ impl Updates {
                 });
             }
             Stage::CheckFailed(error) => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.colored_label(
                         p.failed,
                         tr.with(
@@ -287,7 +287,7 @@ impl Updates {
             }
             Stage::Available(offer) => {
                 let mut install = false;
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.label(tr.with("update-available", &version(offer)));
                     if style::plain(ui, tr.get("update-install")).clicked() {
                         install = true;
@@ -301,7 +301,7 @@ impl Updates {
                 }
             }
             Stage::Downloading(offer) => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.label(tr.with("update-downloading", &version(offer)));
                     let percent = self.percent.load(Ordering::Relaxed);
                     ui.add(egui::ProgressBar::new(f32::from(percent) / 100.0).desired_width(160.0));
@@ -310,7 +310,7 @@ impl Updates {
             Stage::Ready(offer) | Stage::Applying(offer) => {
                 let applying = matches!(self.stage, Stage::Applying(_));
                 let mut restart = false;
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.label(tr.with("update-ready", &version(offer)));
                     let button = egui::Button::new(tr.get("update-restart"))
                         .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
@@ -333,7 +333,7 @@ impl Updates {
                 }
             }
             Stage::Failed(error) => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.colored_label(
                         p.failed,
                         tr.with(
@@ -347,7 +347,7 @@ impl Updates {
                 });
             }
             Stage::Refused(reason) => {
-                ui.horizontal(|ui| {
+                ui.horizontal_wrapped(|ui| {
                     ui.colored_label(p.failed, tr.get("update-refused"))
                         .on_hover_text(reason);
                     if style::plain(ui, tr.get("close")).clicked() {

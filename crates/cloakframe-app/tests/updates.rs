@@ -110,6 +110,35 @@ fn an_update_found_at_startup_is_installed_only_when_the_user_asks() {
     assert_eq!(harness.state().updates.stage, Stage::Quitting);
 }
 
+/// The bar sits in the middle column, left of the fixed settings panel.
+fn assert_clear_of_the_panel(harness: &Harness<'_, AppState>, control: &str) {
+    let panel = harness.get_by_label("What to hide").rect().min.x;
+    let right = harness.get_by_label(control).rect().max.x;
+    assert!(
+        right <= panel,
+        "{control} ends at {right}, the panel starts at {panel}"
+    );
+}
+
+#[test]
+fn the_update_bar_keeps_its_buttons_in_the_middle_column() {
+    let fake = Arc::new(Fake::default());
+    *fake.check.lock().unwrap() = Some(Ok(Some(offer())));
+    let mut harness = harness(&fake, true);
+    settle(&mut harness);
+    harness.get_by_label("Update").click();
+    settle(&mut harness);
+    assert_clear_of_the_panel(&harness, "Restart Now");
+    assert_clear_of_the_panel(&harness, "Later");
+
+    harness.get_by_label("Later").click();
+    settle(&mut harness);
+    *fake.check.lock().unwrap() = Some(Err(Problem::Failed("the network is down ".repeat(10))));
+    harness.state_mut().command(Command::CheckUpdates);
+    settle(&mut harness);
+    assert_clear_of_the_panel(&harness, "Close");
+}
+
 #[test]
 fn later_puts_the_update_away() {
     let fake = Arc::new(Fake::default());
