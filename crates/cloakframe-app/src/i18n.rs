@@ -145,6 +145,19 @@ mod tests {
         }
     }
 
+    /// The sidebar shows a finished run's title directly above the list of waiting reviews.
+    #[test]
+    fn a_run_waiting_for_review_is_named_apart_from_the_list() {
+        for language in Language::ALL {
+            let tr = Translator::new(language);
+            assert_ne!(
+                tr.get("result-title-review"),
+                tr.get("sessions-title"),
+                "{language:?}"
+            );
+        }
+    }
+
     #[test]
     fn arguments_and_plurals_format() {
         let en = Translator::new(Language::En);

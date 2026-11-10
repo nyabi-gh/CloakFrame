@@ -473,5 +473,5 @@ found-remove = { $name } を外す
 models-needed = この作業に必要な検出モデルをダウンロードしてください。
 start-needs-models = 先に検出モデルをダウンロードしてください。
 output-group = 保存
-result-title-review = 確認待ち
+result-title-review = 確認が必要
 editor-back = 一覧

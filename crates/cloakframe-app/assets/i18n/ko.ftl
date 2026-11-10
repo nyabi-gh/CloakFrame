@@ -418,5 +418,5 @@ found-remove = { $name } 빼기
 models-needed = 이 작업에 필요한 감지 모델을 받으세요.
 start-needs-models = 먼저 감지 모델을 받으세요.
 output-group = 저장
-result-title-review = 검토 대기
+result-title-review = 검토 필요
 editor-back = 목록

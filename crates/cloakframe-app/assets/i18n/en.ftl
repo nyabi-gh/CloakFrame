@@ -502,5 +502,5 @@ found-remove = Remove { $name }
 models-needed = Download the detection models this task needs.
 start-needs-models = Download the detection models first.
 output-group = Save
-result-title-review = Waiting for review
+result-title-review = Needs review
 editor-back = List
