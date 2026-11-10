@@ -58,5 +58,4 @@ Velopack의 Linux 패키지는 AppImage 하나다. Windows처럼 Setup이 따로
 - 서명·초안·feed의 Linux 경로는 다음 preview 태그(2.0.0-preview.4)에서 처음 돈다.
 - 실제 Linux 데스크톱(Wayland 포함)에서 실행과 업데이트. 지금까지는 runner의 Xvfb와 컨테이너다.
 - AppImage를 데스크톱에 등록하면 `.desktop`의 `StartupWMClass=CloakFrameApp`이 앱의 창 이름과 맞지 않아 작업 표시줄 아이콘이 묶이지 않을 수 있다. 앱은 app id와 창 아이콘을 정하지 않는다.
-- README의 preview 절은 Linux를 담은 릴리스를 낼 때 고친다.
 - AppImage 런타임이 정적으로 담은 libfuse(LGPL)를 고지만으로 충분히 다루는지 법률 검토 때 같이 본다.

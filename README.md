@@ -34,9 +34,10 @@ only when you agree.
 ## CloakFrame 2 preview
 
 The `main` branch is CloakFrame 2, a rewrite in Rust. The rest of this page describes
-1.12.1, the current release. A preview of CloakFrame 2 for macOS on Apple silicon and
-Windows x64 is on the [releases page](https://github.com/nyabi-gh/CloakFrame/releases) as
-a pre-release. From 2.0.0-preview.3 it masks videos as well as photos, with an FFmpeg
+1.12.1, the current release. A preview of CloakFrame 2 for macOS on Apple silicon,
+Windows x64 and, from 2.0.0-preview.4, Linux x86_64 as an AppImage is on the
+[releases page](https://github.com/nyabi-gh/CloakFrame/releases) as a pre-release.
+From 2.0.0-preview.3 it masks videos as well as photos, with an FFmpeg
 built from source for CloakFrame ([tools/ffmpeg](tools/ffmpeg)), which is licensed under
 the GPL version 2 or later; each release carries its corresponding source. The Windows
 preview includes Microsoft's Windows ML runtime, which is licensed under Microsoft's terms

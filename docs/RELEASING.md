@@ -5,7 +5,7 @@ Maintainer notes for publishing CloakFrame 2. Contributors do not need any of th
 
 CloakFrame 2 has no stable release yet. M7 of the [plan](RUST_PORT_PLAN.md) (8, 10) builds
 the installers, signing and the update feed; so far the releases are previews for macOS,
-Windows and, from the next one, Linux. The `release.yml` workflow that released 1.12.1 and earlier, with the CMake build
+Windows and, from 2.0.0-preview.4, Linux. The `release.yml` workflow that released 1.12.1 and earlier, with the CMake build
 and the deleted `CloakFrame-updates` repository, is kept at the `v1.12.1` tag, and its notes
 are in this file's history: `git show 78bff36:docs/RELEASING.md`.
 
