@@ -45,14 +45,17 @@ Velopack의 Linux 패키지는 AppImage 하나다. Windows처럼 Setup이 따로
 
 기본 창 크기(1100)에서 "다운로드했습니다" 줄이 가운데 칸보다 길어 "Restart Now"가 잘리고 "Later"가 패널 뒤로 숨었으며, 칸 전체가 넓어져 아래 내용도 밀렸다. OS와 관계없다. Windows의 실제 업데이트 확인(preview.3)은 UI Automation으로 버튼을 눌러 드러나지 않았다. 업데이트 줄을 `horizontal_wrapped`로 바꿨다. 재현 시험은 `the_update_bar_keeps_its_buttons_in_the_middle_column`이고 고치기 전에 실패했다(버튼 오른쪽 831.6, 패널 시작 812). 고친 뒤 실제 AppImage 화면에서 두 버튼이 다 보이는 것도 확인했다.
 
-## PR #106의 CI(2026-11-09)
+## PR #106의 CI와 병합(2026-11-09, 11-10)
 
 - `3819103`에서 Format·lint·라이선스는 통과했고, Test 3개(macOS·Ubuntu·Windows, run 42567642571)는 시험 전 받기 단계에서 GitHub 릴리스의 HTTP 504로 멈췄다. 코드와 무관하고 [11-08의 504](M6_UX.md#설정과-화면-배치-재검토2026-11-08-ui-settings)와 같은 현상이다. 그 결정대로 스크립트에 재시도를 넣지 않았다. 잠시 뒤 이 Mac에서 같은 주소는 200이었다.
-- 이 기록을 쓸 때 `release.yml`(run 42567642475)의 세 패키지 job은 진행 중이어서 Linux job의 첫 결과는 아직 없다.
+- `9b53ff2`에서 다시 504로 멈췄다. CI(run 42568079849)의 Test 3개는 받기 단계에서(Linux는 우리 FFmpeg 묶음, macOS·Windows는 시험 자산), `release.yml`(run 42568079881)의 Linux job은 8분 빌드 뒤 Package의 ORT 받기에서 실패했다. macOS·Windows 패키지 job은 통과했다. 그 뒤 이 Mac에서 CI가 받는 17개 주소를 몇 차례 받아 보면 매번 4–8개가 504였고, 실패하는 주소는 매번 달랐다.
+- 2026-11-10 같은 17개 주소가 세 번 연속 모두 받아진 뒤 두 실행의 실패한 job만 다시 돌렸다(attempt 2). Test 3개와 Linux job이 통과했다. **`release.yml`의 Linux job이 처음 통과했다**(10분 44초): Package 7분 5초, Open the AppImage, 다른 배포판 넷에서 시작 70초. 패키지 artifact는 52.4 MiB다.
+- 같은 날 main `9b53ff2`로 fast-forward했고 main push CI(run 42731371131)도 통과했다.
+- 이 504 때문에 CI의 Test job이 받는 것을 캐시하게 했다(PR #107, main `fdb0e6e`). key는 OS와 `native.toml`·`assets.json`의 해시다. 받기 스크립트가 매번 해시를 확인하는 아카이브와 시험 자산만 넣고, 있으면 확인 없이 쓰는 풀린 폴더는 넣지 않았다. 첫 PR 실행이 세 OS에서 저장했고(Linux 177 MiB, macOS 87 MiB, Windows 182 MiB), 다음 실행이 복원했다. 병합 뒤 main push CI가 main 범위에 저장했고, 다른 PR(#108)이 그것을 복원했다. 복원한 실행의 받기 단계는 Windows 11초에서 3–4초, macOS 6초에서 1–2초로 줄었다. Linux는 13초에서 11초인데 대부분 풀기다. 이득은 시간보다 GitHub가 504를 낼 때 받지 않는 것이다. `release.yml`은 캐시하지 않는다. 시험 자산 받기가 실패하면 이제 그 주소를 낸다(`fetch_native.py`는 #101부터 그랬다).
 
 ## 남은 것
 
-- PR #106의 CI 통과와 병합. `release.yml`의 Linux job은 이 PR이 첫 실행이다. 서명·초안·feed의 Linux 경로는 다음 preview 태그에서 처음 돈다.
+- 서명·초안·feed의 Linux 경로는 다음 preview 태그(2.0.0-preview.4)에서 처음 돈다.
 - 실제 Linux 데스크톱(Wayland 포함)에서 실행과 업데이트. 지금까지는 runner의 Xvfb와 컨테이너다.
 - AppImage를 데스크톱에 등록하면 `.desktop`의 `StartupWMClass=CloakFrameApp`이 앱의 창 이름과 맞지 않아 작업 표시줄 아이콘이 묶이지 않을 수 있다. 앱은 app id와 창 아이콘을 정하지 않는다.
 - README의 preview 절은 Linux를 담은 릴리스를 낼 때 고친다.

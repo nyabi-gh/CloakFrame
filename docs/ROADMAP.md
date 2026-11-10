@@ -21,8 +21,8 @@ close it. Check the caller and the full scope before recording a change of state
   it, and releases it without Authenticode, so SmartScreen warns on its first run (decision
   2026-10-30). It still needs the VM. [`tools/package/linux.sh`](../tools/package/linux.sh) builds
   the AppImage, and the release workflow opens it and starts it on Ubuntu 24.04, Debian 13,
-  Fedora 43 and Arch ([record](M7_LINUX.md)). It still needs a real Linux desktop and its first
-  release.
+  Fedora 43 and Arch ([record](M7_LINUX.md)); that job first passed on #106, merged on
+  2026-11-10. It still needs a real Linux desktop and its first release.
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
@@ -60,7 +60,9 @@ close it. Check the caller and the full scope before recording a change of state
   plan 10.1).
 - **Model mirror** (plan 4.6). On 2026-11-08 GitHub answered HTTP 504 to release downloads for
   a long stretch: the default face model, on one person's repository, could not be downloaded
-  from the app ([record](M6_UX.md#설정과-화면-배치-재검토2026-11-08-ui-settings)).
+  from the app ([record](M6_UX.md#설정과-화면-배치-재검토2026-11-08-ui-settings)). CI now caches
+  what its test jobs download (#107, [record](M7_LINUX.md#pr-106의-ci와-병합2026-11-09-11-10));
+  the app still downloads its models from GitHub only.
 
 ## Verification and stable (M8)
 
@@ -72,7 +74,8 @@ close it. Check the caller and the full scope before recording a change of state
   #96 the review hint, #97 ellipse corners and a soft blur edge, #98 language and theme
   in Advanced Options. The maintainer's review of the layout on 2026-11-08 (#104) turned
   Advanced Options into Settings with tabs at the sidebar's foot and moved Start to the panel's
-  foot. #105 stopped editor clicks from acting on hidden boxes and on items not yet seen. Still
+  foot. #105 stopped editor clicks from acting on hidden boxes and on items not yet seen. #108
+  named a run waiting for review apart from the sidebar's list of waiting reviews. Still
   open: the maintainer's look at the app, and #98, the native Settings menu item and #105's
   clicks in the Windows app.
   Record in [M6_UX](M6_UX.md#ui-다듬기2026-11-01).
