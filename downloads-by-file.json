@@ -463,5 +463,20 @@
     "release": "v2.0.0-preview.3",
     "name": "CloakFrame-Preview-2.0.0-preview.3-macOS-arm64.zip",
     "downloads": 1
+  },
+  {
+    "release": "v2.0.0-preview.4",
+    "name": "CloakFrame-2.0.0-preview.4-Linux-x86_64.AppImage",
+    "downloads": 0
+  },
+  {
+    "release": "v2.0.0-preview.4",
+    "name": "CloakFrame-2.0.0-preview.4-Windows-x64-Setup.exe",
+    "downloads": 0
+  },
+  {
+    "release": "v2.0.0-preview.4",
+    "name": "CloakFrame-Preview-2.0.0-preview.4-macOS-arm64.zip",
+    "downloads": 0
   }
 ]
