@@ -22,18 +22,20 @@ close it. Check the caller and the full scope before recording a change of state
   2026-10-30). It still needs the VM. [`tools/package/linux.sh`](../tools/package/linux.sh) builds
   the AppImage, and the release workflow opens it and starts it on Ubuntu 24.04, Debian 13,
   Fedora 43 and Arch ([record](M7_LINUX.md)); that job first passed on #106, merged on
-  2026-11-10. It still needs a real Linux desktop and its first release.
+  2026-11-10, and 2.0.0-preview.4 was its first release
+  ([record](M7_RELEASE.md#네-번째-릴리스2026-11-11-linux)). It still needs a real Linux desktop.
 - **Updates.** Velopack on Windows and Linux, Sparkle on macOS, reading the feed from this
   repository's `updates` pre-release. Updates are signed with new keys
   ([RELEASING](RELEASING.md#signing-keys)) and a downgrade is refused. The Windows and Linux
   app checks, downloads and installs an update only when the pinned key signed it, and a
   release build does not build without the key ([record](M7_UPDATES.md)). The release
   workflow signs the Windows package, and publishing the drafted release publishes the feed;
-  2.0.0-preview.1 to preview.3 went out through it
-  ([record](M7_RELEASE.md#세-번째-릴리스2026-11-08-영상)), and an installed preview.1 updated
+  2.0.0-preview.1 to preview.4 went out through it
+  ([record](M7_RELEASE.md#네-번째-릴리스2026-11-11-linux)), and an installed preview.1 updated
   to preview.3 from that feed on Windows. On Linux an AppImage built with a test key updated in place on a GitHub runner and refused forged
-  feeds and packages ([record](M7_LINUX.md)); the release workflow signs its package and publishing
-  the draft publishes its feed. It still needs Sparkle on macOS and a real Linux desktop.
+  feeds and packages ([record](M7_LINUX.md)); the release workflow signs its package, and
+  preview.4 put the first signed Linux feed on `updates`. It still needs Sparkle on macOS and a
+  real Linux desktop.
 - **GPU acceleration on Linux.** An NVIDIA GPU pack the user downloads after accepting NVIDIA's
   terms (ONNX Runtime's CUDA build and NVIDIA's libraries, 1.2 GB) runs detection on CUDA
   ([record](M7_ACCELERATORS.md)). It still needs a run on a real Linux machine and an older GPU,

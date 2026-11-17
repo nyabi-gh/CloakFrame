@@ -53,9 +53,12 @@ Velopack의 Linux 패키지는 AppImage 하나다. Windows처럼 Setup이 따로
 - 같은 날 main `9b53ff2`로 fast-forward했고 main push CI(run 42731371131)도 통과했다.
 - 이 504 때문에 CI의 Test job이 받는 것을 캐시하게 했다(PR #107, main `fdb0e6e`). key는 OS와 `native.toml`·`assets.json`의 해시다. 받기 스크립트가 매번 해시를 확인하는 아카이브와 시험 자산만 넣고, 있으면 확인 없이 쓰는 풀린 폴더는 넣지 않았다. 첫 PR 실행이 세 OS에서 저장했고(Linux 177 MiB, macOS 87 MiB, Windows 182 MiB), 다음 실행이 복원했다. 병합 뒤 main push CI가 main 범위에 저장했고, 다른 PR(#108)이 그것을 복원했다. 복원한 실행의 받기 단계는 Windows 11초에서 3–4초, macOS 6초에서 1–2초로 줄었다. Linux는 13초에서 11초인데 대부분 풀기다. 이득은 시간보다 GitHub가 504를 낼 때 받지 않는 것이다. `release.yml`은 캐시하지 않는다. 시험 자산 받기가 실패하면 이제 그 주소를 낸다(`fetch_native.py`는 #101부터 그랬다).
 
+## 첫 릴리스(2026-11-11)
+
+2.0.0-preview.4가 AppImage를 담은 첫 릴리스다. `release.yml`의 Linux job, 서명 job의 `linux` 채널, 초안, `publish-feed.yml`이 첫 시도에 통과했고, `updates` 릴리스에 `releases.linux.json`과 서명한 Linux 패키지가 처음 올라갔다. 올라간 패키지의 SHA-256과 서명을 고정 공개 키로 확인했다([기록](M7_RELEASE.md#네-번째-릴리스2026-11-11-linux)).
+
 ## 남은 것
 
-- 서명·초안·feed의 Linux 경로는 다음 preview 태그(2.0.0-preview.4)에서 처음 돈다.
 - 실제 Linux 데스크톱(Wayland 포함)에서 실행과 업데이트. 지금까지는 runner의 Xvfb와 컨테이너다.
 - AppImage를 데스크톱에 등록하면 `.desktop`의 `StartupWMClass=CloakFrameApp`이 앱의 창 이름과 맞지 않아 작업 표시줄 아이콘이 묶이지 않을 수 있다. 앱은 app id와 창 아이콘을 정하지 않는다.
 - AppImage 런타임이 정적으로 담은 libfuse(LGPL)를 고지만으로 충분히 다루는지 법률 검토 때 같이 본다.

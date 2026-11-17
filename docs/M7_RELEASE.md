@@ -60,6 +60,16 @@
 - 초안을 게시하자 `publish-feed.yml`(run 42446641493)이 `updates` 릴리스에 FFmpeg 대응 소스, `CloakFrameApp-2.0.0-preview.3-full.nupkg`(56,318,187바이트, sha256 `ae846ef5…45bff96`)와 `.sig`를 올리고 `releases.win.json`을 preview.3 하나로 바꿨다. 올라간 파일을 받아 SHA-256이 feed와 같고 서명이 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다.
 - **실제 업데이트(2026-11-08):** 메인테이너 Windows PC에 설치돼 있던 preview.1을 시작하자 시험용 feed 변수 없이 "CloakFrame 2.0.0-preview.3 버전을 사용할 수 있습니다." 줄이 떴다. "업데이트"를 누르자 4초 만에 받았고, packages의 nupkg SHA-256이 feed 값(`ae846ef5…`)과 같았다. "지금 다시 시작" 뒤 새 프로세스가 떴고 `current\sq.version`이 preview.3, 앱 폴더에 ffmpeg.exe·ffprobe.exe가 생겼으며, 그 앱이 영상 하나를 저장했다([기록](M7_FFMPEG.md#설치된-앱)). 버튼은 UI Automation으로 눌렀다.
 
+## 네 번째 릴리스(2026-11-11, Linux)
+
+#109가 #106·#107·#108 병합을 기록하고 판을 `2.0.0-preview.4`로 올린 뒤, 메인테이너 "fast-forward"로 main `060d2f1`에 `v2.0.0-preview.4`를 태그했다(run 42937753051). Linux AppImage를 담은 첫 릴리스이고, 서명 job의 `linux` 채널, 초안, `publish-feed.yml`의 Linux 경로가 처음 돌았다.
+
+- Version, macOS zip, Windows 설치본, Linux AppImage(9분 50초), 서명, 초안 job이 첫 시도에 통과했다. 초안에는 `CloakFrame-2.0.0-preview.4-Linux-x86_64.AppImage`(55,556,600바이트), `CloakFrame-2.0.0-preview.4-Windows-x64-Setup.exe`(63,921,061바이트), `CloakFrame-Preview-2.0.0-preview.4-macOS-arm64.zip`(44,994,675바이트), `CloakFrame-FFmpeg-9.0.2-1-source.tar`(27,832,320바이트, 게시된 `ffmpeg-9.0.2-1`의 것과 SHA-256이 같음)가 올라갔다.
+- 초안의 AppImage는 같은 run의 Linux 패키지 artifact와 같았다. macOS zip의 앱은 판이 2.0.0-preview.4이고 `codesign --verify --deep --strict`를 통과했으며, 번들 ffmpeg는 `9.0.2-cloakframe1`이다. Gatekeeper 격리 열기는 다시 하지 않았다(preview.3에서 확인한 구성 그대로).
+- 초안을 게시하자 `publish-feed.yml`(run 42941216898)이 `updates` 릴리스에 `CloakFrameApp-2.0.0-preview.4-full.nupkg`(56,346,021바이트, sha256 `f81c1050…ab8095ec8`), `CloakFrameApp-2.0.0-preview.4-linux-full.nupkg`(54,980,803바이트, sha256 `2694666c…366bd7c9`)와 각자의 `.sig`를 올리고, `releases.win.json`을 preview.4 하나로 바꾸고 `releases.linux.json`을 처음 올렸다. 2026-11-17에 올라간 파일을 받아 두 feed 모두 SHA-256이 같고 서명이 `CLOAKFRAME2_UPDATE_PUBLIC_KEY`로 검증되는 것을 확인했다. 임의의 키로는 둘 다 검증에 실패했다.
+- 릴리스는 pre-release로 게시했고 Latest는 1.12.1 그대로다.
+- 설치된 preview.3이나 실제 Linux 데스크톱의 AppImage가 이 feed로 preview.4를 받는지는 확인하지 않았다.
+
 ## 남은 것
 
 - DMG·Sparkle, 1903 VM. Linux AppImage는 [M7_LINUX](M7_LINUX.md).
