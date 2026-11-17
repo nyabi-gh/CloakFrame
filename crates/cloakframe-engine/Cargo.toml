@@ -53,7 +53,7 @@ ort = { workspace = true, features = ["coreml"] }
 ort = { workspace = true, features = ["cuda"] }
 
 [target.'cfg(unix)'.dependencies]
-rustix = { version = "=1.1.5", features = ["fs", "process"] }
+rustix = { version = "=1.1.6", features = ["fs", "process"] }
 libc = "=0.2.191"
 
 [target.'cfg(windows)'.dependencies]
