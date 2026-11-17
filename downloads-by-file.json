@@ -17,12 +17,12 @@
   {
     "release": "updates",
     "name": "CloakFrameApp-2.0.0-preview.4-full.nupkg",
-    "downloads": 1
+    "downloads": 2
   },
   {
     "release": "updates",
     "name": "CloakFrameApp-2.0.0-preview.4-linux-full.nupkg",
-    "downloads": 1
+    "downloads": 2
   },
   {
     "release": "v1.0.0",
@@ -247,7 +247,7 @@
   {
     "release": "v1.12.1",
     "name": "CloakFrame-1.12.1-Windows-x64-Setup.exe",
-    "downloads": 23
+    "downloads": 24
   },
   {
     "release": "v1.2.0",
