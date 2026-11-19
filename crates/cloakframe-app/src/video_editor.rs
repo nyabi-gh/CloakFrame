@@ -12,7 +12,10 @@ use eframe::egui;
 use fluent_bundle::FluentValue;
 
 use crate::draft::{Draft, Pick};
-use crate::editor::{Go, Mark, View, behind_modal, dashed, kind_name, paint_mark};
+use crate::editor::{
+    CanvasAct, Go, Handle, Mark, View, behind_modal, dashed, hit_handle, kind_name, paint_handles,
+    paint_mark, resize_rect,
+};
 use crate::i18n::Translator;
 use crate::lanes;
 use crate::style::{self, Palette};
@@ -22,8 +25,19 @@ const TIMELINE_HEIGHT: f32 = 150.0;
 const PLAY_ROW_HEIGHT: f32 = 48.0;
 
 enum Drag {
-    Adding { from: egui::Pos2, to: egui::Pos2 },
-    Moving { track: usize, last: egui::Pos2 },
+    Adding {
+        from: egui::Pos2,
+        to: egui::Pos2,
+    },
+    Moving {
+        track: usize,
+        last: egui::Pos2,
+    },
+    Resizing {
+        track: usize,
+        handle: Handle,
+        original: Rect,
+    },
     Panning,
 }
 
@@ -95,6 +109,14 @@ impl VideoEditor {
     /// How the frame sits in the canvas, once it is drawn.
     pub fn view(&self) -> Option<View> {
         self.view
+    }
+
+    pub fn reset_view(&mut self) {
+        self.view = None;
+    }
+
+    pub fn request_focus(&mut self) {
+        self.focus = true;
     }
 
     /// Moves to frame `k`, stopping playback.
@@ -177,8 +199,8 @@ pub fn time(seconds: f64) -> String {
     format!("{}:{:02}.{}", tenths / 600, tenths / 10 % 60, tenths % 10)
 }
 
-/// The frame with its boxes over the timeline; returns a step through the queue the keys asked
-/// for.
+/// The frame with its boxes over the timeline; returns what the keys asked for.
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn ui(
     ui: &mut egui::Ui,
     tr: &Translator,
@@ -186,8 +208,9 @@ pub(crate) fn ui(
     draft: &mut Draft,
     tracks: &[TrackSummary],
     open: bool,
+    can_approve: bool,
     help: &mut bool,
-) -> Option<Go> {
+) -> CanvasAct {
     let ctx = ui.ctx().clone();
     editor.clip.take(&ctx);
     if let Some(e) = &editor.clip.error {
@@ -198,14 +221,14 @@ pub(crate) fn ui(
                 &[("error", FluentValue::from(e.as_str()))],
             ),
         );
-        return None;
+        return CanvasAct::None;
     }
     let Some(preview) = editor.clip.preview.clone() else {
         ui.horizontal(|ui| {
             ui.spinner();
             ui.label(tr.get("editor-video-loading"));
         });
-        return None;
+        return CanvasAct::None;
     };
     let (w, h) = preview.size();
     let size = egui::vec2(w as f32, h as f32);
@@ -307,6 +330,14 @@ pub(crate) fn ui(
             })
     };
     let view_now = *view;
+    let selected_handle =
+        |v: &View, p: egui::Pos2, draft: &Draft| -> Option<(usize, Handle, Rect)> {
+            let Some(Pick::Manual(i)) = draft.selected else {
+                return None;
+            };
+            let (_, bbox) = manual.iter().find(|(idx, _)| *idx == i)?;
+            hit_handle(to_screen(v, *bbox), p).map(|handle| (i, handle, *bbox))
+        };
     let boxes_drawn = editor.boxes_drawn;
     if response.clicked_by(egui::PointerButton::Primary)
         && let Some(p) = response.interact_pointer_pos()
@@ -327,20 +358,32 @@ pub(crate) fn ui(
     {
         editor.clip.stop();
         let middle = ui.input(|i| i.pointer.middle_down() || i.pointer.secondary_down());
-        editor.drag = Some(match hit(&view_now, p).filter(|_| boxes_drawn) {
-            _ if middle || !open => Drag::Panning,
-            Some(Pick::Manual(i)) => {
-                draft.selected = Some(Pick::Manual(i));
-                draft.begin_gesture();
-                Drag::Moving {
-                    track: i,
-                    last: to_frame(&view_now, p),
-                }
+        editor.drag = Some(if middle || !open {
+            Drag::Panning
+        } else if boxes_drawn
+            && let Some((track, handle, original)) = selected_handle(&view_now, p, draft)
+        {
+            draft.begin_gesture();
+            Drag::Resizing {
+                track,
+                handle,
+                original,
             }
-            _ => Drag::Adding {
-                from: to_frame(&view_now, p),
-                to: to_frame(&view_now, p),
-            },
+        } else {
+            match hit(&view_now, p).filter(|_| boxes_drawn) {
+                Some(Pick::Manual(i)) => {
+                    draft.selected = Some(Pick::Manual(i));
+                    draft.begin_gesture();
+                    Drag::Moving {
+                        track: i,
+                        last: to_frame(&view_now, p),
+                    }
+                }
+                _ => Drag::Adding {
+                    from: to_frame(&view_now, p),
+                    to: to_frame(&view_now, p),
+                },
+            }
         });
     }
     if response.dragged()
@@ -356,6 +399,18 @@ pub(crate) fn ui(
                 draft.gesture(|doc, b| {
                     Draft::shift_track(doc, track, at, (delta.x, delta.y), b);
                 });
+            }
+            Some(Drag::Resizing {
+                track,
+                handle,
+                original,
+            }) => {
+                let (track, handle, original) = (*track, *handle, *original);
+                if let Some(resized) = resize_rect(original, handle, now) {
+                    draft.gesture(|doc, b| {
+                        Draft::set_track_rect(doc, track, at, resized, b);
+                    });
+                }
             }
             Some(Drag::Panning) => view.center -= response.drag_delta() / view.scale,
             None => {}
@@ -377,15 +432,54 @@ pub(crate) fn ui(
                     draft.add_track(at, area);
                 }
             }
-            Some(Drag::Moving { .. }) => draft.end_gesture(),
+            Some(Drag::Moving { .. } | Drag::Resizing { .. }) => draft.end_gesture(),
             _ => {}
         }
     }
 
-    let mut go = None;
+    if let Some(drag) = &editor.drag {
+        let icon = match drag {
+            Drag::Adding { .. } => egui::CursorIcon::Crosshair,
+            Drag::Moving { .. } | Drag::Panning => egui::CursorIcon::Grabbing,
+            Drag::Resizing { handle, .. } => handle.cursor(),
+        };
+        ui.ctx().set_cursor_icon(icon);
+    } else if response.hovered()
+        && boxes_drawn
+        && let Some(p) = response.hover_pos()
+    {
+        let icon = if !open {
+            egui::CursorIcon::Grab
+        } else if let Some((_, handle, _)) = selected_handle(&view_now, p, draft) {
+            handle.cursor()
+        } else {
+            match hit(&view_now, p) {
+                Some(Pick::Manual(_)) => egui::CursorIcon::Grab,
+                Some(Pick::Track(_)) => egui::CursorIcon::PointingHand,
+                _ => egui::CursorIcon::Crosshair,
+            }
+        };
+        ui.ctx().set_cursor_icon(icon);
+    }
+
+    let mut act = CanvasAct::None;
     if focused {
-        let canvas = Canvas { fit, size, open };
-        go = keys(ui, editor, draft, view, &canvas, (&tracked, &manual), help);
+        let canvas = Canvas {
+            fit,
+            size,
+            open,
+            can_approve,
+        };
+        act = keys(
+            ui,
+            &response,
+            editor,
+            draft,
+            view,
+            &canvas,
+            (&tracked, &manual),
+            help,
+        );
         editor.holding_mask = ui.input(|i| i.key_down(egui::Key::M));
     } else {
         editor.holding_mask = false;
@@ -419,7 +513,12 @@ pub(crate) fn ui(
         Rect::new(0.0, 0.0, size.x, size.y).expect("a video has a size"),
     );
     if let Some(shown) = &editor.clip.shown {
-        egui::Image::new(&shown.texture).paint_at(ui, frame_rect);
+        painter.image(
+            shown.texture.id(),
+            frame_rect,
+            egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
+            egui::Color32::WHITE,
+        );
     }
     let showing_masked = editor
         .clip
@@ -480,7 +579,11 @@ pub(crate) fn ui(
                 Mark::Between
             };
             let selected = draft.selected == Some(Pick::Manual(*i));
-            paint_mark(&painter, to_screen(&view, *b), mark, selected, &p);
+            let screen = to_screen(&view, *b);
+            paint_mark(&painter, screen, mark, selected, &p);
+            if selected && open {
+                paint_handles(&painter, screen, &p);
+            }
         }
         if let Some(Drag::Adding { from, to }) = &editor.drag {
             let screen = egui::Rect::from_two_pos(
@@ -493,31 +596,39 @@ pub(crate) fn ui(
 
     play_row(ui, tr, editor, draft, &preview, help);
     timeline(ui, tr, editor, draft, tracks, &preview);
-    go
+    act
 }
 
 /// What the keys need of the canvas: the scale that fits the frame, the frame's size, and
-/// whether the item can still be edited.
+/// whether the item can still be edited or approved.
 struct Canvas {
     fit: f32,
     size: egui::Vec2,
     open: bool,
+    can_approve: bool,
 }
 
-/// The canvas's keys; returns a step through the queue.
+/// The canvas's keys; returns what the keys asked for.
+#[allow(clippy::too_many_arguments)]
 fn keys(
     ui: &egui::Ui,
+    response: &egui::Response,
     editor: &mut VideoEditor,
     draft: &mut Draft,
     view: &mut View,
-    &Canvas { fit, size, open }: &Canvas,
+    &Canvas {
+        fit,
+        size,
+        open,
+        can_approve,
+    }: &Canvas,
     (tracked, manual): (&[TrackRegion], &[(usize, Rect)]),
     help: &mut bool,
-) -> Option<Go> {
+) -> CanvasAct {
     let frames = draft.frames();
     let second = draft.second();
     let ppp = ui.ctx().pixels_per_point();
-    let mut go = None;
+    let mut act = CanvasAct::None;
     let events = ui.input(|i| i.events.clone());
     for event in events {
         match event {
@@ -538,10 +649,19 @@ fn keys(
                 match key {
                     egui::Key::Escape if *help => *help = false,
                     egui::Key::Escape => draft.selected = None,
+                    egui::Key::F6 => {
+                        response.surrender_focus();
+                        act = CanvasAct::FocusInspector;
+                    }
+                    egui::Key::Enter
+                        if m.command && open && can_approve && draft.unresolved() == 0 =>
+                    {
+                        act = CanvasAct::Approve;
+                    }
                     egui::Key::Space => editor.toggle_playback(draft),
-                    egui::Key::Z if m.command && m.shift => draft.redo(),
-                    egui::Key::Z if m.command => draft.undo(),
-                    egui::Key::Y if m.command => draft.redo(),
+                    egui::Key::Z if open && m.command && m.shift => draft.redo(),
+                    egui::Key::Z if open && m.command => draft.undo(),
+                    egui::Key::Y if open && m.command => draft.redo(),
                     egui::Key::Tab => draft.selected = cycle(draft, tracked, manual, !m.shift),
                     egui::Key::Enter if open => {
                         if let Some(Pick::Track(id)) = draft.selected {
@@ -597,15 +717,15 @@ fn keys(
                         let factor = 1.0 / ppp / view.scale;
                         zoom(view, factor, fit, ppp);
                     }
-                    egui::Key::PageDown => go = Some(Go::Step(1)),
-                    egui::Key::PageUp => go = Some(Go::Step(-1)),
+                    egui::Key::PageDown => act = CanvasAct::Go(Go::Step(1)),
+                    egui::Key::PageUp => act = CanvasAct::Go(Go::Step(-1)),
                     _ => {}
                 }
             }
             _ => {}
         }
     }
-    go
+    act
 }
 
 /// Zooms about the canvas's center, the point `view.center` shows there.
@@ -709,16 +829,26 @@ fn play_row(
                 ui.label(job);
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let shortcuts = tr.get("editor-shortcuts");
-                    let link = ui.add(
-                        egui::Button::new(
-                            egui::RichText::new(shortcuts).size(12.0).color(p.secondary),
+                    let link = ui
+                        .add(
+                            egui::Button::new(
+                                egui::RichText::new(shortcuts).size(12.0).color(p.secondary),
+                            )
+                            .frame(false),
                         )
-                        .frame(false),
-                    );
+                        .on_hover_cursor(egui::CursorIcon::PointingHand);
+                    style::focus_ring(ui, &link);
                     if link.clicked() {
                         *help = !*help;
                     }
-                    ui.label(egui::RichText::new("M").color(p.secondary));
+                    style::keycap(ui, "M").on_hover_text(tr.get("editor-video-hold-mask"));
+                    let (sep, _) =
+                        ui.allocate_exact_size(egui::vec2(1.0, 14.0), egui::Sense::hover());
+                    ui.painter().vline(
+                        sep.center().x,
+                        sep.y_range(),
+                        egui::Stroke::new(1.0, p.separator),
+                    );
                     ui.add(style::Check::new(
                         &mut editor.masked_playback,
                         tr.get("editor-video-masked"),
@@ -755,7 +885,7 @@ fn timeline(
     );
     let outer = egui::Rect::from_min_size(
         whole.min + egui::vec2(20.0, 6.0),
-        egui::vec2(whole.width() - 40.0, TIMELINE_HEIGHT - 20.0),
+        egui::vec2(whole.width() - 40.0, TIMELINE_HEIGHT - 14.0),
     );
     ui.allocate_rect(
         egui::Rect::from_min_size(whole.min, egui::vec2(whole.width(), TIMELINE_HEIGHT)),
@@ -780,35 +910,20 @@ fn timeline(
                 + 8.0
         })
         .fold(GUTTER, f32::max);
-    let rect = egui::Rect::from_x_y_ranges(outer.left() + gutter..=outer.right(), outer.y_range());
-    let response = ui.interact(
-        rect,
-        ui.make_persistent_id("timeline"),
-        egui::Sense::click_and_drag(),
+    let ruler_height = 18.0;
+    let ruler = egui::Rect::from_min_size(
+        egui::pos2(outer.left() + gutter, outer.top()),
+        egui::vec2((outer.width() - gutter).max(1.0), ruler_height),
     );
-    response.widget_info(|| {
-        egui::WidgetInfo::labeled(egui::Role::Slider, true, tr.get("editor-timeline"))
-    });
-    let painter = ui.painter_at(outer.expand(2.0));
     let frames_f = frames.max(1) as f32;
-    let x_of = |k: f32| rect.left() + (k / frames_f) * rect.width();
+    let x_of = |k: f32| ruler.left() + (k / frames_f) * ruler.width();
     let frame_at = |x: f32| {
-        (((x - rect.left()) / rect.width() * frames_f)
+        (((x - ruler.left()) / ruler.width() * frames_f)
             .floor()
             .max(0.0) as u64)
             .min(frames.saturating_sub(1))
     };
-    let span = |first: u64, last: u64, top: f32, height: f32| {
-        egui::Rect::from_min_max(
-            egui::pos2(x_of(first as f32), top),
-            egui::pos2(
-                x_of((last + 1) as f32).max(x_of(first as f32) + MIN_BAR_WIDTH),
-                top + height,
-            ),
-        )
-    };
 
-    let ruler = egui::Rect::from_min_size(rect.min, egui::vec2(rect.width(), 18.0));
     let manual_spans: Vec<(u64, u64)> = draft
         .doc
         .video
@@ -828,103 +943,28 @@ fn timeline(
         groups.push((tr.get("editor-kind-drawn"), manual_count));
     }
     let rows: usize = groups.iter().map(|(_, n)| n).sum();
-    let rows_top = ruler.bottom();
     let group_gap = 8.0;
     let lane_gap = 3.0;
-    let room = rect.bottom() - rows_top - group_gap * groups.len().saturating_sub(1) as f32;
-    let row_height = (room / rows.max(1) as f32 - lane_gap).clamp(4.0, 18.0);
+    let lanes_view = egui::Rect::from_min_max(egui::pos2(outer.left(), ruler.bottom()), outer.max);
+    let room = lanes_view.height() - group_gap * groups.len().saturating_sub(1) as f32;
+    let row_height = (room / rows.max(1) as f32 - lane_gap).clamp(6.0, 18.0);
     let row_step = row_height + lane_gap;
-    let mut group_tops = Vec::new();
-    let mut top = rows_top + lane_gap;
+    let mut group_offsets = Vec::new();
+    let mut rel_top = lane_gap;
     for (_, n) in &groups {
-        group_tops.push(top);
-        top += *n as f32 * row_step + group_gap;
+        group_offsets.push(rel_top);
+        rel_top += *n as f32 * row_step + group_gap;
     }
-    let lanes_bottom = (top - group_gap).max(rows_top + row_step);
-    let track_tops: Vec<f32> = editor
-        .lanes
-        .rows
-        .iter()
-        .map(|&(kind, row)| group_tops[kind] + row as f32 * row_step)
-        .collect();
-    let track_top = |i: usize| track_tops[i];
-    let manual_top = |i: usize| group_tops[groups.len() - 1] + manual_rows[i] as f32 * row_step;
-    let band = |first: u64, last: u64| span(first, last, rows_top, lanes_bottom - rows_top);
+    let content_height = (rel_top - group_gap).max(lanes_view.height());
 
-    let hit = |p: egui::Pos2| -> Option<Hit> {
-        let near = |r: egui::Rect| r.expand2(egui::vec2(3.0, 1.0)).contains(p);
-        if let Some(i) = (0..manual_spans.len()).find(|&i| {
-            let (f, l) = manual_spans[i];
-            near(span(f, l, manual_top(i), row_height))
-        }) {
-            return Some(Hit::Manual(i));
-        }
-        if let Some(i) = (0..tracks.len()).find(|&i| {
-            near(span(
-                tracks[i].first,
-                tracks[i].last,
-                track_top(i),
-                row_height,
-            ))
-        }) {
-            return Some(Hit::Track(i));
-        }
-        draft
-            .problems()
-            .iter()
-            .enumerate()
-            .find_map(|(i, pr)| match pr {
-                Problem::UnresolvedGap { first, last, .. } if near(band(*first, *last)) => {
-                    Some(Hit::Gap(i))
-                }
-                _ => None,
-            })
-    };
-
-    if let Some(at) = response.interact_pointer_pos()
-        && (response.clicked() || response.dragged())
-    {
-        let k = frame_at(at.x);
-        let picked = if response.clicked() { hit(at) } else { None };
-        match picked {
-            Some(Hit::Gap(i)) => {
-                draft.selected = Some(Pick::Problem(i));
-                editor.seek(k, frames);
-            }
-            Some(Hit::Manual(i)) => {
-                draft.selected = Some(Pick::Manual(i));
-                let t = &draft.doc.video.added_tracks[i];
-                editor.seek(k.clamp(t.first, t.last), frames);
-            }
-            Some(Hit::Track(i)) => {
-                let t = &tracks[i];
-                draft.selected = Some(Pick::Track(t.id));
-                editor.seek(k.clamp(t.first, t.last), frames);
-            }
-            None => editor.seek(k, frames),
-        }
-    }
-    if !behind_modal(ui, &response) && response.has_focus() {
-        let (left, right) = ui.input(|i| {
-            (
-                i.key_pressed(egui::Key::ArrowLeft),
-                i.key_pressed(egui::Key::ArrowRight),
-            )
-        });
-        if left {
-            editor.seek(editor.at.saturating_sub(1), frames);
-        }
-        if right {
-            editor.seek(editor.at + 1, frames);
-        }
-    }
-
+    // Ruler stays pinned above the scrollable lanes.
+    let ruler_painter = ui.painter_at(outer.expand(2.0));
     let total = preview.seconds(frames.saturating_sub(1));
-    let step = ruler_step(total, rect.width());
+    let step = ruler_step(total, ruler.width());
     let mut s = 0.0;
     while s <= total {
         let x = x_of((s / total.max(f64::EPSILON) * frames.saturating_sub(1) as f64) as f32);
-        painter.text(
+        ruler_painter.text(
             egui::pos2(x + 4.0, ruler.center().y),
             egui::Align2::LEFT_CENTER,
             ruler_label(s),
@@ -933,92 +973,211 @@ fn timeline(
         );
         s += step;
     }
-    for ((label, _), &top) in groups.iter().zip(&group_tops) {
-        painter.text(
-            egui::pos2(outer.left(), top + row_height / 2.0),
-            egui::Align2::LEFT_CENTER,
-            label,
-            egui::FontId::proportional(LANE_NAME_SIZE),
-            p.secondary,
-        );
-    }
-    for (i, problem) in draft.problems().iter().enumerate() {
-        if let Problem::UnresolvedGap { first, last, .. } = problem {
-            let open = draft.doc.resolutions[i] == Resolution::Unresolved;
-            let color = if open { p.needs_review } else { p.border };
-            let r = band(*first, *last);
-            hatch(&painter, r, color);
-            let width = if draft.selected == Some(Pick::Problem(i)) {
-                2.0
-            } else {
-                1.0
-            };
-            let edge = egui::Stroke::new(width, color);
-            painter.vline(r.left(), r.y_range(), edge);
-            painter.vline(r.right(), r.y_range(), edge);
-        }
-    }
-    // As on the canvas: a masked track is filled, one left as it is only has a dashed frame,
-    // and the selected one gets a ring in the text colour.
-    let ring = |r: egui::Rect| {
-        painter.rect_stroke(
-            r,
-            3,
-            egui::Stroke::new(1.5, p.text),
-            egui::StrokeKind::Outside,
-        );
-    };
-    for (i, t) in tracks.iter().enumerate() {
-        let r = span(t.first, t.last, track_top(i), row_height);
-        if draft.is_track_excluded(t.id) {
-            dashed(
-                &painter,
-                r.shrink(0.75),
-                egui::Stroke::new(1.5, p.secondary),
-            );
-        } else if t.low_confidence {
-            painter.rect_filled(r, 3, p.separator);
-            dashed(
-                &painter,
-                r.shrink(0.75),
-                egui::Stroke::new(1.5, p.secondary),
-            );
-        } else {
-            painter.rect_filled(r, 3, p.secondary);
-        }
-        if draft.selected == Some(Pick::Track(t.id)) {
-            ring(r);
-        }
-    }
-    for (i, t) in draft.doc.video.added_tracks.iter().enumerate() {
-        let r = span(t.first, t.last, manual_top(i), row_height);
-        painter.rect_filled(r, 3, p.secondary);
-        if draft.selected == Some(Pick::Manual(i)) {
-            ring(r);
-        }
-        for k in &t.keyframes {
-            let c = egui::pos2(x_of(k.frame as f32 + 0.5), r.center().y);
-            let d = (row_height / 2.0).min(5.0);
-            painter.add(egui::Shape::convex_polygon(
-                vec![
-                    c + egui::vec2(0.0, -d),
-                    c + egui::vec2(d, 0.0),
-                    c + egui::vec2(0.0, d),
-                    c + egui::vec2(-d, 0.0),
-                ],
-                p.window,
-                egui::Stroke::new(1.5, p.text),
-            ));
-        }
-    }
-    let x = x_of(editor.at as f32 + 0.5);
-    painter.vline(
-        x,
-        ruler.top()..=lanes_bottom,
-        egui::Stroke::new(2.0, p.text),
+
+    let mut focused = false;
+    ui.scope_builder(
+        egui::UiBuilder::new()
+            .max_rect(lanes_view)
+            .layout(egui::Layout::top_down(egui::Align::Min)),
+        |ui| {
+            egui::ScrollArea::vertical()
+                .id_salt("timeline-lanes")
+                .auto_shrink(false)
+                .show(ui, |ui| {
+                    let (area, _) = ui.allocate_exact_size(
+                        egui::vec2(lanes_view.width(), content_height),
+                        egui::Sense::hover(),
+                    );
+                    let rect = egui::Rect::from_x_y_ranges(
+                        ruler.left()..=ruler.right(),
+                        area.top()..=area.bottom(),
+                    );
+                    let response = ui
+                        .interact(
+                            rect,
+                            ui.make_persistent_id("timeline"),
+                            egui::Sense::click_and_drag(),
+                        )
+                        .on_hover_cursor(egui::CursorIcon::PointingHand);
+                    response.widget_info(|| {
+                        egui::WidgetInfo::labeled(
+                            egui::Role::Slider,
+                            true,
+                            tr.get("editor-timeline"),
+                        )
+                    });
+                    focused = response.has_focus();
+                    let span = |first: u64, last: u64, top: f32, height: f32| {
+                        egui::Rect::from_min_max(
+                            egui::pos2(x_of(first as f32), top),
+                            egui::pos2(
+                                x_of((last + 1) as f32).max(x_of(first as f32) + MIN_BAR_WIDTH),
+                                top + height,
+                            ),
+                        )
+                    };
+                    let group_tops: Vec<f32> =
+                        group_offsets.iter().map(|&o| area.top() + o).collect();
+                    let track_tops: Vec<f32> = editor
+                        .lanes
+                        .rows
+                        .iter()
+                        .map(|&(kind, row)| group_tops[kind] + row as f32 * row_step)
+                        .collect();
+                    let track_top = |i: usize| track_tops[i];
+                    let manual_top =
+                        |i: usize| group_tops[groups.len() - 1] + manual_rows[i] as f32 * row_step;
+                    let band =
+                        |first: u64, last: u64| span(first, last, area.top(), content_height);
+
+                    let hit = |pos: egui::Pos2| -> Option<Hit> {
+                        let near = |r: egui::Rect| r.expand2(egui::vec2(3.0, 1.0)).contains(pos);
+                        if let Some(i) = (0..manual_spans.len()).find(|&i| {
+                            let (f, l) = manual_spans[i];
+                            near(span(f, l, manual_top(i), row_height))
+                        }) {
+                            return Some(Hit::Manual(i));
+                        }
+                        if let Some(i) = (0..tracks.len()).find(|&i| {
+                            near(span(
+                                tracks[i].first,
+                                tracks[i].last,
+                                track_top(i),
+                                row_height,
+                            ))
+                        }) {
+                            return Some(Hit::Track(i));
+                        }
+                        draft
+                            .problems()
+                            .iter()
+                            .enumerate()
+                            .find_map(|(i, pr)| match pr {
+                                Problem::UnresolvedGap { first, last, .. }
+                                    if near(band(*first, *last)) =>
+                                {
+                                    Some(Hit::Gap(i))
+                                }
+                                _ => None,
+                            })
+                    };
+
+                    if let Some(at) = response.interact_pointer_pos()
+                        && (response.clicked() || response.dragged())
+                    {
+                        let k = frame_at(at.x);
+                        let picked = if response.clicked() { hit(at) } else { None };
+                        match picked {
+                            Some(Hit::Gap(i)) => {
+                                draft.selected = Some(Pick::Problem(i));
+                                editor.seek(k, frames);
+                            }
+                            Some(Hit::Manual(i)) => {
+                                draft.selected = Some(Pick::Manual(i));
+                                let t = &draft.doc.video.added_tracks[i];
+                                editor.seek(k.clamp(t.first, t.last), frames);
+                            }
+                            Some(Hit::Track(i)) => {
+                                let t = &tracks[i];
+                                draft.selected = Some(Pick::Track(t.id));
+                                editor.seek(k.clamp(t.first, t.last), frames);
+                            }
+                            None => editor.seek(k, frames),
+                        }
+                    }
+                    if !behind_modal(ui, &response) && response.has_focus() {
+                        let (left, right) = ui.input(|i| {
+                            (
+                                i.key_pressed(egui::Key::ArrowLeft),
+                                i.key_pressed(egui::Key::ArrowRight),
+                            )
+                        });
+                        if left {
+                            editor.seek(editor.at.saturating_sub(1), frames);
+                        }
+                        if right {
+                            editor.seek(editor.at + 1, frames);
+                        }
+                    }
+
+                    let painter = ui.painter();
+                    for ((label, _), &top) in groups.iter().zip(&group_tops) {
+                        painter.text(
+                            egui::pos2(area.left(), top + row_height / 2.0),
+                            egui::Align2::LEFT_CENTER,
+                            label,
+                            egui::FontId::proportional(LANE_NAME_SIZE),
+                            p.secondary,
+                        );
+                    }
+                    for (i, problem) in draft.problems().iter().enumerate() {
+                        if let Problem::UnresolvedGap { first, last, .. } = problem {
+                            let open = draft.doc.resolutions[i] == Resolution::Unresolved;
+                            let color = if open { p.needs_review } else { p.border };
+                            let r = band(*first, *last);
+                            hatch(painter, r, color);
+                            let width = if draft.selected == Some(Pick::Problem(i)) {
+                                2.0
+                            } else {
+                                1.0
+                            };
+                            let edge = egui::Stroke::new(width, color);
+                            painter.vline(r.left(), r.y_range(), edge);
+                            painter.vline(r.right(), r.y_range(), edge);
+                        }
+                    }
+                    let ring = |r: egui::Rect| {
+                        painter.rect_stroke(
+                            r,
+                            3,
+                            egui::Stroke::new(1.5, p.text),
+                            egui::StrokeKind::Outside,
+                        );
+                    };
+                    for (i, t) in tracks.iter().enumerate() {
+                        let r = span(t.first, t.last, track_top(i), row_height);
+                        if draft.is_track_excluded(t.id) {
+                            dashed(painter, r.shrink(0.75), egui::Stroke::new(1.5, p.secondary));
+                        } else if t.low_confidence {
+                            painter.rect_filled(r, 3, p.separator);
+                            dashed(painter, r.shrink(0.75), egui::Stroke::new(1.5, p.secondary));
+                        } else {
+                            painter.rect_filled(r, 3, p.secondary);
+                        }
+                        if draft.selected == Some(Pick::Track(t.id)) {
+                            ring(r);
+                        }
+                    }
+                    for (i, t) in draft.doc.video.added_tracks.iter().enumerate() {
+                        let r = span(t.first, t.last, manual_top(i), row_height);
+                        painter.rect_filled(r, 3, p.secondary);
+                        if draft.selected == Some(Pick::Manual(i)) {
+                            ring(r);
+                        }
+                        for k in &t.keyframes {
+                            let c = egui::pos2(x_of(k.frame as f32 + 0.5), r.center().y);
+                            let d = (row_height / 2.0).min(5.0);
+                            painter.add(egui::Shape::convex_polygon(
+                                vec![
+                                    c + egui::vec2(0.0, -d),
+                                    c + egui::vec2(d, 0.0),
+                                    c + egui::vec2(0.0, d),
+                                    c + egui::vec2(-d, 0.0),
+                                ],
+                                p.window,
+                                egui::Stroke::new(1.5, p.text),
+                            ));
+                        }
+                    }
+                    let x = x_of(editor.at as f32 + 0.5);
+                    painter.vline(x, area.y_range(), egui::Stroke::new(2.0, p.text));
+                });
+        },
     );
-    if response.has_focus() {
-        painter.rect_stroke(
+    let x = x_of(editor.at as f32 + 0.5);
+    ruler_painter.vline(x, ruler.y_range(), egui::Stroke::new(2.0, p.text));
+    if focused {
+        ruler_painter.rect_stroke(
             outer.expand(1.0),
             style::BUTTON_RADIUS,
             egui::Stroke::new(1.5, p.text),

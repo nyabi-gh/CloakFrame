@@ -220,8 +220,13 @@ impl Models {
             );
             let status = self.statuses.get(&model);
             let present = matches!(status, Some(Ok(Status::Present)));
-            ui.horizontal(|ui| {
-                ui.label(tr.get(name_id(model))).on_hover_text(tr.with(
+            ui.horizontal_wrapped(|ui| {
+                ui.label(
+                    egui::RichText::new(tr.get(name_id(model)))
+                        .font(style::medium(13.0))
+                        .color(p.text),
+                )
+                .on_hover_text(tr.with(
                     "model-license",
                     &[("license", FluentValue::from(file.terms.license))],
                 ));
@@ -232,10 +237,7 @@ impl Models {
                             stop = Some(model);
                         }
                         let received = download.received.load(Ordering::Relaxed);
-                        ui.add(
-                            egui::ProgressBar::new(received as f32 / file.size as f32)
-                                .desired_width(120.0),
-                        );
+                        style::progress_bar(ui, received as f32 / file.size as f32, 120.0);
                     } else if present {
                         ui.label(small(tr.get("model-present")));
                     } else {
@@ -245,7 +247,15 @@ impl Models {
                         let button = egui::Button::new(tr.get("model-download"))
                             .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
                             .corner_radius(style::BUTTON_RADIUS);
-                        if ui.add_enabled(ready, button).clicked() {
+                        let mut response = ui.add_enabled(ready, button);
+                        style::focus_ring(ui, &response);
+                        if ready {
+                            response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                        } else if !allowed {
+                            response =
+                                response.on_disabled_hover_text(tr.get("model-download-accept"));
+                        }
+                        if response.clicked() {
                             start = Some(model);
                         }
                         if status.is_some() {

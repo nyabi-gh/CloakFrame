@@ -111,7 +111,7 @@ fn options(settings: &Settings, renderer: eframe::Renderer) -> eframe::NativeOpt
     let mut viewport = egui::ViewportBuilder::default()
         .with_title("CloakFrame")
         .with_inner_size([1100.0, 760.0])
-        .with_min_inner_size([640.0, 480.0]);
+        .with_min_inner_size([860.0, 580.0]);
     if let Some(place) = settings.window {
         viewport = viewport
             .with_position([place.x, place.y])

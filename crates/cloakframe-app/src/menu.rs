@@ -24,17 +24,29 @@ pub fn bar(ui: &mut egui::Ui, state: &mut AppState) {
             )
         };
         ui.menu_button(file, |ui| {
-            if ui.button(add_files).clicked() {
+            if ui
+                .add(egui::Button::new(add_files).shortcut_text("Ctrl+O"))
+                .clicked()
+            {
                 state.command(Command::AddFiles);
             }
-            if ui.button(add_folder).clicked() {
+            if ui
+                .add(egui::Button::new(add_folder).shortcut_text("Ctrl+Shift+O"))
+                .clicked()
+            {
                 state.command(Command::AddFolder);
             }
-            if ui.button(settings).clicked() {
+            if ui
+                .add(egui::Button::new(settings).shortcut_text("Ctrl+,"))
+                .clicked()
+            {
                 state.command(Command::Settings);
             }
             ui.separator();
-            if ui.button(quit).clicked() {
+            if ui
+                .add(egui::Button::new(quit).shortcut_text("Ctrl+Q"))
+                .clicked()
+            {
                 state.command(Command::Quit);
             }
         });

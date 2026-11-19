@@ -51,7 +51,7 @@ const DIALOG_TABS_WIDTH: f32 = 164.0;
 const DIALOG_MARGIN: f32 = 40.0;
 /// As tall as the review's footer, whose primary button sits at the same place.
 const PANEL_FOOTER_HEIGHT: f32 = 64.0;
-const DIALOG_RADIUS: u8 = 10;
+const DIALOG_FOOTER_HEIGHT: f32 = 56.0;
 
 /// The words of the sensitivity slider's steps, least sensitive first.
 const SENSITIVITY_LEVELS: [&str; 5] = [
@@ -149,6 +149,8 @@ pub struct AppState {
     pub review: Option<ReviewScreen>,
     /// The saved session the user asked to discard, until they confirm.
     pub discarding: Option<SessionId>,
+    /// Leaving a review that has active renders or unapproved edits, until the user confirms.
+    leaving: Option<SidebarAct>,
     pub quit: Quit,
     sample: Sample,
     /// The most height the sample photo may take so that the settings panel fits, from the last
@@ -197,6 +199,7 @@ impl AppState {
             sessions_read: false,
             review: None,
             discarding: None,
+            leaving: None,
             quit: Quit::No,
             sample: Sample::new(),
             sample_room: None,
@@ -374,8 +377,26 @@ impl AppState {
                 .map(|f| f.path().to_path_buf())
                 .collect()
         });
-        if !dropped.is_empty() {
+        if !dropped.is_empty() && self.screen() == Screen::Main {
             self.add_inputs(dropped, &ctx);
+        }
+        #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+        if !self.any_modal_open() {
+            ctx.input(|i| {
+                if i.modifiers.command {
+                    if i.key_pressed(egui::Key::O) {
+                        if i.modifiers.shift {
+                            self.commands.push(Command::AddFolder);
+                        } else {
+                            self.commands.push(Command::AddFiles);
+                        }
+                    } else if i.key_pressed(egui::Key::Comma) {
+                        self.commands.push(Command::Settings);
+                    } else if i.key_pressed(egui::Key::Q) {
+                        self.commands.push(Command::Quit);
+                    }
+                }
+            });
         }
         for command in std::mem::take(&mut self.commands) {
             self.run(command, &ctx);
@@ -404,7 +425,18 @@ impl AppState {
         crate::about::window(&ctx, self);
         self.settings_dialog(&ctx);
         self.discard_dialog(&ctx);
+        self.leave_review_dialog(&ctx);
         self.quit_dialog(&ctx);
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    fn any_modal_open(&self) -> bool {
+        self.about_open
+            || self.dialog_open
+            || self.discarding.is_some()
+            || self.leaving.is_some()
+            || self.quit != Quit::No
+            || self.review.as_ref().is_some_and(|r| r.confirm.is_some())
     }
 
     fn screen(&self) -> Screen {
@@ -464,10 +496,18 @@ impl AppState {
         if sidebar {
             region(ui, side, |ui| self.sidebar(ui));
         }
-        region(ui, middle, |ui| match screen {
-            Screen::Main => self.main_middle(ui),
-            Screen::Run => self.run_view(ui),
-            Screen::Review => self.review_view(ui),
+        region(ui, middle, |ui| {
+            let in_editor = self.review.as_ref().is_some_and(ReviewScreen::in_editor);
+            if !in_editor {
+                let working = self.working();
+                self.updates.bar(ui, &self.tr, working);
+                self.notices_band(ui);
+            }
+            match screen {
+                Screen::Main => self.main_middle(ui),
+                Screen::Run => self.run_view(ui),
+                Screen::Review => self.review_view(ui),
+            }
         });
         if settings {
             region(ui, panel, |ui| self.settings_panel(ui));
@@ -565,21 +605,42 @@ impl AppState {
             Screen::Review => unreachable!("the review draws its own toolbar"),
         };
         let rect = ui.max_rect();
+        let actions_width = match self.screen() {
+            Screen::Main => self.main_actions_width(ui),
+            Screen::Run => self.run_actions_width(ui),
+            Screen::Review => 0.0,
+        };
+        let title_right = if actions_width > 0.0 {
+            (rect.right() - 14.0 - actions_width - 12.0).max(title_left + 20.0)
+        } else {
+            rect.right() - 20.0
+        };
         let title_rect =
-            egui::Rect::from_x_y_ranges(title_left + 20.0..=rect.right(), rect.y_range());
+            egui::Rect::from_x_y_ranges(title_left + 20.0..=title_right, rect.y_range());
+        let scanning_with_files = self.screen() == Screen::Main
+            && self.scanning.is_some()
+            && self.found.as_ref().is_some_and(|f| !f.files.is_empty());
         ui.scope_builder(
             egui::UiBuilder::new()
                 .max_rect(title_rect)
                 .layout(egui::Layout::left_to_right(egui::Align::Center)),
             |ui| {
+                ui.set_clip_rect(title_rect.intersect(ui.clip_rect()));
                 ui.label(
-                    egui::RichText::new(title)
+                    egui::RichText::new(&title)
                         .font(style::medium(14.0))
                         .color(p.text),
                 );
-                if let Some(detail) = detail {
+                if let Some(detail) = &detail {
                     ui.add_space(6.0);
-                    ui.label(egui::RichText::new(detail).color(p.secondary));
+                    let label = ui.add(
+                        egui::Label::new(egui::RichText::new(detail).color(p.secondary)).truncate(),
+                    );
+                    label.on_hover_text(detail);
+                }
+                if scanning_with_files {
+                    ui.add_space(6.0);
+                    ui.spinner();
                 }
             },
         );
@@ -588,6 +649,24 @@ impl AppState {
             Screen::Run => self.run_actions(ui, rect),
             Screen::Review => {}
         }
+    }
+
+    fn main_actions_width(&self, ui: &egui::Ui) -> f32 {
+        let (add, clear) = (self.tr.get("add"), self.tr.get("clear-list"));
+        let has_inputs = !self.inputs.is_empty();
+        let has_files = self.found.as_ref().is_some_and(|f| !f.files.is_empty());
+        let mut widths = Vec::new();
+        if has_files {
+            widths.push(style::button_width(ui, &add, false));
+        }
+        if has_inputs {
+            widths.push(style::button_width(ui, &clear, false));
+        }
+        if widths.is_empty() {
+            return 0.0;
+        }
+        let spacing = ui.spacing().item_spacing.x;
+        widths.iter().sum::<f32>() + spacing * (widths.len() - 1) as f32
     }
 
     /// Add… once there are files, where the empty middle no longer offers it, and Remove All.
@@ -668,109 +747,195 @@ impl AppState {
         let p = *Palette::of(ui);
         let tr = &self.tr;
         let mut act = None;
-        egui::Frame::NONE
-            .inner_margin(egui::Margin::symmetric(10, 8))
+        egui::ScrollArea::vertical()
+            .id_salt("sidebar-sessions")
+            .auto_shrink(false)
             .show(ui, |ui| {
-                ui.spacing_mut().item_spacing.y = 1.0;
-                let label = match &self.board {
-                    Some(board) if board.is_over() => {
-                        tr.get(result_title(board, &self.sessions, self.review.as_ref()))
-                    }
-                    Some(_) => tr.get("running"),
-                    None => tr.get("new-task"),
-                };
-                let count = match &self.board {
-                    Some(board) => Some(board.items.len()),
-                    None => self.found.as_ref().map(|f| f.files.len()),
-                }
-                .filter(|&n| n > 0);
-                let selected = self.review.is_none();
-                let item = style::sidebar_item(ui, selected, &label, 30.0, |ui, p| {
-                    ui.label(sidebar_text(&label, selected, p));
-                    if let Some(count) = count {
-                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                egui::Frame::NONE
+                    .inner_margin(egui::Margin::symmetric(10, 8))
+                    .show(ui, |ui| {
+                        ui.spacing_mut().item_spacing.y = 1.0;
+                        let label = match &self.board {
+                            Some(board) if board.is_over() => {
+                                tr.get(result_title(board, &self.sessions, self.review.as_ref()))
+                            }
+                            Some(_) => tr.get("running"),
+                            None => tr.get("new-task"),
+                        };
+                        let count = match &self.board {
+                            Some(board) => Some(board.items.len()),
+                            None => self.found.as_ref().map(|f| f.files.len()),
+                        }
+                        .filter(|&n| n > 0);
+                        let selected = self.review.is_none();
+                        let item = style::sidebar_item(ui, selected, &label, 30.0, |ui, p| {
+                            ui.label(sidebar_text(&label, selected, p));
+                            if let Some(count) = count {
+                                ui.with_layout(
+                                    egui::Layout::right_to_left(egui::Align::Center),
+                                    |ui| {
+                                        ui.label(
+                                            egui::RichText::new(count.to_string())
+                                                .size(12.0)
+                                                .color(p.secondary),
+                                        );
+                                    },
+                                );
+                            }
+                        });
+                        if item.clicked() && self.review.is_some() {
+                            act = Some(SidebarAct::Close);
+                        }
+                        if let Some(e) = &self.sessions.error {
+                            ui.label(egui::RichText::new(e).size(12.0).color(p.needs_review));
+                        }
+                        if self.sessions.list.is_empty() {
+                            return;
+                        }
+                        let title = tr.get("sessions-title");
+                        ui.add_space(14.0);
+                        ui.horizontal(|ui| {
+                            ui.add_space(8.0);
                             ui.label(
-                                egui::RichText::new(count.to_string())
-                                    .size(12.0)
+                                egui::RichText::new(&title)
+                                    .font(style::medium(11.0))
                                     .color(p.secondary),
                             );
                         });
-                    }
-                });
-                if item.clicked() && self.review.is_some() {
-                    act = Some(SidebarAct::Close);
-                }
-                if let Some(e) = &self.sessions.error {
-                    ui.label(egui::RichText::new(e).size(12.0).color(p.needs_review));
-                }
-                if self.sessions.list.is_empty() {
-                    return;
-                }
-                let title = tr.get("sessions-title");
-                ui.add_space(14.0);
-                ui.horizontal(|ui| {
-                    ui.add_space(8.0);
-                    ui.label(
-                        egui::RichText::new(&title)
-                            .font(style::medium(11.0))
-                            .color(p.secondary),
-                    );
-                });
-                ui.add_space(4.0);
-                let now = SystemTime::now();
-                let open_id = self.review.as_ref().map(|r| r.review.id.clone());
-                a11y::list(ui, &title, |ui| {
-                    for saved in &self.sessions.list {
-                        let row = SessionRow::of(saved, now, tr);
-                        let selected = open_id.as_ref() == Some(&saved.id);
-                        let response = a11y::item(ui, &row.described, |ui| {
-                            style::sidebar_item(ui, selected, &row.described, 40.0, |ui, p| {
-                                ui.vertical(|ui| {
-                                    ui.spacing_mut().item_spacing.y = 0.0;
-                                    ui.label(sidebar_text(&row.name, selected, p));
-                                    if let Some(age) = &row.age {
-                                        ui.label(
-                                            egui::RichText::new(age).size(11.0).color(p.secondary),
-                                        );
+                        ui.add_space(4.0);
+                        let now = SystemTime::now();
+                        let open_id = self.review.as_ref().map(|r| r.review.id.clone());
+                        a11y::list(ui, &title, |ui| {
+                            for saved in &self.sessions.list {
+                                let row = SessionRow::of(saved, now, tr);
+                                let selected = open_id.as_ref() == Some(&saved.id);
+                                let response = a11y::item(ui, &row.described, |ui| {
+                                    style::sidebar_item(
+                                        ui,
+                                        selected,
+                                        &row.described,
+                                        40.0,
+                                        |ui, p| {
+                                            let count_text = row.count.map(|c| c.to_string());
+                                            let count_width = count_text
+                                                .as_deref()
+                                                .map_or(0.0, |t| style::text_width(ui, t) + 8.0);
+                                            let name_width =
+                                                (ui.available_width() - count_width).max(24.0);
+                                            ui.allocate_ui_with_layout(
+                                                egui::vec2(name_width, ui.available_height()),
+                                                egui::Layout::top_down(egui::Align::Min),
+                                                |ui| {
+                                                    ui.spacing_mut().item_spacing.y = 0.0;
+                                                    ui.add(
+                                                        egui::Label::new(sidebar_text(
+                                                            &row.name, selected, p,
+                                                        ))
+                                                        .truncate(),
+                                                    );
+                                                    if let Some(age) = &row.age {
+                                                        ui.add(
+                                                            egui::Label::new(
+                                                                egui::RichText::new(age)
+                                                                    .size(11.0)
+                                                                    .color(p.secondary),
+                                                            )
+                                                            .truncate(),
+                                                        );
+                                                    }
+                                                },
+                                            );
+                                            if let Some(count) = count_text {
+                                                ui.with_layout(
+                                                    egui::Layout::right_to_left(
+                                                        egui::Align::Center,
+                                                    ),
+                                                    |ui| {
+                                                        ui.label(
+                                                            egui::RichText::new(count)
+                                                                .size(12.0)
+                                                                .color(p.secondary),
+                                                        );
+                                                    },
+                                                );
+                                            }
+                                        },
+                                    )
+                                });
+                                let response = response.on_hover_text(&row.detail);
+                                if response.clicked() && row.readable && !selected {
+                                    act = Some(SidebarAct::Open(saved.id.clone()));
+                                }
+                                response.context_menu(|ui| {
+                                    if ui.button(tr.get("session-discard")).clicked() {
+                                        act = Some(SidebarAct::Discard(saved.id.clone()));
                                     }
                                 });
-                                if let Some(count) = row.count {
-                                    ui.with_layout(
-                                        egui::Layout::right_to_left(egui::Align::Center),
-                                        |ui| {
-                                            ui.label(
-                                                egui::RichText::new(count.to_string())
-                                                    .size(12.0)
-                                                    .color(p.secondary),
-                                            );
-                                        },
-                                    );
-                                }
-                            })
-                        });
-                        let response = response.on_hover_text(&row.detail);
-                        if response.clicked() && row.readable && !selected {
-                            act = Some(SidebarAct::Open(saved.id.clone()));
-                        }
-                        response.context_menu(|ui| {
-                            if ui.button(tr.get("session-discard")).clicked() {
-                                act = Some(SidebarAct::Discard(saved.id.clone()));
                             }
                         });
-                    }
-                });
+                    });
             });
         match act {
             None => {}
             Some(SidebarAct::Close) => {
-                self.review = None;
-                self.sessions_read = false;
+                if self.review_needs_confirm() {
+                    self.leaving = Some(SidebarAct::Close);
+                } else {
+                    self.review = None;
+                    self.sessions_read = false;
+                }
             }
             Some(SidebarAct::Open(id)) => {
-                let ctx = ui.ctx().clone();
-                self.open_review(id, None, &ctx);
+                if self.review_needs_confirm() {
+                    self.leaving = Some(SidebarAct::Open(id));
+                } else {
+                    let ctx = ui.ctx().clone();
+                    self.open_review(id, None, &ctx);
+                }
             }
             Some(SidebarAct::Discard(id)) => self.discarding = Some(id),
+        }
+    }
+
+    fn review_needs_confirm(&self) -> bool {
+        self.review
+            .as_ref()
+            .is_some_and(|r| r.review.is_rendering() || r.review.has_unsaved_edits())
+    }
+
+    /// Dismissible notices shown at the top of the middle column across screens.
+    fn notices_band(&mut self, ui: &mut egui::Ui) {
+        if self.notices.is_empty() {
+            return;
+        }
+        let p = *Palette::of(ui);
+        let close = self.tr.get("close");
+        let mut remove = None;
+        let band = egui::Frame::NONE
+            .fill(p.sidebar)
+            .inner_margin(egui::Margin::symmetric(24, 10))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.spacing_mut().item_spacing.y = 4.0;
+                for (i, notice) in self.notices.iter().enumerate() {
+                    ui.horizontal(|ui| {
+                        style::status_dot(ui, p.needs_review);
+                        ui.add(egui::Label::new(egui::RichText::new(notice).color(p.text)).wrap());
+                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                            if style::icon_button(ui, &close, style::icon::close).clicked() {
+                                remove = Some(i);
+                            }
+                        });
+                    });
+                }
+            });
+        ui.painter().hline(
+            band.response.rect.x_range(),
+            band.response.rect.bottom(),
+            egui::Stroke::new(1.0, p.separator),
+        );
+        if let Some(i) = remove {
+            self.notices.remove(i);
         }
     }
 
@@ -806,23 +971,15 @@ impl AppState {
             return;
         }
         let tr = &self.tr;
-        let mut choice = None;
-        let modal = egui::Modal::new(egui::Id::unique("quit")).show(ctx, |ui| {
-            ui.heading(tr.get("quit-title"));
-            ui.label(tr.get("quit-body"));
-            ui.horizontal(|ui| {
-                if ui.button(tr.get("quit-confirm")).clicked() {
-                    choice = Some(true);
-                }
-                if ui.button(tr.get("quit-keep")).clicked() {
-                    choice = Some(false);
-                }
-            });
-        });
-        if modal.should_close() && choice.is_none() {
-            choice = Some(false);
-        }
-        match choice {
+        match style::confirm_modal(
+            ctx,
+            "quit",
+            &tr.get("quit-title"),
+            &tr.get("quit-body"),
+            &tr.get("quit-confirm"),
+            &tr.get("quit-keep"),
+            true,
+        ) {
             Some(true) => {
                 if let Some(running) = &self.running {
                     running.cancel();
@@ -837,15 +994,61 @@ impl AppState {
         }
     }
 
+    fn leave_review_dialog(&mut self, ctx: &egui::Context) {
+        let Some(target) = self.leaving.clone() else {
+            return;
+        };
+        let rendering = self
+            .review
+            .as_ref()
+            .is_some_and(|r| r.review.is_rendering());
+        let tr = &self.tr;
+        let body = tr.get(if rendering {
+            "leave-review-body-rendering"
+        } else {
+            "leave-review-body-edits"
+        });
+        match style::confirm_modal(
+            ctx,
+            "leave-review",
+            &tr.get("leave-review-title"),
+            &body,
+            &tr.get("leave-review-confirm"),
+            &tr.get("leave-review-stay"),
+            true,
+        ) {
+            Some(true) => {
+                self.leaving = None;
+                match target {
+                    SidebarAct::Close => {
+                        self.review = None;
+                        self.sessions_read = false;
+                    }
+                    SidebarAct::Open(id) => {
+                        self.review = None;
+                        self.open_review(id, None, ctx);
+                    }
+                    SidebarAct::Discard(id) => self.discarding = Some(id),
+                }
+            }
+            Some(false) => self.leaving = None,
+            None => {}
+        }
+    }
+
     fn run(&mut self, command: Command, ctx: &egui::Context) {
         match command {
             Command::AddFiles => {
-                if let Some(files) = rfd::FileDialog::new().pick_files() {
+                if self.screen() == Screen::Main
+                    && let Some(files) = rfd::FileDialog::new().pick_files()
+                {
                     self.add_inputs(files, ctx);
                 }
             }
             Command::AddFolder => {
-                if let Some(folders) = rfd::FileDialog::new().pick_folders() {
+                if self.screen() == Screen::Main
+                    && let Some(folders) = rfd::FileDialog::new().pick_folders()
+                {
                     self.add_inputs(folders, ctx);
                 }
             }
@@ -917,11 +1120,6 @@ impl AppState {
         egui::CentralPanel::default()
             .frame(egui::Frame::NONE)
             .show(ui, |ui| {
-                let working = self.working();
-                self.updates.bar(ui, &self.tr, working);
-                for notice in &self.notices {
-                    ui.colored_label(p.needs_review, notice);
-                }
                 self.models_needed(ui);
                 if self.found.as_ref().is_some_and(|f| !f.files.is_empty()) {
                     self.file_grid(ui, &ctx);
@@ -1047,24 +1245,46 @@ impl AppState {
             self.tr.get("drop-hint")
         };
         let rect = ui.available_rect_before_wrap();
-        if hovering > 0 {
-            ui.painter().rect_stroke(
-                rect.shrink(12.0),
-                style::BUTTON_RADIUS,
-                egui::Stroke::new(1.5, p.border),
-                egui::StrokeKind::Inside,
-            );
-        }
-        let lines = if self.scanning.is_some() { 3.0 } else { 2.0 };
-        let height = lines * 26.0;
-        let block = egui::Rect::from_center_size(rect.center(), egui::vec2(rect.width(), height));
+        let card_size = egui::vec2(
+            (rect.width() - 48.0).clamp(240.0, 460.0),
+            (rect.height() - 48.0).clamp(180.0, 240.0),
+        );
+        let card = egui::Rect::from_center_size(rect.center(), card_size);
+        let (card_fill, card_stroke) = if hovering > 0 {
+            (p.sidebar, egui::Stroke::new(1.5, p.text))
+        } else {
+            (p.window, egui::Stroke::new(1.0, p.separator))
+        };
+        ui.painter()
+            .rect(card, 10, card_fill, card_stroke, egui::StrokeKind::Inside);
+        let inner = card.shrink2(egui::vec2(24.0, 20.0));
+        let content_height: f32 = if self.scanning.is_some() {
+            162.0
+        } else {
+            132.0
+        };
+        let block = egui::Rect::from_center_size(
+            inner.center(),
+            egui::vec2(inner.width(), content_height.min(inner.height())),
+        );
         ui.scope_builder(
             egui::UiBuilder::new()
                 .max_rect(block)
                 .layout(egui::Layout::top_down(egui::Align::Center)),
             |ui| {
                 ui.spacing_mut().item_spacing.y = 10.0;
-                ui.label(egui::RichText::new(hint).size(15.0).color(p.body));
+                let (icon_rect, _) =
+                    ui.allocate_exact_size(egui::vec2(40.0, 36.0), egui::Sense::hover());
+                let icon_color = if hovering > 0 { p.text } else { p.secondary };
+                style::icon::drop_media(ui.painter(), icon_rect, icon_color);
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(hint)
+                            .font(style::medium(14.0))
+                            .color(p.text),
+                    )
+                    .wrap(),
+                );
                 ui.horizontal(|ui| {
                     let (or, files, folder) = (
                         self.tr.get("drop-or"),
@@ -1089,6 +1309,11 @@ impl AppState {
                         self.command(Command::AddFolder);
                     }
                 });
+                ui.label(
+                    egui::RichText::new(self.tr.get("drop-formats"))
+                        .size(11.0)
+                        .color(p.disabled),
+                );
                 if self.scanning.is_some() {
                     ui.horizontal(|ui| {
                         ui.spinner();
@@ -1122,6 +1347,8 @@ impl AppState {
         let thumbnails = &mut self.thumbnails;
         let tr = &self.tr;
         let list = tr.get("found-list");
+        let hovering = ctx.input(|i| i.raw.hovered_files.len());
+        let drop_rect = ui.available_rect_before_wrap();
         let mut remove = None;
         egui::ScrollArea::vertical()
             .id_salt("files")
@@ -1209,13 +1436,23 @@ impl AppState {
                                         );
                                     }
                                 }
+                                let hovered = ui.rect_contains_pointer(rect);
+                                ui.painter().rect_stroke(
+                                    picture,
+                                    style::THUMBNAIL_RADIUS,
+                                    egui::Stroke::new(
+                                        1.0,
+                                        if hovered { p.border } else { p.faint_line },
+                                    ),
+                                    egui::StrokeKind::Inside,
+                                );
                                 if let Some(seconds) =
                                     thumbnails.as_ref().and_then(|t| t.seconds(&file.path))
                                 {
                                     duration_badge(ui, picture, seconds);
                                 }
                                 let mut job = egui::text::LayoutJob::simple_singleline(
-                                    name,
+                                    name.clone(),
                                     egui::FontId::proportional(12.0),
                                     p.text,
                                 );
@@ -1226,13 +1463,39 @@ impl AppState {
                                     galley,
                                     p.text,
                                 );
-                                if ui.rect_contains_pointer(rect) || out.has_focus() {
+                                if !out.hovered() {
+                                    response.on_hover_text(&name);
+                                }
+                                if hovered || out.has_focus() {
                                     paint_remove_button(ui, &out);
                                 }
                             }
                         });
                     });
             });
+        if hovering > 0 {
+            let overlay = drop_rect.shrink(12.0);
+            let wash = if ui.visuals().dark_mode {
+                egui::Color32::from_rgba_unmultiplied(31, 31, 34, 224)
+            } else {
+                egui::Color32::from_rgba_unmultiplied(255, 255, 255, 224)
+            };
+            ui.painter().rect(
+                overlay,
+                10,
+                wash,
+                egui::Stroke::new(1.5, p.text),
+                egui::StrokeKind::Inside,
+            );
+            let text = tr.with("drop-release", &[("count", FluentValue::from(hovering))]);
+            ui.painter().text(
+                overlay.center(),
+                egui::Align2::CENTER_CENTER,
+                text,
+                style::medium(15.0),
+                p.text,
+            );
+        }
         if let Some(path) = remove {
             self.remove_input(&path);
         }
@@ -1345,6 +1608,7 @@ impl AppState {
 
     fn strength(&mut self, ui: &mut egui::Ui, tr: &Translator) {
         use cloakframe_core::mask::MosaicStrength;
+        const LEVELS: u8 = MosaicStrength::MAX - MosaicStrength::MIN + 1;
         let label = tr.get("strength");
         let label_width = how_label_width(ui, tr);
         style::field(ui, label_width, &label, |ui| {
@@ -1355,12 +1619,18 @@ impl AppState {
             ui.allocate_ui_with_layout(line, centered, |ui| {
                 ui.set_min_height(style::BUTTON_HEIGHT);
                 let width = ui.available_width() - 16.0 - ui.spacing().item_spacing.x;
-                let value = &mut self.settings.mosaic_strength;
-                let slider =
-                    style::slider(ui, value, MosaicStrength::MIN..=MosaicStrength::MAX, width);
-                let shown = *value;
-                slider.widget_info(|| egui::WidgetInfo::slider(true, f64::from(shown), &label));
-                ui.label(shown.to_string());
+                // Internally mosaic_strength is cell count (4 = largest blocks, 12 = finest).
+                // Map right-ward to stronger masking (1 = finest .. 9 = strongest).
+                let cells = self
+                    .settings
+                    .mosaic_strength
+                    .clamp(MosaicStrength::MIN, MosaicStrength::MAX);
+                let mut level = MosaicStrength::MAX + 1 - cells;
+                let slider = style::slider(ui, &mut level, 1..=LEVELS, width)
+                    .on_hover_text(tr.get("strength-hint"));
+                self.settings.mosaic_strength = MosaicStrength::MAX + 1 - level;
+                slider.widget_info(|| egui::WidgetInfo::slider(true, f64::from(level), &label));
+                ui.label(level.to_string());
             });
         });
     }
@@ -1422,11 +1692,15 @@ impl AppState {
         };
         let mut button = egui::Button::new(shown)
             .min_size(egui::vec2(ui.available_width(), style::BUTTON_HEIGHT))
-            .corner_radius(style::BUTTON_RADIUS);
+            .corner_radius(style::BUTTON_RADIUS)
+            .truncate();
         if let Some(change) = change {
             button = button.right_text(egui::RichText::new(change).color(p.secondary));
         }
-        let mut response = ui.add(button);
+        let mut response = ui
+            .add(button)
+            .on_hover_cursor(egui::CursorIcon::PointingHand);
+        style::focus_ring(ui, &response);
         if let Some(folder) = self.output() {
             response = response.on_hover_text(folder.display().to_string());
         }
@@ -1449,34 +1723,19 @@ impl AppState {
         }
         let before = self.settings.clone();
         let tr = self.tr.clone();
-        let (p, backdrop) = if ctx.theme() == egui::Theme::Dark {
-            (style::DARK, egui::Color32::from_black_alpha(128))
-        } else {
-            (
-                style::LIGHT,
-                egui::Color32::from_rgba_unmultiplied(24, 24, 27, 71),
-            )
-        };
+        let p = *Palette::of_ctx(ctx);
         let id = egui::Id::unique("settings");
-        let frame = egui::Frame::NONE
-            .fill(p.window)
-            .stroke(egui::Stroke::new(1.0, p.border))
-            .corner_radius(DIALOG_RADIUS)
-            .shadow(egui::Shadow {
-                offset: [0, 12],
-                blur: 32,
-                spread: 0,
-                color: egui::Color32::from_black_alpha(46),
-            });
+        let width = (ctx.content_rect().width() - 48.0).clamp(480.0, DIALOG_WIDTH);
         let height =
-            (ctx.content_rect().height() - 2.0 * DIALOG_MARGIN).clamp(240.0, DIALOG_MAX_HEIGHT);
+            (ctx.content_rect().height() - 2.0 * DIALOG_MARGIN).clamp(280.0, DIALOG_MAX_HEIGHT);
         let line = egui::Stroke::new(1.0, p.faint_line);
         let mut done = false;
         let modal = egui::Modal::new(id)
-            .frame(frame)
-            .backdrop_color(backdrop)
+            .frame(style::dialog_frame(ctx))
+            .backdrop_color(style::dialog_backdrop(ctx))
             .show(ctx, |ui| {
-                ui.set_width(DIALOG_WIDTH);
+                ui.set_width(width);
+                ui.set_max_width(width);
                 let top = ui.cursor().top();
                 ui.spacing_mut().item_spacing.y = 0.0;
                 let label = tr.get("settings-title");
@@ -1503,17 +1762,42 @@ impl AppState {
                     });
                 ui.painter()
                     .hline(ui.max_rect().x_range(), ui.min_rect().bottom(), line);
-                // An area's ui has no bottom to lay out up from, so the part under the title is
-                // given its own rect down to the dialog's height.
+                // Lay out middle above footer explicitly so Tab visits tabs -> fields -> Done.
                 let rest = egui::Rect::from_x_y_ranges(
                     ui.max_rect().x_range(),
                     ui.cursor().top()..=top + height,
                 );
                 ui.advance_cursor_after_rect(rest);
-                let builder = egui::UiBuilder::new()
-                    .max_rect(rest)
-                    .layout(egui::Layout::bottom_up(egui::Align::Min));
-                ui.scope_builder(builder, |ui| {
+                let (middle, footer) =
+                    rest.split_top_bottom_at_y(rest.bottom() - DIALOG_FOOTER_HEIGHT);
+                let tabs_width = DIALOG_TABS_WIDTH.min(middle.width() * 0.3);
+                let (tabs, pane) = middle.split_left_right_at_x(middle.left() + tabs_width);
+                ui.painter().rect_filled(tabs, 0.0, p.sidebar);
+                ui.painter().vline(tabs.right(), tabs.y_range(), line);
+                region(ui, tabs, |ui| self.settings_tabs(ui, &tr));
+                region(ui, pane, |ui| {
+                    ui.spacing_mut().item_spacing.y = 6.0;
+                    egui::ScrollArea::vertical()
+                        .id_salt(("settings", self.settings_tab))
+                        .auto_shrink(false)
+                        .show(ui, |ui| {
+                            egui::Frame::NONE
+                                .inner_margin(egui::Margin {
+                                    left: 24,
+                                    right: 24,
+                                    top: 16,
+                                    bottom: 20,
+                                })
+                                .show(ui, |ui| match self.settings_tab {
+                                    SettingsTab::General => self.general_settings(ui, &tr),
+                                    SettingsTab::Detection => self.detection_settings(ui, &tr),
+                                    SettingsTab::Output => self.output_settings(ui, &tr),
+                                    SettingsTab::Models => self.model_settings(ui, &tr),
+                                });
+                        });
+                });
+                ui.painter().hline(footer.x_range(), footer.top(), line);
+                region(ui, footer, |ui| {
                     egui::Frame::NONE
                         .inner_margin(egui::Margin::symmetric(24, 14))
                         .show(ui, |ui| {
@@ -1542,35 +1826,6 @@ impl AppState {
                                 },
                             );
                         });
-                    ui.painter()
-                        .hline(ui.max_rect().x_range(), ui.min_rect().top(), line);
-                    let middle = ui.available_rect_before_wrap();
-                    let (tabs, pane) =
-                        middle.split_left_right_at_x(middle.left() + DIALOG_TABS_WIDTH);
-                    ui.painter().rect_filled(tabs, 0.0, p.sidebar);
-                    ui.painter().vline(tabs.right(), tabs.y_range(), line);
-                    region(ui, tabs, |ui| self.settings_tabs(ui, &tr));
-                    region(ui, pane, |ui| {
-                        ui.spacing_mut().item_spacing.y = 6.0;
-                        egui::ScrollArea::vertical()
-                            .id_salt(("settings", self.settings_tab))
-                            .auto_shrink(false)
-                            .show(ui, |ui| {
-                                egui::Frame::NONE
-                                    .inner_margin(egui::Margin {
-                                        left: 24,
-                                        right: 24,
-                                        top: 16,
-                                        bottom: 20,
-                                    })
-                                    .show(ui, |ui| match self.settings_tab {
-                                        SettingsTab::General => self.general_settings(ui, &tr),
-                                        SettingsTab::Detection => self.detection_settings(ui, &tr),
-                                        SettingsTab::Output => self.output_settings(ui, &tr),
-                                        SettingsTab::Models => self.model_settings(ui, &tr),
-                                    });
-                            });
-                    });
                 });
             });
         if done || modal.should_close() {
@@ -1660,6 +1915,18 @@ impl AppState {
                     style::segmented(ui, &mut advanced.face_model, &models);
                 });
             });
+            if !faces {
+                ui.add_space(4.0);
+                let p = Palette::of(ui);
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(tr.get("face-model-disabled"))
+                            .size(12.0)
+                            .color(p.secondary),
+                    )
+                    .wrap(),
+                );
+            }
         });
         dialog_field(ui, &tr.get("sensitivity"), |ui| {
             advanced.sensitivity = advanced.sensitivity.clamp(1, 5);
@@ -2070,13 +2337,12 @@ impl AppState {
         (tr.get("running"), Some(detail))
     }
 
-    /// Cancel All while the run works; New Task and Review once it is over.
-    fn run_actions(&mut self, ui: &mut egui::Ui, bar: egui::Rect) {
+    fn run_action_buttons(&self) -> Vec<(String, ToolbarButton, Act)> {
         let Some(board) = &self.board else {
-            return;
+            return Vec::new();
         };
         let tr = &self.tr;
-        let buttons = if board.is_over() {
+        if board.is_over() {
             match board.finished.as_ref().and_then(|f| f.session.clone()) {
                 Some(session) => vec![
                     (tr.get("new-task"), ToolbarButton::Plain, Act::NewRun),
@@ -2096,7 +2362,14 @@ impl AppState {
                 ToolbarButton::Outlined,
                 Act::CancelRun,
             )]
-        };
+        }
+    }
+
+    fn run_actions_width(&self, ui: &egui::Ui) -> f32 {
+        let buttons = self.run_action_buttons();
+        if buttons.is_empty() {
+            return 0.0;
+        }
         let widths: Vec<f32> = buttons
             .iter()
             .map(|(text, kind, _)| match kind {
@@ -2105,7 +2378,16 @@ impl AppState {
             })
             .collect();
         let spacing = ui.spacing().item_spacing.x;
-        let width = widths.iter().sum::<f32>() + spacing * (widths.len() - 1) as f32;
+        widths.iter().sum::<f32>() + spacing * (widths.len() - 1) as f32
+    }
+
+    /// Cancel All while the run works; New Task and Review once it is over.
+    fn run_actions(&mut self, ui: &mut egui::Ui, bar: egui::Rect) {
+        let buttons = self.run_action_buttons();
+        if buttons.is_empty() {
+            return;
+        }
+        let width = self.run_actions_width(ui);
         let right = bar.right() - 14.0;
         let mut act = Act::None;
         ui.scope_builder(
@@ -2141,23 +2423,15 @@ impl AppState {
             return;
         };
         let tr = &self.tr;
-        let mut choice = None;
-        let modal = egui::Modal::new(egui::Id::unique("discard")).show(ctx, |ui| {
-            ui.heading(tr.get("discard-title"));
-            ui.label(tr.get("discard-body"));
-            ui.horizontal(|ui| {
-                if ui.button(tr.get("discard-confirm")).clicked() {
-                    choice = Some(true);
-                }
-                if ui.button(tr.get("discard-keep")).clicked() {
-                    choice = Some(false);
-                }
-            });
-        });
-        if modal.should_close() && choice.is_none() {
-            choice = Some(false);
-        }
-        match choice {
+        match style::confirm_modal(
+            ctx,
+            "discard",
+            &tr.get("discard-title"),
+            &tr.get("discard-body"),
+            &tr.get("discard-confirm"),
+            &tr.get("discard-keep"),
+            true,
+        ) {
             Some(true) => {
                 // The review holds the session; it lets go first.
                 if self.review.as_ref().is_some_and(|r| r.review.id == id) {
@@ -2210,6 +2484,7 @@ enum Screen {
     Review,
 }
 
+#[derive(Clone)]
 enum SidebarAct {
     Close,
     Open(SessionId),
@@ -2363,7 +2638,9 @@ fn remove_button(
     );
     let label = tr.with("found-remove", &[("name", FluentValue::from(name))]);
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, &label));
-    response.on_hover_text(label)
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .on_hover_text(label)
 }
 
 fn paint_remove_button(ui: &egui::Ui, response: &egui::Response) {
@@ -2703,7 +2980,7 @@ fn run_row(
         ui.make_persistent_id(("run-item", row.id)),
         egui::Sense::hover(),
     );
-    if row.progress.is_some() {
+    if row.progress.is_some() || ui.rect_contains_pointer(rect) {
         ui.painter().rect_filled(rect, 0.0, p.empty);
     }
     ui.painter().hline(
@@ -2713,9 +2990,19 @@ fn run_row(
     );
 
     let gap = 14.0;
-    // The same columns while the run works and once it is over, so the state does not move
-    // when the buttons of a finished row arrive.
-    let (detail_width, buttons_width) = (200.0, 200.0);
+    let inner_width = (rect.width() - 48.0).max(200.0);
+    // Keep columns aligned between running and finished states, shrinking gracefully on narrow
+    // windows so the right-side action buttons never clip off-screen.
+    let (state_width, detail_width, buttons_width) = if inner_width >= 740.0 {
+        (160.0, 200.0, 200.0)
+    } else {
+        let scale = (inner_width / 740.0).clamp(0.55, 1.0);
+        (
+            (130.0 * scale).max(88.0),
+            (170.0 * scale).max(96.0),
+            (180.0 * scale).max(110.0),
+        )
+    };
     let mut x = rect.left() + 24.0;
     let mut column = |w: f32| {
         let column = egui::Rect::from_x_y_ranges(x..=x + w, rect.y_range());
@@ -2726,16 +3013,16 @@ fn run_row(
     let name_width = (rect.right()
         - 24.0
         - (thumb.right() + gap)
-        - 160.0
+        - state_width
         - detail_width
         - buttons_width
         - gap * 3.0)
-        .max(40.0);
+        .max(60.0);
     let name = column(name_width);
-    let state = column(160.0);
+    let state = column(state_width);
     let detail = column(detail_width);
-    let buttons =
-        egui::Rect::from_x_y_ranges(detail.right() + gap..=rect.right() - 24.0, rect.y_range());
+    let buttons_left = (detail.right() + gap).min(rect.right() - 24.0 - buttons_width);
+    let buttons = egui::Rect::from_x_y_ranges(buttons_left..=rect.right() - 24.0, rect.y_range());
 
     let picture = egui::Rect::from_center_size(thumb.center(), egui::vec2(48.0, 36.0));
     match thumbnail {
@@ -2851,8 +3138,14 @@ fn run_row(
             }
         },
     );
-    if !row.full.is_empty() {
-        response.on_hover_text(row.full.join("\n"));
+    let name_overflow = style::text_width(ui, &row.name) > name.width();
+    if !row.full.is_empty() || name_overflow {
+        let mut tip = Vec::new();
+        if name_overflow {
+            tip.push(row.name.clone());
+        }
+        tip.extend(row.full.iter().cloned());
+        response.on_hover_text(tip.join("\n"));
     }
     chosen.map(|i| match &row.buttons[i].act {
         RowAct::Cancel => RowAct::Cancel,
@@ -2954,9 +3247,28 @@ fn run_details(ui: &mut egui::Ui, board: &Board, tr: &Translator, id: egui::Id) 
                 false,
             );
             let title = tr.get("log-title");
-            let header = ui.add(
-                egui::Button::new(egui::RichText::new(&title).color(p.secondary)).frame(false),
-            );
+            let open = state.is_open();
+            let header = ui
+                .horizontal(|ui| {
+                    ui.spacing_mut().item_spacing.x = 4.0;
+                    let (icon_rect, icon_resp) =
+                        ui.allocate_exact_size(egui::vec2(14.0, 14.0), egui::Sense::click());
+                    let draw = if open {
+                        style::icon::chevron_down
+                    } else {
+                        style::icon::next
+                    };
+                    draw(ui.painter(), icon_rect, p.secondary);
+                    let button = ui.add(
+                        egui::Button::new(egui::RichText::new(&title).color(p.secondary))
+                            .frame(false),
+                    );
+                    style::focus_ring(ui, &button);
+                    icon_resp
+                        .union(button)
+                        .on_hover_cursor(egui::CursorIcon::PointingHand)
+                })
+                .inner;
             if header.clicked() {
                 state.toggle(ui);
                 state.store(ui.ctx());

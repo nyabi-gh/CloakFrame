@@ -137,8 +137,12 @@ impl GpuPackRow {
             |bytes: u64| FluentValue::from(format!("{:.0}", bytes as f64 / 1_048_576.0));
         let (mut start, mut stop, mut remove) = (false, false, false);
         let ready = self.status == Some(Status::Ready);
-        ui.horizontal(|ui| {
-            ui.label(tr.get("gpu-pack-name"));
+        ui.horizontal_wrapped(|ui| {
+            ui.label(
+                egui::RichText::new(tr.get("gpu-pack-name"))
+                    .font(style::medium(13.0))
+                    .color(p.text),
+            );
             ui.label(small(tr.with(
                 "gpu-pack-size",
                 &[
@@ -152,10 +156,7 @@ impl GpuPackRow {
                         stop = true;
                     }
                     let received = download.received.load(Ordering::Relaxed);
-                    ui.add(
-                        egui::ProgressBar::new(received as f32 / pack.download_size() as f32)
-                            .desired_width(120.0),
-                    );
+                    style::progress_bar(ui, received as f32 / pack.download_size() as f32, 120.0);
                 } else if ready {
                     if style::plain(ui, tr.get("gpu-pack-remove")).clicked() {
                         remove = true;
@@ -165,7 +166,14 @@ impl GpuPackRow {
                     let button = egui::Button::new(tr.get("model-download"))
                         .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
                         .corner_radius(style::BUTTON_RADIUS);
-                    if ui.add_enabled(self.accepted, button).clicked() {
+                    let mut response = ui.add_enabled(self.accepted, button);
+                    style::focus_ring(ui, &response);
+                    if self.accepted {
+                        response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                    } else {
+                        response = response.on_disabled_hover_text(tr.get("model-download-accept"));
+                    }
+                    if response.clicked() {
                         start = true;
                     }
                 }

@@ -245,116 +245,137 @@ impl Updates {
         self.stage == Stage::Quitting
     }
 
-    /// The update's line above the files, if there is anything to say. `working` holds the restart
-    /// back while a run or a review's renders work.
+    /// The update's banner above the screen content, if there is anything to say. `working` holds
+    /// the restart back while a run or a review's renders work.
     pub fn bar(&mut self, ui: &mut egui::Ui, tr: &Translator, working: bool) {
+        if matches!(
+            self.stage,
+            Stage::Idle | Stage::Checking { asked: false } | Stage::Quitting
+        ) {
+            return;
+        }
         let p = *Palette::of(ui);
         let version = |offer: &Offer| [("version", FluentValue::from(offer.version.clone()))];
         let ctx = ui.ctx().clone();
         let mut next = None;
-        match &self.stage {
-            Stage::Idle | Stage::Checking { asked: false } | Stage::Quitting => return,
-            Stage::Checking { asked: true } => {
-                ui.horizontal_wrapped(|ui| {
-                    ui.spinner();
-                    ui.label(tr.get("update-checking"));
-                });
-            }
-            Stage::UpToDate => {
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(tr.with(
-                        "update-none",
-                        &[("version", FluentValue::from(env!("CARGO_PKG_VERSION")))],
-                    ));
-                    if style::plain(ui, tr.get("close")).clicked() {
-                        next = Some(Stage::Idle);
+        let mut download_offer = None;
+        let mut apply_offer = None;
+        let band = egui::Frame::NONE
+            .fill(p.sidebar)
+            .inner_margin(egui::Margin::symmetric(24, 10))
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                match &self.stage {
+                    Stage::Idle | Stage::Checking { asked: false } | Stage::Quitting => {}
+                    Stage::Checking { asked: true } => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spinner();
+                            ui.label(tr.get("update-checking"));
+                        });
                     }
-                });
-            }
-            Stage::CheckFailed(error) => {
-                ui.horizontal_wrapped(|ui| {
-                    ui.colored_label(
-                        p.failed,
-                        tr.with(
-                            "update-check-failed",
-                            &[("error", FluentValue::from(error.as_str()))],
-                        ),
-                    );
-                    if style::plain(ui, tr.get("close")).clicked() {
-                        next = Some(Stage::Idle);
+                    Stage::UpToDate => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(tr.with(
+                                "update-none",
+                                &[("version", FluentValue::from(env!("CARGO_PKG_VERSION")))],
+                            ));
+                            if style::plain(ui, tr.get("close")).clicked() {
+                                next = Some(Stage::Idle);
+                            }
+                        });
                     }
-                });
-            }
-            Stage::Available(offer) => {
-                let mut install = false;
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(tr.with("update-available", &version(offer)));
-                    if style::plain(ui, tr.get("update-install")).clicked() {
-                        install = true;
+                    Stage::CheckFailed(error) => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.colored_label(
+                                p.failed,
+                                tr.with(
+                                    "update-check-failed",
+                                    &[("error", FluentValue::from(error.as_str()))],
+                                ),
+                            );
+                            if style::plain(ui, tr.get("close")).clicked() {
+                                next = Some(Stage::Idle);
+                            }
+                        });
                     }
-                    if style::plain(ui, tr.get("update-later")).clicked() {
-                        next = Some(Stage::Idle);
+                    Stage::Available(offer) => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(tr.with("update-available", &version(offer)));
+                            if style::outlined(ui, tr.get("update-install")).clicked() {
+                                download_offer = Some(offer.clone());
+                            }
+                            if style::plain(ui, tr.get("update-later")).clicked() {
+                                next = Some(Stage::Idle);
+                            }
+                        });
                     }
-                });
-                if install {
-                    self.download(offer.clone(), &ctx);
+                    Stage::Downloading(offer) => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(tr.with("update-downloading", &version(offer)));
+                            let percent = self.percent.load(Ordering::Relaxed);
+                            style::progress_bar(ui, f32::from(percent) / 100.0, 140.0);
+                        });
+                    }
+                    Stage::Ready(offer) | Stage::Applying(offer) => {
+                        let applying = matches!(self.stage, Stage::Applying(_));
+                        ui.horizontal_wrapped(|ui| {
+                            ui.label(tr.with("update-ready", &version(offer)));
+                            let enabled = !working && !applying;
+                            let button = egui::Button::new(tr.get("update-restart"))
+                                .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
+                                .corner_radius(style::BUTTON_RADIUS);
+                            let mut response = ui.add_enabled(enabled, button);
+                            style::focus_ring(ui, &response);
+                            if enabled {
+                                response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+                            }
+                            if working {
+                                response = response
+                                    .on_disabled_hover_text(tr.get("update-restart-after-run"));
+                            }
+                            if response.clicked() {
+                                apply_offer = Some(offer.clone());
+                            }
+                            if !applying && style::plain(ui, tr.get("update-later")).clicked() {
+                                next = Some(Stage::Idle);
+                            }
+                        });
+                    }
+                    Stage::Failed(error) => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.colored_label(
+                                p.failed,
+                                tr.with(
+                                    "update-failed",
+                                    &[("error", FluentValue::from(error.as_str()))],
+                                ),
+                            );
+                            if style::plain(ui, tr.get("close")).clicked() {
+                                next = Some(Stage::Idle);
+                            }
+                        });
+                    }
+                    Stage::Refused(reason) => {
+                        ui.horizontal_wrapped(|ui| {
+                            ui.colored_label(p.failed, tr.get("update-refused"))
+                                .on_hover_text(reason);
+                            if style::plain(ui, tr.get("close")).clicked() {
+                                next = Some(Stage::Idle);
+                            }
+                        });
+                    }
                 }
-            }
-            Stage::Downloading(offer) => {
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(tr.with("update-downloading", &version(offer)));
-                    let percent = self.percent.load(Ordering::Relaxed);
-                    ui.add(egui::ProgressBar::new(f32::from(percent) / 100.0).desired_width(160.0));
-                });
-            }
-            Stage::Ready(offer) | Stage::Applying(offer) => {
-                let applying = matches!(self.stage, Stage::Applying(_));
-                let mut restart = false;
-                ui.horizontal_wrapped(|ui| {
-                    ui.label(tr.with("update-ready", &version(offer)));
-                    let button = egui::Button::new(tr.get("update-restart"))
-                        .min_size(egui::vec2(0.0, style::BUTTON_HEIGHT))
-                        .corner_radius(style::BUTTON_RADIUS);
-                    let response = ui.add_enabled(!working && !applying, button);
-                    if working {
-                        response
-                            .clone()
-                            .on_disabled_hover_text(tr.get("update-restart-after-run"));
-                    }
-                    if response.clicked() {
-                        restart = true;
-                    }
-                    if !applying && style::plain(ui, tr.get("update-later")).clicked() {
-                        next = Some(Stage::Idle);
-                    }
-                });
-                if restart {
-                    self.apply(offer.clone(), &ctx);
-                }
-            }
-            Stage::Failed(error) => {
-                ui.horizontal_wrapped(|ui| {
-                    ui.colored_label(
-                        p.failed,
-                        tr.with(
-                            "update-failed",
-                            &[("error", FluentValue::from(error.as_str()))],
-                        ),
-                    );
-                    if style::plain(ui, tr.get("close")).clicked() {
-                        next = Some(Stage::Idle);
-                    }
-                });
-            }
-            Stage::Refused(reason) => {
-                ui.horizontal_wrapped(|ui| {
-                    ui.colored_label(p.failed, tr.get("update-refused"))
-                        .on_hover_text(reason);
-                    if style::plain(ui, tr.get("close")).clicked() {
-                        next = Some(Stage::Idle);
-                    }
-                });
-            }
+            });
+        ui.painter().hline(
+            band.response.rect.x_range(),
+            band.response.rect.bottom(),
+            egui::Stroke::new(1.0, p.separator),
+        );
+        if let Some(offer) = download_offer {
+            self.download(offer, &ctx);
+        }
+        if let Some(offer) = apply_offer {
+            self.apply(offer, &ctx);
         }
         if let Some(stage) = next {
             self.stage = stage;

@@ -39,6 +39,7 @@ struct Footage {
 #[derive(Debug, Clone)]
 pub struct Draft {
     pub doc: Doc,
+    initial: Doc,
     problems: Vec<Problem>,
     detections: usize,
     footage: Footage,
@@ -84,12 +85,14 @@ impl Draft {
                 Some((*width as f32, *height as f32)),
             ),
         };
+        let doc = Doc {
+            edits,
+            video,
+            resolutions: item.evidence.iter().map(|e| e.resolution).collect(),
+        };
         Self {
-            doc: Doc {
-                edits,
-                video,
-                resolutions: item.evidence.iter().map(|e| e.resolution).collect(),
-            },
+            initial: doc.clone(),
+            doc,
             problems: item.evidence.iter().map(|e| e.problem.clone()).collect(),
             detections,
             footage,
@@ -99,6 +102,10 @@ impl Draft {
             gesture: None,
             selected: None,
         }
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.doc != self.initial
     }
 
     pub fn unresolved(&self) -> usize {
@@ -259,6 +266,16 @@ impl Draft {
         }
     }
 
+    /// Replaces an added area's rectangle, clamped to the photo.
+    pub fn set_rect(doc: &mut Doc, added: usize, rect: Rect, bounds: Option<(f32, f32)>) {
+        let Some(area) = doc.edits.added.get_mut(added) else {
+            return;
+        };
+        if let Some(clamped) = clamp(rect, bounds) {
+            *area = clamped;
+        }
+    }
+
     pub fn resolve(&mut self, problem: usize, resolution: Resolution) {
         self.change(|doc, _| {
             if let Some(r) = doc.resolutions.get_mut(problem) {
@@ -412,6 +429,17 @@ impl Draft {
             },
             bounds,
         );
+    }
+
+    /// Replaces a manual track's box at `k`, clamped to the frame.
+    pub fn set_track_rect(
+        doc: &mut Doc,
+        track: usize,
+        k: FrameIndex,
+        rect: Rect,
+        bounds: Option<(f32, f32)>,
+    ) {
+        Self::set_box(doc, track, k, |_| Some(rect), bounds);
     }
 
     /// Makes `k` the first frame of manual track `track` (`start`) or its last. The box it showed

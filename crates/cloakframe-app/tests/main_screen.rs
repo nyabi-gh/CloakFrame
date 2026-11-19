@@ -837,10 +837,20 @@ fn reviews_kept_by_earlier_runs_are_listed_opened_and_discarded() {
     harness.get_by_label("gone.jpg, Original changed");
     harness.get_by_label("photo.jpg, To review");
     harness.get_by_label("clip.mp4, One problem");
-    // Going back redoes the frame for the main screen, which starts reading the sessions.
+    // Leaving a review with unapproved edits asks first; Stay keeps it, Leave releases the lock.
     harness
         .get_by_role_and_label(Role::Button, "New Task")
         .click();
+    harness.run_traced();
+    harness.get_by_label("Leave this review?");
+    harness.get_by_role_and_label(Role::Button, "Stay").click();
+    harness.run_traced();
+    assert!(harness.state().review.is_some());
+    harness
+        .get_by_role_and_label(Role::Button, "New Task")
+        .click();
+    harness.run_traced();
+    harness.get_by_role_and_label(Role::Button, "Leave").click();
     settle_with_sessions(&mut harness);
     assert!(harness.state().review.is_none());
     assert!(store.lock(&id).is_ok(), "let go once it is closed");
@@ -2250,4 +2260,196 @@ fn a_scan_that_finds_nothing_keeps_its_result() {
     drop_files(&mut harness, &[dir.file("notes.txt")]);
     assert_eq!(harness.state().found.as_ref().unwrap().skipped["txt"], 1);
     assert_eq!(harness.state().inputs.len(), 1);
+}
+
+/// Moving the mosaic strength slider higher makes the mosaic stronger (fewer, larger cells).
+#[test]
+fn mosaic_strength_slider_increases_strength_to_the_right() {
+    use cloakframe_core::mask::MosaicStrength;
+    let settings = Settings {
+        method: Method::Mosaic,
+        mosaic_strength: MosaicStrength::default().cells(),
+        ..Settings::default()
+    };
+    let mut harness = harness(Language::En, settings);
+    harness.run_traced();
+    // Default 8 cells maps to UI level 5 (mid-point of 1..=9).
+    let slider = harness.get_by_role_and_label(Role::Slider, "Strength");
+    assert_eq!(slider.accesskit_node().numeric_value(), Some(5.0));
+
+    // Setting UI strength to 9 (max) produces 4 cells (strongest mosaic).
+    slider.set_value_accesskit(9.0);
+    harness.run_traced();
+    assert_eq!(
+        harness.state().settings.mosaic_strength,
+        MosaicStrength::MIN
+    );
+
+    // Setting UI strength to 1 (min) produces 12 cells (finest mosaic).
+    harness
+        .get_by_role_and_label(Role::Slider, "Strength")
+        .set_value_accesskit(1.0);
+    harness.run_traced();
+    assert_eq!(
+        harness.state().settings.mosaic_strength,
+        MosaicStrength::MAX
+    );
+}
+
+/// The settings dialog shrinks to fit a narrow window and keeps Tab flowing tabs -> Done.
+#[test]
+fn settings_dialog_fits_narrow_window_and_tabs_top_to_bottom() {
+    let mut harness = harness(Language::En, Settings::default());
+    harness.set_size(egui::vec2(640.0, 580.0));
+    harness.run_traced();
+    harness
+        .get_by_role_and_label(Role::Button, "Settings")
+        .click();
+    harness.run_traced();
+    let window = harness.ctx.content_rect();
+    let general = harness
+        .get_by_role_and_label(Role::Button, "General")
+        .rect();
+    assert!(
+        general.left() >= window.left() - 0.5,
+        "General tab {general:?} clips outside window {window:?}"
+    );
+    let close = harness.get_by_role_and_label(Role::Button, "Close").rect();
+    assert!(
+        close.right() <= window.right() + 0.5,
+        "Close button {close:?} clips outside window {window:?}"
+    );
+    let done = harness.get_by_role_and_label(Role::Button, "Done").rect();
+    assert!(
+        done.right() <= window.right() + 0.5,
+        "Done button {done:?} clips outside window {window:?}"
+    );
+    let order = tab_order(&mut harness);
+    let at = |label: &str| {
+        order
+            .iter()
+            .position(|l| l == label)
+            .unwrap_or_else(|| panic!("{label} is not in {order:?}"))
+    };
+    assert!(at("General") < at("Done"), "{order:?}");
+    assert!(at("Detection") < at("Done"), "{order:?}");
+}
+
+/// Dragging a corner handle of a selected added area resizes it in one undoable step.
+#[test]
+fn dragging_a_handle_resizes_an_added_area() {
+    let dir = Dir::new("resize-handle");
+    let input = dir.0.join("in");
+    std::fs::create_dir_all(&input).unwrap();
+    let assets = required_env("CLOAKFRAME_TEST_ASSETS");
+    std::fs::copy(assets.join("lena.jpg"), input.join("a.jpg")).unwrap();
+    let output = dir.0.join("out");
+    let settings = Settings {
+        output: Some(output),
+        method: Method::Fill,
+        ..Settings::default()
+    };
+    let mut harness = harness(Language::En, settings);
+    harness.state_mut().tools = Tools {
+        ort_library: Some(required_env("CLOAKFRAME_ORT_LIBRARY")),
+        ..Tools::default()
+    };
+    harness.state_mut().set_folders(Folders {
+        data: Some(dir.0.join("data")),
+        models: Some(assets),
+        app_models: false,
+    });
+    drop_files(&mut harness, std::slice::from_ref(&input));
+    harness.get_by_role_and_label(Role::Button, "Start").click();
+    harness.step();
+    finish_run(&mut harness);
+    harness
+        .get_by_role_and_label(Role::Button, "Start Review")
+        .click();
+    harness.step();
+    let ctx = harness.ctx.clone();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_thumbnails(&ctx);
+    harness.run_traced();
+    harness.get_by_label_contains("a.jpg").click();
+    harness.step();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.run_traced();
+    harness
+        .state_mut()
+        .review
+        .as_mut()
+        .unwrap()
+        .wait_for_picture(&ctx);
+    harness.run_traced();
+
+    let view = harness
+        .state()
+        .review
+        .as_ref()
+        .unwrap()
+        .editor
+        .as_ref()
+        .unwrap()
+        .view
+        .unwrap();
+    let canvas = harness.get_by_label("Photo editor").rect();
+    let origin = canvas.center() - view.center.to_vec2() * view.scale;
+    let on_screen = |x: f32, y: f32| origin + egui::vec2(x, y) * view.scale;
+
+    // Draw an added box at (20, 20, 60, 50).
+    let added = Rect::new(20.0, 20.0, 60.0, 50.0).unwrap();
+    harness.hover_at(on_screen(added.x(), added.y()));
+    harness.step();
+    harness.drag_at(on_screen(added.x(), added.y()));
+    harness.step();
+    harness.hover_at(on_screen(added.right(), added.bottom()));
+    harness.step();
+    harness.drop_at(on_screen(added.right(), added.bottom()));
+    harness.step();
+
+    let item = ItemId(0);
+    let before = harness.state().review.as_ref().unwrap().review.drafts[&item]
+        .doc
+        .edits
+        .added[0];
+
+    // Drag its bottom-right corner handle outward by (+40, +30) photo pixels.
+    let br = on_screen(before.right(), before.bottom());
+    let target = on_screen(before.right() + 40.0, before.bottom() + 30.0);
+    harness.hover_at(br);
+    harness.step();
+    harness.drag_at(br);
+    harness.step();
+    harness.hover_at(target);
+    harness.step();
+    harness.drop_at(target);
+    harness.step();
+
+    let after = harness.state().review.as_ref().unwrap().review.drafts[&item]
+        .doc
+        .edits
+        .added[0];
+    assert!(
+        (after.width() - (before.width() + 40.0)).abs() < 3.0
+            && (after.height() - (before.height() + 30.0)).abs() < 3.0,
+        "before={before:?} after={after:?}"
+    );
+    // Undoing restores the original size in one step.
+    harness.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::Z);
+    harness.step();
+    let undone = harness.state().review.as_ref().unwrap().review.drafts[&item]
+        .doc
+        .edits
+        .added[0];
+    assert_eq!(undone, before);
 }

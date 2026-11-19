@@ -58,9 +58,129 @@ pub struct View {
     pub center: egui::Pos2,
 }
 
+/// One of the eight resize handles on a selected manually drawn box.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Handle {
+    TopLeft,
+    Top,
+    TopRight,
+    Right,
+    BottomRight,
+    Bottom,
+    BottomLeft,
+    Left,
+}
+
+impl Handle {
+    const ALL: [Self; 8] = [
+        Self::TopLeft,
+        Self::Top,
+        Self::TopRight,
+        Self::Right,
+        Self::BottomRight,
+        Self::Bottom,
+        Self::BottomLeft,
+        Self::Left,
+    ];
+
+    pub(crate) fn pos(self, r: egui::Rect) -> egui::Pos2 {
+        match self {
+            Self::TopLeft => r.left_top(),
+            Self::Top => egui::pos2(r.center().x, r.top()),
+            Self::TopRight => r.right_top(),
+            Self::Right => egui::pos2(r.right(), r.center().y),
+            Self::BottomRight => r.right_bottom(),
+            Self::Bottom => egui::pos2(r.center().x, r.bottom()),
+            Self::BottomLeft => r.left_bottom(),
+            Self::Left => egui::pos2(r.left(), r.center().y),
+        }
+    }
+
+    pub(crate) fn cursor(self) -> egui::CursorIcon {
+        match self {
+            Self::TopLeft | Self::BottomRight => egui::CursorIcon::ResizeNwSe,
+            Self::TopRight | Self::BottomLeft => egui::CursorIcon::ResizeNeSw,
+            Self::Left | Self::Right => egui::CursorIcon::ResizeHorizontal,
+            Self::Top | Self::Bottom => egui::CursorIcon::ResizeVertical,
+        }
+    }
+}
+
+pub(crate) fn hit_handle(rect: egui::Rect, at: egui::Pos2) -> Option<Handle> {
+    const RADIUS: f32 = 7.0;
+    Handle::ALL
+        .into_iter()
+        .find(|h| h.pos(rect).distance(at) <= RADIUS)
+}
+
+pub(crate) fn paint_handles(painter: &egui::Painter, rect: egui::Rect, p: &Palette) {
+    const SIZE: f32 = 7.0;
+    for h in Handle::ALL {
+        let box_rect = egui::Rect::from_center_size(h.pos(rect), egui::Vec2::splat(SIZE));
+        painter.rect(
+            box_rect,
+            1.5,
+            egui::Color32::WHITE,
+            egui::Stroke::new(1.5, p.text),
+            egui::StrokeKind::Outside,
+        );
+    }
+}
+
+pub(crate) fn resize_rect(original: Rect, handle: Handle, now: egui::Pos2) -> Option<Rect> {
+    const MIN: f32 = 4.0;
+    let (mut l, mut t, mut r, mut b) = (
+        original.x(),
+        original.y(),
+        original.right(),
+        original.bottom(),
+    );
+    match handle {
+        Handle::TopLeft => {
+            l = now.x.min(r - MIN);
+            t = now.y.min(b - MIN);
+        }
+        Handle::Top => {
+            t = now.y.min(b - MIN);
+        }
+        Handle::TopRight => {
+            r = now.x.max(l + MIN);
+            t = now.y.min(b - MIN);
+        }
+        Handle::Right => {
+            r = now.x.max(l + MIN);
+        }
+        Handle::BottomRight => {
+            r = now.x.max(l + MIN);
+            b = now.y.max(t + MIN);
+        }
+        Handle::Bottom => {
+            b = now.y.max(t + MIN);
+        }
+        Handle::BottomLeft => {
+            l = now.x.min(r - MIN);
+            b = now.y.max(t + MIN);
+        }
+        Handle::Left => {
+            l = now.x.min(r - MIN);
+        }
+    }
+    Rect::new(l, t, r - l, b - t).ok()
+}
+
 enum Drag {
-    Adding { from: egui::Pos2, to: egui::Pos2 },
-    Moving { last: egui::Pos2 },
+    Adding {
+        from: egui::Pos2,
+        to: egui::Pos2,
+    },
+    Moving {
+        last: egui::Pos2,
+    },
+    Resizing {
+        index: usize,
+        handle: Handle,
+        original: Rect,
+    },
     Panning,
 }
 
@@ -80,6 +200,8 @@ pub struct Editor {
     /// The document the masking preview was last made of, and its number.
     previewed: Option<(Doc, u64)>,
     focus: bool,
+    /// Set by F6 to move keyboard focus into the inspector panel without the canvas taking it back.
+    focus_inspector: bool,
     /// When the item came on screen, or turned out not to be able to.
     shown_at: Option<f64>,
 }
@@ -103,6 +225,7 @@ impl Editor {
             drag: None,
             previewed: None,
             focus: true,
+            focus_inspector: false,
             shown_at: None,
         }
     }
@@ -216,22 +339,28 @@ impl ReviewScreen {
             .filter(|i| to_review(&self.review, i))
             .count();
         let detail = tr.with("review-left", &[("count", FluentValue::from(left))]);
+        let discard = tr.get("review-discard");
+        let right = bar.right() - 14.0;
+        let width = style::button_width(ui, &discard, false);
+        let title_right = (right - width - 12.0).max(title_left + 20.0);
         row(
             ui,
-            egui::Rect::from_x_y_ranges(title_left + 20.0..=bar.right(), bar.y_range()),
+            egui::Rect::from_x_y_ranges(title_left + 20.0..=title_right, bar.y_range()),
             |ui| {
-                ui.label(
-                    egui::RichText::new(folder)
-                        .font(style::medium(14.0))
-                        .color(p.text),
-                );
+                ui.set_clip_rect(ui.max_rect().intersect(ui.clip_rect()));
+                ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(&folder)
+                            .font(style::medium(14.0))
+                            .color(p.text),
+                    )
+                    .truncate(),
+                )
+                .on_hover_text(&folder);
                 ui.add_space(6.0);
                 ui.label(egui::RichText::new(detail).color(p.secondary));
             },
         );
-        let discard = tr.get("review-discard");
-        let right = bar.right() - 14.0;
-        let width = style::button_width(ui, &discard, false);
         let mut act = None;
         row(
             ui,
@@ -259,6 +388,7 @@ impl ReviewScreen {
             return;
         };
         let item = editor.item;
+        let open = self.review.is_open(item);
         let name = self
             .review
             .order
@@ -267,40 +397,51 @@ impl ReviewScreen {
             .map(file_name)
             .unwrap_or_default();
         let place = place(&self.review, item, tr);
+        let fit = tr.get("editor-fit");
+        let spacing = ui.spacing().item_spacing.x;
+        let width =
+            4.0 * style::BUTTON_HEIGHT + 1.0 + style::button_width(ui, &fit, false) + 5.0 * spacing;
+        let right = bar.right() - 14.0;
+        let title_right = (right - width - 12.0).max(title_left + 14.0);
         let mut go = None;
         row(
             ui,
-            egui::Rect::from_x_y_ranges(title_left + 14.0..=bar.right(), bar.y_range()),
+            egui::Rect::from_x_y_ranges(title_left + 14.0..=title_right, bar.y_range()),
             |ui| {
+                ui.set_clip_rect(ui.max_rect().intersect(ui.clip_rect()));
                 let back = style::plain(ui, format!("‹ {}", tr.get("editor-back")));
                 if back.on_hover_text(folder).clicked() {
                     go = Some(Go::Queue);
                 }
                 ui.add_space(4.0);
-                ui.label(
-                    egui::RichText::new(name)
-                        .font(style::medium(14.0))
-                        .color(p.text),
+                let place_width = style::text_width(ui, &place) + 12.0;
+                let max_name = (ui.available_width() - place_width).max(40.0);
+                ui.allocate_ui_with_layout(
+                    egui::vec2(max_name, ui.available_height()),
+                    egui::Layout::left_to_right(egui::Align::Center),
+                    |ui| {
+                        ui.add(
+                            egui::Label::new(
+                                egui::RichText::new(&name)
+                                    .font(style::medium(14.0))
+                                    .color(p.text),
+                            )
+                            .truncate(),
+                        )
+                        .on_hover_text(&name);
+                    },
                 );
                 ui.add_space(4.0);
                 ui.label(egui::RichText::new(place).color(p.secondary));
             },
         );
-        let photo = editor.video.is_none();
-        let fit = tr.get("editor-fit");
-        let spacing = ui.spacing().item_spacing.x;
-        let mut width = 4.0 * style::BUTTON_HEIGHT + 1.0 + 4.0 * spacing;
-        if photo {
-            width += style::button_width(ui, &fit, false) + spacing;
-        }
-        let right = bar.right() - 14.0;
         let mut draft = self.review.drafts.get_mut(&item);
         row(
             ui,
             egui::Rect::from_x_y_ranges(right - width..=right, bar.y_range()),
             |ui| {
-                let can_undo = draft.as_ref().is_some_and(|d| d.can_undo());
-                let can_redo = draft.as_ref().is_some_and(|d| d.can_redo());
+                let can_undo = open && draft.as_ref().is_some_and(|d| d.can_undo());
+                let can_redo = open && draft.as_ref().is_some_and(|d| d.can_redo());
                 if style::toolbar_icon(ui, &tr.get("editor-undo"), can_undo, style::icon::undo)
                     .clicked()
                     && let Some(d) = draft.as_mut()
@@ -319,8 +460,11 @@ impl ReviewScreen {
                     line.y_range(),
                     egui::Stroke::new(1.0, p.separator),
                 );
-                if photo && style::plain(ui, fit).clicked() {
+                if style::plain(ui, fit).clicked() {
                     editor.view = None;
+                    if let Some(video) = &mut editor.video {
+                        video.reset_view();
+                    }
                 }
                 let previous = tr.get("editor-previous");
                 if style::toolbar_icon(ui, &previous, true, style::icon::previous).clicked() {
@@ -443,53 +587,88 @@ impl ReviewScreen {
         }
         let mut asked = Asked::default();
         let open = self.review.is_open(item);
+        let can_approve = editor.can_approve(&ctx);
         let p = *Palette::of(ui);
-        egui::Panel::right("review-side")
-            .resizable(false)
-            .exact_size(style::INSPECTOR_WIDTH)
-            .frame(egui::Frame::NONE.fill(p.window))
-            .show(ui, |ui| {
-                inspector(ui, tr, &mut self.review, editor, &stored, open, &mut asked);
-            });
-        egui::CentralPanel::default()
-            .frame(egui::Frame::NONE.fill(p.window))
-            .show(ui, |ui| match &stored.media {
-                StoredMedia::Photo { detections, .. } => {
-                    if let Some(draft) = self.review.drafts.get_mut(&item) {
-                        let whole = ui.max_rect();
-                        let (top, bottom) =
-                            whole.split_top_bottom_at_y(whole.bottom() - footer_height(ui.ctx()));
-                        let keys = ui
-                            .scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
-                                canvas(
-                                    ui,
-                                    tr,
-                                    editor,
-                                    draft,
-                                    detections,
-                                    &self.review.options,
-                                    open,
-                                )
-                            })
-                            .inner;
-                        if let Some(step) = keys {
-                            asked.go = Some(step);
+        let whole = ui.max_rect();
+        let (left, right) = whole.split_left_right_at_x(whole.right() - style::INSPECTOR_WIDTH);
+        // Lay out canvas before inspector so Tab and AccessKit read left-to-right.
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(left)
+                .layout(egui::Layout::top_down(egui::Align::Min)),
+            |ui| {
+                ui.set_clip_rect(left.intersect(ui.clip_rect()));
+                match &stored.media {
+                    StoredMedia::Photo { detections, .. } => {
+                        if let Some(draft) = self.review.drafts.get_mut(&item) {
+                            let whole = ui.max_rect();
+                            let (top, bottom) = whole
+                                .split_top_bottom_at_y(whole.bottom() - footer_height(ui.ctx()));
+                            let act = ui
+                                .scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
+                                    canvas(
+                                        ui,
+                                        tr,
+                                        editor,
+                                        draft,
+                                        detections,
+                                        &self.review.options,
+                                        open,
+                                        can_approve,
+                                    )
+                                })
+                                .inner;
+                            apply_canvas_act(act, &mut asked, editor);
+                            ui.scope_builder(egui::UiBuilder::new().max_rect(bottom), |ui| {
+                                hint(ui, tr, &mut editor.help);
+                            });
                         }
-                        ui.scope_builder(egui::UiBuilder::new().max_rect(bottom), |ui| {
-                            hint(ui, tr, &mut editor.help);
-                        });
+                    }
+                    StoredMedia::Video { tracks, .. } => {
+                        if let (Some(draft), Some(video)) =
+                            (self.review.drafts.get_mut(&item), editor.video.as_mut())
+                        {
+                            let act = video_editor::ui(
+                                ui,
+                                tr,
+                                video,
+                                draft,
+                                tracks,
+                                open,
+                                can_approve,
+                                &mut editor.help,
+                            );
+                            apply_canvas_act(act, &mut asked, editor);
+                        }
                     }
                 }
-                StoredMedia::Video { tracks, .. } => {
-                    if let (Some(draft), Some(video)) =
-                        (self.review.drafts.get_mut(&item), editor.video.as_mut())
-                        && let Some(step) =
-                            video_editor::ui(ui, tr, video, draft, tracks, open, &mut editor.help)
-                    {
-                        asked.go = Some(step);
-                    }
+            },
+        );
+        ui.scope_builder(
+            egui::UiBuilder::new()
+                .max_rect(right)
+                .layout(egui::Layout::top_down(egui::Align::Min)),
+            |ui| {
+                ui.set_clip_rect(right.intersect(ui.clip_rect()));
+                inspector(ui, tr, &mut self.review, editor, &stored, &mut asked);
+            },
+        );
+        ui.painter().vline(
+            right.left() + 0.5,
+            whole.y_range(),
+            egui::Stroke::new(1.0, p.separator),
+        );
+        if !editor.help && self.confirm.is_none() && ui.input(|i| i.key_pressed(egui::Key::F6)) {
+            if editor.focus_inspector {
+                editor.focus_inspector = false;
+                editor.focus = true;
+                if let Some(video) = &mut editor.video {
+                    video.request_focus();
                 }
-            });
+            } else {
+                editor.focus_inspector = true;
+            }
+        }
         if editor.help {
             let video = editor.video.is_some();
             shortcuts(&ctx, tr, &mut editor.help, video);
@@ -547,23 +726,15 @@ impl ReviewScreen {
                 tr.get("confirm-warnings"),
             ),
         };
-        let mut choice = None;
-        let modal = egui::Modal::new(egui::Id::unique("review-confirm")).show(ctx, |ui| {
-            ui.heading(title);
-            ui.label(body);
-            ui.horizontal(|ui| {
-                if ui.button(yes).clicked() {
-                    choice = Some(true);
-                }
-                if ui.button(tr.get("confirm-cancel")).clicked() {
-                    choice = Some(false);
-                }
-            });
-        });
-        if modal.should_close() && choice.is_none() {
-            choice = Some(false);
-        }
-        match choice {
+        match style::confirm_modal(
+            ctx,
+            "review-confirm",
+            &title,
+            &body,
+            &yes,
+            &tr.get("confirm-cancel"),
+            true,
+        ) {
             Some(true) => {
                 self.confirm = None;
                 self.decide(confirm.item, confirm.action, None, ctx);
@@ -579,6 +750,22 @@ pub(crate) enum Go {
     Step(isize),
     /// Decide again under a free name the engine suggested.
     Rename(String),
+}
+
+pub(crate) enum CanvasAct {
+    None,
+    Go(Go),
+    Approve,
+    FocusInspector,
+}
+
+fn apply_canvas_act(act: CanvasAct, asked: &mut Asked, editor: &mut Editor) {
+    match act {
+        CanvasAct::None => {}
+        CanvasAct::Go(step) => asked.go = Some(step),
+        CanvasAct::Approve => asked.decide = Some(Action::Approve),
+        CanvasAct::FocusInspector => editor.focus_inspector = true,
+    }
 }
 
 fn file_name(item: &SessionItem) -> String {
@@ -718,11 +905,14 @@ impl Tiles<'_> {
                 );
                 let name = file_name(item);
                 let state = badge(self.review, item, self.tr);
-                let response = ui.interact(
-                    rect,
-                    ui.make_persistent_id(("review-item", item.item.0)),
-                    egui::Sense::click(),
-                );
+                let response = ui
+                    .interact(
+                        rect,
+                        ui.make_persistent_id(("review-item", item.item.0)),
+                        egui::Sense::click(),
+                    )
+                    .on_hover_cursor(egui::CursorIcon::PointingHand)
+                    .on_hover_text(format!("{name}\n{state}"));
                 response.widget_info(|| {
                     egui::WidgetInfo::labeled(egui::Role::Button, true, format!("{name}, {state}"))
                 });
@@ -857,14 +1047,15 @@ fn inspector(
     review: &mut Review,
     editor: &mut Editor,
     stored: &SessionItem,
-    open: bool,
     asked: &mut Asked,
 ) {
     let p = *Palette::of(ui);
+    let open = review.is_open(stored.item);
+    let can_approve = editor.can_approve(ui.ctx());
     let whole = ui.max_rect();
     let footer_height = footer_height(ui.ctx());
     let (top, bottom) = whole.split_top_bottom_at_y(whole.bottom() - footer_height);
-    let can_approve = editor.can_approve(ui.ctx());
+    let focus_footer = editor.focus_inspector;
     ui.scope_builder(egui::UiBuilder::new().max_rect(top), |ui| {
         egui::ScrollArea::vertical()
             .id_salt("inspector")
@@ -877,21 +1068,24 @@ fn inspector(
             .show(ui, |ui| {
                 ui.set_width(ui.available_width());
                 ui.spacing_mut().item_spacing.y = 10.0;
-                footer(ui, tr, review, stored, open, can_approve, asked);
+                footer(ui, tr, review, stored, can_approve, focus_footer, asked);
             })
             .response
             .rect
             .height()
     });
+    if focus_footer {
+        editor.focus_inspector = false;
+    }
     ui.painter().hline(
         whole.x_range(),
         bottom.top(),
         egui::Stroke::new(1.0, p.faint_line),
     );
-    // The footer's height is known once it is drawn; the next frame gives it that room.
+    // The footer's height is known once it is drawn; redo this pass so there is no 1-frame jump.
     if (footer.inner - footer_height).abs() > 0.5 {
         ui.data_mut(|d| d.insert_temp(footer_height_id(), footer.inner));
-        ui.ctx().request_repaint();
+        ui.ctx().request_discard("review footer measured");
     }
 }
 
@@ -950,10 +1144,15 @@ fn masked_row(
         egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
         egui::Sense::click(),
     );
+    let row = row.on_hover_cursor(egui::CursorIcon::PointingHand);
     if selected {
         ui.painter()
             .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.sidebar);
+    } else if row.hovered() {
+        ui.painter()
+            .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.empty);
     }
+    style::focus_ring(ui, &row);
     let check = ui
         .scope_builder(
             egui::UiBuilder::new()
@@ -1144,11 +1343,16 @@ fn added_list(ui: &mut egui::Ui, tr: &Translator, draft: &mut Draft, open: bool)
                 egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
                 egui::Sense::click(),
             );
+            let row = row.on_hover_cursor(egui::CursorIcon::PointingHand);
             row.widget_info(|| egui::WidgetInfo::labeled(egui::Role::ListItem, true, &name));
             if selected {
                 ui.painter()
                     .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.sidebar);
+            } else if row.hovered() {
+                ui.painter()
+                    .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.empty);
             }
+            style::focus_ring(ui, &row);
             if row.clicked() {
                 draft.selected = Some(Pick::Added(i));
             }
@@ -1182,12 +1386,13 @@ fn footer(
     tr: &Translator,
     review: &Review,
     stored: &SessionItem,
-    open: bool,
     can_approve: bool,
+    focus_footer: bool,
     asked: &mut Asked,
 ) {
     let p = *Palette::of(ui);
     let item = stored.item;
+    let open = review.is_open(item);
     let unresolved = review.drafts.get(&item).map_or(0, Draft::unresolved);
     let line = |ui: &mut egui::Ui, text: String, color| {
         ui.label(egui::RichText::new(text).size(12.0).color(color));
@@ -1247,12 +1452,16 @@ fn footer(
     ui.horizontal(|ui| {
         let more = 32.0;
         let width = ui.available_width() - more - ui.spacing().item_spacing.x;
+        let approve_enabled = open && unresolved == 0 && can_approve;
         let approve = style::primary_sized(
             ui,
             &tr.get("editor-approve"),
-            open && unresolved == 0 && can_approve,
+            approve_enabled,
             egui::vec2(width, 32.0),
         );
+        if focus_footer && approve_enabled {
+            approve.request_focus();
+        }
         if approve.clicked() {
             asked.decide = Some(Action::Approve);
         }
@@ -1264,7 +1473,10 @@ fn footer(
         } else {
             egui::Sense::hover()
         };
-        let (rect, menu) = ui.allocate_exact_size(egui::vec2(more, 32.0), sense);
+        let (rect, mut menu) = ui.allocate_exact_size(egui::vec2(more, 32.0), sense);
+        if focus_footer && !approve_enabled && open {
+            menu.request_focus();
+        }
         let label = tr.get("editor-more");
         menu.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, open, &label));
         let border = if open && menu.hovered() {
@@ -1282,6 +1494,10 @@ fn footer(
         for dx in [-5.0, 0.0, 5.0] {
             ui.painter()
                 .circle_filled(rect.center() + egui::vec2(dx, 0.0), 1.5, dots);
+        }
+        style::focus_ring(ui, &menu);
+        if open {
+            menu = menu.on_hover_cursor(egui::CursorIcon::PointingHand);
         }
         if !open {
             return;
@@ -1361,7 +1577,6 @@ fn track_list(
                 go_to = Some((t.first, t.last));
             }
         }
-        let drawn = tr.get("editor-kind-drawn");
         let spans: Vec<(u64, u64)> = draft
             .doc
             .video
@@ -1371,18 +1586,24 @@ fn track_list(
             .collect();
         for (i, (first, last)) in spans.into_iter().enumerate() {
             let selected = draft.selected == Some(Pick::Manual(i));
+            let drawn = tr.with("editor-drawn-item", &[("n", FluentValue::from(i + 1))]);
             let detail = span(first, last);
             let (rect, row) = ui.allocate_exact_size(
                 egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
                 egui::Sense::click(),
             );
+            let row = row.on_hover_cursor(egui::CursorIcon::PointingHand);
             row.widget_info(|| {
                 egui::WidgetInfo::labeled(egui::Role::ListItem, true, format!("{drawn}, {detail}"))
             });
             if selected {
                 ui.painter()
                     .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.sidebar);
+            } else if row.hovered() {
+                ui.painter()
+                    .rect_filled(rect.expand2(egui::vec2(8.0, 0.0)), 5, p.empty);
             }
+            style::focus_ring(ui, &row);
             let painter = ui.painter();
             painter.text(
                 rect.left_center(),
@@ -1476,7 +1697,8 @@ pub(crate) fn behind_modal(ui: &egui::Ui, response: &egui::Response) -> bool {
     behind
 }
 
-/// The photo with its boxes; returns a step through the queue the keys asked for.
+/// The photo with its boxes; returns what the keys asked for.
+#[allow(clippy::too_many_arguments)]
 fn canvas(
     ui: &mut egui::Ui,
     tr: &Translator,
@@ -1485,10 +1707,11 @@ fn canvas(
     detections: &[cloakframe_core::detection::Detection],
     options: &crate::run::RunOptions,
     open: bool,
-) -> Option<Go> {
+    can_approve: bool,
+) -> CanvasAct {
     let Some(picture) = &mut editor.picture else {
         ui.label(tr.get("editor-loading"));
-        return None;
+        return CanvasAct::None;
     };
     if let Some(e) = &picture.error {
         ui.colored_label(
@@ -1498,14 +1721,14 @@ fn canvas(
                 &[("error", FluentValue::from(e.as_str()))],
             ),
         );
-        return None;
+        return CanvasAct::None;
     }
     let Some((width, height)) = picture.size else {
         ui.horizontal(|ui| {
             ui.spinner();
             ui.label(tr.get("editor-loading"));
         });
-        return None;
+        return CanvasAct::None;
     };
     let size = egui::vec2(width as f32, height as f32);
     let (rect, response) =
@@ -1523,6 +1746,7 @@ fn canvas(
     // Keys go to the photo unless another widget took them, as one does when tabbed to.
     let unfocused = ui.memory(|m| m.focused().is_none());
     if !behind_modal(ui, &response)
+        && !editor.focus_inspector
         && (editor.focus || unfocused || response.clicked() || response.drag_started())
     {
         response.request_focus();
@@ -1598,6 +1822,15 @@ fn canvas(
             })
     };
 
+    let selected_handle =
+        |v: &View, at: egui::Pos2, draft: &Draft| -> Option<(usize, Handle, Rect)> {
+            let Some(Pick::Added(i)) = draft.selected else {
+                return None;
+            };
+            let &area = draft.doc.edits.added.get(i)?;
+            hit_handle(to_screen(v, area), at).map(|handle| (i, handle, area))
+        };
+
     // The preview hides the boxes, so a press during it cannot have been aimed at one.
     let boxes_drawn = !editor.previewing;
     if open
@@ -1617,19 +1850,31 @@ fn canvas(
         && let Some(at) = ui.input(|i| i.pointer.press_origin())
     {
         let middle = ui.input(|i| i.pointer.middle_down() || i.pointer.secondary_down());
-        editor.drag = Some(match hit(view, at, draft).filter(|_| boxes_drawn) {
-            _ if middle || !open => Drag::Panning,
-            Some(Pick::Added(i)) => {
-                draft.selected = Some(Pick::Added(i));
-                draft.begin_gesture();
-                Drag::Moving {
-                    last: to_photo(view, at),
-                }
+        editor.drag = Some(if middle || !open {
+            Drag::Panning
+        } else if boxes_drawn
+            && let Some((index, handle, original)) = selected_handle(view, at, draft)
+        {
+            draft.begin_gesture();
+            Drag::Resizing {
+                index,
+                handle,
+                original,
             }
-            _ => Drag::Adding {
-                from: to_photo(view, at),
-                to: to_photo(view, at),
-            },
+        } else {
+            match hit(view, at, draft).filter(|_| boxes_drawn) {
+                Some(Pick::Added(i)) => {
+                    draft.selected = Some(Pick::Added(i));
+                    draft.begin_gesture();
+                    Drag::Moving {
+                        last: to_photo(view, at),
+                    }
+                }
+                _ => Drag::Adding {
+                    from: to_photo(view, at),
+                    to: to_photo(view, at),
+                },
+            }
         });
     }
     if response.dragged()
@@ -1643,6 +1888,16 @@ fn canvas(
                 *last = now;
                 if let Some(Pick::Added(i)) = draft.selected {
                     draft.gesture(|doc, bounds| Draft::shift(doc, i, (delta.x, delta.y), bounds));
+                }
+            }
+            Some(Drag::Resizing {
+                index,
+                handle,
+                original,
+            }) => {
+                let (index, handle, original) = (*index, *handle, *original);
+                if let Some(resized) = resize_rect(original, handle, now) {
+                    draft.gesture(|doc, bounds| Draft::set_rect(doc, index, resized, bounds));
                 }
             }
             Some(Drag::Panning) => view.center -= response.drag_delta() / view.scale,
@@ -1665,12 +1920,37 @@ fn canvas(
                     draft.add(area);
                 }
             }
-            Some(Drag::Moving { .. }) => draft.end_gesture(),
+            Some(Drag::Moving { .. } | Drag::Resizing { .. }) => draft.end_gesture(),
             _ => {}
         }
     }
 
-    let mut go = None;
+    if let Some(drag) = &editor.drag {
+        let icon = match drag {
+            Drag::Adding { .. } => egui::CursorIcon::Crosshair,
+            Drag::Moving { .. } | Drag::Panning => egui::CursorIcon::Grabbing,
+            Drag::Resizing { handle, .. } => handle.cursor(),
+        };
+        ui.ctx().set_cursor_icon(icon);
+    } else if response.hovered()
+        && boxes_drawn
+        && let Some(at) = response.hover_pos()
+    {
+        let icon = if !open {
+            egui::CursorIcon::Grab
+        } else if let Some((_, handle, _)) = selected_handle(view, at, draft) {
+            handle.cursor()
+        } else {
+            match hit(view, at, draft) {
+                Some(Pick::Added(_)) => egui::CursorIcon::Grab,
+                Some(Pick::Detection(_) | Pick::Problem(_)) => egui::CursorIcon::PointingHand,
+                _ => egui::CursorIcon::Crosshair,
+            }
+        };
+        ui.ctx().set_cursor_icon(icon);
+    }
+
+    let mut act = CanvasAct::None;
     if focused {
         let events = ui.input(|i| i.events.clone());
         let step = |m: egui::Modifiers| if m.shift { 10.0 } else { 1.0 };
@@ -1685,9 +1965,18 @@ fn canvas(
                 } => match key {
                     egui::Key::Escape if editor.help => editor.help = false,
                     egui::Key::Escape => draft.selected = None,
-                    egui::Key::Z if m.command && m.shift => draft.redo(),
-                    egui::Key::Z if m.command => draft.undo(),
-                    egui::Key::Y if m.command => draft.redo(),
+                    egui::Key::F6 => {
+                        response.surrender_focus();
+                        act = CanvasAct::FocusInspector;
+                    }
+                    egui::Key::Enter
+                        if m.command && open && can_approve && draft.unresolved() == 0 =>
+                    {
+                        act = CanvasAct::Approve;
+                    }
+                    egui::Key::Z if open && m.command && m.shift => draft.redo(),
+                    egui::Key::Z if open && m.command => draft.undo(),
+                    egui::Key::Y if open && m.command => draft.redo(),
                     egui::Key::Tab => {
                         draft.selected = cycle(draft, detections.len(), !m.shift);
                     }
@@ -1731,8 +2020,8 @@ fn canvas(
                         };
                     }
                     egui::Key::Num1 => zoom_at(view, 1.0 / ppp / view.scale, rect.center()),
-                    egui::Key::PageDown => go = Some(Go::Step(1)),
-                    egui::Key::PageUp => go = Some(Go::Step(-1)),
+                    egui::Key::PageDown => act = CanvasAct::Go(Go::Step(1)),
+                    egui::Key::PageUp => act = CanvasAct::Go(Go::Step(-1)),
                     _ => {}
                 },
                 _ => {}
@@ -1770,7 +2059,7 @@ fn canvas(
             egui::FontId::proportional(14.0),
             ui.visuals().strong_text_color(),
         );
-        return go;
+        return act;
     }
     let p = *Palette::of(ui);
     let problems = draft.problems().to_vec();
@@ -1798,13 +2087,11 @@ fn canvas(
     }
     for (i, area) in draft.doc.edits.added.iter().enumerate() {
         let selected = draft.selected == Some(Pick::Added(i));
-        paint_mark(
-            &painter,
-            to_screen(&view, *area),
-            Mark::Masked,
-            selected,
-            &p,
-        );
+        let screen = to_screen(&view, *area);
+        paint_mark(&painter, screen, Mark::Masked, selected, &p);
+        if selected && open {
+            paint_handles(&painter, screen, &p);
+        }
     }
     if let Some(Drag::Adding { from, to }) = &editor.drag {
         let screen = egui::Rect::from_two_pos(
@@ -1813,7 +2100,7 @@ fn canvas(
         );
         paint_mark(&painter, screen, Mark::Masked, false, &p);
     }
-    go
+    act
 }
 
 /// The next (or previous) box a Tab selects: detections, then added areas, then weak candidates.
@@ -1861,10 +2148,13 @@ fn hint(ui: &mut egui::Ui, tr: &Translator, help: &mut bool) {
         ui.add_space(((ui.available_width() - width) / 2.0).max(20.0));
         ui.label(egui::RichText::new(text).size(12.0).color(p.secondary));
         ui.label(egui::RichText::new("·").size(12.0).color(p.secondary));
-        let link = ui.add(
-            egui::Button::new(egui::RichText::new(shortcuts).size(12.0).color(p.secondary))
-                .frame(false),
-        );
+        let link = ui
+            .add(
+                egui::Button::new(egui::RichText::new(shortcuts).size(12.0).color(p.secondary))
+                    .frame(false),
+            )
+            .on_hover_cursor(egui::CursorIcon::PointingHand);
+        style::focus_ring(ui, &link);
         if link.clicked() {
             *help = !*help;
         }
@@ -1949,8 +2239,9 @@ pub(crate) fn uncertain_tag(painter: &egui::Painter, rect: egui::Rect, text: &st
     painter.galley(tag.min + egui::vec2(5.0, 1.0), galley, egui::Color32::WHITE);
 }
 
-/// The `?` overlay, of the photo or the video editor.
+/// The `?` overlay, of the photo or the video editor, in the shared modal style.
 fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool, video: bool) {
+    let p = *Palette::of_ctx(ctx);
     let undo = ctx.format_shortcut(&egui::KeyboardShortcut::new(
         egui::Modifiers::COMMAND,
         egui::Key::Z,
@@ -1958,6 +2249,10 @@ fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool, video: bool)
     let redo = ctx.format_shortcut(&egui::KeyboardShortcut::new(
         egui::Modifiers::COMMAND | egui::Modifiers::SHIFT,
         egui::Key::Z,
+    ));
+    let approve = ctx.format_shortcut(&egui::KeyboardShortcut::new(
+        egui::Modifiers::COMMAND,
+        egui::Key::Enter,
     ));
     let command = if cfg!(target_os = "macos") {
         "Cmd"
@@ -1988,6 +2283,8 @@ fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool, video: bool)
             (redo, "shortcut-redo"),
             ("+  −  0  1".to_owned(), "shortcut-zoom"),
             ("Page Up / Page Down".to_owned(), "shortcut-pages"),
+            (approve, "shortcut-approve"),
+            ("F6".to_owned(), "shortcut-pane"),
             ("?".to_owned(), "shortcut-help"),
         ]
     } else {
@@ -2004,28 +2301,121 @@ fn shortcuts(ctx: &egui::Context, tr: &Translator, open: &mut bool, video: bool)
             (redo, "shortcut-redo"),
             ("+  −  0  1".to_owned(), "shortcut-zoom"),
             ("Page Up / Page Down".to_owned(), "shortcut-pages"),
+            (approve, "shortcut-approve"),
+            ("F6".to_owned(), "shortcut-pane"),
             ("?".to_owned(), "shortcut-help"),
         ]
     };
-    egui::Window::new(tr.get("shortcuts-title"))
-        .id(egui::Id::unique("review-shortcuts"))
-        .collapsible(false)
-        .resizable(false)
-        .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+    let title = tr.get("shortcuts-title");
+    let width = (ctx.content_rect().width() - 48.0).clamp(380.0, 580.0);
+    let target_height = if video { 540.0 } else { 460.0 };
+    let height = (ctx.content_rect().height() - 64.0).clamp(280.0, target_height);
+    let line = egui::Stroke::new(1.0, p.faint_line);
+    let mut close_now = false;
+    let modal = egui::Modal::new(egui::Id::unique("review-shortcuts"))
+        .frame(style::dialog_frame(ctx))
+        .backdrop_color(style::dialog_backdrop(ctx))
         .show(ctx, |ui| {
-            egui::Grid::new("shortcut-rows")
-                .num_columns(2)
-                .spacing([16.0, 6.0])
+            ui.set_width(width);
+            ui.set_max_width(width);
+            let top = ui.cursor().top();
+            ui.spacing_mut().item_spacing.y = 0.0;
+            ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+                node.set_role(egui::accesskit::Role::Dialog);
+            });
+            egui::Frame::NONE
+                .inner_margin(egui::Margin::symmetric(24, 14))
                 .show(ui, |ui| {
-                    for (keys, what) in rows {
-                        ui.strong(keys);
-                        ui.label(tr.get(what));
-                        ui.end_row();
-                    }
+                    ui.set_width(ui.available_width());
+                    ui.label(egui::RichText::new(&title).font(style::medium(14.0)));
                 });
-            ui.label(tr.get("shortcut-scroll"));
-            if ui.button(tr.get("shortcuts-close")).clicked() {
-                *open = false;
-            }
+            ui.painter()
+                .hline(ui.max_rect().x_range(), ui.min_rect().bottom(), line);
+            let rest = egui::Rect::from_x_y_ranges(
+                ui.max_rect().x_range(),
+                ui.cursor().top()..=top + height,
+            );
+            ui.advance_cursor_after_rect(rest);
+            let (middle, footer) =
+                rest.split_top_bottom_at_y(rest.bottom() - (style::BUTTON_HEIGHT + 28.0));
+            ui.scope_builder(
+                egui::UiBuilder::new()
+                    .max_rect(middle)
+                    .layout(egui::Layout::top_down(egui::Align::Min)),
+                |ui| {
+                    ui.set_clip_rect(middle.intersect(ui.clip_rect()));
+                    egui::ScrollArea::vertical()
+                        .id_salt("shortcut-rows-scroll")
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            egui::Frame::NONE
+                                .inner_margin(egui::Margin::symmetric(24, 16))
+                                .show(ui, |ui| {
+                                    ui.set_width(ui.available_width());
+                                    ui.spacing_mut().item_spacing.y = 8.0;
+                                    let key_col = 180.0_f32.min(ui.available_width() * 0.42);
+                                    for (keys, what) in rows {
+                                        ui.horizontal_top(|ui| {
+                                            ui.allocate_ui_with_layout(
+                                                egui::vec2(key_col, 22.0),
+                                                egui::Layout::left_to_right(egui::Align::Center),
+                                                |ui| {
+                                                    ui.set_min_width(key_col);
+                                                    style::keycap(ui, &keys);
+                                                },
+                                            );
+                                            ui.vertical(|ui| {
+                                                ui.set_width(ui.available_width());
+                                                ui.add_space(2.0);
+                                                ui.add(
+                                                    egui::Label::new(
+                                                        egui::RichText::new(tr.get(what))
+                                                            .color(p.body),
+                                                    )
+                                                    .wrap(),
+                                                );
+                                            });
+                                        });
+                                    }
+                                    ui.add_space(6.0);
+                                    ui.add(
+                                        egui::Label::new(
+                                            egui::RichText::new(tr.get("shortcut-scroll"))
+                                                .size(12.0)
+                                                .color(p.secondary),
+                                        )
+                                        .wrap(),
+                                    );
+                                });
+                        });
+                },
+            );
+            ui.painter()
+                .hline(footer.x_range(), footer.top() + 0.5, line);
+            ui.scope_builder(
+                egui::UiBuilder::new()
+                    .max_rect(footer)
+                    .layout(egui::Layout::top_down(egui::Align::Min)),
+                |ui| {
+                    egui::Frame::NONE
+                        .inner_margin(egui::Margin::symmetric(24, 14))
+                        .show(ui, |ui| {
+                            ui.allocate_ui_with_layout(
+                                egui::vec2(ui.available_width(), style::BUTTON_HEIGHT),
+                                egui::Layout::right_to_left(egui::Align::Center),
+                                |ui| {
+                                    if style::primary(ui, &tr.get("shortcuts-close"), true)
+                                        .clicked()
+                                    {
+                                        close_now = true;
+                                    }
+                                },
+                            );
+                        });
+                },
+            );
         });
+    if close_now || modal.should_close() {
+        *open = false;
+    }
 }

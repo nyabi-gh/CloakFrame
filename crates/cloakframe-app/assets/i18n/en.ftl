@@ -35,7 +35,7 @@ coverage = Coverage
 coverage-narrow = Narrow
 coverage-standard = Standard
 coverage-wide = Wide
-coverage-hint = How far past the detected face or plate to mask, on every side: narrow 8%, standard 18% (as in 1.12.1), wide 30% of its size.
+coverage-hint = How far past the detected face or plate to mask, on every side: narrow 8%, standard 18%, wide 30% of its size.
 models-need-one = Choose faces, license plates, or both.
 
 output-folder = Output folder
@@ -294,12 +294,12 @@ refused-invalid-name = The output name is not a valid file name.
 refused-unresolved = This item still has unresolved problems.
 refused-not-covered = An added area no longer covers a problem marked as covered by it.
 refused-internal = The decision was refused because of a fault in CloakFrame: { $reason }
-confirm-warnings-title = Export with unresolved problems?
+confirm-warnings-title = Save with unresolved problems?
 confirm-warnings-body = { $count ->
     [one] One problem is
    *[other] { $count } problems are
 } not resolved, so a face or license plate may be left unmasked. The item is not counted as finished normally.
-confirm-warnings = Export with Warnings
+confirm-warnings = Save with Warnings
 confirm-plain-title = Export without anonymization?
 confirm-plain-body = Nothing is masked: the item is saved again under the metadata rules only. The item is not counted as finished normally.
 confirm-plain = Export Without Anonymization
@@ -491,7 +491,7 @@ gpu-pack-restart = Restart CloakFrame to use the GPU pack.
 
 settings-title = Settings
 settings-open = Settings…
-settings-next-run = Detection and output settings apply from the next run.
+settings-next-run = Settings other than language and theme apply from the next run.
 settings-tab-general = General
 settings-tab-detection = Detection
 settings-tab-output = Output
@@ -504,3 +504,16 @@ start-needs-models = Download the detection models first.
 output-group = Save
 result-title-review = Needs review
 editor-back = List
+drop-formats = JPG, PNG, WebP, TIFF, BMP · MP4, MOV, WebM
+strength-hint = Higher makes the mosaic blocks larger and hides more detail.
+face-model-disabled = Turn on Faces on the main screen to choose a face model.
+model-download-accept = Accept the terms below before downloading.
+leave-review-title = Leave this review?
+leave-review-body-rendering = Some items are still saving. Leaving cancels them, and unapproved edits are lost.
+leave-review-body-edits = You have unapproved edits in this review. Leaving discards them; saved items stay.
+leave-review-confirm = Leave
+leave-review-stay = Stay
+editor-drawn-item = Drawn { $n }
+editor-video-hold-mask = Hold M to preview masked
+shortcut-approve = Approve and save
+shortcut-pane = Switch between canvas and panel

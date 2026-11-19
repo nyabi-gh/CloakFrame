@@ -182,6 +182,13 @@ impl Review {
         self.status.values().any(|s| *s == Status::Rendering)
     }
 
+    /// Whether any still-open item in this session has unapproved edits in memory.
+    pub fn has_unsaved_edits(&self) -> bool {
+        self.drafts
+            .iter()
+            .any(|(&item, draft)| self.is_open(item) && draft.is_dirty())
+    }
+
     /// Whether the item can be decided now.
     pub fn is_open(&self, item: ItemId) -> bool {
         self.item(item).is_some()

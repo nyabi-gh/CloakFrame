@@ -32,10 +32,11 @@ impl Sample {
         Self { photo, shown: None }
     }
 
-    /// The sample as a run with `options` would save it.
+    /// The sample as a run with `options` would save it. Applies the masking style whenever
+    /// either faces or license plates is chosen so style changes stay visible in plate-only runs.
     pub fn masked(&self, options: &RunOptions) -> RgbImage {
         let mut image = DynamicImage::ImageRgb8(self.photo.clone());
-        if options.faces {
+        if options.faces || options.plates {
             mask::apply(&mut image, &[Region::new(face())], &options.style(), None)
                 .expect("an 8-bit RGB photo masks");
         }
@@ -45,7 +46,7 @@ impl Sample {
     /// Made again only when what or how changed.
     pub fn texture(&mut self, ctx: &egui::Context, options: &RunOptions) -> &egui::TextureHandle {
         let looks_the_same = |shown: &RunOptions| {
-            shown.faces == options.faces
+            (shown.faces || shown.plates) == (options.faces || options.plates)
                 && shown.method == options.method
                 && shown.shape == options.shape
                 && shown.coverage == options.coverage
@@ -76,19 +77,27 @@ mod tests {
     fn options(faces: bool, method: Method, strength: u8) -> RunOptions {
         RunOptions {
             faces,
+            plates: false,
             method,
             mosaic_strength: strength,
             ..RunOptions::of(&Settings::default())
         }
     }
 
-    /// Only the face changes, and each method and strength changes it differently; with faces
-    /// off nothing does.
+    /// Only the face changes, and each method and strength changes it differently; with both
+    /// faces and plates off nothing does, while plate-only still previews the chosen style.
     #[test]
     fn what_and_how_change_only_the_face() {
         let sample = Sample::new();
         let original = sample.masked(&options(false, Method::Fill, 8));
         assert_eq!(original, sample.photo);
+        let plates_only = sample.masked(&RunOptions {
+            faces: false,
+            plates: true,
+            method: Method::Fill,
+            ..RunOptions::of(&Settings::default())
+        });
+        assert_ne!(plates_only, sample.photo);
         let face = face();
         let inside = |x: u32, y: u32| {
             let (x, y) = (x as f32, y as f32);

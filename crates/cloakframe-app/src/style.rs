@@ -13,6 +13,7 @@ pub const BUTTON_HEIGHT: f32 = 28.0;
 pub const SMALL_BUTTON_HEIGHT: f32 = 24.0;
 pub const BUTTON_RADIUS: u8 = 6;
 pub const THUMBNAIL_RADIUS: u8 = 4;
+pub const DIALOG_RADIUS: u8 = 10;
 /// The narrowest a cell of a thumbnail grid gets before a column is dropped.
 pub const GRID_MIN_CELL: f32 = 120.0;
 
@@ -40,6 +41,8 @@ pub struct Palette {
     pub failed: Color32,
     /// The primary button's text, on `text`.
     pub on_primary: Color32,
+    /// A destructive confirmation button's text, on `failed`.
+    pub on_danger: Color32,
 }
 
 const fn rgb(hex: u32) -> Color32 {
@@ -64,6 +67,7 @@ pub const LIGHT: Palette = Palette {
     saved: rgb(0x15803D),
     failed: rgb(0xB91C1C),
     on_primary: rgb(0xFFFFFF),
+    on_danger: rgb(0xFFFFFF),
 };
 
 pub const DARK: Palette = Palette {
@@ -82,13 +86,22 @@ pub const DARK: Palette = Palette {
     needs_review: rgb(0xFB923C),
     uncertain: rgb(0xFB923C),
     saved: rgb(0x4ADE80),
-    failed: rgb(0xF87171),
+    failed: rgb(0xEF4444),
     on_primary: rgb(0x18181B),
+    on_danger: rgb(0xFFFFFF),
 };
 
 impl Palette {
     pub fn of(ui: &egui::Ui) -> &'static Self {
         if ui.visuals().dark_mode {
+            &DARK
+        } else {
+            &LIGHT
+        }
+    }
+
+    pub fn of_ctx(ctx: &egui::Context) -> &'static Self {
+        if ctx.theme() == Theme::Dark {
             &DARK
         } else {
             &LIGHT
@@ -246,6 +259,10 @@ impl egui::Widget for Check<'_> {
             let text_pos = egui::pos2(frame.right() + gap, rect.center().y - galley.size().y / 2.0);
             painter.galley(text_pos, galley, visuals.text_color());
         }
+        focus_ring(ui, &response);
+        if ui.is_enabled() {
+            response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+        }
         response
     }
 }
@@ -380,17 +397,50 @@ pub fn primary_sized(
         })
         .inner;
     focus_ring(ui, &response);
-    response
+    if enabled {
+        response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        response
+    }
+}
+
+/// A destructive confirmation action: filled in the failure colour.
+pub fn danger(ui: &mut egui::Ui, text: &str) -> egui::Response {
+    let p = Palette::of(ui);
+    let button = egui::Button::new(
+        egui::RichText::new(text)
+            .font(medium(13.0))
+            .color(p.on_danger),
+    )
+    .min_size(egui::vec2(0.0, BUTTON_HEIGHT))
+    .corner_radius(BUTTON_RADIUS)
+    .fill(p.failed)
+    .stroke(Stroke::new(1.0, p.failed));
+    let response = ui.add(button);
+    focus_ring(ui, &response);
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 /// A button with a border, for actions beside the primary one.
 pub fn outlined(ui: &mut egui::Ui, text: impl Into<egui::WidgetText>) -> egui::Response {
-    ui.add(sized(egui::Button::new(text)))
+    let response = ui.add(sized(egui::Button::new(text)));
+    focus_ring(ui, &response);
+    if ui.is_enabled() {
+        response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        response
+    }
 }
 
 /// A button with no border until the pointer is on it, for the toolbar's secondary actions.
 pub fn plain(ui: &mut egui::Ui, text: impl Into<egui::WidgetText>) -> egui::Response {
-    ui.add(sized(egui::Button::new(text).frame_when_inactive(false)))
+    let response = ui.add(sized(egui::Button::new(text).frame_when_inactive(false)));
+    focus_ring(ui, &response);
+    if ui.is_enabled() {
+        response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        response
+    }
 }
 
 /// A row's own action, smaller than the toolbar's: bordered, or `plain` until the pointer is on
@@ -407,7 +457,11 @@ pub fn small(ui: &mut egui::Ui, text: &str, plain: bool) -> egui::Response {
     let response = ui.add(button);
     ui.spacing_mut().button_padding = padding;
     focus_ring(ui, &response);
-    response
+    if ui.is_enabled() {
+        response.on_hover_cursor(egui::CursorIcon::PointingHand)
+    } else {
+        response
+    }
 }
 
 /// How wide [`small`] makes a button with `text`.
@@ -442,7 +496,9 @@ pub fn icon_button(
     }
     draw(ui.painter(), rect.shrink(6.0), p.secondary);
     focus_ring(ui, &response);
-    response.on_hover_text(label)
+    response
+        .on_hover_cursor(egui::CursorIcon::PointingHand)
+        .on_hover_text(label)
 }
 
 /// An icon button of the toolbar's height, which shows itself greyed out while it cannot be
@@ -459,7 +515,8 @@ pub fn toolbar_icon(
     } else {
         egui::Sense::hover()
     };
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(BUTTON_HEIGHT, BUTTON_HEIGHT), sense);
+    let (rect, mut response) =
+        ui.allocate_exact_size(egui::vec2(BUTTON_HEIGHT, BUTTON_HEIGHT), sense);
     response.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, enabled, label));
     if enabled && response.hovered() {
         ui.painter().rect_filled(rect, BUTTON_RADIUS, p.selected);
@@ -467,6 +524,9 @@ pub fn toolbar_icon(
     let color = if enabled { p.body } else { p.disabled };
     draw(ui.painter(), rect.shrink(6.0), color);
     focus_ring(ui, &response);
+    if enabled {
+        response = response.on_hover_cursor(egui::CursorIcon::PointingHand);
+    }
     response.on_hover_text(label)
 }
 
@@ -495,7 +555,7 @@ pub fn link(ui: &mut egui::Ui, text: &str) -> egui::Response {
     let response =
         ui.add(egui::Button::new(egui::RichText::new(text).color(p.text).underline()).frame(false));
     focus_ring(ui, &response);
-    response
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 /// One choice of several, side by side in equal parts of a recessed track, as the masking method
@@ -555,6 +615,9 @@ pub fn segmented<T: PartialEq + Copy>(
             color,
         );
         focus_ring(ui, &response);
+        if ui.is_enabled() {
+            response.on_hover_cursor(egui::CursorIcon::PointingHand);
+        }
     }
     *value != before
 }
@@ -612,7 +675,7 @@ pub fn slider(
         ]),
     );
     focus_ring(ui, &response);
-    response
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
 }
 
 /// A drop-down list `width` wide whose arrow is a stroked chevron like the other icons, not
@@ -670,7 +733,130 @@ pub fn sidebar_item(
         },
     );
     focus_ring(ui, &response);
-    response
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
+/// A thin monochrome progress bar matching the run list, replacing egui's thicker default bar.
+pub fn progress_bar(ui: &mut egui::Ui, fraction: f32, width: f32) {
+    const HEIGHT: f32 = 4.0;
+    let p = Palette::of(ui);
+    let (rect, _) = ui.allocate_exact_size(egui::vec2(width, BUTTON_HEIGHT), egui::Sense::hover());
+    let rail = egui::Rect::from_center_size(rect.center(), egui::vec2(width, HEIGHT));
+    ui.painter().rect_filled(rail, HEIGHT / 2.0, p.separator);
+    let done = egui::Rect::from_min_max(
+        rail.min,
+        egui::pos2(
+            rail.left() + rail.width() * fraction.clamp(0.0, 1.0),
+            rail.max.y,
+        ),
+    );
+    ui.painter().rect_filled(done, HEIGHT / 2.0, p.text);
+}
+
+/// A subtle keycap badge for keyboard shortcuts.
+pub fn keycap(ui: &mut egui::Ui, text: &str) -> egui::Response {
+    let p = Palette::of(ui);
+    egui::Frame::NONE
+        .fill(p.sidebar)
+        .stroke(Stroke::new(1.0, p.border))
+        .corner_radius(4)
+        .inner_margin(egui::Margin::symmetric(6, 2))
+        .show(ui, |ui| {
+            ui.label(egui::RichText::new(text).font(medium(11.0)).color(p.body))
+        })
+        .response
+}
+
+/// The darkened backdrop behind every centered modal dialog.
+pub fn dialog_backdrop(ctx: &egui::Context) -> Color32 {
+    if ctx.theme() == Theme::Dark {
+        Color32::from_black_alpha(128)
+    } else {
+        Color32::from_rgba_unmultiplied(24, 24, 27, 71)
+    }
+}
+
+/// The shared frame of every centered modal dialog.
+pub fn dialog_frame(ctx: &egui::Context) -> egui::Frame {
+    let p = Palette::of_ctx(ctx);
+    egui::Frame::NONE
+        .fill(p.window)
+        .stroke(Stroke::new(1.0, p.border))
+        .corner_radius(DIALOG_RADIUS)
+        .shadow(egui::Shadow {
+            offset: [0, 12],
+            blur: 32,
+            spread: 0,
+            color: Color32::from_black_alpha(46),
+        })
+}
+
+/// A centered confirmation modal with a wrapped body and right-aligned actions (cancel on the
+/// left, the action on the right). Returns `Some(true)` on confirm, `Some(false)` on cancel or
+/// dismiss, `None` while still open.
+pub fn confirm_modal(
+    ctx: &egui::Context,
+    id: &str,
+    title: &str,
+    body: &str,
+    confirm_label: &str,
+    cancel_label: &str,
+    destructive: bool,
+) -> Option<bool> {
+    let p = *Palette::of_ctx(ctx);
+    let width = (ctx.content_rect().width() - 48.0).clamp(320.0, 440.0);
+    let mut choice = None;
+    let modal = egui::Modal::new(egui::Id::unique(id))
+        .frame(dialog_frame(ctx))
+        .backdrop_color(dialog_backdrop(ctx))
+        .show(ctx, |ui| {
+            ui.set_width(width);
+            ui.set_max_width(width);
+            ui.ctx().accesskit_node_builder(ui.unique_id(), |node| {
+                node.set_role(egui::accesskit::Role::Dialog);
+            });
+            egui::Frame::NONE
+                .inner_margin(egui::Margin {
+                    left: 24,
+                    right: 24,
+                    top: 22,
+                    bottom: 18,
+                })
+                .show(ui, |ui| {
+                    ui.set_width(ui.available_width());
+                    ui.spacing_mut().item_spacing.y = 10.0;
+                    ui.label(egui::RichText::new(title).font(medium(15.0)).color(p.text));
+                    ui.add(egui::Label::new(egui::RichText::new(body).color(p.body)).wrap());
+                });
+            let line = Stroke::new(1.0, p.faint_line);
+            ui.painter()
+                .hline(ui.max_rect().x_range(), ui.cursor().top(), line);
+            egui::Frame::NONE
+                .inner_margin(egui::Margin::symmetric(24, 14))
+                .show(ui, |ui| {
+                    ui.allocate_ui_with_layout(
+                        egui::vec2(ui.available_width(), BUTTON_HEIGHT),
+                        egui::Layout::right_to_left(egui::Align::Center),
+                        |ui| {
+                            let confirmed = if destructive {
+                                danger(ui, confirm_label)
+                            } else {
+                                primary(ui, confirm_label, true)
+                            };
+                            if confirmed.clicked() {
+                                choice = Some(true);
+                            }
+                            if outlined(ui, cancel_label).clicked() {
+                                choice = Some(false);
+                            }
+                        },
+                    );
+                });
+        });
+    if modal.should_close() && choice.is_none() {
+        choice = Some(false);
+    }
+    choice
 }
 
 /// The small round mark beside a state's words.
@@ -754,6 +940,50 @@ pub mod icon {
 
     pub fn next(painter: &Painter, rect: Rect, color: Color32) {
         chevron(painter, rect, color, true);
+    }
+
+    pub fn chevron_down(painter: &Painter, rect: Rect, color: Color32) {
+        painter.add(Shape::line(
+            vec![
+                at(rect, 0.25, 0.38),
+                at(rect, 0.5, 0.64),
+                at(rect, 0.75, 0.38),
+            ],
+            Stroke::new(1.5, color),
+        ));
+    }
+
+    pub fn folder(painter: &Painter, rect: Rect, color: Color32) {
+        let stroke = Stroke::new(1.4, color);
+        painter.add(Shape::closed_line(
+            vec![
+                at(rect, 0.12, 0.24),
+                at(rect, 0.42, 0.24),
+                at(rect, 0.52, 0.34),
+                at(rect, 0.88, 0.34),
+                at(rect, 0.88, 0.78),
+                at(rect, 0.12, 0.78),
+            ],
+            stroke,
+        ));
+    }
+
+    /// Two overlapping picture frames for the empty drop area.
+    pub fn drop_media(painter: &Painter, rect: Rect, color: Color32) {
+        let stroke = Stroke::new(1.5, color);
+        let frame = Rect::from_min_max(at(rect, 0.14, 0.2), at(rect, 0.86, 0.8));
+        painter.rect_stroke(frame, 4.0, stroke, eframe::egui::StrokeKind::Middle);
+        painter.circle_stroke(at(rect, 0.34, 0.4), rect.width() * 0.065, stroke);
+        painter.add(Shape::line(
+            vec![
+                at(rect, 0.2, 0.74),
+                at(rect, 0.44, 0.5),
+                at(rect, 0.6, 0.64),
+                at(rect, 0.7, 0.54),
+                at(rect, 0.82, 0.74),
+            ],
+            stroke,
+        ));
     }
 
     pub fn play(painter: &Painter, rect: Rect, color: Color32) {
